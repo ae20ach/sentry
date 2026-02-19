@@ -329,7 +329,9 @@ export function Controls({
               </Tooltip>
             )}
             {hasFeature && !isPrebuiltDashboard && onRestore && (
-              <DashboardHistoryButton dashboard={dashboard} onRestore={onRestore} />
+              <Feature features="organizations:dashboards-history">
+                <DashboardHistoryButton dashboard={dashboard} onRestore={onRestore} />
+              </Feature>
             )}
             {renderEditButton(hasFeature)}
             {hasFeature && !isPrebuiltDashboard && (
