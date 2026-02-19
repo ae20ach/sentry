@@ -47,7 +47,8 @@ import {MetricsCardinalityProvider} from 'sentry/utils/performance/contexts/metr
 import {MetricsResultsMetaProvider} from 'sentry/utils/performance/contexts/metricsEnhancedPerformanceDataContext';
 import {MEPSettingProvider} from 'sentry/utils/performance/contexts/metricsEnhancedSetting';
 import {OnDemandControlProvider} from 'sentry/utils/performance/contexts/onDemandControl';
-import {QueryClient, useQueryClient} from 'sentry/utils/queryClient';
+import type {QueryClient} from 'sentry/utils/queryClient';
+import {useQueryClient} from 'sentry/utils/queryClient';
 import {decodeBoolean} from 'sentry/utils/queryString';
 import {OnRouteLeave} from 'sentry/utils/reactRouter6Compat/onRouteLeave';
 import {scheduleMicroTask} from 'sentry/utils/scheduleMicroTask';
@@ -575,7 +576,12 @@ class DashboardDetail extends Component<Props, State> {
     if (this.isEditingDashboard || this.isPreview) {
       return null;
     }
-    return updateDashboard(api, organization.slug, newModifiedDashboard).then(
+    return updateDashboard(
+      api,
+      organization.slug,
+      newModifiedDashboard,
+      this.props.queryClient
+    ).then(
       (newDashboard: DashboardDetails) => {
         if (onDashboardUpdate) {
           onDashboardUpdate(newDashboard);
@@ -916,7 +922,12 @@ class DashboardDetail extends Component<Props, State> {
           this.setState({
             isCommittingChanges: true,
           });
-          updateDashboard(api, organization.slug, modifiedDashboard).then(
+          updateDashboard(
+            api,
+            organization.slug,
+            modifiedDashboard,
+            this.props.queryClient
+          ).then(
             (newDashboard: DashboardDetails) => {
               if (onDashboardUpdate) {
                 onDashboardUpdate(newDashboard);
