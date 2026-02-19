@@ -210,10 +210,10 @@ class OrganizationDashboardDetailsEndpoint(OrganizationDashboardBase):
                 )
 
         try:
-            if isinstance(dashboard, Dashboard):
-                capture_dashboard_snapshot(dashboard, user_id=request.user.id)
-
             with transaction.atomic(router.db_for_write(DashboardTombstone)):
+                if isinstance(dashboard, Dashboard):
+                    capture_dashboard_snapshot(dashboard, user_id=request.user.id)
+
                 serializer.save()
                 if tombstone:
                     DashboardTombstone.objects.get_or_create(
