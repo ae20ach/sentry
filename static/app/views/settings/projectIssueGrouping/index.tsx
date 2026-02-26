@@ -1,4 +1,5 @@
 import {ExternalLink} from '@sentry/scraps/link';
+import {Text} from '@sentry/scraps/text';
 
 import {hasEveryAccess} from 'sentry/components/acl/access';
 import {Form} from 'sentry/components/forms/form';
@@ -13,10 +14,9 @@ import type {EventGroupingConfig} from 'sentry/types/event';
 import type {Project} from 'sentry/types/project';
 import {getApiUrl} from 'sentry/utils/api/getApiUrl';
 import {useApiQuery} from 'sentry/utils/queryClient';
-import {routeTitleGen} from 'sentry/utils/routeTitle';
+import routeTitleGen from 'sentry/utils/routeTitle';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {SettingsPageHeader} from 'sentry/views/settings/components/settingsPageHeader';
-import {TextBlock} from 'sentry/views/settings/components/text/textBlock';
 import {ProjectPermissionAlert} from 'sentry/views/settings/project/projectPermissionAlert';
 import {useProjectSettingsOutlet} from 'sentry/views/settings/project/projectSettingsLayout';
 
@@ -71,7 +71,7 @@ export default function ProjectIssueGrouping() {
     <SentryDocumentTitle title={routeTitleGen(t('Issue Grouping'), project.slug, false)}>
       <SettingsPageHeader title={t('Issue Grouping')} />
 
-      <TextBlock>
+      <Text as="div" density="comfortable">
         {tct(
           `All events have a fingerprint. Events with the same fingerprint are grouped together into an issue. To learn more about issue grouping, [link: read the docs].`,
           {
@@ -80,7 +80,7 @@ export default function ProjectIssueGrouping() {
             ),
           }
         )}
-      </TextBlock>
+      </Text>
 
       <ProjectPermissionAlert project={project} />
 

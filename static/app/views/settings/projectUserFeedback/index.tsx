@@ -4,22 +4,19 @@ import {mutationOptions} from '@tanstack/react-query';
 import {z} from 'zod';
 
 import {Button, LinkButton} from '@sentry/scraps/button';
-import {AutoSaveForm, FieldGroup, FormSearch} from '@sentry/scraps/form';
-import {Flex} from '@sentry/scraps/layout';
-import {ExternalLink} from '@sentry/scraps/link';
 import {Text} from '@sentry/scraps/text';
 
 import {Access} from 'sentry/components/acl/access';
 import {AiPrivacyNotice} from 'sentry/components/aiPrivacyTooltip';
 import {useOrganizationSeerSetup} from 'sentry/components/events/autofix/useOrganizationSeerSetup';
-import {SentryDocumentTitle} from 'sentry/components/sentryDocumentTitle';
-import {t, tct} from 'sentry/locale';
-import {ProjectsStore} from 'sentry/stores/projectsStore';
-import type {Project} from 'sentry/types/project';
-import {fetchMutation} from 'sentry/utils/queryClient';
+import Form from 'sentry/components/forms/form';
+import JsonForm from 'sentry/components/forms/jsonForm';
+import SentryDocumentTitle from 'sentry/components/sentryDocumentTitle';
+import formGroups from 'sentry/data/forms/userFeedback';
+import {t} from 'sentry/locale';
+import {space} from 'sentry/styles/space';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {SettingsPageHeader} from 'sentry/views/settings/components/settingsPageHeader';
-import {TextBlock} from 'sentry/views/settings/components/text/textBlock';
 import {ProjectPermissionAlert} from 'sentry/views/settings/project/projectPermissionAlert';
 import {useProjectSettingsOutlet} from 'sentry/views/settings/project/projectSettingsLayout';
 
@@ -79,30 +76,34 @@ export default function ProjectUserFeedback() {
   const options = project.options ?? {};
 
   return (
-    <FormSearch route="/settings/:orgId/projects/:projectId/user-feedback/">
-      <SentryDocumentTitle title={t('User Feedback')} projectSlug={project.slug}>
-        <SettingsPageHeader
-          title={t('User Feedback')}
-          action={
-            <Flex gap="md" align="center">
-              <LinkButton href="https://docs.sentry.io/product/user-feedback/" external>
-                {t('Read the Docs')}
-              </LinkButton>
-              <Button priority="primary" onClick={handleClick}>
-                {t('Open the Crash Report Modal')}
-              </Button>
-            </Flex>
-          }
-        />
-        <TextBlock>
-          {t(
-            `Don't rely on stack traces and graphs alone to understand
+    <SentryDocumentTitle title={t('User Feedback')} projectSlug={project.slug}>
+      <SettingsPageHeader
+        title={t('User Feedback')}
+        action={
+          <ButtonList>
+            <LinkButton href="https://docs.sentry.io/product/user-feedback/" external>
+              {t('Read the Docs')}
+            </LinkButton>
+            <Button priority="primary" onClick={handleClick}>
+              {t('Open the Crash Report Modal')}
+            </Button>
+          </ButtonList>
+        }
+      />
+      <Text as="div" density="comfortable">
+        {t(
+          `Don't rely on stack traces and graphs alone to understand
             the cause and impact of errors. Enable the User Feedback Widget to collect
             your users' comments at anytime, or enable the Crash Report Modal to collect additional context only when an error occurs.`
-          )}
-        </TextBlock>
-        <ProjectPermissionAlert project={project} />
-
+        )}
+      </Text>
+      <ProjectPermissionAlert project={project} />
+      <Form
+        saveOnBlur
+        apiMethod="PUT"
+        apiEndpoint={`/projects/${organization.slug}/${project.slug}/`}
+        initialData={project.options}
+      >
         <Access access={['project:write']} project={project}>
           {({hasAccess}) => (
             <FieldGroup title={t('Settings')}>

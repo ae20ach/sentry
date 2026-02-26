@@ -26,7 +26,7 @@ import {useAccountSecurityContext} from 'sentry/views/settings/account/accountSe
 import {RemoveConfirm} from 'sentry/views/settings/account/accountSecurity/components/removeConfirm';
 import {TwoFactorRequired} from 'sentry/views/settings/account/accountSecurity/components/twoFactorRequired';
 import {PasswordForm} from 'sentry/views/settings/account/passwordForm';
-import SettingsPageHeader from 'sentry/views/settings/components/settingsPageHeader';
+import {SettingsPageHeader} from 'sentry/views/settings/components/settingsPageHeader';
 
 /**
  * Lists 2fa devices + password change form

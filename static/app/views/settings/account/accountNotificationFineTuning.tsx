@@ -2,11 +2,12 @@ import {Fragment} from 'react';
 import {parseAsString, useQueryState} from 'nuqs';
 import {z} from 'zod';
 
-import {AutoSaveForm} from '@sentry/scraps/form';
-import {Flex, Stack} from '@sentry/scraps/layout';
+import {Text} from '@sentry/scraps/text';
 
-import {EmptyMessage} from 'sentry/components/emptyMessage';
-import {EmptyStateWarning} from 'sentry/components/emptyStateWarning';
+import EmptyMessage from 'sentry/components/emptyMessage';
+import EmptyStateWarning from 'sentry/components/emptyStateWarning';
+import SelectField from 'sentry/components/forms/fields/selectField';
+import Form from 'sentry/components/forms/form';
 import ProjectBadge from 'sentry/components/idBadge/projectBadge';
 import {LoadingError} from 'sentry/components/loadingError';
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
@@ -24,9 +25,12 @@ import {getApiUrl} from 'sentry/utils/api/getApiUrl';
 import {fetchMutation, keepPreviousData, useApiQuery} from 'sentry/utils/queryClient';
 import {ACCOUNT_NOTIFICATION_FIELDS} from 'sentry/views/settings/account/notifications/fields';
 import {OrganizationSelectHeader} from 'sentry/views/settings/account/notifications/organizationSelectHeader';
-import {groupByOrganization} from 'sentry/views/settings/account/notifications/utils';
+import {
+  getNotificationTypeFromPathname,
+  groupByOrganization,
+  isGroupedByProject,
+} from 'sentry/views/settings/account/notifications/utils';
 import {SettingsPageHeader} from 'sentry/views/settings/components/settingsPageHeader';
-import {TextBlock} from 'sentry/views/settings/components/text/textBlock';
 
 type EmailSelectOption = {label: string; value: string};
 
@@ -204,7 +208,11 @@ export function AccountNotificationFineTuning() {
   return (
     <div>
       <SettingsPageHeader title={field.title} />
-      {field.description && <TextBlock>{field.description}</TextBlock>}
+      {field.description && (
+        <Text as="div" density="comfortable">
+          {field.description}
+        </Text>
+      )}
       <Panel>
         <PanelHeader hasButtons>
           <Flex wrap="wrap" gap="md" flex="1" align="center">

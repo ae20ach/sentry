@@ -5,6 +5,7 @@ import {ProjectAvatar} from '@sentry/scraps/avatar';
 import {Button} from '@sentry/scraps/button';
 import {CompactSelect, type SelectOption} from '@sentry/scraps/compactSelect';
 import {OverlayTrigger} from '@sentry/scraps/overlayTrigger';
+import {Text} from '@sentry/scraps/text';
 import {Tooltip} from '@sentry/scraps/tooltip';
 
 import {addErrorMessage, addSuccessMessage} from 'sentry/actionCreators/indicator';
@@ -27,8 +28,7 @@ import {useApiQuery} from 'sentry/utils/queryClient';
 import {useApi} from 'sentry/utils/useApi';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useOrganization} from 'sentry/utils/useOrganization';
-import {ProjectItem as ProjectListItem} from 'sentry/views/settings/components/settingsProjectItem';
-import {TextBlock} from 'sentry/views/settings/components/text/textBlock';
+import ProjectListItem from 'sentry/views/settings/components/settingsProjectItem';
 import {useTeamDetailsOutlet} from 'sentry/views/settings/organizationTeams/teamDetails';
 
 export default function TeamProjects() {
@@ -107,11 +107,11 @@ export default function TeamProjects() {
 
   return (
     <Fragment>
-      <TextBlock>
+      <Text as="div" density="comfortable">
         {t(
           'If you have Team Admin permissions for other projects, you can associate them with this team.'
         )}
-      </TextBlock>
+      </Text>
       <Panel>
         <PanelHeader hasButtons>
           <div>{t('Projects')}</div>
