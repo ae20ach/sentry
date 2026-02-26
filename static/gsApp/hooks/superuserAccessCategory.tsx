@@ -3,11 +3,12 @@ import styled from '@emotion/styled';
 
 import {Alert} from '@sentry/scraps/alert';
 import {ExternalLink} from '@sentry/scraps/link';
+import {Text} from '@sentry/scraps/text';
 
 import {FieldRequiredBadge} from 'sentry/components/forms/fieldGroup/fieldRequiredBadge';
-import {RadioField} from 'sentry/components/forms/fields/radioField';
-import {TextField} from 'sentry/components/forms/fields/textField';
-import {TextBlock} from 'sentry/views/settings/components/text/textBlock';
+import RadioField from 'sentry/components/forms/fields/radioField';
+import TextField from 'sentry/components/forms/fields/textField';
+import {space} from 'sentry/styles/space';
 
 type SuperuserAccessCategories = [string, React.ReactNode];
 
@@ -41,7 +42,7 @@ export function SuperuserAccessCategory() {
         For more information on these categories, please{' '}
         <ExternalLink href={DOCUMENTATION_URL}>see this Notion document</ExternalLink>.
       </Alert>
-      <CategoriesLabel>
+      <CategoriesLabel as="div" density="comfortable">
         Categories of Superuser Access
         <FieldRequiredBadge />
       </CategoriesLabel>
@@ -90,9 +91,9 @@ export function SuperuserAccessCategory() {
   );
 }
 
-const CategoriesLabel = styled(TextBlock)`
-  margin-top: ${p => p.theme.space.md};
-  margin-bottom: ${p => p.theme.space.md};
+const CategoriesLabel = styled(Text)`
+  margin-top: ${space(1)};
+  margin-bottom: ${space(1)};
 `;
 
 const CategoryGrid = styled('div')`
