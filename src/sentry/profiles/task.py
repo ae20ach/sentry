@@ -15,9 +15,11 @@ from uuid import UUID
 import msgpack
 import sentry_sdk
 import vroomrs
+import zstandard
 from arroyo import Topic as ArroyoTopic
 from arroyo.backends.kafka import KafkaPayload, KafkaProducer
 from django.conf import settings
+from django.core.files.base import ContentFile
 from google.protobuf.timestamp_pb2 import Timestamp
 from packaging.version import InvalidVersion
 from packaging.version import parse as parse_version
@@ -80,6 +82,26 @@ REVERSE_DEVICE_CLASS = {next(iter(tags)): label for label, tags in DEVICE_CLASS.
 MAX_DURATION_SAMPLE_V2 = 66000
 
 UI_PROFILE_PLATFORMS = {"cocoa", "android", "javascript"}
+
+
+def _is_android_sample_v2(profile: Profile) -> bool:
+    return profile.get("version") == "2" and profile["platform"] == "android"
+
+
+# Java/Android package prefixes that are always system frames.
+JAVA_SYSTEM_PACKAGE_PREFIXES = (
+    "android.",
+    "androidx.",
+    "com.android.",
+    "com.google.android.",
+    "com.motorola.",
+    "java.",
+    "javax.",
+    "kotlin.",
+    "kotlinx.",
+    "retrofit2.",
+    "sun.",
+)
 
 UNSAMPLED_PROFILE_ID = "00000000000000000000000000000000"
 
@@ -164,7 +186,8 @@ def process_profile_task(
                 "sampled": sampled,
             }
         )
-
+        if "raw_profile_content_type" in message_dict:
+            profile["raw_profile_content_type"] = message_dict["raw_profile_content_type"]
     assert profile is not None
 
     if not sampled:
@@ -236,6 +259,9 @@ def process_profile_task(
     # only for those platforms that didn't go through symbolication
     _set_frames_platform(profile)
 
+    if _is_android_sample_v2(profile):
+        _set_in_app_for_android_v2_frames(profile)
+
     if "version" in profile:
         set_span_attribute("profile.samples.processed", len(profile["profile"]["samples"]))
         set_span_attribute("profile.stacks.processed", len(profile["profile"]["stacks"]))
@@ -285,6 +311,26 @@ def process_profile_task(
                 categories=[DataCategory.PROFILE_INDEXED],
                 reason="sampled",
             )
+
+    if (
+        payload
+        and message_dict.get("raw_profile")
+        and message_dict.get("raw_profile_content_type") == "perfetto"
+    ):
+        _store_raw_profile(profile, message_dict["raw_profile"])
+
+
+def _store_raw_profile(profile: Profile, raw_profile: bytes) -> None:
+    if not options.get("profiling.store-raw-perfetto-traces.enabled"):
+        return
+    try:
+        storage = get_profiles_storage()
+        content_type = profile.get("raw_profile_content_type", profile["platform"])
+        path = f"profiles/raw/{profile['project_id']}/{profile['chunk_id']}/{content_type}.zstd"
+        compressed = zstandard.compress(raw_profile)
+        storage.save(path, ContentFile(compressed))
+    except Exception:
+        logger.exception("Failed to store raw profile")
 
 
 def _is_deprecated(profile: Profile, project: Project, organization: Organization) -> bool:
@@ -361,16 +407,30 @@ SHOULD_DEOBFUSCATE = frozenset(["android"])
 
 
 def _should_symbolicate(profile: Profile) -> bool:
+    if profile.get("processed_by_symbolicator", False):
+        return False
+    if _is_android_sample_v2(profile):
+        return True
     platform: str = profile["platform"]
-    return platform in SHOULD_SYMBOLICATE and not profile.get("processed_by_symbolicator", False)
+    return platform in SHOULD_SYMBOLICATE
 
 
 def _should_deobfuscate(profile: Profile) -> bool:
+    if _is_android_sample_v2(profile):
+        return False
     platform: str = profile["platform"]
     return platform in SHOULD_DEOBFUSCATE and not profile.get("deobfuscated", False)
 
 
 def get_profile_platforms(profile: Profile) -> list[str]:
+    if _is_android_sample_v2(profile):
+        platforms: list[str] = []
+        for frame in profile["profile"]["frames"]:
+            p = frame.get("platform", "")
+            if p and p not in platforms:
+                platforms.append(p)
+        return platforms if platforms else [profile["platform"]]
+
     platforms = [profile["platform"]]
 
     if "version" in profile and profile["platform"] in SHOULD_SYMBOLICATE_JS:
@@ -385,6 +445,8 @@ def get_profile_platforms(profile: Profile) -> list[str]:
 def get_debug_images_for_platform(profile: Profile, platform: str) -> list[dict[str, Any]]:
     if platform in SHOULD_SYMBOLICATE_JS:
         return [image for image in profile["debug_meta"]["images"] if image["type"] == "sourcemap"]
+    if platform == "java":
+        return [image for image in profile["debug_meta"]["images"] if image["type"] == "proguard"]
     return native_images_from_data(profile)
 
 
@@ -495,9 +557,12 @@ def _normalize_profile(profile: Profile, organization: Organization, project: Pr
 
 @metrics.wraps("process_profile.normalize")
 def _normalize(profile: Profile, organization: Organization) -> None:
-    profile["retention_days"] = quotas.backend.get_event_retention(
-        organization=organization,
-        category=_get_duration_category(profile),
+    profile["retention_days"] = (
+        quotas.backend.get_event_retention(
+            organization=organization,
+            category=_get_duration_category(profile),
+        )
+        or 90
     )
     platform = profile["platform"]
     version = profile.get("version")
@@ -543,14 +608,13 @@ def _prepare_frames_from_profile(
                 frames = [profile["profile"]["frames"][idx] for idx in frames_sent]
             else:
                 if profile["platform"] != platform:
-                    # we might have both js and cocoa frames (react native)
-                    # and we need to filter only for the cocoa ones
+                    # Filter frames for the current platform pass.
+                    # This applies to react-native (js + cocoa) and
+                    # perfetto profiles (java + native).
                     for idx, f in enumerate(profile["profile"]["frames"]):
-                        if (
-                            f.get("platform", "") == platform
-                            and f.get("instruction_addr") is not None
-                        ):
-                            frames_sent.add(idx)
+                        if f.get("platform", "") == platform:
+                            if platform == "java" or f.get("instruction_addr") is not None:
+                                frames_sent.add(idx)
                     frames = [profile["profile"]["frames"][idx] for idx in frames_sent]
                 else:
                     # if the root platform is cocoa, then we know we have only cocoa frames
@@ -564,21 +628,22 @@ def _prepare_frames_from_profile(
                         first_frame_idx = stack[0]
                         frame = deepcopy(profile["profile"]["frames"][first_frame_idx])
                         frame["adjust_instruction_addr"] = False
-                        if profile["platform"] not in JS_PLATFORMS:
-                            frames.append(frame)
-                            stack[0] = len(frames) - 1
-                        else:
-                            # In case where root platform is not cocoa, but we're dealing
-                            # with a cocoa stack (as in react-native), since we're relying
-                            # on frames_sent instead of sending back the whole
-                            # profile["profile"]["frames"], we have to append the deepcopy
-                            # frame both to the original frames and to the list frames.
-                            # see _process_symbolicator_results_for_sample method's logic
+                        if len(frames_sent) > 0:
+                            # Multi-platform profile (react-native or perfetto):
+                            # only deepcopy if the leaf frame belongs to the
+                            # current platform pass, and append to both the
+                            # profile frames and the filtered frames list so
+                            # indices stay consistent.
                             if first_frame_idx in frames_sent:
                                 profile["profile"]["frames"].append(frame)
                                 frames.append(frame)
                                 stack[0] = len(profile["profile"]["frames"]) - 1
                                 frames_sent.add(stack[0])
+                        else:
+                            # Single-platform profile: frames IS the profile
+                            # frames list, so appending to it is sufficient.
+                            frames.append(frame)
+                            stack[0] = len(frames) - 1
 
             stacktraces = [{"frames": frames}]
         # in the original format, we need to gather frames from all samples
@@ -616,7 +681,7 @@ def symbolicate(
             frame_order=frame_order,
             apply_source_context=False,
         )
-    elif platform == "android":
+    elif platform in ("android", "java"):
         return symbolicator.process_jvm(
             platform=platform,
             exceptions=[],
@@ -658,6 +723,8 @@ def run_symbolicate(
 
     if platform in SHOULD_SYMBOLICATE_JS:
         symbolicator_platform = SymbolicatorPlatform.js
+    elif platform == "java":
+        symbolicator_platform = SymbolicatorPlatform.jvm
     else:
         symbolicator_platform = SymbolicatorPlatform.native
     symbolicator = Symbolicator(
@@ -1243,12 +1310,35 @@ def _calculate_duration_for_android_format(profile: Profile) -> int:
 
 def _set_frames_platform(profile: Profile) -> None:
     platform = profile["platform"]
-    frames = (
-        profile["profile"]["methods"] if platform == "android" else profile["profile"]["frames"]
-    )
+    if platform == "android" and "methods" in profile["profile"]:
+        frames = profile["profile"]["methods"]
+    else:
+        frames = profile["profile"]["frames"]
     for f in frames:
         if "platform" not in f:
             f["platform"] = platform
+
+
+def _set_in_app_for_android_v2_frames(profile: Profile) -> None:
+    """Mark known system packages as not in-app for Android Sample v2 profiles.
+
+    For Java frames whose module (class name) starts with a known system
+    package prefix, ``in_app`` is set to ``False``.  Frames that already
+    have ``in_app`` set (e.g. by the symbolicator) are left untouched.
+    Native frames without ``in_app`` default to ``False``.
+    """
+    for frame in profile["profile"]["frames"]:
+        if frame.get("in_app") is not None:
+            continue
+        platform = frame.get("platform", "")
+        if platform == "java":
+            module = frame.get("module") or ""
+            if module.startswith(JAVA_SYSTEM_PACKAGE_PREFIXES):
+                frame["in_app"] = False
+            else:
+                frame["in_app"] = True
+        elif platform == "native":
+            frame["in_app"] = False
 
 
 class UnknownProfileTypeException(Exception):

@@ -822,6 +822,9 @@ from .endpoints.project_performance_general_settings import (
 )
 from .endpoints.project_plugin_details import ProjectPluginDetailsEndpoint
 from .endpoints.project_plugins import ProjectPluginsEndpoint
+from .endpoints.project_profiling_download import (
+    ProjectProfilingDownloadEndpoint,
+)
 from .endpoints.project_profiling_profile import (
     ProjectProfilingProfileEndpoint,
     ProjectProfilingRawChunkEndpoint,
@@ -3285,6 +3288,11 @@ PROJECT_URLS: list[URLPattern | URLResolver] = [
         r"^(?P<organization_id_or_slug>[^/]+)/(?P<project_id_or_slug>[^/]+)/profiling/raw_chunks/(?P<profiler_id>(?:\d+|[A-Fa-f0-9-]{32,36}))/(?P<chunk_id>(?:\d+|[A-Fa-f0-9-]{32,36}))/$",
         ProjectProfilingRawChunkEndpoint.as_view(),
         name="sentry-api-0-project-profiling-raw-chunk",
+    ),
+    re_path(
+        r"^(?P<organization_id_or_slug>[^/]+)/(?P<project_id_or_slug>[^/]+)/profiling/download/(?P<chunk_id>[^/]+)/(?P<trace_format>[^/]+)/$",
+        ProjectProfilingDownloadEndpoint.as_view(),
+        name="sentry-api-0-project-profiling-download",
     ),
     re_path(
         r"^(?P<organization_id_or_slug>[^/]+)/(?P<project_id_or_slug>[^/]+)/statistical-detector/$",

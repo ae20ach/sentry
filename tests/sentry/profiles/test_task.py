@@ -26,8 +26,11 @@ from sentry.profiles.task import (
     _deobfuscate,
     _deobfuscate_using_symbolicator,
     _normalize,
+    _prepare_frames_from_profile,
     _process_symbolicator_results_for_sample,
     _set_frames_platform,
+    _set_in_app_for_android_v2_frames,
+    _store_raw_profile,
     _symbolicate_profile,
     process_profile_task,
 )
@@ -498,6 +501,140 @@ def test_process_symbolicator_results_for_sample_js() -> None:
     assert profile["profile"]["stacks"] == [[0, 1, 2, 3]]
 
 
+def test_process_symbolicator_results_for_perfetto_mixed_platforms() -> None:
+    """Test that a perfetto profile with both java and native frames
+    is correctly symbolicated in two sequential passes, and the results
+    are merged back into a single frames list."""
+
+    # Perfetto profile with mixed java (indices 0, 2) and native (indices 1, 3) frames.
+    # Stack is: java_A -> native_B -> java_C -> native_D (callee to caller)
+    profile: dict[str, Any] = {
+        "version": "2",
+        "platform": "android",
+        "raw_profile_content_type": "perfetto",
+        "debug_meta": {
+            "images": [
+                {"type": "proguard", "uuid": "abc123"},
+                {"type": "elf", "code_id": "def456", "image_addr": "0x7000000000"},
+            ],
+        },
+        "profile": {
+            "frames": [
+                {
+                    "function": "a.b.c.obfuscated1",
+                    "platform": "java",
+                },
+                {
+                    "function": "",
+                    "instruction_addr": "0x7000001000",
+                    "platform": "native",
+                },
+                {
+                    "function": "a.b.c.obfuscated2",
+                    "platform": "java",
+                },
+                {
+                    "function": "",
+                    "instruction_addr": "0x7000002000",
+                    "platform": "native",
+                },
+            ],
+            "samples": [
+                {"stack_id": 0, "timestamp": 1000.0, "thread_id": "1"},
+            ],
+            "stacks": [
+                [0, 1, 2, 3],
+            ],
+        },
+    }
+
+    # --- Pass 1: java frames (indices 0, 2) ---
+    _, _, java_frames_sent = _prepare_frames_from_profile(profile, "java")
+
+    # The leaf frame (index 0, java) is deepcopied with adjust_instruction_addr=False
+    # and appended as index 4. stack[0] is updated to point to this copy.
+    assert java_frames_sent == {0, 2, 4}
+    assert profile["profile"]["stacks"] == [[4, 1, 2, 3]]
+
+    # Symbolicator returns deobfuscated java frames (3 frames sent: indices 0, 2, 4)
+    java_stacktraces = [
+        {
+            "frames": [
+                {
+                    "function": "com.example.ClassA.method1",
+                    "platform": "java",
+                    "original_index": 0,
+                },
+                {
+                    "function": "com.example.ClassB.method2",
+                    "platform": "java",
+                    "original_index": 1,
+                },
+                {
+                    "function": "com.example.ClassA.method1",
+                    "platform": "java",
+                    "original_index": 2,
+                },
+            ],
+        },
+    ]
+
+    _process_symbolicator_results_for_sample(profile, java_stacktraces, java_frames_sent, "java")
+
+    # After java pass: java frames deobfuscated, native frames unchanged.
+    assert profile["profile"]["frames"][0]["function"] == "com.example.ClassA.method1"
+    assert profile["profile"]["frames"][1]["function"] == ""
+    assert profile["profile"]["frames"][1]["platform"] == "native"
+    assert profile["profile"]["frames"][2]["function"] == "com.example.ClassB.method2"
+    assert profile["profile"]["frames"][3]["function"] == ""
+    assert profile["profile"]["frames"][3]["platform"] == "native"
+    # Index 4 is the deobfuscated leaf frame copy
+    assert profile["profile"]["frames"][4]["function"] == "com.example.ClassA.method1"
+
+    # --- Pass 2: native frames (indices 1, 3) ---
+    _, _, native_frames_sent = _prepare_frames_from_profile(profile, "native")
+    assert native_frames_sent == {1, 3}
+
+    native_stacktraces = [
+        {
+            "frames": [
+                {
+                    "function": "libc.so!malloc",
+                    "instruction_addr": "0x7000001000",
+                    "platform": "native",
+                    "original_index": 0,
+                },
+                {
+                    "function": "libhwui.so!drawFrame",
+                    "instruction_addr": "0x7000002000",
+                    "platform": "native",
+                    "original_index": 1,
+                },
+            ],
+        },
+    ]
+
+    _process_symbolicator_results_for_sample(
+        profile, native_stacktraces, native_frames_sent, "native"
+    )
+
+    # After both passes: all frames should be symbolicated/deobfuscated.
+    assert profile["profile"]["frames"][0]["function"] == "com.example.ClassA.method1"
+    assert profile["profile"]["frames"][0]["platform"] == "java"
+    assert profile["profile"]["frames"][1]["function"] == "libc.so!malloc"
+    assert profile["profile"]["frames"][1]["platform"] == "native"
+    assert profile["profile"]["frames"][2]["function"] == "com.example.ClassB.method2"
+    assert profile["profile"]["frames"][2]["platform"] == "java"
+    assert profile["profile"]["frames"][3]["function"] == "libhwui.so!drawFrame"
+    assert profile["profile"]["frames"][3]["platform"] == "native"
+    # Index 4: leaf frame copy, also deobfuscated
+    assert profile["profile"]["frames"][4]["function"] == "com.example.ClassA.method1"
+    assert profile["profile"]["frames"][4]["platform"] == "java"
+
+    # Stack uses index 4 for the leaf (adjust_instruction_addr copy of frame 0).
+    assert profile["profile"]["stacks"] == [[4, 1, 2, 3]]
+
+
 @django_db_all
 def test_decode_signature(project, android_profile) -> None:
     android_profile.update(
@@ -821,6 +958,107 @@ def test_set_frames_platform_sample() -> None:
 
     platforms = [f["platform"] for f in js_prof["profile"]["frames"]]
     assert platforms == ["javascript", "cocoa", "javascript"]
+
+
+def test_set_in_app_for_android_v2_frames() -> None:
+    profile: Profile = {
+        "platform": "android",
+        "version": "2",
+        "profile": {
+            "frames": [
+                # Java system frames
+                {"platform": "java", "module": "android.app.Activity", "function": "onCreate"},
+                {
+                    "platform": "java",
+                    "module": "androidx.core.app.CoreActivity",
+                    "function": "init",
+                },
+                {
+                    "platform": "java",
+                    "module": "kotlin.coroutines.Continuation",
+                    "function": "resume",
+                },
+                {"platform": "java", "module": "java.lang.Thread", "function": "run"},
+                {"platform": "java", "module": "javax.net.ssl.SSLSocket", "function": "connect"},
+                {
+                    "platform": "java",
+                    "module": "com.android.internal.os.ZygoteInit",
+                    "function": "main",
+                },
+                {
+                    "platform": "java",
+                    "module": "com.google.android.gms.common.GoogleApiClient",
+                    "function": "connect",
+                },
+                {"platform": "java", "module": "retrofit2.OkHttpCall", "function": "execute"},
+                {"platform": "java", "module": "sun.misc.Unsafe", "function": "getObject"},
+                {
+                    "platform": "java",
+                    "module": "kotlinx.coroutines.CoroutineScope",
+                    "function": "launch",
+                },
+                {
+                    "platform": "java",
+                    "module": "com.motorola.camera.CameraApp",
+                    "function": "start",
+                },
+                # Java app frames
+                {
+                    "platform": "java",
+                    "module": "com.example.myapp.MainActivity",
+                    "function": "doWork",
+                },
+                {"platform": "java", "module": "io.sentry.Sentry", "function": "init"},
+                {"platform": "java", "module": "org.apache.http.HttpClient", "function": "execute"},
+                # Java frame with no module
+                {"platform": "java", "function": "unknownFunction"},
+                # Native frames
+                {"platform": "native", "function": "__libc_init", "module": "libc.so"},
+                {"platform": "native", "function": "main", "module": "app_process64"},
+                # Frame with in_app already set by symbolicator
+                {
+                    "platform": "java",
+                    "module": "android.view.View",
+                    "function": "draw",
+                    "in_app": True,
+                },
+            ],
+            "samples": [],
+            "stacks": [],
+        },
+    }
+
+    _set_in_app_for_android_v2_frames(profile)
+
+    frames = profile["profile"]["frames"]
+
+    # Java system frames -> in_app=False
+    assert frames[0]["in_app"] is False  # android.app
+    assert frames[1]["in_app"] is False  # androidx.core
+    assert frames[2]["in_app"] is False  # kotlin.coroutines
+    assert frames[3]["in_app"] is False  # java.lang
+    assert frames[4]["in_app"] is False  # javax.net
+    assert frames[5]["in_app"] is False  # com.android.internal
+    assert frames[6]["in_app"] is False  # com.google.android
+    assert frames[7]["in_app"] is False  # retrofit2
+    assert frames[8]["in_app"] is False  # sun.misc
+    assert frames[9]["in_app"] is False  # kotlinx.coroutines
+    assert frames[10]["in_app"] is False  # com.motorola
+
+    # Java app frames -> in_app=True
+    assert frames[11]["in_app"] is True  # com.example.myapp
+    assert frames[12]["in_app"] is True  # io.sentry
+    assert frames[13]["in_app"] is True  # org.apache
+
+    # Java frame with no module -> in_app=True (not a known system package)
+    assert frames[14]["in_app"] is True
+
+    # Native frames -> in_app=False
+    assert frames[15]["in_app"] is False
+    assert frames[16]["in_app"] is False
+
+    # Frame with in_app already set -> preserved
+    assert frames[17]["in_app"] is True
 
 
 def test_set_frames_platform_android() -> None:
@@ -1223,3 +1461,47 @@ def test_process_profile_task_should_flip_project_flag(
     )
     project.refresh_from_db()
     assert project.flags.has_profiles
+
+
+@django_db_all
+def test_store_raw_profile_stores_compressed_data():
+    import zstandard
+
+    from sentry.models.files.utils import get_profiles_storage
+
+    profile: dict[str, Any] = {
+        "project_id": 456,
+        "chunk_id": "11111111-2222-3333-4444-555555555555",
+        "platform": "android",
+        "raw_profile_content_type": "perfetto",
+    }
+    raw_profile = b"fake perfetto binary data"
+
+    with override_options({"profiling.store-raw-perfetto-traces.enabled": True}):
+        _store_raw_profile(profile, raw_profile)
+
+    storage = get_profiles_storage()
+    path = "profiles/raw/456/11111111-2222-3333-4444-555555555555/perfetto.zstd"
+    with storage.open(path) as f:
+        decompressed = zstandard.decompress(f.read())
+    assert decompressed == raw_profile
+
+
+@django_db_all
+def test_store_raw_profile_skips_when_option_disabled():
+    from sentry.models.files.utils import get_profiles_storage
+
+    profile: dict[str, Any] = {
+        "project_id": 789,
+        "chunk_id": "aaaaaaaa-bbbb-cccc-dddd-ffffffffffff",
+        "platform": "android",
+        "raw_profile_content_type": "perfetto",
+    }
+    raw_profile = b"fake perfetto binary data"
+
+    with override_options({"profiling.store-raw-perfetto-traces.enabled": False}):
+        _store_raw_profile(profile, raw_profile)
+
+    storage = get_profiles_storage()
+    path = "profiles/raw/789/aaaaaaaa-bbbb-cccc-dddd-ffffffffffff/perfetto.zstd"
+    assert not storage.exists(path)
