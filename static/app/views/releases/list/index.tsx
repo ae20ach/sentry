@@ -41,6 +41,7 @@ import {useLocation} from 'sentry/utils/useLocation';
 import {useNavigate} from 'sentry/utils/useNavigate';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {useProjects} from 'sentry/utils/useProjects';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 import {ReleaseArchivedNotice} from 'sentry/views/releases/detail/overview/releaseArchivedNotice';
 import {MobileBuilds} from 'sentry/views/releases/list/mobileBuilds';
 import {ReleaseHealthCTA} from 'sentry/views/releases/list/releaseHealthCTA';
@@ -109,6 +110,7 @@ function makeReleaseListQueryKey({
 export default function ReleasesList() {
   const api = useApi({persistInFlight: true});
   const organization = useOrganization();
+  const hasPageFrame = useHasPageFrameFeature();
   const {projects} = useProjects();
   const {selection} = usePageFilters();
   const location = useLocation();
@@ -425,16 +427,18 @@ export default function ReleasesList() {
                   </Layout.Title>
                 </Layout.HeaderContent>
                 <Layout.HeaderActions>
-                  <FeedbackButton
-                    feedbackOptions={{
-                      messagePlaceholder: t(
-                        'How can we improve the Releases experience?'
-                      ),
-                      tags: {
-                        ['feedback.source']: 'releases-list-header',
-                      },
-                    }}
-                  />
+                  {!hasPageFrame && (
+                    <FeedbackButton
+                      feedbackOptions={{
+                        messagePlaceholder: t(
+                          'How can we improve the Releases experience?'
+                        ),
+                        tags: {
+                          ['feedback.source']: 'releases-list-header',
+                        },
+                      }}
+                    />
+                  )}
                 </Layout.HeaderActions>
               </Flex>
 

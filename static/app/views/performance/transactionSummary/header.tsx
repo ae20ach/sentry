@@ -32,6 +32,7 @@ import {FRONTEND_LANDING_SUB_PATH} from 'sentry/views/insights/pages/frontend/se
 import {MobileHeader} from 'sentry/views/insights/pages/mobile/mobilePageHeader';
 import {MOBILE_LANDING_SUB_PATH} from 'sentry/views/insights/pages/mobile/settings';
 import {useDomainViewFilters} from 'sentry/views/insights/pages/useFilters';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 import {Breadcrumb, getTabCrumbs} from 'sentry/views/performance/breadcrumb';
 import {useTransactionSummaryEAP} from 'sentry/views/performance/eap/useTransactionSummaryEAP';
 import {TAB_ANALYTICS} from 'sentry/views/performance/transactionSummary/pageLayout';
@@ -72,6 +73,7 @@ export function TransactionHeader({
 }: Props) {
   const {isInDomainView, view} = useDomainViewFilters();
   const navigate = useNavigate();
+  const hasPageFrame = useHasPageFrameFeature();
 
   const getNewRoute = useCallback(
     (newTab: Tab) => {
@@ -314,7 +316,7 @@ export function TransactionHeader({
               onChangeThreshold={onChangeThreshold}
             />
           </GuideAnchor>
-          <FeedbackButton />
+          {!hasPageFrame && <FeedbackButton />}
         </Grid>
       </Layout.HeaderActions>
       <TabList

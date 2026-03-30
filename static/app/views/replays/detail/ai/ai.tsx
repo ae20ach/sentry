@@ -18,6 +18,7 @@ import {trackAnalytics} from 'sentry/utils/analytics';
 import {useReplayReader} from 'sentry/utils/replays/playback/providers/replayReaderProvider';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {useProjectFromId} from 'sentry/utils/useProjectFromId';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 import {ChapterList} from 'sentry/views/replays/detail/ai/chapterList';
 import {useReplaySummaryContext} from 'sentry/views/replays/detail/ai/replaySummaryContext';
 import {ReplaySummaryLoading} from 'sentry/views/replays/detail/ai/replaySummaryLoading';
@@ -262,7 +263,8 @@ function ThumbsUpDownButton({
   type: 'positive' | 'negative';
   disabled?: boolean;
 }) {
-  return (
+  const hasPageFrame = useHasPageFrameFeature();
+  return hasPageFrame ? null : (
     <FeedbackButton
       aria-label={t('Give feedback on the replay summary section')}
       icon={<IconThumb direction={type === 'positive' ? 'up' : 'down'} />}

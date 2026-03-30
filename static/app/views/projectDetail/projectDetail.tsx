@@ -35,6 +35,7 @@ import {useNavigate} from 'sentry/utils/useNavigate';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {useParams} from 'sentry/utils/useParams';
 import {useProjects} from 'sentry/utils/useProjects';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 import {makeProjectsPathname} from 'sentry/views/projects/pathname';
 
 import {ERRORS_BASIC_CHART_PERIODS} from './charts/projectErrorsBasicChart';
@@ -49,6 +50,7 @@ import {ProjectTeamAccess} from './projectTeamAccess';
 
 export function ProjectDetail() {
   const api = useApi();
+  const hasPageFrame = useHasPageFrameFeature();
   const params = useParams<{orgId: string; projectId: string}>();
   const location = useLocation();
   const navigate = useNavigate();
@@ -205,7 +207,7 @@ export function ProjectDetail() {
 
               <Layout.HeaderActions>
                 <Grid flow="column" align="center" gap="md">
-                  <FeedbackButton />
+                  {!hasPageFrame && <FeedbackButton />}
                   <LinkButton
                     size="sm"
                     to={

@@ -28,6 +28,7 @@ import {
 import {IncidentStatus} from 'sentry/views/alerts/types';
 import {AlertWizardAlertNames} from 'sentry/views/alerts/wizard/options';
 import {getAlertTypeFromAggregateDataset} from 'sentry/views/alerts/wizard/utils';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 interface MetricDetailsSidebarProps {
   rule: MetricRule;
@@ -143,6 +144,7 @@ export function MetricDetailsSidebar({
   rule,
   showOnDemandMetricAlertUI,
 }: MetricDetailsSidebarProps) {
+  const hasPageFrame = useHasPageFrameFeature();
   // get current status
   const latestIncident = rule.latestIncident;
 
@@ -160,7 +162,7 @@ export function MetricDetailsSidebar({
   const ownerId = rule.owner?.split(':')[1];
   const teamActor = ownerId && {type: 'team' as Actor['type'], id: ownerId, name: ''};
 
-  const feedbackButton = (
+  const feedbackButton = !hasPageFrame && (
     <FeedbackButton
       feedbackOptions={{
         formTitle: t('Anomaly Detection Feedback'),

@@ -11,9 +11,11 @@ import {FeedbackButton} from 'sentry/components/feedbackButton/feedbackButton';
 import {IconThumb} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {useSyncedLocalStorageState} from 'sentry/utils/useSyncedLocalStorageState';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 export function FeedbackSummaryCategories() {
   const {areAiFeaturesAllowed} = useOrganizationSeerSetup();
+  const hasPageFrame = useHasPageFrameFeature();
 
   const [isExpanded, setIsExpanded] = useSyncedLocalStorageState(
     'user-feedback-ai-summary-categories-expanded',
@@ -61,8 +63,8 @@ export function FeedbackSummaryCategories() {
         <Disclosure.Title
           trailingItems={
             <Flex gap="xs">
-              {feedbackButton({type: 'positive'})}
-              {feedbackButton({type: 'negative'})}
+              {!hasPageFrame && feedbackButton({type: 'positive'})}
+              {!hasPageFrame && feedbackButton({type: 'negative'})}
             </Flex>
           }
         >

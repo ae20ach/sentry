@@ -37,9 +37,11 @@ import {useDetectorsQuery} from 'sentry/views/detectors/hooks';
 import {makeMonitorTypePathname} from 'sentry/views/detectors/pathnames';
 import {OverviewTimeline} from 'sentry/views/insights/uptime/components/overviewTimeline';
 import {MODULE_DESCRIPTION, MODULE_DOC_LINK} from 'sentry/views/insights/uptime/settings';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 export default function UptimeOverview() {
   const organization = useOrganization();
+  const hasPageFrame = useHasPageFrameFeature();
   const navigate = useNavigate();
   const location = useLocation();
   const project = decodeList(location.query?.project);
@@ -82,7 +84,7 @@ export default function UptimeOverview() {
         </Layout.HeaderContent>
         <Layout.HeaderActions>
           <Grid flow="column" align="center" gap="md">
-            <FeedbackButton />
+            {!hasPageFrame && <FeedbackButton />}
             <LinkButton
               size="sm"
               priority="primary"

@@ -19,6 +19,7 @@ import {useApiQuery} from 'sentry/utils/queryClient';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {SupergroupDetailDrawer} from 'sentry/views/issueList/supergroups/supergroupDrawer';
 import type {SupergroupDetail} from 'sentry/views/issueList/supergroups/types';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 interface ListSupergroupsResponse {
   data: SupergroupDetail[];
@@ -86,6 +87,7 @@ function SupergroupCard({
 
 function Supergroups() {
   const organization = useOrganization();
+  const hasPageFrame = useHasPageFrameFeature();
   const hasTopIssuesUI = organization.features.includes('top-issues-ui');
   const {openDrawer} = useDrawer();
 
@@ -129,16 +131,18 @@ function Supergroups() {
           </Flex>
         </Layout.HeaderContent>
         <Layout.HeaderActions>
-          <FeedbackButton
-            size="sm"
-            feedbackOptions={{
-              messagePlaceholder: t('What do you think about Supergroups?'),
-              tags: {
-                ['feedback.source']: 'supergroups',
-                ['feedback.owner']: 'issues',
-              },
-            }}
-          />
+          {!hasPageFrame && (
+            <FeedbackButton
+              size="sm"
+              feedbackOptions={{
+                messagePlaceholder: t('What do you think about Supergroups?'),
+                tags: {
+                  ['feedback.source']: 'supergroups',
+                  ['feedback.owner']: 'issues',
+                },
+              }}
+            />
+          )}
         </Layout.HeaderActions>
       </Layout.Header>
 

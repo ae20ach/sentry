@@ -2,6 +2,7 @@ import {type ComponentProps} from 'react';
 
 import {FeedbackButton} from 'sentry/components/feedbackButton/feedbackButton';
 import {t} from 'sentry/locale';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 interface AutofixFeedbackProps extends ComponentProps<typeof FeedbackButton> {
   iconOnly?: boolean;
@@ -12,6 +13,8 @@ export function AutofixFeedback({
   iconOnly = false,
   ...buttonProps
 }: AutofixFeedbackProps) {
+  const hasPageFrame = useHasPageFrameFeature();
+  if (hasPageFrame) return null;
   return (
     <FeedbackButton
       size="xs"

@@ -59,6 +59,7 @@ import type {DashboardsLayout} from 'sentry/views/dashboards/manage/types';
 import {DashboardFilter, PREBUILT_DASHBOARD_LABEL} from 'sentry/views/dashboards/types';
 import type {DashboardDetails, DashboardListItem} from 'sentry/views/dashboards/types';
 import {PREBUILT_DASHBOARDS} from 'sentry/views/dashboards/utils/prebuiltConfigs';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 import RouteError from 'sentry/views/routeError';
 
 import DashboardGrid from './dashboardGrid';
@@ -162,6 +163,7 @@ function ManageDashboards() {
   const navigate = useNavigate();
   const location = useLocation();
   const api = useApi();
+  const hasPageFrame = useHasPageFrameFeature();
   const dashboardGridRef = useRef<HTMLDivElement>(null);
   const hasPrebuiltDashboards = organization.features.includes(
     'dashboards-prebuilt-insights-dashboards'
@@ -659,7 +661,7 @@ function ManageDashboards() {
                         </TemplateSwitch>
                       )}
 
-                      <FeedbackButton />
+                      {!hasPageFrame && <FeedbackButton />}
                       <Feature features={['dashboards-ai-generate']}>
                         {({hasFeature: hasAiGenerate}) =>
                           hasAiGenerate && areAiFeaturesAllowed ? (

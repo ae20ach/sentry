@@ -38,6 +38,7 @@ import {useOrganization} from 'sentry/utils/useOrganization';
 import {SectionKey} from 'sentry/views/issueDetails/streamline/context';
 import {useIssueDetailsEventView} from 'sentry/views/issueDetails/streamline/hooks/useIssueDetailsDiscoverQuery';
 import {InterimSection} from 'sentry/views/issueDetails/streamline/interimSection';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 export function EventFeatureFlagSection(props: EventFeatureFlagSectionProps) {
   return (
@@ -57,20 +58,22 @@ function BaseEventFeatureFlagList({event, group, project}: EventFeatureFlagSecti
   const organization = useOrganization();
   const theme = useTheme();
   const isXsScreen = useMedia(`(max-width: ${theme.breakpoints.xs})`);
+  const hasPageFrame = useHasPageFrameFeature();
 
-  const feedbackButton = isXsScreen ? null : (
-    <FeedbackButton
-      aria-label={t('Give feedback on the feature flag section')}
-      size="xs"
-      feedbackOptions={{
-        messagePlaceholder: t('How can we make feature flags work better for you?'),
-        tags: {
-          ['feedback.source']: 'issue_details_feature_flags',
-          ['feedback.owner']: 'replay',
-        },
-      }}
-    />
-  );
+  const feedbackButton =
+    isXsScreen || hasPageFrame ? null : (
+      <FeedbackButton
+        aria-label={t('Give feedback on the feature flag section')}
+        size="xs"
+        feedbackOptions={{
+          messagePlaceholder: t('How can we make feature flags work better for you?'),
+          tags: {
+            ['feedback.source']: 'issue_details_feature_flags',
+            ['feedback.owner']: 'replay',
+          },
+        }}
+      />
+    );
 
   const [orderBy, setOrderBy] = useState<OrderBy>(OrderBy.NEWEST);
   const {closeDrawer, isDrawerOpen, openDrawer} = useDrawer();

@@ -14,6 +14,7 @@ import {
 } from 'sentry/views/explore/logs/types';
 import {useModuleURLBuilder} from 'sentry/views/insights/common/utils/useModuleURL';
 import {useDomainViewFilters} from 'sentry/views/insights/pages/useFilters';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 import type {TraceMetaQueryResults} from 'sentry/views/performance/newTraceDetails/traceApi/useTraceMeta';
 import type {TraceRootEventQueryResults} from 'sentry/views/performance/newTraceDetails/traceApi/useTraceRootEvent';
 import {Highlights} from 'sentry/views/performance/newTraceDetails/traceHeader/highlights';
@@ -42,6 +43,7 @@ export interface TraceMetadataHeaderProps {
 export function TraceMetaDataHeader(props: TraceMetadataHeaderProps) {
   const location = useLocation();
   const {view} = useDomainViewFilters();
+  const hasPageFrame = useHasPageFrameFeature();
   const moduleURLBuilder = useModuleURLBuilder(true);
   const {projects} = useProjects();
   const {hasLogs, hasMetrics} = useTraceContextSections({
@@ -89,16 +91,18 @@ export function TraceMetaDataHeader(props: TraceMetadataHeaderProps) {
             })}
           />
           <Grid flow="column" align="center" gap="md">
-            <FeedbackButton
-              size="xs"
-              feedbackOptions={{
-                messagePlaceholder: t('How can we make the trace view better for you?'),
-                tags: {
-                  ['feedback.source']: 'trace-view',
-                  ['feedback.owner']: 'performance',
-                },
-              }}
-            />
+            {!hasPageFrame && (
+              <FeedbackButton
+                size="xs"
+                feedbackOptions={{
+                  messagePlaceholder: t('How can we make the trace view better for you?'),
+                  tags: {
+                    ['feedback.source']: 'trace-view',
+                    ['feedback.owner']: 'performance',
+                  },
+                }}
+              />
+            )}
           </Grid>
         </TraceHeaderComponents.HeaderRow>
         <TraceHeaderComponents.HeaderRow>

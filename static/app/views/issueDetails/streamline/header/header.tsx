@@ -52,6 +52,7 @@ import {
   getGroupReprocessingStatus,
   ReprocessingStatus,
 } from 'sentry/views/issueDetails/utils';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 interface GroupHeaderProps {
   event: Event | null;
@@ -94,6 +95,7 @@ export function StreamlinedGroupHeader({event, group, project}: GroupHeaderProps
   const statusProps = getBadgeProperties(group.status, group.substatus);
   const issueTypeConfig = getConfigForIssueType(group, project);
 
+  const hasPageFrame = useHasPageFrameFeature();
   const hasOnlyOneUIOption = defined(organization.streamlineOnly);
   const [showLearnMore, setShowLearnMore] = useLocalStorageState(
     'issue-details-learn-more',
@@ -147,18 +149,20 @@ export function StreamlinedGroupHeader({event, group, project}: GroupHeaderProps
               </LinkButton>
             )}
             {hasFeedbackForm && feedback ? (
-              <FeedbackButton
-                aria-label={t('Give feedback on the issue Sentry detected')}
-                size="xs"
-                feedbackOptions={{
-                  messagePlaceholder: t(
-                    'Please provide feedback on the issue Sentry detected.'
-                  ),
-                  tags: {
-                    ['feedback.source']: feedbackSource,
-                  },
-                }}
-              />
+              !hasPageFrame && (
+                <FeedbackButton
+                  aria-label={t('Give feedback on the issue Sentry detected')}
+                  size="xs"
+                  feedbackOptions={{
+                    messagePlaceholder: t(
+                      'Please provide feedback on the issue Sentry detected.'
+                    ),
+                    tags: {
+                      ['feedback.source']: feedbackSource,
+                    },
+                  }}
+                />
+              )
             ) : (
               <NewIssueExperienceButton />
             )}

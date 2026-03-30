@@ -31,6 +31,7 @@ import type {RequestError} from 'sentry/utils/requestError/requestError';
 import {useIsSentryEmployee} from 'sentry/utils/useIsSentryEmployee';
 import {useNavigate} from 'sentry/utils/useNavigate';
 import {useOrganization} from 'sentry/utils/useOrganization';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 import type {BuildDetailsApiResponse} from 'sentry/views/preprod/types/buildDetailsTypes';
 import {
   isSizeInfoCompleted,
@@ -52,6 +53,7 @@ export function BuildDetailsHeaderContent(props: BuildDetailsHeaderContentProps)
   const organization = useOrganization();
   const navigate = useNavigate();
   const isSentryEmployee = useIsSentryEmployee();
+  const hasPageFrame = useHasPageFrameFeature();
   const {buildDetailsQuery, projectSlug, artifactId, projectType} = props;
   const {
     isDeletingArtifact,
@@ -175,13 +177,15 @@ export function BuildDetailsHeaderContent(props: BuildDetailsHeaderContentProps)
 
       <Layout.HeaderActions>
         <Flex align="center" gap="sm" flexShrink={0}>
-          <FeedbackButton
-            feedbackOptions={{
-              tags: {
-                'feedback.source': 'preprod.buildDetails',
-              },
-            }}
-          />
+          {!hasPageFrame && (
+            <FeedbackButton
+              feedbackOptions={{
+                tags: {
+                  'feedback.source': 'preprod.buildDetails',
+                },
+              }}
+            />
+          )}
           <Button
             size="sm"
             priority="default"

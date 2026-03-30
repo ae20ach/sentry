@@ -7,6 +7,7 @@ import {FeedbackButton} from 'sentry/components/feedbackButton/feedbackButton';
 import {PreprodBuildsDisplay} from 'sentry/components/preprod/preprodBuildsDisplay';
 import {SentryDocumentTitle} from 'sentry/components/sentryDocumentTitle';
 import {t} from 'sentry/locale';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 import {PreprodQuotaAlert} from 'sentry/views/preprod/components/preprodQuotaAlert';
 import {SettingsPageHeader} from 'sentry/views/settings/components/settingsPageHeader';
 import {TextBlock} from 'sentry/views/settings/components/text/textBlock';
@@ -27,6 +28,7 @@ const DISTRIBUTION_ENABLED_QUERY_READ_KEY = 'sentry:preprod_distribution_enabled
 const DISTRIBUTION_ENABLED_QUERY_WRITE_KEY = 'preprodDistributionEnabledQuery';
 
 export default function PreprodSettings() {
+  const hasPageFrame = useHasPageFrameFeature();
   return (
     <Fragment>
       <Feature features="organizations:preprod-frontend-routes" renderDisabled>
@@ -35,7 +37,7 @@ export default function PreprodSettings() {
           title={t('Mobile Builds')}
           action={
             <Grid flow="column" align="center" gap="lg">
-              <FeedbackButton />
+              {!hasPageFrame && <FeedbackButton />}
             </Grid>
           }
         />

@@ -6,6 +6,7 @@ import {Placeholder} from 'sentry/components/placeholder';
 import {ConfigureReplayCard} from 'sentry/components/replays/header/configureReplayCard';
 import {ReplayLoadingState} from 'sentry/components/replays/player/replayLoadingState';
 import type {useLoadReplayReader} from 'sentry/utils/replays/hooks/useLoadReplayReader';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 import {ReplayItemDropdown} from 'sentry/views/replays/detail/header/replayItemDropdown';
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function ReplayDetailsHeaderActions({readerResult}: Props) {
+  const hasPageFrame = useHasPageFrameFeature();
   return (
     <ReplayLoadingState
       readerResult={readerResult}
@@ -23,7 +25,7 @@ export function ReplayDetailsHeaderActions({readerResult}: Props) {
       renderMissing={() => null}
       renderProcessingError={({replayRecord, projectSlug}) => (
         <ButtonActionsWrapper>
-          <FeedbackButton size="xs" />
+          {!hasPageFrame && <FeedbackButton size="xs" />}
           <ConfigureReplayCard isMobile={false} replayRecord={replayRecord} />
           <ReplayItemDropdown
             projectSlug={projectSlug}
@@ -35,7 +37,7 @@ export function ReplayDetailsHeaderActions({readerResult}: Props) {
     >
       {({replay}) => (
         <ButtonActionsWrapper>
-          <FeedbackButton size="xs" />
+          {!hasPageFrame && <FeedbackButton size="xs" />}
           <ConfigureReplayCard
             isMobile={replay.isVideoReplay()}
             replayRecord={replay.getReplay()}

@@ -30,6 +30,7 @@ import {
 } from 'sentry/views/explore/queryParams/context';
 import {TraceItemDataset} from 'sentry/views/explore/types';
 import {useOnboardingProject} from 'sentry/views/insights/common/queries/useOnboardingProject';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 export default function LogsContent() {
   const organization = useOrganization();
@@ -87,6 +88,7 @@ function LogsHeader() {
   const organization = useOrganization();
   const {data: savedQuery} = useGetSavedQuery(pageId);
   const onboardingProject = useOnboardingProject({property: 'hasLogs'});
+  const hasPageFrame = useHasPageFrameFeature();
 
   const hasSavedQueryTitle =
     defined(pageId) && defined(savedQuery) && savedQuery.name.length > 0;
@@ -108,15 +110,17 @@ function LogsHeader() {
       </Layout.HeaderContent>
       <Layout.HeaderActions>
         <Grid flow="column" align="center" gap="md">
-          <FeedbackButton
-            feedbackOptions={{
-              messagePlaceholder: t('How can we make logs work better for you?'),
-              tags: {
-                ['feedback.source']: 'logs-listing',
-                ['feedback.owner']: 'performance',
-              },
-            }}
-          />
+          {!hasPageFrame && (
+            <FeedbackButton
+              feedbackOptions={{
+                messagePlaceholder: t('How can we make logs work better for you?'),
+                tags: {
+                  ['feedback.source']: 'logs-listing',
+                  ['feedback.owner']: 'performance',
+                },
+              }}
+            />
+          )}
           {defined(onboardingProject) && <SetupLogsButton />}
         </Grid>
       </Layout.HeaderActions>

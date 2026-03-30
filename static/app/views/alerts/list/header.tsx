@@ -15,6 +15,7 @@ import {useLocation} from 'sentry/utils/useLocation';
 import {useNavigate} from 'sentry/utils/useNavigate';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {makeAlertsPathname} from 'sentry/views/alerts/pathnames';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 type Props = {
   activeTab: 'stream' | 'rules';
@@ -24,6 +25,7 @@ export function AlertHeader({activeTab}: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   const organization = useOrganization();
+  const hasPageFrame = useHasPageFrameFeature();
   const {selection} = usePageFilters();
   /**
    * Incidents list is currently at the organization level, but the link needs to
@@ -79,7 +81,7 @@ export function AlertHeader({activeTab}: Props) {
           >
             {t('Create Alert')}
           </CreateAlertButton>
-          <FeedbackButton />
+          {!hasPageFrame && <FeedbackButton />}
           <LinkButton
             size="sm"
             onClick={handleNavigateToSettings}

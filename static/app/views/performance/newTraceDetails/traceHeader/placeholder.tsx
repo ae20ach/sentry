@@ -8,6 +8,7 @@ import type {Project} from 'sentry/types/project';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useModuleURLBuilder} from 'sentry/views/insights/common/utils/useModuleURL';
 import {useDomainViewFilters} from 'sentry/views/insights/pages/useFilters';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 import {getTraceViewBreadcrumbs} from './breadcrumbs';
 import {TraceHeaderComponents} from './styles';
@@ -24,6 +25,7 @@ export function PlaceHolder({
   const {view} = useDomainViewFilters();
   const moduleURLBuilder = useModuleURLBuilder(true);
   const location = useLocation();
+  const hasPageFrame = useHasPageFrameFeature();
 
   return (
     <TraceHeaderComponents.HeaderLayout>
@@ -40,16 +42,18 @@ export function PlaceHolder({
             })}
           />
           <Grid flow="column" align="center" gap="md">
-            <FeedbackButton
-              size="xs"
-              feedbackOptions={{
-                messagePlaceholder: t('How can we make the trace view better for you?'),
-                tags: {
-                  ['feedback.source']: 'trace-view',
-                  ['feedback.owner']: 'performance',
-                },
-              }}
-            />
+            {!hasPageFrame && (
+              <FeedbackButton
+                size="xs"
+                feedbackOptions={{
+                  messagePlaceholder: t('How can we make the trace view better for you?'),
+                  tags: {
+                    ['feedback.source']: 'trace-view',
+                    ['feedback.owner']: 'performance',
+                  },
+                }}
+              />
+            )}
           </Grid>
         </TraceHeaderComponents.HeaderRow>
         <TraceHeaderComponents.HeaderRow>

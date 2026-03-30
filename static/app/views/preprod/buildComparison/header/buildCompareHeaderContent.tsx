@@ -21,6 +21,7 @@ import {
 import {t} from 'sentry/locale';
 import {useIsSentryEmployee} from 'sentry/utils/useIsSentryEmployee';
 import {useOrganization} from 'sentry/utils/useOrganization';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 import {AppIcon} from 'sentry/views/preprod/components/appIcon';
 import {
   isSizeInfoCompleted,
@@ -47,6 +48,7 @@ export function BuildCompareHeaderContent(props: BuildCompareHeaderContentProps)
     props;
   const organization = useOrganization();
   const isSentryEmployee = useIsSentryEmployee();
+  const hasPageFrame = useHasPageFrameFeature();
   const labels = getLabels(buildDetails.app_info?.platform ?? undefined);
   const breadcrumbs: Crumb[] = [
     {
@@ -141,13 +143,15 @@ export function BuildCompareHeaderContent(props: BuildCompareHeaderContentProps)
         </Flex>
       </Stack>
       <Flex align="center" gap="sm">
-        <FeedbackButton
-          feedbackOptions={{
-            tags: {
-              'feedback.source': 'preprod.buildDetails',
-            },
-          }}
-        />
+        {!hasPageFrame && (
+          <FeedbackButton
+            feedbackOptions={{
+              tags: {
+                'feedback.source': 'preprod.buildDetails',
+              },
+            }}
+          />
+        )}
         {isSentryEmployee &&
           headArtifactId &&
           baseArtifactId &&

@@ -44,6 +44,7 @@ import {
 import {StarSavedQueryButton} from 'sentry/views/explore/starSavedQueryButton';
 import {TraceItemDataset} from 'sentry/views/explore/types';
 import {useOnboardingProject} from 'sentry/views/insights/common/queries/useOnboardingProject';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 const CROSS_EVENTS_DATE_OVERRIDE: MaxPickableDaysOptions = {
   defaultPeriod: MAX_PERIOD_FOR_CROSS_EVENTS,
@@ -148,6 +149,7 @@ function SpansTabHeader() {
   const title = useQueryParamsTitle();
   const organization = useOrganization();
   const {data: savedQuery} = useGetSavedQuery(id);
+  const hasPageFrame = useHasPageFrameFeature();
 
   const hasSavedQueryTitle =
     defined(id) && defined(savedQuery) && savedQuery.name.length > 0;
@@ -179,7 +181,7 @@ function SpansTabHeader() {
         <Grid flow="column" align="center" gap="md">
           <StarSavedQueryButton />
           {defined(id) && savedQuery?.isPrebuilt === false && <SavedQueryEditMenu />}
-          <FeedbackButton />
+          {!hasPageFrame && <FeedbackButton />}
         </Grid>
       </Layout.HeaderActions>
     </Layout.Header>

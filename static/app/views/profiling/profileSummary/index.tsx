@@ -61,6 +61,7 @@ import {useLocation} from 'sentry/utils/useLocation';
 import {useMaxPickableDays} from 'sentry/utils/useMaxPickableDays';
 import {useNavigate} from 'sentry/utils/useNavigate';
 import {useOrganization} from 'sentry/utils/useOrganization';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 import {transactionSummaryRouteWithQuery} from 'sentry/views/performance/transactionSummary/utils';
 import {
   FlamegraphProvider,
@@ -108,6 +109,7 @@ interface ProfileSummaryHeaderProps {
 function ProfileSummaryHeader(props: ProfileSummaryHeaderProps) {
   const location = useLocation();
   const organization = useOrganization();
+  const hasPageFrame = useHasPageFrameFeature();
 
   const breadcrumbTrails: ProfilingBreadcrumbsProps['trails'] = useMemo(() => {
     return [
@@ -158,7 +160,7 @@ function ProfileSummaryHeader(props: ProfileSummaryHeaderProps) {
       </ProfilingHeaderContent>
       {transactionSummaryTarget && (
         <StyledHeaderActions>
-          <FeedbackButton />
+          {!hasPageFrame && <FeedbackButton />}
           <LinkButton to={transactionSummaryTarget} size="sm">
             {t('View Summary')}
           </LinkButton>

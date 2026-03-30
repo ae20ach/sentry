@@ -29,6 +29,7 @@ import {
   isModuleVisible,
 } from 'sentry/views/insights/pages/utils';
 import {ModuleName} from 'sentry/views/insights/types';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 export type Props = {
   domainBaseUrl: string;
@@ -59,6 +60,7 @@ export function DomainViewHeader({
   unified,
 }: Props) {
   const organization = useOrganization();
+  const hasPageFrame = useHasPageFrameFeature();
   const location = useLocation();
   const moduleURLBuilder = useModuleURLBuilder();
   const isLaravelInsightsAvailable = useIsLaravelInsightsAvailable();
@@ -135,7 +137,7 @@ export function DomainViewHeader({
         </Layout.HeaderContent>
         <Layout.HeaderActions>
           <Grid flow="column" align="center" gap="md">
-            <FeedbackButton feedbackOptions={feedbackOptions} />
+            {!hasPageFrame && <FeedbackButton feedbackOptions={feedbackOptions} />}
             {additonalHeaderActions}
           </Grid>
         </Layout.HeaderActions>

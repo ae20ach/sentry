@@ -48,6 +48,7 @@ import {useEventOpenPeriod} from 'sentry/views/detectors/hooks/useOpenPeriods';
 import {getMetricDetectorSuffix} from 'sentry/views/detectors/utils/metricDetectorSuffix';
 import {makeDiscoverPathname} from 'sentry/views/discover/pathnames';
 import {InterimSection} from 'sentry/views/issueDetails/streamline/interimSection';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 import {AttributeComparisonSection} from './attributeComparisonSection';
 import {OpenPeriodTimelineSection} from './openPeriodTimelineSection';
@@ -360,6 +361,7 @@ function TriggeredConditionDetails({
   groupId: string;
   projectId: string | number;
 }) {
+  const hasPageFrame = useHasPageFrameFeature();
   const {conditions, dataSources, value} = evidenceData;
   const dataSource = dataSources[0];
   const snubaQuery = dataSource?.queryObj?.snubaQuery;
@@ -405,17 +407,21 @@ function TriggeredConditionDetails({
         type="triggered_condition"
         actions={
           <Flex gap="xs">
-            <FeedbackButton
-              aria-label={t('Give feedback on metric issues')}
-              size="xs"
-              feedbackOptions={{
-                messagePlaceholder: t('Tell us what you think about this metric issue.'),
-                tags: {
-                  ['feedback.source']: 'metric_issue_details',
-                  ['feedback.owner']: 'aci',
-                },
-              }}
-            />
+            {!hasPageFrame && (
+              <FeedbackButton
+                aria-label={t('Give feedback on metric issues')}
+                size="xs"
+                feedbackOptions={{
+                  messagePlaceholder: t(
+                    'Tell us what you think about this metric issue.'
+                  ),
+                  tags: {
+                    ['feedback.source']: 'metric_issue_details',
+                    ['feedback.owner']: 'aci',
+                  },
+                }}
+              />
+            )}
             {!isOpenPeriodLoading && (
               <OpenInDestinationButton
                 snubaQuery={snubaQuery}

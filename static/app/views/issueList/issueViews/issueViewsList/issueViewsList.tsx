@@ -44,6 +44,7 @@ import {
   type GroupSearchView,
 } from 'sentry/views/issueList/types';
 import {IssueSortOptions} from 'sentry/views/issueList/utils';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 type IssueViewSectionProps = {
   createdBy: GroupSearchViewCreatedBy;
@@ -326,6 +327,7 @@ export default function IssueViewsList() {
   const navigate = useNavigate();
   const location = useLocation();
   const query = typeof location.query.query === 'string' ? location.query.query : '';
+  const hasPageFrame = useHasPageFrameFeature();
   const {mutate: createGroupSearchView, isPending: isCreatingView} =
     useCreateGroupSearchView();
 
@@ -365,17 +367,19 @@ export default function IssueViewsList() {
           </Layout.HeaderContent>
           <Layout.HeaderActions>
             <Grid flow="column" align="center" gap="md">
-              <FeedbackButton
-                size="sm"
-                feedbackOptions={{
-                  formTitle: t('Give Feedback'),
-                  messagePlaceholder: t('How can we make issue views better for you?'),
-                  tags: {
-                    ['feedback.source']: 'custom_views',
-                    ['feedback.owner']: 'issues',
-                  },
-                }}
-              />
+              {!hasPageFrame && (
+                <FeedbackButton
+                  size="sm"
+                  feedbackOptions={{
+                    formTitle: t('Give Feedback'),
+                    messagePlaceholder: t('How can we make issue views better for you?'),
+                    tags: {
+                      ['feedback.source']: 'custom_views',
+                      ['feedback.owner']: 'issues',
+                    },
+                  }}
+                />
+              )}
               <Feature
                 features="organizations:issue-views"
                 hookName="feature-disabled:issue-views"

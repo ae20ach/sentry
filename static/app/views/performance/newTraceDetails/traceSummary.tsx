@@ -17,6 +17,7 @@ import type {ApiQueryKey} from 'sentry/utils/queryClient';
 import {useApiQuery, useQueryClient} from 'sentry/utils/queryClient';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useOrganization} from 'sentry/utils/useOrganization';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 import {getTraceDetailsUrl} from 'sentry/views/performance/traceDetails/utils';
 
 interface SpanInsight {
@@ -78,6 +79,7 @@ export function TraceSummarySection({traceSlug}: {traceSlug: string}) {
   const {feedback} = useFeedbackSDKIntegration();
   const organization = useOrganization();
   const location = useLocation();
+  const hasPageFrame = useHasPageFrameFeature();
 
   if (traceContent.isPending) {
     return <LoadingIndicator />;
@@ -87,16 +89,18 @@ export function TraceSummarySection({traceSlug}: {traceSlug: string}) {
     return (
       <Flex align="center" padding="xl" gap="md">
         <div>{t('Error loading Trace Summary')}</div>
-        <FeedbackButton
-          size="xs"
-          feedbackOptions={{
-            messagePlaceholder: t('How can we make the trace summary better for you?'),
-            tags: {
-              ['feedback.source']: 'trace-summary',
-              ['feedback.owner']: 'ml-ai',
-            },
-          }}
-        />
+        {!hasPageFrame && (
+          <FeedbackButton
+            size="xs"
+            feedbackOptions={{
+              messagePlaceholder: t('How can we make the trace summary better for you?'),
+              tags: {
+                ['feedback.source']: 'trace-summary',
+                ['feedback.owner']: 'ml-ai',
+              },
+            }}
+          />
+        )}
       </Flex>
     );
   }
@@ -159,7 +163,7 @@ export function TraceSummarySection({traceSlug}: {traceSlug: string}) {
         <SectionContent text="" />
       )}
 
-      {feedback && (
+      {feedback && !hasPageFrame && (
         <Flex justify="end" marginTop="xl">
           <FeedbackButton
             size="xs"

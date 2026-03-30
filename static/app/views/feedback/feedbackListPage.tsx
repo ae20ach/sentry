@@ -31,9 +31,11 @@ import {useLocation} from 'sentry/utils/useLocation';
 import {useMedia} from 'sentry/utils/useMedia';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {makeAlertsPathname} from 'sentry/views/alerts/pathnames';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 export default function FeedbackListPage() {
   const organization = useOrganization();
+  const hasPageFrame = useHasPageFrameFeature();
   const {hasSetupOneFeedback} = useHaveSelectedProjectsSetupFeedback();
   const pageFilters = usePageFilters();
 
@@ -153,17 +155,19 @@ export default function FeedbackListPage() {
             </Layout.HeaderContent>
             <Layout.HeaderActions>
               <Flex gap="lg">
-                <FeedbackButton
-                  size="sm"
-                  feedbackOptions={{
-                    messagePlaceholder: t(
-                      'How can we improve the User Feedback experience?'
-                    ),
-                    tags: {
-                      ['feedback.source']: 'feedback-list',
-                    },
-                  }}
-                />
+                {!hasPageFrame && (
+                  <FeedbackButton
+                    size="sm"
+                    feedbackOptions={{
+                      messagePlaceholder: t(
+                        'How can we improve the User Feedback experience?'
+                      ),
+                      tags: {
+                        ['feedback.source']: 'feedback-list',
+                      },
+                    }}
+                  />
+                )}
                 <LinkButton
                   size="sm"
                   icon={<IconSiren />}

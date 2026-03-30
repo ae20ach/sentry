@@ -40,6 +40,7 @@ import {useMaxPickableDays} from 'sentry/utils/useMaxPickableDays';
 import {useNavigate} from 'sentry/utils/useNavigate';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {useProjects} from 'sentry/utils/useProjects';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 import {LandingAggregateFlamegraph} from 'sentry/views/profiling/landingAggregateFlamegraph';
 import {Onboarding} from 'sentry/views/profiling/onboarding';
 
@@ -375,6 +376,7 @@ function shouldShowProfilingOnboardingPanel(selection: PageFilters, projects: Pr
 }
 
 function ProfilingContentPageHeader() {
+  const hasPageFrame = useHasPageFrameFeature();
   return (
     <StyledLayoutHeader unified>
       <StyledHeaderContent unified>
@@ -387,7 +389,7 @@ function ProfilingContentPageHeader() {
             )}
           />
         </Layout.Title>
-        <FeedbackButton />
+        {!hasPageFrame && <FeedbackButton />}
       </StyledHeaderContent>
     </StyledLayoutHeader>
   );

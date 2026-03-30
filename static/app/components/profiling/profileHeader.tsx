@@ -13,6 +13,7 @@ import {generateLinkToEventInTraceView} from 'sentry/utils/discover/urls';
 import {isSchema, isSentrySampledProfile} from 'sentry/utils/profiling/guards/profile';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useOrganization} from 'sentry/utils/useOrganization';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 import {useProfiles} from 'sentry/views/profiling/profilesProvider';
 
 function getTransactionName(input: Profiling.ProfileInput): string {
@@ -35,6 +36,7 @@ interface ProfileHeaderProps {
 function ProfileHeader({transaction, projectId, eventId}: ProfileHeaderProps) {
   const location = useLocation();
   const organization = useOrganization();
+  const hasPageFrame = useHasPageFrameFeature();
   const profiles = useProfiles();
 
   const transactionName =
@@ -89,7 +91,7 @@ function ProfileHeader({transaction, projectId, eventId}: ProfileHeaderProps) {
         </SmallerProfilingBreadcrumbsWrapper>
       </SmallerHeaderContent>
       <StyledHeaderActions>
-        <FeedbackButton />
+        {!hasPageFrame && <FeedbackButton />}
         {transactionTarget && (
           <LinkButton size="sm" onClick={handleGoToTransaction} to={transactionTarget}>
             {t('Go to Trace')}

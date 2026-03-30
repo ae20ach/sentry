@@ -15,6 +15,7 @@ import {useNavigate} from 'sentry/utils/useNavigate';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {makeAlertsPathname} from 'sentry/views/alerts/pathnames';
 import type {Monitor} from 'sentry/views/insights/crons/types';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 import {StatusToggleButton} from './statusToggleButton';
 
@@ -28,6 +29,7 @@ export function MonitorHeaderActions({monitor, orgSlug, onUpdate}: Props) {
   const api = useApi();
   const navigate = useNavigate();
   const organization = useOrganization();
+  const hasPageFrame = useHasPageFrameFeature();
   const {selection} = usePageFilters();
 
   const endpointOptions = {
@@ -84,7 +86,7 @@ export function MonitorHeaderActions({monitor, orgSlug, onUpdate}: Props) {
 
   return (
     <Flex direction="row" align="center" gap="md" wrap="wrap">
-      <FeedbackButton />
+      {!hasPageFrame && <FeedbackButton />}
       <Button
         size="sm"
         icon={monitor.isMuted ? <IconSubscribed /> : <IconUnsubscribed />}

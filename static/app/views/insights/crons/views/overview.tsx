@@ -45,6 +45,7 @@ import {useCronsUpsertGuideState} from 'sentry/views/insights/crons/components/u
 import {MODULE_DESCRIPTION, MODULE_DOC_LINK} from 'sentry/views/insights/crons/settings';
 import type {Monitor} from 'sentry/views/insights/crons/types';
 import {makeMonitorListQueryKey} from 'sentry/views/insights/crons/utils';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 const CronsListPageHeader = HookOrDefault({
   hookName: 'component:crons-list-page-header',
@@ -52,6 +53,7 @@ const CronsListPageHeader = HookOrDefault({
 
 function CronsOverview() {
   const organization = useOrganization();
+  const hasPageFrame = useHasPageFrameFeature();
   const navigate = useNavigate();
   const location = useLocation();
   const {guideVisible} = useCronsUpsertGuideState();
@@ -96,7 +98,7 @@ function CronsOverview() {
         </Layout.HeaderContent>
         <Layout.HeaderActions>
           <Grid flow="column" align="center" gap="md">
-            <FeedbackButton />
+            {!hasPageFrame && <FeedbackButton />}
             <Button
               icon={<IconList />}
               size="sm"

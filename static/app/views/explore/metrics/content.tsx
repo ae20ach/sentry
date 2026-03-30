@@ -23,6 +23,7 @@ import {
 } from 'sentry/views/explore/queryParams/savedQuery';
 import {TraceItemDataset} from 'sentry/views/explore/types';
 import {useOnboardingProject} from 'sentry/views/insights/common/queries/useOnboardingProject';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 export default function MetricsContent() {
   const organization = useOrganization();
@@ -71,6 +72,7 @@ function MetricsHeader() {
   const title = getTitleFromLocation(location, TITLE_KEY);
   const organization = useOrganization();
   const {data: savedQuery} = useGetSavedQuery(pageId);
+  const hasPageFrame = useHasPageFrameFeature();
 
   const hasSavedQueryTitle =
     defined(pageId) && defined(savedQuery) && savedQuery.name.length > 0;
@@ -93,15 +95,17 @@ function MetricsHeader() {
         </Layout.Title>
       </Layout.HeaderContent>
       <Layout.HeaderActions>
-        <FeedbackButton
-          feedbackOptions={{
-            messagePlaceholder: t('How can we make metrics work better for you?'),
-            tags: {
-              ['feedback.source']: 'metrics-listing',
-              ['feedback.owner']: 'performance',
-            },
-          }}
-        />
+        {!hasPageFrame && (
+          <FeedbackButton
+            feedbackOptions={{
+              messagePlaceholder: t('How can we make metrics work better for you?'),
+              tags: {
+                ['feedback.source']: 'metrics-listing',
+                ['feedback.owner']: 'performance',
+              },
+            }}
+          />
+        )}
       </Layout.HeaderActions>
     </Layout.Header>
   );
