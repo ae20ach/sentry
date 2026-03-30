@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import cell_silo_endpoint
-from sentry.api.bases.organization import OrganizationEndpoint
+from sentry.api.bases.organization import OrganizationEndpoint, OrganizationIntegrationsPermission
 from sentry.api.serializers import serialize
 from sentry.constants import ObjectStatus
 from sentry.exceptions import NotRegistered
@@ -26,6 +26,7 @@ class OrganizationIntegrationDirectEnableEndpoint(OrganizationEndpoint):
     publish_status = {
         "POST": ApiPublishStatus.PRIVATE,
     }
+    permission_classes = (OrganizationIntegrationsPermission,)
 
     def post(self, request: Request, organization: Organization, provider_key: str) -> Response:
         """Directly install an integration that requires no pipeline configuration."""
