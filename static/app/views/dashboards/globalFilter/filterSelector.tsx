@@ -12,6 +12,7 @@ import {
 } from '@sentry/scraps/compactSelect';
 import {Container, Flex} from '@sentry/scraps/layout';
 import {OverlayTrigger} from '@sentry/scraps/overlayTrigger';
+import {Text} from '@sentry/scraps/text';
 
 import {DropdownMenu} from 'sentry/components/dropdownMenu';
 import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
@@ -312,7 +313,7 @@ export function FilterSelector({
     // Add "(no value)" option at the top for supported operators
     if (NO_VALUE_SUPPORTED_OPERATORS.has(stagedOperator)) {
       const noValueOption: SelectOption<string> = {
-        label: <NoValueLabel>{t('(no value)')}</NoValueLabel>,
+        label: <Text variant="muted">{t('(no value)')}</Text>,
         textValue: t('(no value)'),
         value: NO_VALUE_SENTINEL,
       };
@@ -619,8 +620,4 @@ const WildcardButton = styled(Flex)`
 const SubText = styled('span')`
   color: ${p => p.theme.tokens.content.secondary};
   font-size: ${p => p.theme.font.size.sm};
-`;
-
-const NoValueLabel = styled('span')`
-  color: ${p => p.theme.tokens.content.secondary};
 `;
