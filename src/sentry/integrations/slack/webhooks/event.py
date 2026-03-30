@@ -352,16 +352,17 @@ class SlackEventEndpoint(SlackDMEndpoint):
 
             channel_id = data.get("channel")
             text = data.get("text")
-            thread_ts = data.get("thread_ts") or data.get("ts")
+            ts = data.get("ts")
+            thread_ts = data.get("thread_ts")  # None for top-level messages
 
-            if not channel_id or not text or not thread_ts or not slack_request.user_id:
+            if not channel_id or not text or not ts or not slack_request.user_id:
                 lifecycle.record_halt(AppMentionHaltReason.MISSING_EVENT_DATA)
                 return self.respond()
 
             try:
                 installation.set_thread_status(
                     channel_id=channel_id,
-                    thread_ts=thread_ts,
+                    thread_ts=thread_ts or ts,
                     status="Thinking...",
                     loading_messages=[
                         "Digging through your errors...",
@@ -380,7 +381,7 @@ class SlackEventEndpoint(SlackDMEndpoint):
                     extra={
                         "integration_id": slack_request.integration.id,
                         "channel_id": channel_id,
-                        "thread_ts": thread_ts,
+                        "thread_ts": thread_ts or ts,
                     },
                 )
 
@@ -392,6 +393,7 @@ class SlackEventEndpoint(SlackDMEndpoint):
                     "integration_id": slack_request.integration.id,
                     "organization_id": organization_id,
                     "channel_id": channel_id,
+                    "ts": ts,
                     "thread_ts": thread_ts,
                     "text": text,
                     "slack_user_id": slack_request.user_id,

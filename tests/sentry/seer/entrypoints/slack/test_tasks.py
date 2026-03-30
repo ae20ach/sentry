@@ -9,6 +9,7 @@ from sentry.testutils.cases import TestCase
 TASK_KWARGS = {
     "integration_id": 123,
     "channel_id": "C1234567890",
+    "ts": "1234567890.654321",
     "thread_ts": "1234567890.123456",
     "text": "<@U0BOT> What is causing this issue?",
     "slack_user_id": "U1234567890",
@@ -108,7 +109,9 @@ class ProcessMentionForSlackTest(TestCase):
 
         self._run_task()
 
-        mock_send_link.assert_called_once_with(entrypoint=mock_entrypoint)
+        mock_send_link.assert_called_once_with(
+            entrypoint=mock_entrypoint, thread_ts="1234567890.123456"
+        )
         mock_operator_cls.assert_not_called()
         assert_failure_metric(mock_record, ProcessMentionFailureReason.IDENTITY_NOT_LINKED)
 
