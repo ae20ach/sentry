@@ -85,19 +85,19 @@ export function MetricsTabSeerComboBox() {
   const inputValue = currentInputValueRef.current.trim();
 
   // Only filter out FREE_TEXT tokens if there's actual input value to filter by
-  const filteredCommittedQuery = queryDetails?.parsedQuery
+  const filteredCommittedQuery = queryDetails.parsedQuery
     ?.filter(
       token =>
         !(token.type === Token.FREE_TEXT && inputValue && token.text.includes(inputValue))
     )
-    ?.map(token => stringifyToken(token))
-    ?.join(' ')
-    ?.trim();
+    .map(token => stringifyToken(token))
+    .join(' ')
+    .trim();
 
   // Use filteredCommittedQuery if it exists and has content, otherwise fall back to queryToUse
   if (filteredCommittedQuery && filteredCommittedQuery.length > 0) {
     initialSeerQuery = filteredCommittedQuery;
-  } else if (queryDetails?.queryToUse) {
+  } else if (queryDetails.queryToUse) {
     initialSeerQuery = queryDetails.queryToUse;
   }
 
@@ -132,18 +132,17 @@ export function MetricsTabSeerComboBox() {
         status: 'ok',
         unsupported_reason: data.unsupported_reason,
         queries: data.responses.map(r => ({
-          visualizations:
-            r?.visualization?.map(v => ({
-              chartType: v?.chart_type,
-              yAxes: v?.y_axes ?? [],
-            })) ?? [],
-          query: r?.query ?? '',
-          sort: r?.sort ?? '',
-          groupBys: r?.group_by ?? [],
-          statsPeriod: r?.stats_period ?? '',
-          start: r?.start ?? null,
-          end: r?.end ?? null,
-          mode: r?.mode ?? 'metrics',
+          visualizations: r.visualization.map(v => ({
+            chartType: v.chart_type,
+            yAxes: v.y_axes,
+          })),
+          query: r.query,
+          sort: r.sort,
+          groupBys: r.group_by,
+          statsPeriod: r.stats_period,
+          start: r.start,
+          end: r.end,
+          mode: r.mode,
         })),
       };
     },
@@ -317,18 +316,17 @@ export function MetricsTabSeerComboBox() {
 
       if (seerResponse.responses && Array.isArray(seerResponse.responses)) {
         return seerResponse.responses.map(r => ({
-          visualizations:
-            r?.visualization?.map(v => ({
-              chartType: v?.chart_type,
-              yAxes: v?.y_axes ?? [],
-            })) ?? [],
-          query: r?.query ?? '',
-          sort: r?.sort ?? '',
-          groupBys: r?.group_by ?? [],
-          statsPeriod: r?.stats_period ?? '',
-          start: r?.start ?? null,
-          end: r?.end ?? null,
-          mode: r?.mode ?? 'metrics',
+          visualizations: r.visualization.map(v => ({
+            chartType: v.chart_type,
+            yAxes: v.y_axes,
+          })),
+          query: r.query,
+          sort: r.sort,
+          groupBys: r.group_by,
+          statsPeriod: r.stats_period,
+          start: r.start,
+          end: r.end,
+          mode: r.mode,
         }));
       }
 

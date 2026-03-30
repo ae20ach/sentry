@@ -166,9 +166,9 @@ export function Filter({traceMetric}: FilterProps) {
       // Use the metric name as a key to force remount when it changes
       // This prevents race conditions when navigating between different metrics
       key={traceMetric.name}
+      {...searchQueryBuilderProviderProps}
       enableAISearch={hasTranslateEndpoint}
       aiSearchBadgeType="alpha"
-      {...searchQueryBuilderProviderProps}
     >
       <MetricsSearchBar
         tracesItemSearchQueryBuilderProps={tracesItemSearchQueryBuilderProps}
