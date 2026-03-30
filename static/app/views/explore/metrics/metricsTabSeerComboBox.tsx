@@ -9,18 +9,22 @@ import {Token} from 'sentry/components/searchSyntax/parser';
 import {stringifyToken} from 'sentry/components/searchSyntax/utils';
 import {ConfigStore} from 'sentry/stores/configStore';
 import type {DateString} from 'sentry/types/core';
+import {defined} from 'sentry/utils';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {getFieldDefinition} from 'sentry/utils/fields';
 import {fetchMutation, mutationOptions} from 'sentry/utils/queryClient';
+import {decodeList} from 'sentry/utils/queryString';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useNavigate} from 'sentry/utils/useNavigate';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {useProjects} from 'sentry/utils/useProjects';
-import type {WritableAggregateField} from 'sentry/views/explore/queryParams/aggregateField';
 import {
-  useQueryParams,
-  useSetQueryParams,
-} from 'sentry/views/explore/queryParams/context';
+  decodeMetricsQueryParams,
+  encodeMetricQueryParams,
+  type BaseMetricQuery,
+} from 'sentry/views/explore/metrics/metricQuery';
+import type {WritableAggregateField} from 'sentry/views/explore/queryParams/aggregateField';
+import {useQueryParams} from 'sentry/views/explore/queryParams/context';
 import {isGroupBy} from 'sentry/views/explore/queryParams/groupBy';
 import {Mode} from 'sentry/views/explore/queryParams/mode';
 import {isVisualize} from 'sentry/views/explore/queryParams/visualize';
@@ -66,7 +70,6 @@ export function MetricsTabSeerComboBox() {
   const pageFilters = usePageFilters();
   const organization = useOrganization();
   const queryParams = useQueryParams();
-  const setQueryParams = useSetQueryParams();
   const {
     currentInputValueRef,
     query,
@@ -224,10 +227,7 @@ export function MetricsTabSeerComboBox() {
         aggregateFields.push({groupBy});
       }
 
-      // Update per-query state atomically (query, aggregateFields, mode)
-      setQueryParams({query: queryToUse, aggregateFields, mode});
-
-      // Update global time range via navigation
+      // Build datetime selection
       const selection = {
         ...pageFilters.selection,
         datetime: {
@@ -255,12 +255,42 @@ export function MetricsTabSeerComboBox() {
         visualize_count: visualizations?.length ?? 0,
       });
 
-      // Navigate to update global time range params
+      // Get current metric queries from URL and update the first one
+      const rawQueryParams = decodeList(location.query.metric);
+      const metricQueries = rawQueryParams
+        .map(value => decodeMetricsQueryParams(value))
+        .filter(defined);
+
+      // Update the first metric query with new params
+      const updatedMetricQueries = metricQueries.map(
+        (metricQuery: BaseMetricQuery, index: number) => {
+          if (index !== 0) {
+            return metricQuery;
+          }
+          return {
+            metric: metricQuery.metric,
+            queryParams: queryParams.replace({
+              query: queryToUse,
+              aggregateFields,
+              mode,
+            }),
+          };
+        }
+      );
+
+      // Encode updated metric queries
+      const newMetricParams = updatedMetricQueries
+        .map((metricQuery: BaseMetricQuery) => encodeMetricQueryParams(metricQuery))
+        .filter(defined)
+        .filter(Boolean);
+
+      // Single navigation with all params (metric query state + datetime)
       navigate(
         {
           ...location,
           query: {
             ...location.query,
+            metric: newMetricParams,
             start: selection.datetime.start,
             end: selection.datetime.end,
             statsPeriod: selection.datetime.period,
@@ -276,8 +306,7 @@ export function MetricsTabSeerComboBox() {
       navigate,
       organization,
       pageFilters.selection,
-      queryParams.aggregateFields,
-      setQueryParams,
+      queryParams,
     ]
   );
 
