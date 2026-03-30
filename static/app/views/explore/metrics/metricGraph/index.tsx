@@ -38,6 +38,11 @@ import {
   useQueryParamsTopEventsLimit,
 } from 'sentry/views/explore/queryParams/context';
 import {EXPLORE_CHART_TYPE_OPTIONS} from 'sentry/views/explore/spans/charts';
+
+const METRICS_CHART_TYPE_OPTIONS = [
+  ...EXPLORE_CHART_TYPE_OPTIONS,
+  {value: ChartType.HEATMAP, label: t('Heatmap')},
+];
 import {getVisualizeLabel} from 'sentry/views/explore/toolbar/toolbarVisualize';
 import {useRawCounts} from 'sentry/views/explore/useRawCounts';
 import {
@@ -239,7 +244,7 @@ function Graph({
         )}
         value={visualize.chartType}
         menuTitle="Type"
-        options={EXPLORE_CHART_TYPE_OPTIONS}
+        options={METRICS_CHART_TYPE_OPTIONS}
         onChange={option => onChartTypeChange(option.value)}
       />
       <CompactSelect

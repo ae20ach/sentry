@@ -32,7 +32,7 @@ export default function MetricsContent() {
   });
   const datePageFilterProps = useDatePageFilterProps(maxPickableDays);
   return (
-    <SentryDocumentTitle title={t('Metrics')} orgSlug={organization?.slug}>
+    <SentryDocumentTitle title={t('Application Metrics')} orgSlug={organization?.slug}>
       <PageFiltersContainer
         maxPickableDays={datePageFilterProps.maxPickableDays}
         defaultSelection={
@@ -80,7 +80,7 @@ function MetricsHeader() {
       <Layout.HeaderContent unified>
         {hasSavedQueryTitle ? (
           <SentryDocumentTitle
-            title={`${savedQuery.name} — ${t('Metrics')}`}
+            title={`${savedQuery.name} — ${t('Application Metrics')}`}
             orgSlug={organization?.slug}
           />
         ) : null}
@@ -88,7 +88,7 @@ function MetricsHeader() {
           <ExploreBreadcrumb traceItemDataset={TraceItemDataset.TRACEMETRICS} />
         ) : null}
         <Layout.Title>
-          {title ? title : t('Metrics')}
+          {title ? title : t('Application Metrics')}
           <FeatureBadge type="beta" />
         </Layout.Title>
       </Layout.HeaderContent>
