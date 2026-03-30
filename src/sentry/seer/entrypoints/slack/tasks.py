@@ -37,7 +37,8 @@ def process_mention_for_slack(
     integration_id: int,
     organization_id: int,
     channel_id: str,
-    thread_ts: str,
+    ts: str,
+    thread_ts: str | None = None,
     text: str,
     slack_user_id: str,
     bot_user_id: str,
@@ -47,6 +48,9 @@ def process_mention_for_slack(
 
     Parses the mention, extracts thread context,
     and triggers an Explorer run via SeerExplorerOperator.
+
+    ``ts`` is the message's own timestamp (always present).
+    ``thread_ts`` is the parent thread's timestamp (None for top-level messages).
 
     Authorization: Access is gated by the org-level ``seer-slack-workflows``
     feature flag and ``has_explorer_access()``.  The incoming webhook is
@@ -62,6 +66,7 @@ def process_mention_for_slack(
         lifecycle.add_extras(
             {
                 "channel_id": channel_id,
+                "ts": ts,
                 "thread_ts": thread_ts,
                 "slack_user_id": slack_user_id,
             },
@@ -82,7 +87,7 @@ def process_mention_for_slack(
                 integration_id=integration_id,
                 organization_id=organization_id,
                 channel_id=channel_id,
-                thread_ts=thread_ts,
+                thread_ts=thread_ts or ts,
                 slack_user_id=slack_user_id,
             )
         except (ValueError, EntrypointSetupError) as e:
@@ -95,16 +100,21 @@ def process_mention_for_slack(
         )
         if not user:
             lifecycle.record_failure(failure_reason=ProcessMentionFailureReason.IDENTITY_NOT_LINKED)
-            _send_link_identity_prompt(entrypoint=entrypoint)
+            # In a thread, show the prompt in the thread; top-level, show in the channel.
+            _send_link_identity_prompt(
+                entrypoint=entrypoint,
+                thread_ts=thread_ts if thread_ts else "",
+            )
             entrypoint.install.set_thread_status(
                 channel_id=channel_id,
-                thread_ts=thread_ts,
+                thread_ts=thread_ts or ts,
                 status="",
             )
             return
 
         prompt = extract_prompt(text, bot_user_id)
 
+        # Only fetch thread context when actually in a thread.
         thread_context: str | None = None
         if thread_ts:
             messages = entrypoint.install.get_thread_history(
@@ -151,6 +161,7 @@ def _resolve_user(
 def _send_link_identity_prompt(
     *,
     entrypoint: SlackExplorerEntrypoint,
+    thread_ts: str,
 ) -> None:
     """Send an ephemeral message prompting the user to link their Slack identity to Sentry."""
     associate_url = build_linking_url(
@@ -164,13 +175,13 @@ def _send_link_identity_prompt(
         slack_user_id=entrypoint.slack_user_id,
         channel_id=entrypoint.channel_id,
         renderable=renderable,
-        thread_ts="",
+        thread_ts=thread_ts,
     )
 
 
 def _build_link_identity_renderable(associate_url: str) -> SlackRenderable:
     """Build a SlackRenderable prompting the user to link their Slack identity to Sentry."""
-    message = "Link your Slack identity to Sentry to use this feature."
+    message = "Link your Slack identity to Sentry to use Seer Explorer in Slack."
     return SlackRenderable(
         blocks=[
             MarkdownBlock(text=message),
