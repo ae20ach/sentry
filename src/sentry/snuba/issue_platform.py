@@ -154,7 +154,7 @@ def query(
                 limit=limit,
                 referrer=referrer,
                 config=SearchResolverConfig(),
-                occurrence_category=OccurrenceCategory.GENERIC,
+                occurrence_category=OccurrenceCategory.ISSUE_PLATFORM,
             )
             eap_data = [
                 {translate_issue_platform_column_from_eap(key): value for key, value in row.items()}
