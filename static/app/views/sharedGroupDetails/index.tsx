@@ -4,20 +4,19 @@ import {Container} from '@sentry/scraps/layout';
 import {Link} from '@sentry/scraps/link';
 
 import {NotFound} from 'sentry/components/errors/notFound';
-import {BorderlessEventEntries} from 'sentry/components/events/eventEntries';
 import {Footer} from 'sentry/components/footer';
 import {LoadingError} from 'sentry/components/loadingError';
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
 import {SentryDocumentTitle} from 'sentry/components/sentryDocumentTitle';
-import {SharedIssueStackTrace} from 'sentry/components/stackTrace/issueStackTrace/sharedIssueStackTrace';
 import {t} from 'sentry/locale';
-import {EntryType} from 'sentry/types/event';
 import type {Group} from 'sentry/types/group';
+import type {Organization, SharedViewOrganization} from 'sentry/types/organization';
 import {getApiUrl} from 'sentry/utils/api/getApiUrl';
 import {useApiQuery} from 'sentry/utils/queryClient';
 import {useParams} from 'sentry/utils/useParams';
 import {OrganizationContext} from 'sentry/views/organizationContext';
 
+import {SharedEventContent} from './sharedEventContent';
 import {SharedGroupHeader} from './sharedGroupHeader';
 
 function SharedGroupDetails() {
@@ -69,13 +68,16 @@ function SharedGroupDetails() {
     return <NotFound />;
   }
 
-  // project.organization is not a real organization, it's just the slug and name
-  // Add the features array to avoid errors when using OrganizationContext
-  const org = {...group.project.organization, features: []};
+  // Backend only provides {slug, name} for the organization.
+  // Add features: [] for OrganizationContext compatibility.
+  const org: SharedViewOrganization = {
+    ...group.project.organization,
+    features: [],
+  };
 
   return (
     <SentryDocumentTitle noSuffix title={group?.title ?? 'Sentry'}>
-      <OrganizationContext value={org}>
+      <OrganizationContext value={org as Organization}>
         <div className="app">
           <div className="pattern-bg" />
           <div className="container">
@@ -96,7 +98,12 @@ function SharedGroupDetails() {
                   padding="3xl"
                   className="group-overview event-details-container"
                 >
-                  <SharedEventContent event={group.latestEvent} org={org} group={group} />
+                  <SharedEventContent
+                    organization={org}
+                    group={group}
+                    event={group.latestEvent}
+                    project={group.project}
+                  />
                 </Container>
                 <Footer />
               </div>
@@ -105,54 +112,6 @@ function SharedGroupDetails() {
         </div>
       </OrganizationContext>
     </SentryDocumentTitle>
-  );
-}
-
-function SharedEventContent({
-  event,
-  org,
-  group,
-}: {
-  group: Group;
-  org: {features: string[]; slug: string; name?: string};
-  event?: Group['latestEvent'];
-}) {
-  if (!event) {
-    return (
-      <BorderlessEventEntries
-        organization={org}
-        group={group}
-        event={event}
-        project={group.project}
-        isShare
-      />
-    );
-  }
-
-  const exceptionEntry = event.entries?.find(e => e.type === EntryType.EXCEPTION);
-  const stacktraceEntry = event.entries?.find(e => e.type === EntryType.STACKTRACE);
-
-  const hideEntryTypes = [
-    ...(exceptionEntry ? [EntryType.EXCEPTION] : []),
-    ...(stacktraceEntry ? [EntryType.STACKTRACE] : []),
-  ];
-
-  return (
-    <div>
-      {exceptionEntry ? (
-        <SharedIssueStackTrace event={event} values={exceptionEntry.data.values ?? []} />
-      ) : stacktraceEntry ? (
-        <SharedIssueStackTrace event={event} stacktrace={stacktraceEntry.data} />
-      ) : null}
-      <BorderlessEventEntries
-        organization={org}
-        group={group}
-        event={event}
-        project={group.project}
-        isShare
-        hideEntryTypes={hideEntryTypes}
-      />
-    </div>
   );
 }
 

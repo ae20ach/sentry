@@ -19,7 +19,8 @@ import {
 import {LoadingError} from 'sentry/components/loadingError';
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
 import {Panel} from 'sentry/components/panels/panel';
-import {ScmRepoTreeModal} from 'sentry/components/repositories/scmRepoTreeModal';
+import {useBulkUpdateRepositorySettings} from 'sentry/components/repositories/useBulkUpdateRepositorySettings';
+import {getRepositoryWithSettingsQueryKey} from 'sentry/components/repositories/useRepositoryWithSettings';
 import {IconAdd} from 'sentry/icons';
 import {IconSearch} from 'sentry/icons/iconSearch';
 import {t, tct} from 'sentry/locale';
@@ -35,8 +36,6 @@ import {useOrganization} from 'sentry/utils/useOrganization';
 
 import {SeerRepoTableHeader} from 'getsentry/views/seerAutomation/components/repoTable/seerRepoTableHeader';
 import {SeerRepoTableRow} from 'getsentry/views/seerAutomation/components/repoTable/seerRepoTableRow';
-import {useBulkUpdateRepositorySettings} from 'getsentry/views/seerAutomation/onboarding/hooks/useBulkUpdateRepositorySettings';
-import {getRepositoryWithSettingsQueryKey} from 'getsentry/views/seerAutomation/onboarding/hooks/useRepositoryWithSettings';
 
 const GRID_COLUMNS = '40px 1fr 118px 150px';
 const SELECTED_ROW_HEIGHT = 44;
@@ -161,7 +160,10 @@ export function SeerRepoTable() {
         <Button
           priority="primary"
           icon={<IconAdd />}
-          onClick={() => {
+          onClick={async () => {
+            const {ScmRepoTreeModal} =
+              await import('sentry/components/repositories/scmRepoTreeModal');
+
             openModal(
               deps => <ScmRepoTreeModal {...deps} title={t('Add Repository')} />,
               {
