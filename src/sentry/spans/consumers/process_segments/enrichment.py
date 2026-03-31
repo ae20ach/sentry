@@ -155,13 +155,13 @@ class TreeEnricher:
         self, span: SpanEvent, start_with_self: bool = False
     ) -> Iterator[SpanEvent]:
         """
-        Iterates over the ancestors of a span in order towards the root using the "parent_span_id" attribute.
+        Iterates over the ancestors of a span in order towards the root using the "parent_span_id" attribute. If start_with_self is True, the span itself is yielded first.
         """
         current: SpanEvent | None = span
         parent_span_id: str | None = None
 
         if start_with_self:
-            current = span
+            yield current
 
         while current is not None:
             parent_span_id = current.get("parent_span_id")
