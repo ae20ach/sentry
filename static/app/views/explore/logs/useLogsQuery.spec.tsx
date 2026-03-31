@@ -369,41 +369,31 @@ describe('useInfiniteLogsQuery', () => {
       };
     }
 
-    it('auto fetches only empty pages pages and end when signaled', async () => {
+    it('auto fetches empty pages until hasNext is false', async () => {
       const mockFlextTimeRequests = [
         makeMockEventsResponse({cursor: '', nextCursor: 'page2'}),
         makeMockEventsResponse({cursor: 'page2', nextCursor: 'page3'}),
         makeMockEventsResponse({cursor: 'page3', nextCursor: 'page4'}),
-        makeMockEventsResponse({cursor: 'page4', nextCursor: 'page5'}),
+        makeMockEventsResponse({cursor: 'page4', nextCursor: 'page5', hasNext: false}),
         makeMockEventsResponse({cursor: 'page5', nextCursor: 'page6', hasNext: false}),
-        makeMockEventsResponse({cursor: 'page6', nextCursor: 'page7', hasNext: false}),
       ].map(response => MockApiClient.addMockResponse(response));
 
       const {result} = renderHookWithProviders(
-        () => useInfiniteLogsQuery({highFidelity: true, maxAutoFetches: 3}),
+        () => useInfiniteLogsQuery({highFidelity: true}),
         {
           additionalWrapper: createWrapper(),
         }
       );
 
-      // the first 3 requests should have been called
       await waitFor(() => expect(mockFlextTimeRequests[0]).toHaveBeenCalledTimes(1));
       await waitFor(() => expect(mockFlextTimeRequests[1]).toHaveBeenCalledTimes(1));
       await waitFor(() => expect(mockFlextTimeRequests[2]).toHaveBeenCalledTimes(1));
-      await waitFor(() => expect(mockFlextTimeRequests[3]).not.toHaveBeenCalled());
-
-      // should be allowed to resume autofetching
-      expect(result.current.canResumeAutoFetch).toBe(true);
-      act(() => result.current.resumeAutoFetch());
-
-      // the next 3 requests should have been called
       await waitFor(() => expect(mockFlextTimeRequests[3]).toHaveBeenCalledTimes(1));
-      await waitFor(() => expect(mockFlextTimeRequests[4]).toHaveBeenCalledTimes(1));
 
-      // should not be allowed to resume autofetching
+      // should not be allowed to resume autofetching because hasNext is false
       expect(result.current.canResumeAutoFetch).toBe(false);
 
-      await waitFor(() => expect(mockFlextTimeRequests[5]).not.toHaveBeenCalled());
+      await waitFor(() => expect(mockFlextTimeRequests[4]).not.toHaveBeenCalled());
     });
 
     it('auto fetches until limit', async () => {
@@ -433,7 +423,7 @@ describe('useInfiniteLogsQuery', () => {
       ].map(response => MockApiClient.addMockResponse(response));
 
       const {result} = renderHookWithProviders(
-        () => useInfiniteLogsQuery({highFidelity: true, maxAutoFetches: 3}),
+        () => useInfiniteLogsQuery({highFidelity: true}),
         {
           additionalWrapper: createWrapper(),
         }

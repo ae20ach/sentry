@@ -28,6 +28,8 @@ import {SAMPLING_MODE} from 'sentry/views/explore/hooks/useProgressiveQuery';
 import {useTraceItemDetails} from 'sentry/views/explore/hooks/useTraceItemDetails';
 import {
   AlwaysPresentLogFields,
+  FLEX_TIME_INITIAL_SEARCH_DURATION_MS,
+  FLEX_TIME_RESUME_SEARCH_DURATION_MS,
   MAX_LOG_INGEST_DELAY,
   MAX_LOGS_INFINITE_QUERY_PAGES,
   QUERY_PAGE_LIMIT,
@@ -405,12 +407,10 @@ type QueryKey = [
 export function useInfiniteLogsQuery({
   disabled,
   highFidelity,
-  maxAutoFetches = 5,
   referrer,
 }: {
   disabled?: boolean;
   highFidelity?: boolean;
-  maxAutoFetches?: number;
   referrer?: string;
 } = {}) {
   const _referrer = referrer ?? 'api.explore.logs-table';
@@ -689,15 +689,17 @@ export function useInfiniteLogsQuery({
   const lastPageLength = data?.pages?.[data.pages.length - 1]?.[0]?.data?.length ?? 0;
   const limit = autoRefresh ? QUERY_PAGE_LIMIT_WITH_AUTO_REFRESH : QUERY_PAGE_LIMIT;
 
-  // the original state starts at -1 because we have to count
-  // the 1 query made by default outside of the auto fetches
-  const [autoFetchesRemaining, setAutoFetchesRemaining] = useState(maxAutoFetches - 1);
+  const [autoFetchStartTime, setAutoFetchStartTime] = useState<number>(() => Date.now());
+  const [autoFetchDuration, setAutoFetchDuration] = useState(
+    FLEX_TIME_INITIAL_SEARCH_DURATION_MS
+  );
   const canAutoFetchNextPage =
     !!highFidelity &&
     hasNextPage &&
     nextPageHasData &&
     (lastPageLength === 0 || _data.length < limit);
-  const shouldAutoFetchNextPage = canAutoFetchNextPage && autoFetchesRemaining > 0;
+  const shouldAutoFetchNextPage =
+    canAutoFetchNextPage && Date.now() - autoFetchStartTime < autoFetchDuration;
 
   useEffect(() => {
     if (!shouldAutoFetchNextPage) {
@@ -708,7 +710,6 @@ export function useInfiniteLogsQuery({
       return;
     }
 
-    setAutoFetchesRemaining(remaining => remaining - 1);
     _fetchNextPage();
   }, [shouldAutoFetchNextPage, isFetchingNextPage, _fetchNextPage, nextPageCursor]);
 
@@ -741,7 +742,10 @@ export function useInfiniteLogsQuery({
     isFetchingPreviousPage,
     lastPageLength,
     canResumeAutoFetch: canAutoFetchNextPage,
-    resumeAutoFetch: () => setAutoFetchesRemaining(maxAutoFetches),
+    resumeAutoFetch: () => {
+      setAutoFetchStartTime(Date.now());
+      setAutoFetchDuration(FLEX_TIME_RESUME_SEARCH_DURATION_MS);
+    },
     dataScanned,
     bytesScanned: totalBytesScanned,
   };
