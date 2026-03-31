@@ -138,6 +138,11 @@ class TreeEnricher:
                         "type": "string",
                         "value": agent_name,
                     }
+                elif (function_id := self._find_function_id(span)) is not None:
+                    attributes[ATTRIBUTE_NAMES.GEN_AI_AGENT_NAME] = {
+                        "type": "string",
+                        "value": function_id,
+                    }
 
         attributes["sentry.exclusive_time_ms"] = {
             "type": "double",
@@ -146,12 +151,17 @@ class TreeEnricher:
 
         return attributes
 
-    def _iter_ancestors(self, span: SpanEvent) -> Iterator[SpanEvent]:
+    def _iter_ancestors(
+        self, span: SpanEvent, start_with_self: bool = False
+    ) -> Iterator[SpanEvent]:
         """
         Iterates over the ancestors of a span in order towards the root using the "parent_span_id" attribute.
         """
         current: SpanEvent | None = span
         parent_span_id: str | None = None
+
+        if start_with_self:
+            current = span
 
         while current is not None:
             parent_span_id = current.get("parent_span_id")
@@ -174,6 +184,18 @@ class TreeEnricher:
                 agent_name := attribute_value(ancestor, ATTRIBUTE_NAMES.GEN_AI_AGENT_NAME)
             ) is not None:
                 return agent_name
+        return None
+
+    def _find_function_id(self, span: SpanEvent) -> str | None:
+        """
+        Finds the nearest ancestor's function id within MAX_AGENT_NAME_ANCESTOR_HOPS, starting with the span itself.
+        Returns the first function id found, or None if no ancestor has one.
+        """
+        for ancestor in islice(
+            self._iter_ancestors(span, start_with_self=True), MAX_AGENT_NAME_ANCESTOR_HOPS
+        ):
+            if (function_id := attribute_value(ancestor, "gen_ai.function_id")) is not None:
+                return function_id
         return None
 
     def _exclusive_time(self, span: SpanEvent) -> float:

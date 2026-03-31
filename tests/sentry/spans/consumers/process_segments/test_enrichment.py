@@ -812,6 +812,164 @@ def test_enrich_gen_ai_agent_name_respects_max_depth() -> None:
     assert attribute_value(compatible_spans[-1], "gen_ai.agent.name") is None
 
 
+def test_enrich_gen_ai_agent_name_fallback_to_own_function_id() -> None:
+    """Test that gen_ai.agent.name falls back to the span's own gen_ai.function_id when no ancestor agent name exists."""
+    parent_span = build_mock_span(
+        project_id=1,
+        is_segment=True,
+        span_id="aaaaaaaaaaaaaaaa",
+        start_timestamp=1609455600.0,
+        end_timestamp=1609455605.0,
+        span_op="some.operation",
+    )
+
+    child_span = build_mock_span(
+        project_id=1,
+        span_id="bbbbbbbbbbbbbbbb",
+        parent_span_id="aaaaaaaaaaaaaaaa",
+        start_timestamp=1609455601.0,
+        end_timestamp=1609455602.0,
+        attributes={
+            "gen_ai.operation.name": {"type": "string", "value": "execute_tool"},
+            "gen_ai.function_id": {"type": "string", "value": "my_tool_function"},
+        },
+    )
+
+    spans = [parent_span, child_span]
+    _, enriched_spans = TreeEnricher.enrich_spans(spans)
+
+    child = enriched_spans[1]
+    assert attribute_value(child, "gen_ai.agent.name") == "my_tool_function"
+
+
+def test_enrich_gen_ai_agent_name_fallback_to_ancestor_function_id() -> None:
+    """Test that gen_ai.agent.name falls back to an ancestor's gen_ai.function_id when no agent name exists."""
+    parent_span = build_mock_span(
+        project_id=1,
+        is_segment=True,
+        span_id="aaaaaaaaaaaaaaaa",
+        start_timestamp=1609455600.0,
+        end_timestamp=1609455605.0,
+        span_op="some.operation",
+        attributes={
+            "gen_ai.function_id": {"type": "string", "value": "parent_function"},
+        },
+    )
+
+    child_span = build_mock_span(
+        project_id=1,
+        span_id="bbbbbbbbbbbbbbbb",
+        parent_span_id="aaaaaaaaaaaaaaaa",
+        start_timestamp=1609455601.0,
+        end_timestamp=1609455602.0,
+        attributes={
+            "gen_ai.operation.name": {"type": "string", "value": "execute_tool"},
+        },
+    )
+
+    spans = [parent_span, child_span]
+    _, enriched_spans = TreeEnricher.enrich_spans(spans)
+
+    child = enriched_spans[1]
+    assert attribute_value(child, "gen_ai.agent.name") == "parent_function"
+
+
+def test_enrich_gen_ai_agent_name_prefers_agent_name_over_function_id() -> None:
+    """Test that ancestor agent name takes priority over function_id."""
+    parent_span = build_mock_span(
+        project_id=1,
+        is_segment=True,
+        span_id="aaaaaaaaaaaaaaaa",
+        start_timestamp=1609455600.0,
+        end_timestamp=1609455605.0,
+        span_op="gen_ai.invoke_agent",
+        attributes={
+            "gen_ai.agent.name": {"type": "string", "value": "MyAgent"},
+            "gen_ai.function_id": {"type": "string", "value": "should_not_use"},
+        },
+    )
+
+    child_span = build_mock_span(
+        project_id=1,
+        span_id="bbbbbbbbbbbbbbbb",
+        parent_span_id="aaaaaaaaaaaaaaaa",
+        start_timestamp=1609455601.0,
+        end_timestamp=1609455602.0,
+        attributes={
+            "gen_ai.operation.name": {"type": "string", "value": "execute_tool"},
+            "gen_ai.function_id": {"type": "string", "value": "also_should_not_use"},
+        },
+    )
+
+    spans = [parent_span, child_span]
+    _, enriched_spans = TreeEnricher.enrich_spans(spans)
+
+    child = enriched_spans[1]
+    assert attribute_value(child, "gen_ai.agent.name") == "MyAgent"
+
+
+def test_enrich_gen_ai_agent_name_own_function_id_preferred_over_ancestor_function_id() -> None:
+    """Test that the span's own function_id is preferred over an ancestor's function_id."""
+    parent_span = build_mock_span(
+        project_id=1,
+        is_segment=True,
+        span_id="aaaaaaaaaaaaaaaa",
+        start_timestamp=1609455600.0,
+        end_timestamp=1609455605.0,
+        span_op="some.operation",
+        attributes={
+            "gen_ai.function_id": {"type": "string", "value": "parent_function"},
+        },
+    )
+
+    child_span = build_mock_span(
+        project_id=1,
+        span_id="bbbbbbbbbbbbbbbb",
+        parent_span_id="aaaaaaaaaaaaaaaa",
+        start_timestamp=1609455601.0,
+        end_timestamp=1609455602.0,
+        attributes={
+            "gen_ai.operation.name": {"type": "string", "value": "execute_tool"},
+            "gen_ai.function_id": {"type": "string", "value": "child_function"},
+        },
+    )
+
+    spans = [parent_span, child_span]
+    _, enriched_spans = TreeEnricher.enrich_spans(spans)
+
+    child = enriched_spans[1]
+    assert attribute_value(child, "gen_ai.agent.name") == "child_function"
+
+
+def test_enrich_gen_ai_no_agent_name_no_function_id() -> None:
+    """Test that gen_ai.agent.name is not set when neither agent name nor function_id exists."""
+    parent_span = build_mock_span(
+        project_id=1,
+        is_segment=True,
+        span_id="aaaaaaaaaaaaaaaa",
+        start_timestamp=1609455600.0,
+        end_timestamp=1609455605.0,
+        span_op="some.operation",
+    )
+
+    child_span = build_mock_span(
+        project_id=1,
+        span_id="bbbbbbbbbbbbbbbb",
+        parent_span_id="aaaaaaaaaaaaaaaa",
+        start_timestamp=1609455601.0,
+        end_timestamp=1609455602.0,
+        attributes={
+            "gen_ai.operation.name": {"type": "string", "value": "execute_tool"},
+        },
+    )
+
+    spans = [parent_span, child_span]
+    _, enriched_spans = TreeEnricher.enrich_spans(spans)
+
+    child = enriched_spans[1]
+    assert attribute_value(child, "gen_ai.agent.name") is None
+
+
 def test_enrich_gen_ai_agent_name_from_deep_ancestor() -> None:
     """Test that agent name is inherited from ancestor at exactly MAX_AGENT_NAME_ANCESTOR_HOPS."""
     spans = []
