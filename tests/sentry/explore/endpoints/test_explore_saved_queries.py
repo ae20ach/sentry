@@ -50,13 +50,13 @@ class ExploreSavedQueriesTest(APITestCase):
             response = self.client.get(self.url)
 
         assert response.status_code == 200, response.content
-        assert len(response.data) == 5
+        assert len(response.data) == 6
 
         # Prebuilt query
-        assert response.data[0]["name"] == "All Transactions"
-        assert response.data[0]["projects"] == []
-        assert "range" not in response.data[0]
-        assert response.data[0]["query"] == [
+        assert response.data[1]["name"] == "All Transactions"
+        assert response.data[1]["projects"] == []
+        assert "range" not in response.data[1]
+        assert response.data[1]["query"] == [
             {
                 "caseInsensitive": False,
                 "fields": [
@@ -82,18 +82,18 @@ class ExploreSavedQueriesTest(APITestCase):
                 "orderby": "-timestamp",
             }
         ]
-        assert "createdBy" in response.data[0]
-        assert response.data[0]["createdBy"] is None
-        assert not response.data[0]["expired"]
+        assert "createdBy" in response.data[1]
+        assert response.data[1]["createdBy"] is None
+        assert not response.data[1]["expired"]
 
         # User saved query
-        assert response.data[3]["name"] == "Test query"
-        assert sorted(response.data[3]["projects"]) == sorted(self.project_ids)
-        assert response.data[3]["range"] == "24h"
-        assert response.data[3]["query"] == [{"fields": ["span.op"], "mode": "samples"}]
-        assert "createdBy" in response.data[3]
-        assert response.data[3]["createdBy"]["username"] == self.user.username
-        assert not response.data[3]["expired"]
+        assert response.data[4]["name"] == "Test query"
+        assert sorted(response.data[4]["projects"]) == sorted(self.project_ids)
+        assert response.data[4]["range"] == "24h"
+        assert response.data[4]["query"] == [{"fields": ["span.op"], "mode": "samples"}]
+        assert "createdBy" in response.data[4]
+        assert response.data[4]["createdBy"]["username"] == self.user.username
+        assert not response.data[4]["expired"]
 
     def test_get_name_filter(self) -> None:
         with self.feature(self.features):
@@ -310,7 +310,7 @@ class ExploreSavedQueriesTest(APITestCase):
         with self.feature(self.features):
             response = self.client.get(self.url, data={"exclude": "owned", "sortBy": "dateAdded"})
         assert response.status_code == 200, response.content
-        assert len(response.data) == 5
+        assert len(response.data) == 6
         assert response.data[0]["name"] == "Shared query"
 
     def test_get_query_last_visited(self) -> None:
@@ -341,7 +341,7 @@ class ExploreSavedQueriesTest(APITestCase):
         with self.feature(self.features):
             response = self.client.get(self.url, data={"starred": "1"})
         assert response.status_code == 200, response.content
-        assert len(response.data) == 4
+        assert len(response.data) == 5
 
         # Unstars prebuilt queries
         ExploreSavedQueryStarred.objects.filter(
@@ -395,7 +395,7 @@ class ExploreSavedQueriesTest(APITestCase):
             response = self.client.get(self.url, data={"starred": "1"})
         assert response.status_code == 200, response.content
         assert (
-            len(response.data) == 5
+            len(response.data) == 6
         )  # Only one query should be returned because the other query is starred by a different user
         assert response.data[0]["name"] == "Starred query A"
         assert response.data[0]["starred"] is True
@@ -451,7 +451,7 @@ class ExploreSavedQueriesTest(APITestCase):
         with self.feature(self.features):
             response = self.client.get(self.url, data={"sortBy": "mostStarred"})
         assert response.status_code == 200, response.content
-        assert len(response.data) == 7
+        assert len(response.data) == 8
         assert response.data[0]["name"] == "Most starred query"
         assert response.data[0]["starred"] is True
         assert response.data[0]["position"] == 1
@@ -562,7 +562,7 @@ class ExploreSavedQueriesTest(APITestCase):
             response = self.client.get(self.url, data={"sortBy": ["starred", "recentlyViewed"]})
 
         assert response.status_code == 200, response.content
-        assert len(response.data) == 9
+        assert len(response.data) == 10
         assert response.data[0]["name"] == "Query B"
         assert response.data[0]["starred"] is True
         assert response.data[0]["position"] == 2
@@ -1104,16 +1104,16 @@ class ExploreSavedQueriesTest(APITestCase):
             response_with_flag = self.client.get(self.url, data={"sortBy": ["name"]})
 
         assert response_with_flag.status_code == 200, response_with_flag.content
-        assert len(response_with_flag.data) == 6
+        assert len(response_with_flag.data) == 7
 
-        assert response_with_flag.data[5]["name"] == "Z - Segment span query"
-        assert response_with_flag.data[5]["dataset"] == "segment_spans"
+        assert response_with_flag.data[6]["name"] == "Z - Segment span query"
+        assert response_with_flag.data[6]["dataset"] == "segment_spans"
 
         with self.feature(self.features):
             response_without_flag = self.client.get(self.url)
 
         assert response_without_flag.status_code == 200, response_without_flag.content
-        assert len(response_without_flag.data) == 5
+        assert len(response_without_flag.data) == 6
 
     def test_post_metrics_dataset_with_metric_field(self) -> None:
         with self.feature(self.features):

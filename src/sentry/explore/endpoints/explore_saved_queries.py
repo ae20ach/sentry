@@ -159,6 +159,38 @@ PREBUILT_SAVED_QUERIES = [
             }
         ],
     },
+    {
+        "prebuilt_id": 5,
+        "prebuilt_version": 1,
+        "name": "AI Spans",
+        "dataset": "spans",
+        "query": [
+            {
+                "fields": [
+                    "id",
+                    "span.op",
+                    "span.description",
+                    "span.duration",
+                    "transaction",
+                    "timestamp",
+                    "gen_ai.cost.total_tokens",
+                    "gen_ai.output.model",
+                    "gen_ai.response.model",
+                    "gen_ai.output.messages",
+                    "gen_ai.response.text",
+                ],
+                "query": "has:gen_ai.cost.total_tokens has:gen_ai.response.model has:gen_ai.response.text",
+                "mode": "samples",
+                "visualize": [
+                    {
+                        "chartType": 1,
+                        "yAxes": ["p90(span.duration)"],
+                    },
+                ],
+                "orderby": "-timestamp",
+            }
+        ],
+    },
 ]
 
 
