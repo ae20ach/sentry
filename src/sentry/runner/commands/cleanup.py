@@ -266,13 +266,19 @@ def cleanup(
     partition_total: int | None,
     partition_key: str,
 ) -> None:
-    """Delete a portion of trailing data based on creation date.
+    """Delete a portion of trailing data based on a model's configured datetime column.
 
-    All data that is older than `--days` will be deleted.  The default for
-    this is 30 days.  In the default setting all projects will be truncated
-    but if you have a specific project or organization you want to limit this to,
-    this can be done with the `--project` or `--organization` flags respectively,
-    which accepts a project/organization ID or a string with the form `org/project` where both are slugs.
+    Each model has a configured datetime column that will determine which records should
+    be deleted. If the datetime in the configured datetime column passed more than `--days`
+    days ago, the record will be deleted. By default, `--days` is 30 days. Models may
+    choose their `date_added` column to delete records with a uniform expiration policy or
+    they may choose an `date_expires` column and rely on the application to set the expiry
+    based on the owner's plan.
+
+    In the default setting all projects will be truncated but if you have a specific project
+    or organization you want to limit this to, this can be done with the `--project` or
+    `--organization` flags respectively, which accept a project/organization ID or a string
+    with the form `org/project` where both are slugs.
     """
     _cleanup(
         model=model,
@@ -673,7 +679,7 @@ def models_which_use_deletions_code_path() -> list[tuple[type[BaseModel], str, s
     # Deletions that use the `deletions` code path (which handles their child relations)
     # (model, datetime_field, order_by)
     return [
-        (EventAttachment, "date_added", "date_added"),
+        # Delete based on a record's age (universal retention policies)
         (ReplayRecordingSegment, "date_added", "date_added"),
         (ArtifactBundle, "date_added", "date_added"),
         (MonitorCheckIn, "date_added", "date_added"),
@@ -685,6 +691,9 @@ def models_which_use_deletions_code_path() -> list[tuple[type[BaseModel], str, s
         (File, "timestamp", "id"),
         (Commit, "date_added", "id"),
         (UptimeResponseCapture, "date_added", "date_added"),
+        # Delete based on a record's expiration date (variable retention policies)
+        # Use with `--days=0`
+        (EventAttachment, "date_expires", "date_expires"),
     ]
 
 
