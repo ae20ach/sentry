@@ -77,13 +77,6 @@ from sentry.models.dashboard_widget import (
     DashboardWidgetQueryOnDemand,
     DashboardWidgetTypes,
 )
-<<<<<<< HEAD
-from sentry.models.dynamicsampling import (
-    CustomDynamicSamplingRule,
-    CustomDynamicSamplingRuleProject,
-)
-=======
->>>>>>> f8f3dc83b21 (ref(dynamic-sampling): Remove CustomDynamicSamplingRule model and code)
 from sentry.models.groupassignee import GroupAssignee
 from sentry.models.groupbookmark import GroupBookmark
 from sentry.models.groupsearchview import GroupSearchView, GroupSearchViewProject
@@ -820,20 +813,6 @@ class ExhaustiveFixtures(Fixtures):
             project=project,
             overrides={"write_key": "test_override_write_key"},
         )
-
-        custom_rule = CustomDynamicSamplingRule.objects.create(
-            organization=org,
-            condition='{"op":"and","inner":[]}',
-            end_date=timezone.now() + timedelta(days=1),
-            num_samples=100,
-            condition_hash="abc123def456abc123def456abc123def4560000",
-            sample_rate=0.5,
-        )
-        CustomDynamicSamplingRuleProject.objects.create(
-            custom_dynamic_sampling_rule=custom_rule,
-            project=project,
-        )
-
         return org
 
     @assume_test_silo_mode(SiloMode.CONTROL)
