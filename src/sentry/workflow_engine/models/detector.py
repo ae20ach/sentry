@@ -19,6 +19,7 @@ from sentry.db.models.utils import is_model_attr_cached
 from sentry.issues import grouptype
 from sentry.issues.grouptype import GroupType
 from sentry.models.owner_base import OwnerModel
+from sentry.utils import metrics
 from sentry.utils.cache import cache
 from sentry.workflow_engine.models import DataCondition
 from sentry.workflow_engine.types import DetectorSettings
@@ -69,7 +70,7 @@ class DetectorManager(BaseManager["Detector"]):
 class Detector(DefaultFieldsModel, OwnerModel, JSONConfigBase):
     __relocation_scope__ = RelocationScope.Organization
 
-    objects: ClassVar[DetectorManager] = DetectorManager()
+    objects: ClassVar[DetectorManager] = DetectorManager(cache_fields=["pk"])
     objects_for_deletion: ClassVar[BaseManager[Detector]] = BaseManager()
 
     project = FlexibleForeignKey("sentry.Project", on_delete=models.CASCADE)
@@ -121,6 +122,20 @@ class Detector(DefaultFieldsModel, OwnerModel, JSONConfigBase):
         if detector is None:
             detector = cls.objects.get(project_id=project_id, type=detector_type)
             cache.set(cache_key, detector, cls.CACHE_TTL)
+        return detector
+
+    @classmethod
+    def get_detector_by_id(cls, id: int) -> Detector:
+        cache_key = f"detector:by_id:{id}"
+
+        detector = cache.get(cache_key)
+        if detector is None:
+            detector = cls.objects.get(id=id)
+            metrics.incr("workflow_engine.models.detector.cache_miss")
+            cache.set(cache_key, detector, cls.CACHE_TTL)
+        else:
+            metrics.incr("workflow_engine.models.detector.cache_hit")
+
         return detector
 
     @classmethod

@@ -405,7 +405,7 @@ def _get_detector_for_event(event: GroupEvent) -> Detector | None:
             detector_id = issue_occurrence.evidence_data.get("detector_id")
             if detector_id is None:
                 return None
-            return Detector.objects.get(id=detector_id)
+            return Detector.get_detector_by_id(detector_id)
         else:
             return Detector.get_error_detector_for_project(event.group.project_id)
     except Detector.DoesNotExist:
