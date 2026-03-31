@@ -1,4 +1,5 @@
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import * as Sentry from '@sentry/react';
 import {logger} from '@sentry/react';
 
 import {type ApiResult} from 'sentry/api';
@@ -701,6 +702,29 @@ export function useInfiniteLogsQuery({
   const shouldAutoFetchNextPage =
     canAutoFetchNextPage && Date.now() - autoFetchStartTime < autoFetchDuration;
 
+  const autoFetchPageCount = useRef(0);
+  const prevShouldAutoFetch = useRef(false);
+
+  useEffect(() => {
+    if (shouldAutoFetchNextPage && !prevShouldAutoFetch.current) {
+      autoFetchPageCount.current = 0;
+    }
+
+    if (!shouldAutoFetchNextPage && prevShouldAutoFetch.current && highFidelity) {
+      Sentry.metrics.distribution(
+        'explore.logs.flex_time_pages_before_data',
+        autoFetchPageCount.current,
+        {
+          attributes: {
+            found_data: _data.length > 0 ? 'true' : 'false',
+          },
+        }
+      );
+    }
+
+    prevShouldAutoFetch.current = shouldAutoFetchNextPage;
+  }, [shouldAutoFetchNextPage, highFidelity, _data.length]);
+
   useEffect(() => {
     if (!shouldAutoFetchNextPage) {
       return;
@@ -710,6 +734,7 @@ export function useInfiniteLogsQuery({
       return;
     }
 
+    autoFetchPageCount.current += 1;
     _fetchNextPage();
   }, [shouldAutoFetchNextPage, isFetchingNextPage, _fetchNextPage, nextPageCursor]);
 
