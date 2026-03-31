@@ -14,6 +14,8 @@ import type {EventTransaction} from 'sentry/types/event';
 type SpanEvidencePreviewProps = {
   children: React.ReactNode;
   groupId: string;
+  delay?: number;
+  displayTimeout?: number;
   query?: string;
 };
 
@@ -78,6 +80,8 @@ export function SpanEvidencePreview({
   children,
   groupId,
   query,
+  delay,
+  displayTimeout,
 }: SpanEvidencePreviewProps) {
   const {shouldShowLoadingState, onRequestBegin, onRequestEnd, reset} =
     useDelayedLoadingState();
@@ -85,6 +89,8 @@ export function SpanEvidencePreview({
   return (
     <GroupPreviewHovercard
       hide={!shouldShowLoadingState}
+      delay={delay}
+      displayTimeout={displayTimeout}
       body={
         <SpanEvidencePreviewBody
           onRequestBegin={onRequestBegin}

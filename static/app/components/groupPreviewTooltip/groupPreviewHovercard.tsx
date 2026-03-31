@@ -15,6 +15,8 @@ export function GroupPreviewHovercard({
   children,
   hide,
   body,
+  delay = 100,
+  displayTimeout = 200,
   ...props
 }: GroupPreviewHovercardProps) {
   const theme = useTheme();
@@ -30,8 +32,8 @@ export function GroupPreviewHovercard({
   return (
     <StyledHovercardWithBodyClass
       className={className}
-      displayTimeout={200}
-      delay={100}
+      displayTimeout={displayTimeout}
+      delay={delay}
       position={shouldShowPositionTop ? 'top' : 'right'}
       hide={shouldNotPreview || hide}
       body={<div onClick={handleStackTracePreviewClick}>{body}</div>}

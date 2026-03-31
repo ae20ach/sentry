@@ -21,7 +21,11 @@ describe('SpanEvidencePreview', () => {
       body: {},
     });
 
-    render(<SpanEvidencePreview groupId="group-id">Hover me</SpanEvidencePreview>);
+    render(
+      <SpanEvidencePreview groupId="group-id" delay={0} displayTimeout={0}>
+        Hover me
+      </SpanEvidencePreview>
+    );
 
     await act(tick);
 
@@ -35,7 +39,11 @@ describe('SpanEvidencePreview', () => {
       statusCode: 500,
     });
 
-    render(<SpanEvidencePreview groupId="group-id">Hover me</SpanEvidencePreview>);
+    render(
+      <SpanEvidencePreview groupId="group-id" delay={0} displayTimeout={0}>
+        Hover me
+      </SpanEvidencePreview>
+    );
 
     await userEvent.hover(screen.getByText('Hover me'), {delay: null});
 
@@ -101,7 +109,11 @@ describe('SpanEvidencePreview', () => {
       body: event,
     });
 
-    render(<SpanEvidencePreview groupId="group-id">Hover me</SpanEvidencePreview>);
+    render(
+      <SpanEvidencePreview groupId="group-id" delay={0} displayTimeout={0}>
+        Hover me
+      </SpanEvidencePreview>
+    );
 
     await userEvent.hover(screen.getByText('Hover me'), {delay: null});
 

@@ -26,6 +26,7 @@ describe('EventGroupingInfo', () => {
   let groupingInfoRequest!: jest.Mock;
 
   beforeEach(() => {
+    localStorage.removeItem('issue-details-fold-section-collapse:grouping-info');
     MockApiClient.clearMockResponses();
     groupingInfoRequest = MockApiClient.addMockResponse({
       url: `/projects/org-slug/project-slug/events/${event.id}/grouping-info/`,
@@ -64,6 +65,9 @@ describe('EventGroupingInfo', () => {
     render(
       <EventGroupingInfoSection {...defaultProps} event={perfEvent} group={perfGroup} />
     );
+    await userEvent.click(
+      screen.getByRole('button', {name: 'View Event Grouping Information Section'})
+    );
 
     expect(await screen.findByText('performance problem')).toBeInTheDocument();
     expect(screen.getByText('123')).toBeInTheDocument();
@@ -89,6 +93,9 @@ describe('EventGroupingInfo', () => {
       },
     });
     render(<EventGroupingInfoSection {...defaultProps} />);
+    await userEvent.click(
+      screen.getByRole('button', {name: 'View Event Grouping Information Section'})
+    );
 
     expect(await screen.findByText('variant description')).toBeInTheDocument();
     expect(screen.getByText('123')).toBeInTheDocument();
@@ -118,6 +125,9 @@ describe('EventGroupingInfo', () => {
 
     render(
       <EventGroupingInfoSection {...defaultProps} event={perfEvent} group={perfGroup} />
+    );
+    await userEvent.click(
+      screen.getByRole('button', {name: 'View Event Grouping Information Section'})
     );
 
     expect(await screen.findByText('performance problem')).toBeInTheDocument();
