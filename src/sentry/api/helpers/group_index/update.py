@@ -1062,6 +1062,68 @@ def handle_is_public(
     return share_id
 
 
+def validate_issue_assignment(
+    *,
+    organization: Organization | None,
+    project: Project,
+    assignee: Actor,
+    assigner_user_id: int | None = None,
+    access: Any | None = None,
+    current_assignee_team_id: int | None = None,
+) -> None:
+    """
+    Validate permission for a single issue assignment. This function is the source
+    of truth for the issue assignment permission model.
+
+    There are two categories of checks: assignee checks (does the target make sense)
+    and assigner checks (does the requesting user have permission). Not all callers
+    need both — pass ``assigner_user_id`` to enable assigner checks.
+
+    Assignee checks (always run):
+        - User assignee: must be on a team with access to the project.
+        - Team assignee: must have access to the project.
+
+    Assigner checks (run when ``assigner_user_id`` is provided, team assignment only):
+        - Open membership (``allow_joinleave``): all team assignment is allowed.
+        - ``team:admin`` scope: all team assignment is allowed.
+        - Assigner is a member of the target team: allowed.
+        - Assigner is a member of the currently assigned team: allowed (reassignment).
+        - Otherwise: denied.
+
+    Raises ``serializers.ValidationError`` on failure.
+    """
+    if assignee.is_user:
+        if not project.member_set.filter(user_id=assignee.id).exists():
+            raise serializers.ValidationError("Cannot assign to non-team member")
+    elif assignee.is_team:
+        if not project.teams.filter(id=assignee.id).exists():
+            raise serializers.ValidationError(
+                "Cannot assign to a team without access to the project"
+            )
+
+    if assigner_user_id is None or not assignee.is_team:
+        return
+
+    if organization and organization.flags.allow_joinleave:
+        return
+
+    if access and access.has_scope("team:admin"):
+        return
+
+    team_ids_to_check = {assignee.id}
+    if current_assignee_team_id is not None:
+        team_ids_to_check.add(current_assignee_team_id)
+
+    if OrganizationMemberTeam.objects.filter(
+        team_id__in=team_ids_to_check,
+        organizationmember__user_id=assigner_user_id,
+        is_active=True,
+    ).exists():
+        return
+
+    raise serializers.ValidationError("You can only assign teams you are a member of")
+
+
 def validate_bulk_reassignment(
     request: Request,
     group_list: Sequence[Group],
@@ -1070,14 +1132,15 @@ def validate_bulk_reassignment(
     organization: Organization | None = None,
 ) -> None:
     """
-    Validate that the user has permission to assign a team to all groups.
+    Validate assigner permission for bulk issue assignment.
 
-    When assigning to a team, a user is permitted if any of the following are true:
-    - Open Team Membership is enabled for the organization, OR
-    - They have team:admin scope, OR
-    - They are a member of the target team, OR
-    - ALL groups are currently assigned to teams the user is a member of
-      (allows reassignment from own team to any team)
+    Assignee-side checks (project access for user/team) are handled separately
+    by ``GroupValidator.validate_assignedTo()`` during serializer validation.
+
+    This function validates the assigner's permission to assign a team to the
+    given groups. It delegates per-group checks to ``validate_issue_assignment()``.
+
+    Only runs for team assignment — user assignment has no assigner restrictions.
     """
     if assigned_actor is None or not assigned_actor.is_team:
         return
@@ -1095,49 +1158,38 @@ def validate_bulk_reassignment(
             {"assignedTo": "You can only assign teams you are a member of"}
         )
 
-    user_is_target_team_member = OrganizationMemberTeam.objects.filter(
+    # Fast path: if the assigner is on the target team, all groups are allowed
+    if OrganizationMemberTeam.objects.filter(
         team_id=assigned_actor.id,
         organizationmember__user_id=user.id,
         is_active=True,
-    ).exists()
-
-    if user_is_target_team_member:
+    ).exists():
         return
 
+    # Slow path: check per-group reassignment permission (assigner must be on
+    # each group's currently-assigned team).
     current_assignees = {
         assignee.group_id: assignee
-        for assignee in GroupAssignee.objects.filter(group__in=group_list).select_related("team")
+        for assignee in GroupAssignee.objects.filter(group__in=group_list)
     }
 
-    groups_with_team_assignment = {
-        group_id for group_id, assignee in current_assignees.items() if assignee.team_id is not None
-    }
-    all_group_ids = {group.id for group in group_list}
+    for group in group_list:
+        current = current_assignees.get(group.id)
+        current_team_id = current.team_id if current else None
 
-    if groups_with_team_assignment != all_group_ids:
-        # Some groups are either unassigned or assigned to users (not teams)
-        # User cannot reassign these to a team they're not a member of
-        raise serializers.ValidationError(
-            {"assignedTo": "You can only assign teams you are a member of"}
-        )
-
-    current_team_ids = {
-        current_assignees[group_id].team_id for group_id in groups_with_team_assignment
-    }
-
-    user_team_memberships = set(
-        OrganizationMemberTeam.objects.filter(
-            team_id__in=current_team_ids,
-            organizationmember__user_id=user.id,
-            is_active=True,
-        ).values_list("team_id", flat=True)
-    )
-
-    # If any group is assigned to a team the user is not a member of, deny
-    if current_team_ids - user_team_memberships:
-        raise serializers.ValidationError(
-            {"assignedTo": "You can only assign teams you are a member of"}
-        )
+        try:
+            validate_issue_assignment(
+                organization=organization,
+                project=group.project,
+                assignee=assigned_actor,
+                assigner_user_id=user.id,
+                access=access,
+                current_assignee_team_id=current_team_id,
+            )
+        except serializers.ValidationError:
+            raise serializers.ValidationError(
+                {"assignedTo": "You can only assign teams you are a member of"}
+            )
 
 
 def handle_assigned_to(

@@ -83,22 +83,23 @@ class GroupValidator(serializers.Serializer[Group]):
     snoozeDuration = serializers.IntegerField(allow_null=True)
 
     def validate_assignedTo(self, value: Actor) -> Actor:
-        if (
-            value
-            and value.is_user
-            and not self.context["project"].member_set.filter(user_id=value.id).exists()
-        ):
-            raise serializers.ValidationError("Cannot assign to non-team member")
+        """
+        Validate that the assignee has access to the issue's project.
 
-        if (
-            value
-            and value.is_team
-            and not self.context["project"].teams.filter(id=value.id).exists()
-        ):
-            raise serializers.ValidationError(
-                "Cannot assign to a team without access to the project"
-            )
+        Delegates to ``validate_issue_assignment()`` which is the source of truth
+        for the issue assignment permission model. Only assignee-side checks run
+        here — assigner-side checks run later in ``validate_bulk_reassignment()``.
+        """
+        if not value:
+            return value
 
+        from sentry.api.helpers.group_index.update import validate_issue_assignment
+
+        validate_issue_assignment(
+            organization=self.context.get("organization"),
+            project=self.context["project"],
+            assignee=value,
+        )
         return value
 
     def validate_discard(self, value: bool) -> bool:
