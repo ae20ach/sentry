@@ -860,6 +860,7 @@ export default typescript.config([
       ...testingLibrary.configs['flat/react'].rules,
       'testing-library/no-unnecessary-act': 'off',
       'testing-library/render-result-naming-convention': 'off',
+      '@sentry/prefer-find-by': 'error',
     },
   },
   {
