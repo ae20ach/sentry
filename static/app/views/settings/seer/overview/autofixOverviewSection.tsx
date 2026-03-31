@@ -23,7 +23,6 @@ import {
   type AutofixAutomationSettings,
 } from 'sentry/components/events/autofix/preferences/hooks/useBulkAutofixAutomationSettings';
 import {organizationIntegrationsCodingAgents} from 'sentry/components/events/autofix/useAutofix';
-import {ConfigAutofixProjectRepoMappingModal} from 'sentry/components/seer/autofixConfig/configAutofixProjectRepoMappingModal';
 import {IconSettings} from 'sentry/icons';
 import {t, tct, tn} from 'sentry/locale';
 import type {Organization} from 'sentry/types/organization';
@@ -166,13 +165,15 @@ function ConnectedReposForm({
                 <Button
                   priority="primary"
                   size="sm"
-                  onClick={() => {
+                  onClick={async () => {
+                    const {ConfigAutofixProjectRepoMappingModal} =
+                      await import('sentry/components/seer/autofixConfig/configAutofixProjectRepoMappingModal');
+
                     openModal(
                       deps => (
                         <ConfigAutofixProjectRepoMappingModal
+                          {...deps}
                           title={t('Connect Projects and Repos')}
-                          Header={Header}
-                          Body={Body}
                         />
                       ),
                       {
