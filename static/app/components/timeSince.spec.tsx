@@ -1,4 +1,4 @@
-import {render, screen, userEvent, waitFor} from 'sentry-test/reactTestingLibrary';
+import {render, screen, userEvent} from 'sentry-test/reactTestingLibrary';
 
 import {TimeSince} from 'sentry/components/timeSince';
 import {TimezoneProvider} from 'sentry/components/timezoneProvider';
@@ -62,13 +62,11 @@ describe('TimeSince', () => {
     const date = new Date('2024-01-15T12:00:00Z');
     render(
       <TimezoneProvider timezone="America/New_York">
-        <TimeSince date={date} />
+        <TimeSince date={date} tooltipProps={{delay: 0}} />
       </TimezoneProvider>
     );
     const timeElement = screen.getByRole('time');
     await userEvent.hover(timeElement);
-    await waitFor(() => {
-      expect(screen.getByText(/EST/)).toBeInTheDocument();
-    });
+    expect(await screen.findByText(/EST/)).toBeInTheDocument();
   });
 });
