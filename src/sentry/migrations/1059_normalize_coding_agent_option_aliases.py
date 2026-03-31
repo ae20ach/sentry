@@ -42,7 +42,7 @@ class Migration(CheckedMigration):
     is_post_deployment = False
 
     dependencies = [
-        ("sentry", "1057_drop_legacy_alert_rule_tables"),
+        ("sentry", "1058_change_code_mapping_unique_constraint"),
     ]
 
     operations = [
