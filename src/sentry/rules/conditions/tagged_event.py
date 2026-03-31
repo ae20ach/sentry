@@ -36,7 +36,7 @@ class TaggedEventForm(forms.Form):
 
 class TaggedEventCondition(EventCondition):
     id = "sentry.rules.conditions.tagged_event.TaggedEventCondition"
-    label = "The event's tags match {key} {match} {value}"
+    label = "The event's {key} tag {match} {value}"
 
     form_fields = {
         "key": {"type": "string", "placeholder": "key"},

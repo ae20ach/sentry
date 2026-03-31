@@ -94,7 +94,7 @@ class EventAttributeCondition(EventCondition):
     """
 
     id = "sentry.rules.conditions.event_attribute.EventAttributeCondition"
-    label = "The event's {attribute} value {match} {value}"
+    label = "The event's {attribute} attribute {match} {value}"
 
     form_fields = {
         "attribute": {

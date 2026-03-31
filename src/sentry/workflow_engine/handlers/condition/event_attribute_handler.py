@@ -15,7 +15,7 @@ from sentry.workflow_engine.types import DataConditionHandler, WorkflowEventData
 class EventAttributeConditionHandler(DataConditionHandler[WorkflowEventData]):
     group = DataConditionHandler.Group.ACTION_FILTER
     subgroup = DataConditionHandler.Subgroup.EVENT_ATTRIBUTES
-    label_template = "The event's {attribute} value {match} {value}"
+    label_template = "The event's {attribute} attribute {match} {value}"
 
     comparison_json_schema = {
         "type": "object",

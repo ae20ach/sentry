@@ -289,7 +289,7 @@ ACTION_FILTERS_HELP_TEXT = """The filters to run before the action will fire and
         ```
 
         **Event Attribute**
-        The event's `attribute` value `match` `value`
+        The event's `attribute` attribute `match` `value`
 
         - `attribute`: The event attribute to match on. Valid values are: `message`, `platform`, `environment`, `type`, `error.handled`, `error.unhandled`, `error.main_thread`, `exception.type`, `exception.value`, `user.id`, `user.email`, `user.username`, `user.ip_address`, `http.method`, `http.url`, `http.status_code`, `sdk.name`, `stacktrace.code`, `stacktrace.module`, `stacktrace.filename`, `stacktrace.abs_path`, `stacktrace.package`, `unreal.crash_type`, `app.in_foreground`.
         - `match`: The comparison operator
@@ -316,7 +316,7 @@ ACTION_FILTERS_HELP_TEXT = """The filters to run before the action will fire and
         ```
 
         **Tagged Event**
-        The event's tags `key` match `value`
+        The event's `key` tag `match` `value`
         - `key`: The tag value
         - `match`: The comparison operator
             - `co`: Contains

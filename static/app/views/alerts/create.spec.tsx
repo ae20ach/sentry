@@ -362,7 +362,7 @@ describe('ProjectAlertsCreate', () => {
 
         // Add another condition
         await selectEvent.select(screen.getByText('Add optional filter...'), [
-          "The event's tags match {key} {match} {value}",
+          "The event's {key} tag {match} {value}",
         ]);
         // Edit new Condition
         await userEvent.click(screen.getByPlaceholderText('key'));

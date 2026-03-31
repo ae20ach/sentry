@@ -15,7 +15,7 @@ logger = log_context.get_logger(__name__)
 class TaggedEventConditionHandler(DataConditionHandler[WorkflowEventData]):
     group = DataConditionHandler.Group.ACTION_FILTER
     subgroup = DataConditionHandler.Subgroup.EVENT_ATTRIBUTES
-    label_template = "The event's tags match {key} {match} {value}"
+    label_template = "The event's {key} tag {match} {value}"
 
     comparison_json_schema = {
         "type": "object",

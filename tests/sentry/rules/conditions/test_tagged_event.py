@@ -22,7 +22,7 @@ class TaggedEventConditionTest(RuleTestCase):
 
     def test_render_label(self) -> None:
         rule = self.get_rule(data={"match": MatchType.EQUAL, "key": "\xc3", "value": "\xc4"})
-        assert rule.render_label() == "The event's tags match \xc3 equals \xc4"
+        assert rule.render_label() == "The event's \xc3 tag equals \xc4"
 
     def test_equals(self) -> None:
         event = self.get_event()
