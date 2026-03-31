@@ -107,7 +107,12 @@ export function useScmRepoSelection({
       onSelect({...optimistic, ...created});
     } catch (error) {
       Sentry.captureException(error);
-      addErrorMessage(t('Failed to select repository'));
+      // The POST to add a repo returns errors.__all__ with a specific message
+      // (e.g. "You must grant Sentry access to {repo}"). The GET lookup above
+      // won't return this shape, so the fallback message covers that case.
+      const errorData = error as any;
+      const text = errorData?.responseJSON?.errors?.__all__;
+      addErrorMessage(text ?? t('Failed to select repository'));
       onSelect(undefined);
     } finally {
       setBusy(false);
