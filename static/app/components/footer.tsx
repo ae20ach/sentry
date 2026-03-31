@@ -6,6 +6,7 @@ import {Container} from '@sentry/scraps/layout';
 import {ExternalLink} from '@sentry/scraps/link';
 import {StatusIndicator} from '@sentry/scraps/statusIndicator';
 
+import {useFooterHover} from 'sentry/components/footerHoverContext';
 import {useFrontendVersion} from 'sentry/components/frontendVersionContext';
 import Hook from 'sentry/components/hook';
 import {IconSentry, IconSentryPrideLogo} from 'sentry/icons';
@@ -45,6 +46,7 @@ function BaseFooter({className}: Props) {
 
   const secondaryNavigation = useContext(SecondaryNavigationContext);
   const hasPageFrame = useHasPageFrameFeature();
+  const {setFooterHovered} = useFooterHover();
 
   if (hasPageFrame) {
     // @TODO(JonasBadalic): Remove ~ footer CSS rules once this flag is GA'd
@@ -56,6 +58,8 @@ function BaseFooter({className}: Props) {
       as="footer"
       background="primary"
       className={className}
+      onMouseEnter={() => setFooterHovered(true)}
+      onMouseLeave={() => setFooterHovered(false)}
       borderLeft={
         hasPageFrame && secondaryNavigation?.view === 'expanded' ? 'secondary' : undefined
       }

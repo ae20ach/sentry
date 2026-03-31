@@ -10,6 +10,7 @@ import {fetchGuides} from 'sentry/actionCreators/guides';
 import {fetchOrganizations} from 'sentry/actionCreators/organizations';
 import {initApiClientErrorHandling} from 'sentry/api';
 import {ErrorBoundary} from 'sentry/components/errorBoundary';
+import {FooterHoverProvider} from 'sentry/components/footerHoverContext';
 import {GlobalModal} from 'sentry/components/globalModal';
 import Hook from 'sentry/components/hook';
 import Indicators from 'sentry/components/indicators';
@@ -241,12 +242,14 @@ export function App() {
                 <GlobalFeedbackForm>
                   <MainContainer tabIndex={-1}>
                     <DemoToursProvider>
-                      <ExplorerPanelProvider>
-                        <GlobalModal />
-                        <ExplorerPanel />
-                        <Indicators className="indicators-container" />
-                        <ErrorBoundary>{renderBody()}</ErrorBoundary>
-                      </ExplorerPanelProvider>
+                      <FooterHoverProvider>
+                        <ExplorerPanelProvider>
+                          <GlobalModal />
+                          <ExplorerPanel />
+                          <Indicators className="indicators-container" />
+                          <ErrorBoundary>{renderBody()}</ErrorBoundary>
+                        </ExplorerPanelProvider>
+                      </FooterHoverProvider>
                     </DemoToursProvider>
                   </MainContainer>
                 </GlobalFeedbackForm>

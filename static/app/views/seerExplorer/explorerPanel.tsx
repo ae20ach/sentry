@@ -11,6 +11,7 @@ import {Flex} from '@sentry/scraps/layout';
 import {Text} from '@sentry/scraps/text';
 
 import {addErrorMessage, addSuccessMessage} from 'sentry/actionCreators/indicator';
+import {useFooterHover} from 'sentry/components/footerHoverContext';
 import {IconSeer} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import type {User} from 'sentry/types/user';
@@ -809,16 +810,24 @@ interface SeerFloatingActionButtonProps extends React.ComponentProps<
 function SeerFloatingActionButton(props: SeerFloatingActionButtonProps) {
   const {visible, ...rest} = props;
   const theme = useTheme();
+  const {hoverState, setButtonAreaHovered} = useFooterHover();
+  const isShifted = hoverState !== 'off';
 
   return (
     <AnimatePresence>
       {visible && (
         <Container
           position="fixed"
-          bottom={theme.space.lg}
+          bottom={isShifted ? '4rem' : theme.space.lg}
           right={theme.space.lg}
-          style={{zIndex: theme.zIndex.sidebarPanel}}
+          style={{
+            zIndex: theme.zIndex.sidebarPanel,
+            transition: 'bottom 0.2s ease-in-out',
+          }}
+          onMouseEnter={() => setButtonAreaHovered(true)}
+          onMouseLeave={() => setButtonAreaHovered(false)}
         >
+          <ButtonHoverCatch />
           <SeerButton
             initial={{opacity: 0, scale: 0.9, y: 20}}
             animate={{opacity: 1, scale: 1, y: 0}}
@@ -839,7 +848,22 @@ function SeerFloatingActionButton(props: SeerFloatingActionButtonProps) {
   );
 }
 
+/**
+ * Invisible area above the button that blocks footer hover events when the
+ * mouse approaches from above. Only extends upward so it doesn't overlap
+ * the footer below and block clicks on footer links.
+ */
+const ButtonHoverCatch = styled('div')`
+  position: absolute;
+  left: -${p => p.theme.space.md};
+  right: -${p => p.theme.space.xl};
+  top: -${p => p.theme.space.xl};
+  bottom: 0;
+  pointer-events: auto;
+`;
+
 const SeerButton = styled(MotionButton)`
+  position: relative;
   & > span:last-child {
     overflow: visible;
   }
