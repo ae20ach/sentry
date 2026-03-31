@@ -36,6 +36,11 @@ def safe_extract_zip(f: str | IO[bytes] | zipfile.ZipFile, path: str) -> None:
             if is_unsafe_path(member):
                 continue
             dst_path = os.path.join(path, member)
+            # Validate the final path is within the extraction directory
+            abs_dst_path = os.path.abspath(dst_path)
+            abs_base_path = os.path.abspath(path)
+            if not abs_dst_path.startswith(abs_base_path + os.sep):
+                continue
             os.makedirs(os.path.dirname(dst_path), exist_ok=True)
             with open(dst_path, "wb") as df:
                 with zf.open(member) as sf:
