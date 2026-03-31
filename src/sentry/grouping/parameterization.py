@@ -238,7 +238,23 @@ DEFAULT_PARAMETERIZATION_REGEXES = [
         """,
     ),
     ParameterizationRegex(name="float", raw_pattern=r"""-\d+\.\d+\b | \b\d+\.\d+\b"""),
-    ParameterizationRegex(name="int", raw_pattern=r"""-\d+\b | \b\d+\b"""),
+    ParameterizationRegex(
+        name="int",
+        raw_pattern=r"""
+            (
+                # Regular word boundary for positive ints
+                \b
+                |
+                # Alphanumeric negative lookbehind for negative ints to ensure a dash is only
+                # considered a minus sign if it doesn't connect two alphanumeric strings. (No word
+                # boundary here because the dash serves as the word boundary, since it's not a word
+                # character.)
+                (?<!\w)-
+            )
+            \d{1,7} # Anything 8 digits and up is considered hex
+            \b
+        """,
+    ),
     ParameterizationRegex(
         name="quoted_str",
         raw_pattern=r"""
