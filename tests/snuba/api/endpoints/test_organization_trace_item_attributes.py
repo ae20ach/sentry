@@ -2,6 +2,7 @@ from operator import itemgetter
 from unittest import mock
 from uuid import uuid4
 
+import pytest
 from django.urls import reverse
 from rest_framework.exceptions import ErrorDetail
 
@@ -2512,6 +2513,8 @@ class OrganizationTraceItemAttributeValidateEndpointTest(
         assert attrs["nonexistent.tag"]["valid"] is False
         assert "error" in attrs["nonexistent.tag"]
 
+    # https://github.com/getsentry/sentry/actions/runs/23844914430/job/69511303912?pr=111982
+    @pytest.mark.xfail(reason="Flaky test - PR #111982")  # noqa: F821
     def test_stats_period_limits_time_range(self):
         self.store_segment(
             self.project.id,
