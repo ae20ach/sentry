@@ -13,13 +13,22 @@ import {
 } from 'sentry/components/events/autofix/preferences/hooks/useUpdateProjectSeerPreferences';
 import {PROVIDER_TO_HANDOFF_TARGET} from 'sentry/components/events/autofix/types';
 import type {ProjectSeerPreferences} from 'sentry/components/events/autofix/types';
-import {type CodingAgentIntegration} from 'sentry/components/events/autofix/useAutofix';
+import {
+  organizationIntegrationsCodingAgents,
+  type CodingAgentIntegration,
+} from 'sentry/components/events/autofix/useAutofix';
 import {t} from 'sentry/locale';
 import {ProjectsStore} from 'sentry/stores/projectsStore';
+import type {Organization} from 'sentry/types/organization';
 import type {Project} from 'sentry/types/project';
 import {processInChunks} from 'sentry/utils/array/procesInChunks';
 import {useUpdateProject} from 'sentry/utils/project/useUpdateProject';
-import {fetchDataQuery, fetchMutation, useQueryClient} from 'sentry/utils/queryClient';
+import {
+  fetchDataQuery,
+  fetchMutation,
+  useQuery,
+  useQueryClient,
+} from 'sentry/utils/queryClient';
 import {RequestError} from 'sentry/utils/requestError/requestError';
 import {useOrganization} from 'sentry/utils/useOrganization';
 
@@ -40,6 +49,29 @@ export function useAgentOptions({
       {value: 'none' as const, label: t('No Handoff')},
     ];
   }, [integrations]);
+}
+
+export function usePreferredAgent({organization}: {organization: Organization}) {
+  const {data: integrations} = useQuery(
+    organizationIntegrationsCodingAgents(organization)
+  );
+
+  const value = organization.defaultCodingAgentIntegrationId
+    ? String(organization.defaultCodingAgentIntegrationId)
+    : organization.defaultCodingAgent
+      ? organization.defaultCodingAgent
+      : 'seer';
+  const integration =
+    value === 'seer'
+      ? ('seer' as const)
+      : integrations?.integrations?.find(i => i.id === String(value));
+  const label = integration === 'seer' ? t('Seer Agent') : integration?.name;
+
+  return {
+    value,
+    label,
+    integration,
+  };
 }
 
 export function useSelectedAgentFromProjectSettings({

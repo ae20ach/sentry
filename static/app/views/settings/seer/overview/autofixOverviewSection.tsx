@@ -1,4 +1,5 @@
 import {useState} from 'react';
+import styled from '@emotion/styled';
 import {mutationOptions} from '@tanstack/react-query';
 import {z} from 'zod';
 
@@ -7,6 +8,7 @@ import {Button} from '@sentry/scraps/button';
 import {AutoSaveForm, FieldGroup} from '@sentry/scraps/form';
 import {Container, Flex, Stack} from '@sentry/scraps/layout';
 import {ExternalLink, Link} from '@sentry/scraps/link';
+import {Radio} from '@sentry/scraps/radio';
 import {Text} from '@sentry/scraps/text';
 
 import {addErrorMessage} from 'sentry/actionCreators/indicator';
@@ -29,6 +31,7 @@ import {
   useAgentOptions,
   useBulkMutateCreatePr,
   useBulkMutateSelectedAgent,
+  usePreferredAgent,
 } from 'sentry/views/settings/seer/seerAgentHooks';
 
 export function useAutofixOverviewData() {
@@ -121,6 +124,8 @@ export function AutofixOverviewSection({canWrite, data, isPending, organization}
         projects={projects}
         projectsWithCreatePr={projectsWithCreatePr}
       />
+
+      <StoppingPointForm organization={organization} />
     </FieldGroup>
   );
 }
@@ -155,6 +160,12 @@ function AgentNameForm({
     label: option.label,
   }));
 
+  const {
+    value: preferredAgentValue,
+    label: preferredAgentLabel,
+    integration: preferredAgentIntegration
+  } = usePreferredAgent({organization});
+
   const codingAgentMutationOpts = mutationOptions({
     mutationFn: ({agentId}: {agentId: string}) => {
       return fetchMutation<Organization>({
@@ -177,22 +188,22 @@ function AgentNameForm({
     onSuccess: updateOrganization,
   });
 
-  const preferredAgentValue = organization.defaultCodingAgentIntegrationId
-    ? String(organization.defaultCodingAgentIntegrationId)
-    : organization.defaultCodingAgent
-      ? organization.defaultCodingAgent
-      : 'seer';
+  // const preferredAgentValue = organization.defaultCodingAgentIntegrationId
+  //   ? String(organization.defaultCodingAgentIntegrationId)
+  //   : organization.defaultCodingAgent
+  //     ? organization.defaultCodingAgent
+  //     : 'seer';
 
-  const preferredAgentLabel = codingAgentOptions.find(
-    option => option.value === preferredAgentValue
-  )?.label;
+  // const preferredAgentLabel = codingAgentOptions.find(
+  //   option => option.value === preferredAgentValue
+  // )?.label;
 
-  const preferredAgentIntegration =
-    preferredAgentValue === 'seer'
-      ? 'seer'
-      : rawAgentOptions
-          .filter(option => option.value !== 'seer')
-          .find(option => option.value.id === preferredAgentValue)?.value;
+  // const preferredAgentIntegration =
+  //   preferredAgentValue === 'seer'
+  //     ? 'seer'
+  //     : rawAgentOptions
+  //         .filter(option => option.value !== 'seer')
+  //         .find(option => option.value.id === preferredAgentValue)?.value;
 
   const preferredAgentProjectIds = new Set(
     projectsWithPreferredAgent.map(s => s.projectId)
@@ -415,3 +426,233 @@ function CreatePrForm({
     </AutoSaveForm>
   );
 }
+
+// organization.autoOpenPrs
+// ? ([
+//   {value: 'off', label: t('No Automation')},
+//   {
+//     value: 'root_cause',
+//     label: t('Automate Root Cause Analysis'),
+//   },
+//   {
+//     value: 'open_pr',
+//     label: t('Automate Code Changes and Create PR'),
+//   },
+// ] as const)
+// : ([
+//   {value: 'off', label: t('No Automation')},
+//   {
+//     value: 'root_cause',
+//     label: t('Automate Root Cause Analysis'),
+//   },
+//   {value: 'code_changes', label: t('Automate Code Changes')},
+// ] as const)
+
+function getStoppingPointOptions(organization: Organization) {
+  const isSeerAgent = organization.defaultCodingAgent === 'seer';
+  const createPr = organization.autoOpenPrs;
+
+  const schema = z.object({
+    stoppingPoint: createPr
+      ? z.enum(['off', 'root_cause', 'open_pr'])
+      : z.enum(['off', 'root_cause', 'code_changes']),
+  });
+  const options = [
+    {value: 'off', label: t('No Automation')},
+    {value: 'root_cause', label: t('Automate Root Cause Analysis')},
+  ];
+  const initialValue =
+    organization.defaultAutofixAutomationTuning === 'off'
+      ? 'off'
+      : (organization.defaultAutomatedRunStoppingPoint ?? 'off');
+
+  if (isSeerAgent) {
+    if (createPr) {
+      return {
+        schema,
+        options: [...options, {value: 'open_pr', label: t('Draft a Pull Request with Seer')}],
+        initialValue: ,
+      };
+    }
+    return {
+      schema,
+      options: [...options, {value: 'code_changes', label: t('Write Code Changes with Seer')}],
+      initialValue,
+    };
+  }
+  if (createPr) {
+    return {
+      schema,
+      options: [...options, {value: 'open_pr', label: t('Draft a Pull Request with %s', organization.defaultCodingAgent)}],
+      initialValue,
+    };
+  }
+  return {
+    schema,
+    options: [...options, {value: 'code_changes', label: t('Write Code Changes with %s', organization.defaultCodingAgent)}],
+    initialValue,
+  };
+}
+
+function StoppingPointForm({organization}: {organization: Organization}) {
+  const stoppingPointMutationOpts = mutationOptions({
+    mutationFn: ({
+      stoppingPoint,
+    }: {
+      stoppingPoint:
+        | 'off'
+        | Organization['defaultAutomatedRunStoppingPoint'][keyof Organization['defaultAutomatedRunStoppingPoint']];
+    }) => {
+      return fetchMutation<Organization>({
+        method: 'PUT',
+        url: `/organizations/${organization.slug}/`,
+        data:
+          stoppingPoint === 'off'
+            ? {
+                defaultAutofixAutomationTuning: 'off',
+                defaultAutomatedRunStoppingPoint: null,
+              }
+            : {
+                defaultAutofixAutomationTuning: 'medium',
+                defaultAutomatedRunStoppingPoint: stoppingPoint,
+              },
+      });
+    },
+    onSuccess: updateOrganization,
+  });
+
+  const {schema, options, initialValue} = getStoppingPointOptions(organization);
+
+  return (
+    <AutoSaveForm
+      name="stoppingPoint"
+      schema={schema}
+      initialValue={initialValue}
+      mutationOptions={stoppingPointMutationOpts}
+    >
+      {field => (
+        <Stack gap="md">
+          <field.Layout.Row
+            label={t('Default Automation Steps')}
+            hintText={tct(
+              'For new projects, pick which steps Seer should try to run as new issues are collected. Depending on how [actionable:actionable] the issue is, Seer may stop at an earlier step.',
+              {
+                actionable: (
+                  <ExternalLink href="https://docs.sentry.io/product/ai-in-sentry/seer/autofix/#how-issue-autofix-works" />
+                ),
+              }
+            )}
+          >
+            <Container flexGrow={1}>
+              <field.Select
+                value={field.state.value}
+                onChange={value => field.handleChange(value)}
+                options={options}
+              />
+
+              {/* <field.Base<HTMLInputElement>>
+                {(baseProps, {indicator}) => (
+                  <Flex flexGrow={1} align="center" gap="lg" justify="between">
+                    <StoppingPointContainer
+                      flexGrow={1}
+                      gap="md"
+                      justify="between"
+                      selectedValue={field.state.value}
+                    >
+                      <StoppingPointLabel as="label" align="center" gap="xs">
+                        <Radio
+                          {...baseProps}
+                          value="off"
+                          checked={field.state.value === 'off'}
+                          onChange={() => field.handleChange('off')}
+                        />
+                        <Text size="sm" bold={false}>
+                          {t('No Automation')}
+                        </Text>
+                      </StoppingPointLabel>
+                      <StoppingPointLabel as="label" align="center" gap="xs">
+                        <Radio
+                          {...baseProps}
+                          value="root_cause"
+                          checked={field.state.value === 'root_cause'}
+                          onChange={() => field.handleChange('root_cause')}
+                        />
+                        <Text size="sm" bold={false}>
+                          {t('Root Cause Analysis')}
+                        </Text>
+                      </StoppingPointLabel>
+
+                      <StoppingPointLabel as="label" align="center" gap="xs">
+                        <Radio
+                          {...baseProps}
+                          value="code_changes"
+                          checked={field.state.value === 'code_changes'}
+                          onChange={() => field.handleChange('code_changes')}
+                        />
+                        <Text size="sm" bold={false}>
+                          {t('Propose Code Changes')}
+                        </Text>
+                      </StoppingPointLabel>
+                    </StoppingPointContainer>
+                    {indicator ?? <Flex width="14px" flexShrink={0} />}
+                  </Flex>
+                )}
+              </field.Base> */}
+            </Container>
+          </field.Layout.Row>
+        </Stack>
+      )}
+    </AutoSaveForm>
+  );
+}
+
+// const StoppingPointContainer = styled(Flex, {
+//   shouldForwardProp: prop => prop !== 'selectedValue',
+// })<{selectedValue: string}>`
+//   position: relative;
+//   isolation: isolate;
+
+//   &::before {
+//     content: '';
+//     position: absolute;
+//     /* Vertically centered through the radio buttons (24px default diameter → 12px center) */
+//     top: 12px;
+//     transform: translateY(-50%);
+//     height: 1em;
+
+//     /*
+//      * Left is fixed at the center of the first item.
+//      * Width expands to reach the center of whichever item is selected,
+//      * animating left to right. Each label has flex:1 so all three are equal
+//      * width W = (100% - 2*gap) / 3. Distance from center of item 1 to:
+//      *   item 2: W + gap     = (100% + gap) / 3
+//      *   item 3: 2W + 2*gap = (200% + 2*gap) / 3
+//      */
+//     left: calc((100% - ${p => p.theme.space.md} * 2) / 6);
+//     width: ${p => {
+//       const gap = p.theme.space.md;
+//       switch (p.selectedValue) {
+//         case 'root_cause':
+//           return `calc((100% + ${gap}) / 3)`;
+//         case 'code_changes':
+//         case 'open_pr':
+//           return `calc((200% + ${gap} * 2) / 3)`;
+//         default: // 'off'
+//           return '0px';
+//       }
+//     }};
+
+//     background: ${p => p.theme.colors.blue400};
+//     pointer-events: none;
+//     z-index: -1;
+//     transition: width ${p => p.theme.motion.smooth.moderate};
+//   }
+// `;
+
+// const StoppingPointLabel = styled(Stack)`
+//   flex: 1;
+//   & input {
+//     opacity: 1 !important;
+//     background: ${p => p.theme.tokens.background.primary};
+//   }
+// `;
