@@ -1548,7 +1548,7 @@ class FakeGitHubApiClient(GitHubApiClient):
         return make_github_check_run()
 
     def update_check_run(
-        self, repo: str, check_run_id: str, data: dict[str, Any]
+        self, repo: str, check_run_id: int, data: dict[str, Any]
     ) -> dict[str, Any]:
         self._record_call("update_check_run", repo, check_run_id, data)
         self._maybe_raise()
