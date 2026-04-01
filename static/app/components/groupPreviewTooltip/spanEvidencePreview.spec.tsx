@@ -3,7 +3,7 @@ import {
   ProblemSpan,
   TransactionEventBuilder,
 } from 'sentry-test/performance/utils';
-import {act, render, screen, userEvent, waitFor} from 'sentry-test/reactTestingLibrary';
+import {act, render, screen, userEvent} from 'sentry-test/reactTestingLibrary';
 
 import {SpanEvidencePreview} from './spanEvidencePreview';
 
@@ -21,7 +21,11 @@ describe('SpanEvidencePreview', () => {
       body: {},
     });
 
-    render(<SpanEvidencePreview groupId="group-id">Hover me</SpanEvidencePreview>);
+    render(
+      <SpanEvidencePreview groupId="group-id" delay={0} displayTimeout={0}>
+        Hover me
+      </SpanEvidencePreview>
+    );
 
     await act(tick);
 
@@ -35,16 +39,15 @@ describe('SpanEvidencePreview', () => {
       statusCode: 500,
     });
 
-    render(<SpanEvidencePreview groupId="group-id">Hover me</SpanEvidencePreview>);
+    render(
+      <SpanEvidencePreview groupId="group-id" delay={0} displayTimeout={0}>
+        Hover me
+      </SpanEvidencePreview>
+    );
 
     await userEvent.hover(screen.getByText('Hover me'), {delay: null});
 
-    await waitFor(
-      () => {
-        expect(screen.getByText('Failed to load preview')).toBeInTheDocument();
-      },
-      {timeout: 3000}
-    );
+    await screen.findByText('Failed to load preview');
   });
 
   it('renders the span evidence correctly when request succeeds', async () => {
@@ -106,7 +109,11 @@ describe('SpanEvidencePreview', () => {
       body: event,
     });
 
-    render(<SpanEvidencePreview groupId="group-id">Hover me</SpanEvidencePreview>);
+    render(
+      <SpanEvidencePreview groupId="group-id" delay={0} displayTimeout={0}>
+        Hover me
+      </SpanEvidencePreview>
+    );
 
     await userEvent.hover(screen.getByText('Hover me'), {delay: null});
 
