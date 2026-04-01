@@ -3,11 +3,9 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from django.conf import settings
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from sentry import features
 from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import cell_silo_endpoint
@@ -44,11 +42,6 @@ class OrganizationPreprodArtifactApproveEndpoint(OrganizationEndpoint):
     permission_classes = (OrganizationReleasePermission,)
 
     def post(self, request: Request, organization: Organization, artifact_id: str) -> Response:
-        if not settings.IS_DEV and not features.has(
-            "organizations:preprod-snapshots", organization, actor=request.user
-        ):
-            return Response({"detail": "Feature not enabled"}, status=403)
-
         feature_type_str = request.data.get("feature_type")
         if feature_type_str not in FEATURE_TYPE_MAP:
             return Response(
@@ -63,9 +56,12 @@ class OrganizationPreprodArtifactApproveEndpoint(OrganizationEndpoint):
                 id=artifact_id,
                 project__organization_id=organization.id,
             )
-        except PreprodArtifact.DoesNotExist:
+        except (PreprodArtifact.DoesNotExist, ValueError):
             return Response({"detail": "Artifact not found"}, status=404)
 
+        # TODO(hybrid-cloud): approved_by is a User FK (control silo). This cell silo
+        # endpoint stores the ID, and the snapshot GET resolves it via User.objects.filter().
+        # Both will need to use an RPC service when hybrid cloud enforcement is enabled.
         _, created = PreprodComparisonApproval.objects.get_or_create(
             preprod_artifact=artifact,
             preprod_feature_type=feature_type,

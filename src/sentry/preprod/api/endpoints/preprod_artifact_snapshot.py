@@ -137,7 +137,7 @@ class OrganizationPreprodSnapshotEndpoint(OrganizationEndpoint):
         except Exception:
             logger.exception(
                 "preprod_snapshot.delete_failed",
-                extra={"artifact_id": int(snapshot_id)},
+                extra={"artifact_id": artifact.id},
             )
             return Response(
                 {"detail": "Internal error deleting snapshot."},
@@ -158,7 +158,7 @@ class OrganizationPreprodSnapshotEndpoint(OrganizationEndpoint):
         logger.info(
             "preprod_snapshot.deleted",
             extra={
-                "artifact_id": int(snapshot_id),
+                "artifact_id": artifact.id,
                 "user_id": request.user.id if request.user else None,
                 "files_deleted": result.files_deleted,
                 "size_metrics_deleted": result.size_metrics_deleted,
@@ -178,7 +178,7 @@ class OrganizationPreprodSnapshotEndpoint(OrganizationEndpoint):
             artifact = PreprodArtifact.objects.select_related("commit_comparison").get(
                 id=snapshot_id, project__organization_id=organization.id
             )
-        except PreprodArtifact.DoesNotExist:
+        except (PreprodArtifact.DoesNotExist, ValueError):
             return Response({"detail": "Snapshot not found"}, status=404)
 
         try:
@@ -346,10 +346,6 @@ class OrganizationPreprodSnapshotEndpoint(OrganizationEndpoint):
             for a in all_approvals
             if a.approval_status == PreprodComparisonApproval.ApprovalStatus.APPROVED
         ]
-        has_needs_approval = any(
-            a.approval_status == PreprodComparisonApproval.ApprovalStatus.NEEDS_APPROVAL
-            for a in all_approvals
-        )
 
         if approved:
             sentry_user_ids = [a.approved_by_id for a in approved if a.approved_by_id]
@@ -391,7 +387,8 @@ class OrganizationPreprodSnapshotEndpoint(OrganizationEndpoint):
                 status="approved",
                 approvers=approver_list,
             )
-        elif has_needs_approval:
+        elif all_approvals:
+            # If records exist but none are APPROVED, they must be NEEDS_APPROVAL
             approval_info = SnapshotApprovalInfo(
                 status="requires_approval",
                 approvers=[],
