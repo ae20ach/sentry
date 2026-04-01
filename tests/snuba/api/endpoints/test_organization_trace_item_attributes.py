@@ -2520,7 +2520,7 @@ class OrganizationTraceItemAttributeValidateEndpointTest(
             span_id=uuid4().hex[:16],
             organization_id=self.organization.id,
             parent_span_id=None,
-            timestamp=before_now(days=2).replace(microsecond=0),
+            timestamp=before_now(days=10).replace(microsecond=0),
             transaction="foo",
             duration=100,
             exclusive_time=100,
@@ -2530,7 +2530,7 @@ class OrganizationTraceItemAttributeValidateEndpointTest(
         # Wide time range should find the tag
         response = self.do_request(
             payload={"attributes": ["old.tag"]},
-            query_params={"itemType": "spans", "statsPeriod": "7d"},
+            query_params={"itemType": "spans", "statsPeriod": "14d"},
         )
         assert response.status_code == 200
         assert response.data["attributes"]["old.tag"]["valid"] is True
