@@ -27,7 +27,7 @@ const DETECTOR_FILTER_KEYS: Record<
       kind: FieldKind.FIELD,
       valueType: FieldValueType.STRING,
       allowWildcard: false,
-      values: ['error', 'metric', 'cron', 'uptime'],
+      values: ['error', 'metric', 'cron', 'uptime', 'preprod_size_analysis'],
     },
   },
   assignee: {
