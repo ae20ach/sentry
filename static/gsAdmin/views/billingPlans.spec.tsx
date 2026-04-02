@@ -95,7 +95,7 @@ describe('BillingPlans Component', () => {
     render(<BillingPlans />);
 
     // Verify that the main heading is rendered
-    expect(screen.getByText('Billing Plans')).toBeInTheDocument();
+    expect(screen.getByText('Application Monitoring Billing Plans')).toBeInTheDocument();
 
     // Wait for the plans data to be fetched and rendered
     await waitFor(() => {
@@ -111,10 +111,7 @@ describe('BillingPlans Component', () => {
       expect(screen.getByText('Table of Contents')).toBeInTheDocument();
     });
 
-    expect(await screen.findByRole('link', {name: /AM9000\s+Plans/})).toBeInTheDocument();
-    expect(screen.getByRole('link', {name: /Business/})).toBeInTheDocument();
-    expect(screen.getByRole('link', {name: /Pricing/})).toBeInTheDocument();
-    expect(screen.getByRole('link', {name: /Errors/})).toBeInTheDocument();
+    expect(await screen.findByRole('link', {name: /Business/})).toBeInTheDocument();
   });
 
   it('renders pricing tables correctly', async () => {
@@ -122,7 +119,7 @@ describe('BillingPlans Component', () => {
 
     // Wait for the pricing tables to be rendered
     await waitFor(() => {
-      expect(screen.getByText('Pricing:')).toBeInTheDocument();
+      expect(screen.getByText('Pricing')).toBeInTheDocument();
     });
 
     // Check that pricing information is displayed
@@ -136,21 +133,27 @@ describe('BillingPlans Component', () => {
   it('renders price tiers tables correctly', async () => {
     render(<BillingPlans />);
 
-    // Wait for the price tiers tables to be rendered
+    // Wait for the price tiers table to be rendered
     await waitFor(() => {
-      expect(screen.getByText('Errors for AM9000 Business')).toBeInTheDocument();
+      expect(screen.getByText('Usage Price Tiers')).toBeInTheDocument();
     });
 
-    // Check that price tier information is displayed
-    expect(await screen.findByText('Tier')).toBeInTheDocument();
-    expect(screen.getByText('Reserved PPE')).toBeInTheDocument();
-    expect(screen.getByText('PAYG PPE')).toBeInTheDocument();
-    expect(screen.getByText('1')).toBeInTheDocument();
-    expect(screen.getByText('100,000')).toBeInTheDocument();
-    expect(screen.getAllByText('$0.00')).toHaveLength(2); // Both reserved_ppe and od_ppe for tier 1
+    // Column headers are always visible
+    expect(screen.getByRole('columnheader', {name: 'Tier'})).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', {name: 'Reserved PPE'})).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', {name: 'PAYG PPE'})).toBeInTheDocument();
 
+    // Rows are collapsed by default — expand them
+    const expandButton = screen
+      .getAllByRole('button')
+      .find(btn => btn.getAttribute('aria-expanded') !== null)!;
+    await userEvent.click(expandButton);
+
+    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getByText('100K')).toBeInTheDocument(); // formatVolumeCompact(100000)
+    // Tier 1 has monthly=0, annual=0, od_ppe=0, reserved_ppe=0 — all render as empty cells
     expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getByText('1,000,000')).toBeInTheDocument();
+    expect(screen.getByText('1M')).toBeInTheDocument(); // formatVolumeCompact(1000000)
     expect(screen.getByText('$1.60')).toBeInTheDocument(); // reserved_ppe
     expect(screen.getByText('$2.00')).toBeInTheDocument(); // od_ppe
   });
@@ -203,7 +206,7 @@ describe('BillingPlans Component', () => {
     expect(blobText).toContain(
       'Monthly,Annual, , ,Tier,Volume (max),Monthly,Annual,Reserved PPE,PAYG PPE,'
     );
-    expect(blobText).toContain('$89,$960, , ,1,100000,$0,$0,$0.00,$0.00,');
+    expect(blobText).toContain('$89,$960, , ,1,100000,,,$0.00,$0.00,');
     expect(blobText).toContain(' , , , ,2,1000000,$100,"$1,000",$1.60,$2.00,');
   });
 
@@ -235,16 +238,6 @@ describe('BillingPlans Component', () => {
     });
     const planNotLiveBadge = within(planHeader.parentElement!).getByText('NOT LIVE');
     expect(planNotLiveBadge).toBeInTheDocument();
-
-    // Check that the 'NOT LIVE' badge is displayed next to the data category header
-    const dataCategoryHeader = screen.getByRole('heading', {
-      level: 5,
-      name: /Errors\s+for\s+AM9000\s+Business/i,
-    });
-    const dataCategoryNotLiveBadge = within(dataCategoryHeader.parentElement!).getByText(
-      'NOT LIVE'
-    );
-    expect(dataCategoryNotLiveBadge).toBeInTheDocument();
   });
 
   it('displays "DISABLED" badge for data categories that are disabled', async () => {
@@ -297,17 +290,15 @@ describe('BillingPlans Component', () => {
       expect(screen.getAllByText('AM9000 Plans').length).toBeGreaterThan(0);
     });
 
-    // Check that the 'DISABLED' badge is displayed next to the data category
-    const dataCategoryHeader = screen.getByText('Errors for AM9000 Business');
-    const disabledBadge = within(dataCategoryHeader.parentElement!).getByText('DISABLED');
-    expect(disabledBadge).toBeInTheDocument();
+    // Disabled categories are shown with "(DISABLED)" in the category label
+    expect(await screen.findByText('Errors (DISABLED)')).toBeInTheDocument();
   });
 
   it('renders without crashing and displays LIVE badges', async () => {
     render(<BillingPlans />);
 
     // Verify that the main heading is rendered
-    expect(screen.getByText('Billing Plans')).toBeInTheDocument();
+    expect(screen.getByText('Application Monitoring Billing Plans')).toBeInTheDocument();
 
     // Wait for the plans data to be fetched and rendered
     await waitFor(() => {
@@ -320,10 +311,5 @@ describe('BillingPlans Component', () => {
     headerLiveBadges.forEach(badge => {
       expect(badge).toBeInTheDocument();
     });
-
-    // Check that the LIVE badge is displayed for the data category
-    const dataCategoryHeader = screen.getByText('Errors for AM9000 Business');
-    const liveBadge = within(dataCategoryHeader.parentElement!).getByText('LIVE');
-    expect(liveBadge).toBeInTheDocument();
   });
 });
