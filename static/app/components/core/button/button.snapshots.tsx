@@ -25,7 +25,7 @@ describe('Button', () => {
             extending outside #root get cut off. */}
 
           <div style={{padding: 8}}>
-            <Button priority={priority}>{priority}</Button>
+            zzzz<Button priority={priority}>{priority}</Button>
           </div>
         </ThemeProvider>
       ),
