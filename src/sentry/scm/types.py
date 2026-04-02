@@ -1043,10 +1043,9 @@ class CreateReviewCommentMultilineProtocol(Protocol):
         commit_id: SHA,
         body: str,
         path: str,
+        side: ReviewSide,
         start_line: int,
-        start_side: ReviewSide,
         end_line: int,
-        end_side: ReviewSide,
     ) -> ActionResult[ReviewComment]: ...
 
 

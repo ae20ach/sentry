@@ -812,8 +812,31 @@ class GitHubProvider:
         )
         return map_action(response, map_review_comment)
 
+    def create_review_comment_multiline(
+        self,
+        pull_request_id: str,
+        commit_id: SHA,
+        body: str,
+        path: str,
+        side: ReviewSide,
+        start_line: int,
+        end_line: int,
+    ) -> ActionResult[ReviewComment]:
+        """Leave a review comment on a line span."""
+        response = self.client.post(
+            f"/repos/{self.repository['name']}/pulls/{pull_request_id}/comments",
+            data={
+                "body": body,
+                "commit_id": commit_id,
+                "path": path,
+                "line": end_line,
+                "side": side,
+                "start_line": start_line,
+            },
+        )
+        return map_action(response, map_review_comment)
+
     # create_review_comment_line: not supported
-    # create_review_comment_multiline: not supported
 
     def create_review_comment_reply(
         self,

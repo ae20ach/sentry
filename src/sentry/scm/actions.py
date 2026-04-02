@@ -42,6 +42,7 @@ from sentry.scm.types import (
     CreatePullRequestProtocol,
     CreatePullRequestReactionProtocol,
     CreateReviewCommentFileProtocol,
+    CreateReviewCommentMultilineProtocol,
     CreateReviewCommentReplyProtocol,
     CreateReviewProtocol,
     DeleteIssueCommentProtocol,
@@ -550,6 +551,22 @@ def create_review(
     body: str | None = None,
 ) -> ActionResult[Review]:
     return scm.create_review(pull_request_id, commit_sha, event, comments, body=body)
+
+
+def create_review_comment_multiline(
+    scm: CreateReviewCommentMultilineProtocol,
+    pull_request_id: str,
+    commit_id: SHA,
+    body: str,
+    path: str,
+    side: ReviewSide,
+    start_line: int,
+    end_line: int,
+) -> ActionResult[ReviewComment]:
+    """Leave a review comment on a line span."""
+    return scm.create_review_comment_multiline(
+        pull_request_id, commit_id, body, path, side, start_line, end_line
+    )
 
 
 def create_check_run(
