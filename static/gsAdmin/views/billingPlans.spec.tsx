@@ -206,7 +206,7 @@ describe('BillingPlans Component', () => {
     expect(blobText).toContain(
       'Monthly,Annual, , ,Tier,Volume (max),Monthly,Annual,Reserved PPE,PAYG PPE,'
     );
-    expect(blobText).toContain('$89,$960, , ,1,100000,,,$0.00,$0.00,');
+    expect(blobText).toContain('$89,$960, , ,1,100000,,,,,');
     expect(blobText).toContain(' , , , ,2,1000000,$100,"$1,000",$1.60,$2.00,');
   });
 

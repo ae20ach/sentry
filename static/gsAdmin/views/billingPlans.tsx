@@ -160,8 +160,20 @@ export function BillingPlans() {
                 tier.volume.toString(), // Volume (max)
                 tier.monthly === 0 ? '' : formatCurrency(tier.monthly), // Monthly
                 tier.annual === 0 ? '' : formatCurrency(tier.annual), // Annual
-                displayUnitPrice({cents: tier.reserved_ppe, minDigits: 2, maxDigits: 10}), // Reserved PPE
-                displayUnitPrice({cents: tier.od_ppe, minDigits: 2, maxDigits: 10}), // PAYG PPE
+                tier.reserved_ppe === 0
+                  ? ''
+                  : displayUnitPrice({
+                      cents: tier.reserved_ppe,
+                      minDigits: 2,
+                      maxDigits: 10,
+                    }), // Reserved PPE
+                tier.od_ppe === 0
+                  ? ''
+                  : displayUnitPrice({
+                      cents: tier.od_ppe,
+                      minDigits: 2,
+                      maxDigits: 10,
+                    }), // PAYG PPE
                 ' ' // empty column
               );
             } else {
