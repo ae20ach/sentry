@@ -28,7 +28,7 @@ from sentry.api.base import cell_silo_endpoint
 from sentry.api.bases import OrganizationEndpoint
 from sentry.api.bases.organization import OrganizationReleasePermission
 from sentry.models.organization import Organization
-from sentry.objectstore import parse_accept_encoding
+from sentry.objectstore import get_preprod_session, parse_accept_encoding
 
 
 @cell_silo_endpoint
@@ -58,33 +58,34 @@ class OrganizationObjectstoreEndpoint(OrganizationEndpoint):
     ) -> Response | StreamingHttpResponse:
         if response := self._check_flag(request, organization):
             return response
-        return self._proxy(request, path)
+        return self._proxy(request, path, organization)
 
     def put(
         self, request: Request, organization: Organization, path: str
     ) -> Response | StreamingHttpResponse:
         if response := self._check_flag(request, organization):
             return response
-        return self._proxy(request, path)
+        return self._proxy(request, path, organization)
 
     def post(
         self, request: Request, organization: Organization, path: str
     ) -> Response | StreamingHttpResponse:
         if response := self._check_flag(request, organization):
             return response
-        return self._proxy(request, path)
+        return self._proxy(request, path, organization)
 
     def delete(
         self, request: Request, organization: Organization, path: str
     ) -> Response | StreamingHttpResponse:
         if response := self._check_flag(request, organization):
             return response
-        return self._proxy(request, path)
+        return self._proxy(request, path, organization)
 
     def _proxy(
         self,
         request: Request,
         path: str,
+        organization: Organization,
     ) -> Response | StreamingHttpResponse:
         assert request.method
         target_url = get_target_url(path)
@@ -93,6 +94,14 @@ class OrganizationObjectstoreEndpoint(OrganizationEndpoint):
         headers.pop("Host", None)
         headers.pop("Content-Length", None)
         headers.pop("Transfer-Encoding", None)
+
+        # Create an Objectstore session to mint a token
+        session = get_preprod_session(organization.id, None)
+        if token := session.mint_token():
+            headers["Authorization"] = f"Bearer {token}"
+        else:
+            # Objectstore can't parse Sentry's auth headers, must pop it
+            headers.pop("Authorization", None)
 
         response = requests.request(
             request.method,

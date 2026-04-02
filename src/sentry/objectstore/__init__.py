@@ -1,6 +1,7 @@
 import subprocess
 from datetime import timedelta
 from urllib.parse import urlparse, urlunparse
+from typing import TypedDict, Unpack
 
 import urllib3
 from django.conf import settings
@@ -19,7 +20,7 @@ from sentry import options
 from sentry.utils import metrics as sentry_metrics
 from sentry.utils.env import in_test_environment
 
-__all__ = ["get_attachments_session", "parse_accept_encoding"]
+__all__ = ["get_attachments_session", "get_preprod_session", "parse_accept_encoding"]
 
 
 def default_attachment_retention() -> int:
@@ -65,17 +66,17 @@ _ATTACHMENTS_USECASE: Usecase | None = None
 _PREPROD_USECASE = Usecase("preprod", expiration_policy=TimeToLive(timedelta(days=30)))
 
 
-def create_client() -> Client:
+def create_client(token_override: str | None = None) -> Client:
     from sentry import options as options_store
 
     options = options_store.get("objectstore.config")
 
     # Initialize the `TokenGenerator` if key parameters are found.
-    token_generator = None
+    token = token_override
     if signing_key_options := options.get("token_generator"):
         # We require the `kid` and `secret_key` keys be set, other options are optional
-        if signing_key_options.get("kid") and signing_key_options.get("secret_key"):
-            token_generator = TokenGenerator(
+        if token is None and signing_key_options.get("kid") and signing_key_options.get("secret_key"):
+            token = TokenGenerator(
                 **signing_key_options,
             )
 
@@ -90,15 +91,27 @@ def create_client() -> Client:
             # Workaround for 0.0.14's default read timeout. Can be removed with 0.0.15
             {"timeout": urllib3.Timeout(connect=0.1)},
         ),
-        token=token_generator,
+        token=token,
     )
 
 
-def get_client() -> Client:
+def default_client() -> Client:
     global _OBJECTSTORE_CLIENT
     if not _OBJECTSTORE_CLIENT:
         _OBJECTSTORE_CLIENT = create_client()
     return _OBJECTSTORE_CLIENT
+
+
+def _get_session(usecase: Usecase, org: int, project: int | None, client: Client | None = None) -> Session:
+    if client is None:
+        client = default_client()
+
+    if project is None:
+        session = client.session(usecase, org=org)
+    else:
+        session = client.session(usecase, org=org, project=project)
+
+    return session
 
 
 def get_attachments_usecase() -> Usecase:
@@ -112,11 +125,11 @@ def get_attachments_usecase() -> Usecase:
 
 
 def get_attachments_session(org: int, project: int) -> Session:
-    return get_client().session(get_attachments_usecase(), org=org, project=project)
+    return _get_session(get_attachments_usecase(), org, project)
 
 
-def get_preprod_session(org: int, project: int) -> Session:
-    return get_client().session(_PREPROD_USECASE, org=org, project=project)
+def get_preprod_session(org: int, project: int | None, client: Client | None = None) -> Session:
+    return _get_session(_PREPROD_USECASE, org, project, client=client)
 
 
 _IS_SYMBOLICATOR_CONTAINER: bool | None = None

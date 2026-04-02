@@ -11,7 +11,7 @@ from objectstore_client.client import RequestError
 from pydantic import ValidationError
 from taskbroker_client.retry import Retry
 
-from sentry.objectstore import get_preprod_session
+from sentry.objectstore import create_client, get_preprod_session
 from sentry.preprod.models import PreprodArtifact
 from sentry.preprod.snapshots.image_diff.compare import compare_images_batch
 from sentry.preprod.snapshots.image_diff.odiff import OdiffServer
@@ -125,6 +125,7 @@ def compare_snapshots(
     org_id: int,
     head_artifact_id: int,
     base_artifact_id: int,
+    storage_token: str | None = None,
 ) -> None:
     task_start_time = timezone.now()
     logger.info(
@@ -219,7 +220,8 @@ def compare_snapshots(
         )
 
     try:
-        session = get_preprod_session(org_id, project_id)
+        client_with_token = create_client(token_override=storage_token)
+        session = get_preprod_session(org_id, project_id, client=client_with_token)
 
         head_manifest_key = (head_metrics.extras or {}).get("manifest_key")
         base_manifest_key = (base_metrics.extras or {}).get("manifest_key")
