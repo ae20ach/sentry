@@ -278,13 +278,12 @@ function TableOfContents({plans}: {plans: Plans}) {
                     <td>{planTierIdFormatted}</td>
                     {planColumnOrder.map(planName => {
                       const planDetails = planTier[planName];
-                      const planNameFormattedForId = formatPlanName(planName);
                       return (
                         <td key={planName}>
                           {planDetails ? (
                             <span style={{display: 'block'}}>
                               <a
-                                href={`#${planDetails.id ?? `${planTierIdFormatted}-${planNameFormattedForId}`}`}
+                                href={`#${planDetails.id ?? planFallbackAnchorId(planTierIdFormatted, planName)}`}
                               >
                                 {formatPlanName(planName, true)}
                               </a>
@@ -376,7 +375,7 @@ function PlanDetailsSection({
         style={{display: 'flex', alignItems: 'center', marginBottom: theme.space['2xl']}}
       >
         <h3
-          id={planDetails.id ?? `${planTierIdFormatted}-${planNameFormatted}`}
+          id={planDetails.id ?? planFallbackAnchorId(planTierIdFormatted, planName)}
           style={{margin: '20px 0 5px'}}
         >
           {planTierIdFormatted} {planNameFormatted} Plan
@@ -463,7 +462,7 @@ function PlanDetailsSection({
       {/* Price Tiers (single merged table) */}
       <MergedPriceTiersTable
         planTierIdFormatted={planTierIdFormatted}
-        planNameFormatted={planNameFormatted}
+        planName={planName}
         planDetails={planDetails}
         categories={categories}
       />
@@ -535,18 +534,19 @@ function getCategoryInfo(
 
 function shouldShowCategoryCode(categoryLabel: string, categoryCode?: string): boolean {
   if (!categoryCode) return false;
-  const labelWithoutPlural = categoryLabel.toLowerCase().replace(/s$/, '');
+  const baseLabel = categoryLabel.replace(/\s*\(DISABLED\)\s*$/i, '').trim();
+  const labelWithoutPlural = baseLabel.toLowerCase().replace(/s$/, '');
   return labelWithoutPlural !== categoryCode;
 }
 
 function MergedPriceTiersTable({
   planTierIdFormatted,
-  planNameFormatted,
+  planName,
   planDetails,
   categories,
 }: {
   planDetails: PlanDetails;
-  planNameFormatted: string;
+  planName: string;
   planTierIdFormatted: string;
   categories?: Record<string, CategoryInfo | string>;
 }) {
@@ -560,7 +560,7 @@ function MergedPriceTiersTable({
 
   const groups: TierGroup[] = entries.flatMap(([dataCategory, tiers]) => {
     const dataCategoryFormatted = formatDataCategory(dataCategory);
-    const dataCategoryId = `${planTierIdFormatted}-${planNameFormatted}-${dataCategoryFormatted}`;
+    const dataCategoryId = `${planTierIdFormatted}-${planName}-${dataCategory}`;
     const disabled = planDetails.data_categories_disabled.includes(dataCategory);
     const categoryLabel = disabled
       ? `${dataCategoryFormatted} (DISABLED)`
@@ -1239,6 +1239,11 @@ function renderVolume(volume: number, unitSize?: number): ReactNode {
 
 function formatPlanTierId(planTierId: string): string {
   return planTierId.toUpperCase();
+}
+
+/** Fragment id when `planDetails.id` is missing; uses API plan key (no spaces) so anchors stay valid HTML. */
+function planFallbackAnchorId(planTierIdFormatted: string, planNameKey: string): string {
+  return `${planTierIdFormatted}-${planNameKey}`;
 }
 
 function formatPlanName(planType: string, shortenEnterprise = false): string {
