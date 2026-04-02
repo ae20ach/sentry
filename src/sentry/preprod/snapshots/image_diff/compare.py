@@ -13,7 +13,9 @@ from .types import DiffResult
 
 logger = logging.getLogger(__name__)
 
-DIFF_THRESHOLD = 0
+# NOTE: Must be >0. odiff's server mode treats threshold=0 as falsy and
+# silently falls back to its default of 0.1, which swallows small diffs.
+DIFF_THRESHOLD = 0.001
 
 
 def _as_image(source: bytes | Image.Image) -> Image.Image:
