@@ -5158,7 +5158,6 @@ describe('SearchQueryBuilder', () => {
           return displayAskSeer ? (
             <AskSeerComboBox
               initialQuery={query}
-              analyticsSource="test"
               feedbackSource="test"
               applySeerSearchQuery={() => {}}
               askSeerMutationOptions={mutationOptions({

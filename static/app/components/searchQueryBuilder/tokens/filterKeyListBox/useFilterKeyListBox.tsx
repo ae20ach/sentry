@@ -421,10 +421,6 @@ export function useFilterKeyListBox({filterValue}: UseFilterKeyListBoxArgs) {
   const handleOptionSelected = useCallback(
     (option: FilterKeyItem) => {
       if (option.type === 'ask-seer') {
-        trackAnalytics('trace.explorer.ai_query_interface', {
-          organization,
-          action: 'opened',
-        });
         trackAnalytics('ai_query.interface', {
           organization,
           area: analyticsArea,
@@ -442,10 +438,6 @@ export function useFilterKeyListBox({filterValue}: UseFilterKeyListBoxArgs) {
       }
 
       if (option.type === 'ask-seer-consent') {
-        trackAnalytics('trace.explorer.ai_query_interface', {
-          organization,
-          action: 'consent_accepted',
-        });
         trackAnalytics('ai_query.interface', {
           organization,
           area: analyticsArea,
