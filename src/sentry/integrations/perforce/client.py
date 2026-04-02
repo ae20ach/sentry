@@ -8,13 +8,12 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any, TypedDict
 
-# Redirect P4's environment persistence file (P4ENVIRO) to /dev/null BEFORE
-# importing P4. P4.set_env() writes to ~/.p4enviro by default, which causes
-# disk contention when multiple tenants call set_env() concurrently.
-# By pointing P4ENVIRO to /dev/null, set_env() still sets the per-instance
-# in-memory value (which is what P4 operations actually use) but the disk
-# write becomes a harmless no-op.
-os.environ.setdefault("P4ENVIRO", os.devnull)
+# Tell P4 to look for a ".p4config" file when resolving per-connection
+# settings like P4TRUST and P4TICKETS. Each _connect() call creates a temp
+# directory with its own .p4config and sets p4.cwd to that directory.
+# P4 walks upward from cwd to find the config file, so each P4 instance
+# reads its own isolated config — no global state, no locks needed.
+os.environ.setdefault("P4CONFIG", ".p4config")
 
 from P4 import P4, P4Exception
 
@@ -142,10 +141,15 @@ class PerforceClient(RepositoryClient, CommitContextClient):
         Context manager for P4 connections with automatic cleanup.
 
         Yields a connected P4 instance and ensures disconnection on exit.
-        Creates a temporary directory for P4TRUST/P4TICKETS files to avoid
-        lock contention between concurrent connections from different tenants.
-        The temp directory lives for the duration of this context manager and
-        is cleaned up automatically on exit.
+        Creates a temporary directory with a P4CONFIG file to isolate
+        P4TRUST and P4TICKETS per connection. This prevents lock contention
+        when multiple tenants connect concurrently.
+
+        P4Python's set_env("P4TRUST", ...) only works on Windows/macOS — on
+        Linux it raises and does NOT set the value. Instead we use the
+        P4CONFIG mechanism: a per-directory config file that P4 discovers
+        via p4.cwd. Each connection gets its own temp dir with its own
+        .p4config, so no global state or locks are needed.
 
         Uses P4Python API:
         - p4.connect(): https://www.perforce.com/manuals/p4python/Content/P4Python/python.programming.html#python.programming.connecting
@@ -157,23 +161,26 @@ class PerforceClient(RepositoryClient, CommitContextClient):
                 result = p4.run("info")
         """
         with tempfile.TemporaryDirectory(prefix="sentry-p4-") as p4_home:
+            trust_path = f"{p4_home}/.p4trust"
+            ticket_path = f"{p4_home}/.p4tickets"
+
+            # Write a per-connection P4CONFIG file so P4 resolves P4TRUST
+            # and P4TICKETS to this temp directory. P4 finds the config by
+            # walking upward from p4.cwd looking for a file named by the
+            # P4CONFIG env var (set to ".p4config" at module level).
+            # Use the actual P4CONFIG value as the filename in case it was
+            # already set before our module loaded (setdefault preserves it).
+            config_filename = os.environ.get("P4CONFIG", ".p4config")
+            with open(f"{p4_home}/{config_filename}", "w") as f:
+                f.write(f"P4TRUST={trust_path}\n")
+                f.write(f"P4TICKETS={ticket_path}\n")
+
             p4 = P4()
+            p4.cwd = p4_home
             p4.port = self.p4port
             p4.user = self.user
             p4.password = self.password
-
-            # Point trust and ticket files to an isolated temp directory.
-            # P4Python doesn't expose a trust_file property, so we use set_env
-            # which sets P4TRUST per-instance. ticket_file is a direct property.
-            # set_env always sets the per-instance in-memory value (which P4
-            # operations use), but may raise P4Exception when it can't persist
-            # to the P4ENVIRO file on disk — this is expected and harmless since
-            # we redirect P4ENVIRO to /dev/null at module level.
-            try:
-                p4.set_env("P4TRUST", f"{p4_home}/.p4trust")
-            except P4Exception:
-                pass
-            p4.ticket_file = f"{p4_home}/.p4tickets"
+            p4.ticket_file = ticket_path
 
             if self.client_name:
                 p4.client = self.client_name
@@ -185,7 +192,6 @@ class PerforceClient(RepositoryClient, CommitContextClient):
                 p4.connect()
             except P4Exception as e:
                 error_msg = str(e)
-                # Provide helpful error message for connection failures
                 if "SSL" in error_msg or "trust" in error_msg.lower():
                     raise ApiError(
                         f"Failed to connect to Perforce (SSL issue): {error_msg}. "
@@ -224,8 +230,6 @@ class PerforceClient(RepositoryClient, CommitContextClient):
                         "Verify your password is correct."
                     )
             elif self.password and self.auth_type == "ticket":
-                # Ticket authentication: p4.password is already set to the ticket
-                # Verify ticket works by running a test command
                 try:
                     p4.run("info")
                 except P4Exception as e:
@@ -241,12 +245,10 @@ class PerforceClient(RepositoryClient, CommitContextClient):
             try:
                 yield p4
             finally:
-                # Ensure cleanup
                 try:
                     if p4.connected():
                         p4.disconnect()
                 except Exception as e:
-                    # Log disconnect failures as they may indicate connection leaks
                     logger.warning("Failed to disconnect from Perforce: %s", e, exc_info=True)
 
     def check_file(self, repo: Repository, path: str, version: str | None) -> object | None:
@@ -606,10 +608,61 @@ class PerforceClient(RepositoryClient, CommitContextClient):
         self, repo: Repository, path: str, ref: str | None, codeowners: bool = False
     ) -> str:
         """
-        Get file contents from Perforce depot.
-        Required by abstract base class but not used (CODEOWNERS).
+        Get file contents from Perforce depot using ``p4 print``.
+
+        API docs: https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_print.html
+
+        Perforce supports two revision specifiers:
+        - ``@N`` — changelist number (global point-in-time snapshot)
+        - ``#N`` — file revision (per-file version counter)
+
+        Args:
+            repo: Repository object containing depot path config
+            path: File path relative to depot root
+            ref: Revision specifier. Accepts:
+                 - ``"#3"`` → file revision 3
+                 - ``"@42"`` → changelist 42
+                 - ``"42"`` → treated as changelist (``@42``)
+                 - ``None`` → head revision
+            codeowners: Not used for Perforce
+
+        Returns:
+            File contents as a UTF-8 string
+
+        Raises:
+            ApiError(404): File not found in depot
+            ApiError(500): Perforce connection or command error
         """
-        raise NotImplementedError("get_file is not supported for Perforce")
+        with self._connect() as p4:
+            depot_path = self.build_depot_path(repo, path)
+
+            if ref and "#" not in depot_path and "@" not in depot_path:
+                if ref.startswith("#") or ref.startswith("@"):
+                    depot_path = f"{depot_path}{ref}"
+                else:
+                    depot_path = f"{depot_path}@{ref}"
+
+            try:
+                result = p4.run("print", depot_path)
+            except P4Exception as e:
+                error_msg = str(e)
+                if "no such file" in error_msg.lower() or "not in client view" in error_msg.lower():
+                    raise ApiError(error_msg, code=404)
+                raise ApiError(error_msg, code=500)
+
+            # p4 print returns a list: first element is file metadata dict,
+            # remaining elements are file content strings/bytes
+            if not result or not isinstance(result[0], dict):
+                raise ApiError(f"File not found: {depot_path}", code=404)
+
+            content_parts = result[1:]
+            if not content_parts:
+                return ""
+
+            return "".join(
+                part.decode("utf-8", errors="replace") if isinstance(part, bytes) else part
+                for part in content_parts
+            )
 
     def create_comment(self, repo: str, issue_id: str, data: dict[str, Any]) -> Any:
         """Create comment. Not applicable for Perforce."""

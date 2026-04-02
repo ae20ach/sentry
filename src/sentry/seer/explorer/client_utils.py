@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 explorer_connection_pool = connection_from_url(
     settings.SEER_AUTOFIX_URL,
+    timeout=settings.SEER_DEFAULT_TIMEOUT,
 )
 
 
@@ -65,6 +66,7 @@ class ExplorerChatRequest(TypedDict):
     category_value: NotRequired[str]
     metadata: NotRequired[dict[str, Any]]
     is_context_engine_enabled: NotRequired[bool]
+    max_iterations: NotRequired[int]
 
 
 class ExplorerRunsRequest(TypedDict):
@@ -84,6 +86,12 @@ class ExplorerUpdateRequest(TypedDict):
     run_id: int
     organization_id: int
     payload: NotRequired[dict[str, Any]]
+
+
+class ExplorerPrStateRequest(TypedDict):
+    organization_id: int
+    provider: str
+    pr_id: int
 
 
 def make_explorer_state_request(
@@ -138,6 +146,39 @@ def make_explorer_update_request(
     )
 
 
+def make_explorer_state_pr_request(
+    body: ExplorerPrStateRequest,
+    connection_pool: HTTPConnectionPool | None = None,
+    viewer_context: SeerViewerContext | None = None,
+) -> BaseHTTPResponse:
+    return make_signed_seer_api_request(
+        connection_pool or explorer_connection_pool,
+        "/v1/automation/explorer/state/pr",
+        body=orjson.dumps(body, option=orjson.OPT_NON_STR_KEYS),
+        viewer_context=viewer_context,
+    )
+
+
+def get_explorer_state_from_pr_id(
+    organization_id: int, provider: str, pr_id: int
+) -> SeerRunState | None:
+    body = ExplorerPrStateRequest(organization_id=organization_id, provider=provider, pr_id=pr_id)
+    response = make_explorer_state_pr_request(body)
+
+    if response.status >= 400:
+        raise SeerApiError("Seer request failed", response.status)
+
+    result = response.json()
+    if not result:
+        return None
+
+    session = result.get("session")
+    if session is None:
+        return None
+
+    return SeerRunState(**session)
+
+
 def has_seer_explorer_access_with_detail(
     organization: Organization, actor: SentryUser | AnonymousUser | RpcUser | None = None
 ) -> tuple[bool, str | None]:
@@ -155,8 +196,24 @@ def has_seer_explorer_access_with_detail(
     if not has_access:
         return False, error
 
-    # Check seer-explorer specific feature flag
-    if not features.has("organizations:seer-explorer", organization, actor=actor):
+    feature_names = [
+        # Access to seer explorer
+        "organizations:seer-explorer",
+        # Access to seer explorer powered autofix
+        "organizations:autofix-on-explorer",
+    ]
+
+    batch_features = features.batch_has(
+        feature_names,
+        organization=organization,
+        actor=actor,
+    )
+
+    if batch_features is None:
+        return False, "Feature flag not enabled"
+
+    org_features = batch_features.get(f"organization:{organization.id}", {})
+    if not any(bool(org_features.get(feature_name)) for feature_name in feature_names):
         return False, "Feature flag not enabled"
 
     # Check open team membership (Explorer requires this for context)
@@ -170,7 +227,7 @@ def has_seer_explorer_access_with_detail(
 
 
 def collect_user_org_context(
-    user: SentryUser | AnonymousUser | None,
+    user: SentryUser | RpcUser | AnonymousUser | None,
     organization: Organization,
     request: Request | None = None,
 ) -> dict[str, Any]:
@@ -186,7 +243,22 @@ def collect_user_org_context(
             "all_org_projects": all_org_projects,
         }
 
-    member = OrganizationMember.objects.get(organization=organization, user_id=user.id)
+    try:
+        member = OrganizationMember.objects.get(organization=organization, user_id=user.id)
+    except OrganizationMember.DoesNotExist:
+        # User is not a member of this organization (e.g., superuser accessing foreign org)
+        logger.warning(
+            "User attempted to access Seer Explorer for organization they are not a member of",
+            extra={
+                "user_id": user.id,
+                "organization_id": organization.id,
+                "organization_slug": organization.slug,
+            },
+        )
+        return {
+            "org_slug": organization.slug,
+            "all_org_projects": all_org_projects,
+        }
     user_teams = [{"id": t.id, "slug": t.slug} for t in member.get_teams()]
     my_projects = (
         Project.objects.filter(
@@ -201,7 +273,7 @@ def collect_user_org_context(
 
     # Handle name attribute - SentryUser has name
     user_name: str | None = None
-    if isinstance(user, SentryUser):
+    if isinstance(user, (SentryUser, RpcUser)):
         user_name = user.name
 
     # Get user's timezone setting (IANA timezone name, e.g., "America/Los_Angeles")

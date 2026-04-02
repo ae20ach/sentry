@@ -51,7 +51,6 @@ import type {ReadableExploreQueryParts} from 'sentry/views/explore/multiQueryMod
 import type {Visualize} from 'sentry/views/explore/queryParams/visualize';
 import {getTargetWithReadableQueryParams} from 'sentry/views/explore/spans/spansQueryParams';
 import {TraceItemDataset} from 'sentry/views/explore/types';
-import type {ChartType} from 'sentry/views/insights/common/components/chart';
 import {isChartType} from 'sentry/views/insights/common/components/chart';
 import type {useSortedTimeSeries} from 'sentry/views/insights/common/queries/useSortedTimeSeries';
 import {makeReplaysPathname} from 'sentry/views/replays/pathnames';
@@ -144,9 +143,9 @@ function getExploreUrlFromSavedQueryUrl({
           q.aggregateField
             ?.filter<RawGroupBy>(isGroupBy)
             ?.map(groupBy => groupBy.groupBy) ?? q.groupby;
-        const visualize: RawVisualize | undefined =
+        const visualize =
           q.aggregateField?.find<RawVisualize>(isRawVisualize) ?? q.visualize?.[0];
-        const chartType: ChartType | undefined = isChartType(visualize?.chartType)
+        const chartType = isChartType(visualize?.chartType)
           ? visualize.chartType
           : undefined;
 
@@ -252,7 +251,11 @@ export function combineConfidenceForSeries(series: TimeSeries[]): Confidence {
   let highs = 0;
   let nulls = 0;
 
-  for (const s of series) {
+  // We filter the series because there are cases where the series is a sparse array,
+  // meaning we have possible undefined values. This typically happens in multi-yaxis
+  // charts when we have a grouping so the data is positioned in such a way to make
+  // series colors consistent when rendering
+  for (const s of series.filter(defined)) {
     const confidence = determineTimeSeriesConfidence(s);
     if (confidence === 'low') {
       lows += 1;
@@ -424,10 +427,7 @@ export function viewSamplesTarget({
 }
 
 export function getDefaultExploreRoute(organization: Organization) {
-  if (
-    organization.features.includes('performance-trace-explorer') ||
-    organization.features.includes('visibility-explore-view')
-  ) {
+  if (organization.features.includes('visibility-explore-view')) {
     return 'traces';
   }
 
@@ -712,6 +712,7 @@ const TRACE_ITEM_TO_URL_FUNCTION: Record<
   [TraceItemDataset.TRACEMETRICS]: getMetricsUrlFromSavedQueryUrl,
   [TraceItemDataset.PREPROD]: undefined,
   [TraceItemDataset.REPLAYS]: getReplayUrlFromSavedQueryUrl,
+  [TraceItemDataset.PROCESSING_ERRORS]: undefined,
 };
 
 /**

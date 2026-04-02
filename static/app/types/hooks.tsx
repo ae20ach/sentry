@@ -1,11 +1,10 @@
 import type {ButtonProps} from '@sentry/scraps/button';
-import type {SelectKey} from '@sentry/scraps/compactSelect';
 
 import type {ChildrenRenderFn} from 'sentry/components/acl/feature';
 import type {Guide} from 'sentry/components/assistant/types';
 import type {ProductSelectionProps} from 'sentry/components/onboarding/productSelection';
-import type DateRange from 'sentry/components/timeRangeSelector/dateRange';
-import type SelectorItems from 'sentry/components/timeRangeSelector/selectorItems';
+import type {DateRange} from 'sentry/components/timeRangeSelector/dateRange';
+import type {SelectorItems} from 'sentry/components/timeRangeSelector/selectorItems';
 import type {SentryRouteObject} from 'sentry/router/types';
 import type {DataCategory} from 'sentry/types/core';
 import type {Event} from 'sentry/types/event';
@@ -16,6 +15,7 @@ import type {
   useMaxPickableDays,
 } from 'sentry/utils/useMaxPickableDays';
 import type {WidgetType} from 'sentry/views/dashboards/types';
+import type {AutofixContentProps} from 'sentry/views/issueDetails/streamline/sidebar/autofixSection';
 import type {OrganizationStatsProps} from 'sentry/views/organizationStats';
 import type {RouteAnalyticsContext} from 'sentry/views/routeAnalyticsContextProvider';
 import type {NavigationSection} from 'sentry/views/settings/types';
@@ -61,6 +61,7 @@ export type HookName = keyof Hooks;
  */
 type RouteHooks = {
   'routes:legacy-organization-redirects': RouteObjectHook;
+  'routes:org-settings': RouteObjectHook;
   'routes:root': RouteObjectHook;
   'routes:subscription-settings': RouteObjectHook;
 };
@@ -166,12 +167,6 @@ export type MembershipSettingsProps = {
   onSave: (previous: Organization, updated: Organization) => void;
   organization: Organization;
 };
-export type GithubInstallationInstallButtonProps = {
-  handleSubmit: (e: React.MouseEvent) => void;
-  hasSCMMultiOrg: boolean;
-  installationID: SelectKey;
-  isSaving: boolean;
-};
 
 type DashboardLimitProviderProps = {
   children:
@@ -188,6 +183,7 @@ type DashboardLimitProviderProps = {
  * Component wrapping hooks
  */
 type ComponentHooks = {
+  'component:ai-configure-seer-quota-sidebar': () => React.ComponentType<AutofixContentProps>;
   'component:ai-setup-configuration': () => React.ComponentType<AiSetupConfigrationProps>;
   'component:ai-setup-data-consent': () => React.ComponentType<AiSetupDataConsentProps> | null;
   'component:codecov-integration-settings-link': () => React.ComponentType<CodecovLinkProps>;
@@ -227,7 +223,6 @@ type ComponentHooks = {
   'component:replay-onboarding-alert': () => React.ComponentType<ReplayOnboardingAlertProps>;
   'component:replay-onboarding-cta': () => React.ComponentType<ReplayOnboardingCTAProps>;
   'component:replay-settings-alert': () => React.ComponentType | null;
-  'component:scm-multi-org-install-button': () => React.ComponentType<GithubInstallationInstallButtonProps>;
   'component:seer-beta-closing-alert': () => React.ComponentType;
   'component:superuser-access-category': React.ComponentType<any>;
   'component:superuser-warning': React.ComponentType<any>;

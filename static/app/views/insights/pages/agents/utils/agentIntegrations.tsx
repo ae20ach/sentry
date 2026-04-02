@@ -52,11 +52,6 @@ export const PYTHON_AGENT_INTEGRATIONS = [
   AgentIntegration.MANUAL,
 ];
 
-export const SERVER_SIDE_NODE_INTEGRATIONS = new Set([
-  AgentIntegration.VERCEL_AI,
-  AgentIntegration.MASTRA,
-]);
-
 export const NODE_AGENT_INTEGRATIONS = [
   AgentIntegration.VERCEL_AI,
   AgentIntegration.ANTHROPIC,
@@ -65,5 +60,10 @@ export const NODE_AGENT_INTEGRATIONS = [
   AgentIntegration.LANGGRAPH,
   AgentIntegration.MASTRA,
   AgentIntegration.OPENAI,
+  AgentIntegration.MANUAL,
+];
+
+export const DENO_AGENT_INTEGRATIONS = [
+  AgentIntegration.VERCEL_AI,
   AgentIntegration.MANUAL,
 ];

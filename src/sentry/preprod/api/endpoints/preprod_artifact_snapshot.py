@@ -6,39 +6,57 @@ from typing import Any
 import jsonschema
 import orjson
 from django.conf import settings
-from django.db import router, transaction
+from django.db import IntegrityError, router, transaction
 from rest_framework.request import Request
 from rest_framework.response import Response
 
 from sentry import analytics, features
 from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
-from sentry.api.base import region_silo_endpoint
-from sentry.api.bases.organization import OrganizationEndpoint, OrganizationReleasePermission
+from sentry.api.base import cell_silo_endpoint
+from sentry.api.bases.organization import (
+    OrganizationEndpoint,
+    OrganizationReleasePermission,
+)
 from sentry.api.bases.project import ProjectEndpoint, ProjectReleasePermission
-from sentry.api.paginator import OffsetPaginator
 from sentry.models.commitcomparison import CommitComparison
 from sentry.models.organization import Organization
 from sentry.models.project import Project
 from sentry.objectstore import get_preprod_session
-from sentry.preprod.analytics import PreprodArtifactApiGetSnapshotDetailsEvent
-from sentry.preprod.api.models.project_preprod_build_details_models import BuildDetailsVcsInfo
+from sentry.preprod.analytics import (
+    PreprodArtifactApiDeleteEvent,
+    PreprodArtifactApiGetSnapshotDetailsEvent,
+)
+from sentry.preprod.api.models.project_preprod_build_details_models import (
+    BuildDetailsVcsInfo,
+)
 from sentry.preprod.api.models.snapshots.project_preprod_snapshot_models import (
     SnapshotComparisonRunInfo,
     SnapshotDetailsApiResponse,
     SnapshotImageResponse,
 )
 from sentry.preprod.api.schemas import VCS_ERROR_MESSAGES, VCS_SCHEMA_PROPERTIES
+from sentry.preprod.helpers.deletion import delete_artifacts_and_eap_data
 from sentry.preprod.models import PreprodArtifact
 from sentry.preprod.snapshots.comparison_categorizer import (
     CategorizedComparison,
     categorize_comparison_images,
 )
-from sentry.preprod.snapshots.manifest import ComparisonManifest, ImageMetadata, SnapshotManifest
-from sentry.preprod.snapshots.models import PreprodSnapshotComparison, PreprodSnapshotMetrics
+from sentry.preprod.snapshots.manifest import (
+    ComparisonManifest,
+    ImageMetadata,
+    SnapshotManifest,
+)
+from sentry.preprod.snapshots.models import (
+    PreprodSnapshotComparison,
+    PreprodSnapshotMetrics,
+)
 from sentry.preprod.snapshots.tasks import compare_snapshots
 from sentry.preprod.snapshots.utils import find_base_snapshot_artifact
 from sentry.preprod.url_utils import get_preprod_artifact_url
+from sentry.preprod.vcs.status_checks.snapshots.tasks import (
+    create_preprod_snapshot_status_check_task,
+)
 from sentry.ratelimits.config import RateLimitConfig
 from sentry.types.ratelimit import RateLimit, RateLimitCategory
 from sentry.utils import metrics
@@ -52,7 +70,7 @@ SNAPSHOT_POST_REQUEST_SCHEMA: dict[str, Any] = {
         "images": {
             "type": "object",
             "additionalProperties": ImageMetadata.schema(),
-            "maxProperties": 1000,
+            "maxProperties": 50000,
         },
         **VCS_SCHEMA_PROPERTIES,
     },
@@ -67,7 +85,9 @@ SNAPSHOT_POST_REQUEST_ERROR_MESSAGES: dict[str, str] = {
 }
 
 
-def validate_preprod_snapshot_post_schema(request_body: bytes) -> tuple[dict[str, Any], str | None]:
+def validate_preprod_snapshot_post_schema(
+    request_body: bytes,
+) -> tuple[dict[str, Any], str | None]:
     try:
         data = orjson.loads(request_body)
         jsonschema.validate(data, SNAPSHOT_POST_REQUEST_SCHEMA)
@@ -82,13 +102,68 @@ def validate_preprod_snapshot_post_schema(request_body: bytes) -> tuple[dict[str
         return {}, "Invalid json body"
 
 
-@region_silo_endpoint
+@cell_silo_endpoint
 class OrganizationPreprodSnapshotEndpoint(OrganizationEndpoint):
     owner = ApiOwner.EMERGE_TOOLS
     publish_status = {
         "GET": ApiPublishStatus.EXPERIMENTAL,
+        "DELETE": ApiPublishStatus.EXPERIMENTAL,
     }
     permission_classes = (OrganizationReleasePermission,)
+
+    def delete(self, request: Request, organization: Organization, snapshot_id: str) -> Response:
+        if not settings.IS_DEV and not features.has(
+            "organizations:preprod-snapshots", organization, actor=request.user
+        ):
+            return Response({"detail": "Feature not enabled"}, status=403)
+
+        try:
+            artifact = PreprodArtifact.objects.select_related("project").get(
+                id=snapshot_id, project__organization_id=organization.id
+            )
+        except (PreprodArtifact.DoesNotExist, ValueError):
+            return Response({"detail": "Snapshot not found"}, status=404)
+
+        try:
+            artifact.preprodsnapshotmetrics
+        except PreprodSnapshotMetrics.DoesNotExist:
+            return Response({"detail": "Artifact is not a snapshot"}, status=400)
+
+        try:
+            result = delete_artifacts_and_eap_data([artifact])
+        except Exception:
+            logger.exception(
+                "preprod_snapshot.delete_failed",
+                extra={"artifact_id": int(snapshot_id)},
+            )
+            return Response(
+                {"detail": "Internal error deleting snapshot."},
+                status=500,
+            )
+
+        analytics.record(
+            PreprodArtifactApiDeleteEvent(
+                organization_id=organization.id,
+                project_id=artifact.project_id,
+                user_id=(
+                    request.user.id if request.user and request.user.is_authenticated else None
+                ),
+                artifact_id=str(artifact.id),
+            )
+        )
+
+        logger.info(
+            "preprod_snapshot.deleted",
+            extra={
+                "artifact_id": int(snapshot_id),
+                "user_id": request.user.id if request.user else None,
+                "files_deleted": result.files_deleted,
+                "size_metrics_deleted": result.size_metrics_deleted,
+                "artifacts_deleted": result.artifacts_deleted,
+            },
+        )
+
+        return Response(status=204)
 
     def get(self, request: Request, organization: Organization, snapshot_id: str) -> Response:
         if not settings.IS_DEV and not features.has(
@@ -189,16 +264,22 @@ class OrganizationPreprodSnapshotEndpoint(OrganizationEndpoint):
             PreprodArtifactApiGetSnapshotDetailsEvent(
                 organization_id=organization.id,
                 project_id=artifact.project_id,
-                user_id=request.user.id if request.user and request.user.is_authenticated else None,
+                user_id=(
+                    request.user.id if request.user and request.user.is_authenticated else None
+                ),
                 artifact_id=str(artifact.id),
             )
         )
 
+        first_class = SnapshotImageResponse.__fields__
         image_list = [
             SnapshotImageResponse(
-                key=key,
+                **{k: v for k, v in metadata.dict().items() if k not in first_class},
+                key=metadata.content_hash
+                or key,  # TODO(EME-977): Remove backwards fallback for hash-keyed manifests once near EA/GA
                 display_name=metadata.display_name,
-                image_file_name=metadata.image_file_name,
+                image_file_name=key,
+                group=metadata.group,
                 width=metadata.width,
                 height=metadata.height,
             )
@@ -250,15 +331,15 @@ class OrganizationPreprodSnapshotEndpoint(OrganizationEndpoint):
                 duration_ms=int(duration.total_seconds() * 1000),
             )
 
-        def on_results(images: list[SnapshotImageResponse]) -> dict[str, Any]:
-            return SnapshotDetailsApiResponse(
+        return Response(
+            SnapshotDetailsApiResponse(
                 head_artifact_id=str(artifact.id),
                 base_artifact_id=base_artifact_id,
                 project_id=str(artifact.project_id),
                 comparison_type=comparison_type,
                 state=artifact.state,
                 vcs_info=vcs_info,
-                images=images,
+                images=image_list,
                 image_count=snapshot_metrics.image_count,
                 changed=categorized.changed,
                 changed_count=len(categorized.changed),
@@ -266,24 +347,18 @@ class OrganizationPreprodSnapshotEndpoint(OrganizationEndpoint):
                 added_count=len(categorized.added),
                 removed=categorized.removed,
                 removed_count=len(categorized.removed),
+                renamed=categorized.renamed,
+                renamed_count=len(categorized.renamed),
                 unchanged=categorized.unchanged,
                 unchanged_count=len(categorized.unchanged),
                 errored=categorized.errored,
                 errored_count=len(categorized.errored),
                 comparison_run_info=run_info,
             ).dict()
-
-        return self.paginate(
-            request=request,
-            queryset=image_list,
-            paginator_cls=OffsetPaginator,
-            on_results=on_results,
-            default_per_page=20,
-            max_per_page=100,
         )
 
 
-@region_silo_endpoint
+@cell_silo_endpoint
 class ProjectPreprodSnapshotEndpoint(ProjectEndpoint):
     owner = ApiOwner.EMERGE_TOOLS
     publish_status = {
@@ -386,6 +461,45 @@ class ProjectPreprodSnapshotEndpoint(ProjectEndpoint):
             },
         )
 
+        has_vcs = commit_comparison is not None
+
+        metric_tags = {
+            "org_id_temp": str(project.organization_id),
+            "project_id_temp": str(project.id),
+            "app_id_temp": artifact.app_id or "",
+        }
+
+        metrics.distribution(
+            "preprod.snapshots.upload.image_count",
+            len(images),
+            sample_rate=1.0,
+            tags={**metric_tags, "has_vcs": has_vcs},
+        )
+
+        if has_vcs:
+            try:
+                # No composite index on (commit_comparison, project) — acceptable at current
+                # Snapshots customer volume (rate-limited to 100 req/min/org).
+                bundle_count = PreprodArtifact.objects.filter(
+                    commit_comparison=commit_comparison,
+                    project=project,
+                ).count()
+                metrics.distribution(
+                    "preprod.snapshots.upload.bundles_per_commit",
+                    bundle_count,
+                    sample_rate=1.0,
+                    tags=metric_tags,
+                )
+            except Exception:
+                logger.exception("Failed to record bundles_per_commit metric")
+
+        create_preprod_snapshot_status_check_task.apply_async(
+            kwargs={
+                "preprod_artifact_id": artifact.id,
+                "caller": "upload_completion",
+            },
+        )
+
         if base_sha and base_repo_name:
             try:
                 base_artifact = find_base_snapshot_artifact(
@@ -406,6 +520,19 @@ class ProjectPreprodSnapshotEndpoint(ProjectEndpoint):
                             "base_sha": base_sha,
                         },
                     )
+
+                    base_metrics = PreprodSnapshotMetrics.objects.filter(
+                        preprod_artifact=base_artifact
+                    ).first()
+                    if base_metrics:
+                        try:
+                            PreprodSnapshotComparison.objects.get_or_create(
+                                head_snapshot_metrics=snapshot_metrics,
+                                base_snapshot_metrics=base_metrics,
+                                defaults={"state": PreprodSnapshotComparison.State.PENDING},
+                            )
+                        except IntegrityError:
+                            pass
 
                     compare_snapshots.apply_async(
                         kwargs={

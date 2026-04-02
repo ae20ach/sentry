@@ -11,8 +11,7 @@ class Lock {
     top: string;
     width: string;
   } | null = null;
-  private scrollX = 0;
-  private scrollY = 0;
+  private scroll: {x: number; y: number} = {x: 0, y: 0};
   private container: HTMLElement;
 
   constructor(container: HTMLElement) {
@@ -23,8 +22,7 @@ class Lock {
     if (this.acquiredBy.size === 0) {
       if (this.container === document.body) {
         // Keep root overflow unchanged so sticky sidebars stay visible.
-        this.scrollX = window.scrollX;
-        this.scrollY = window.scrollY;
+        this.scroll = {x: window.scrollX, y: window.scrollY};
         this.initialBodyStyles = {
           position: document.body.style.position,
           top: document.body.style.top,
@@ -39,10 +37,14 @@ class Lock {
         const existingPaddingRight =
           Number.parseFloat(getComputedStyle(document.body).paddingRight) || 0;
         document.body.style.position = 'fixed';
-        document.body.style.top = `-${this.scrollY}px`;
+        document.body.style.top = `-${this.scroll.y}px`;
         document.body.style.left = '0';
         document.body.style.right = '0';
         document.body.style.width = '100%';
+        document.documentElement.style.setProperty(
+          '--scrollbar-size',
+          `${scrollbarWidth}px`
+        );
         document.body.style.paddingRight = `${existingPaddingRight + scrollbarWidth}px`;
       } else {
         this.initialOverflow = this.container.style.overflow;
@@ -63,7 +65,13 @@ class Lock {
         document.body.style.right = this.initialBodyStyles.right;
         document.body.style.width = this.initialBodyStyles.width;
         document.body.style.paddingRight = this.initialBodyStyles.paddingRight;
-        window.scrollTo(this.scrollX, this.scrollY);
+        document.documentElement.style.removeProperty('--scrollbar-size');
+        const {x, y} = this.scroll;
+        requestAnimationFrame(() => {
+          if (this.acquiredBy.size === 0) {
+            window.scrollTo(x, y);
+          }
+        });
         this.initialBodyStyles = null;
       }
 
@@ -109,6 +117,7 @@ export function useScrollLock(container: HTMLElement) {
     return {
       acquire: () => lock.acquire(id),
       release: () => lock.release(id),
+      held: () => lock.held(),
     };
   }, [lock, id]);
 }

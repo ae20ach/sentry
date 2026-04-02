@@ -22,7 +22,6 @@ import {focusTarget} from 'sentry/components/tokenizedInput/grid/utils';
 import {InputBox} from 'sentry/components/tokenizedInput/token/inputBox';
 import {IconClose} from 'sentry/icons';
 import {t} from 'sentry/locale';
-import {space} from 'sentry/styles/space';
 import {defined} from 'sentry/utils';
 
 interface ArithmeticTokenLiteralProps {
@@ -84,8 +83,15 @@ function InternalInput({item, state, token}: InternalInputProps) {
   }, [updateSelectionIndex]);
 
   const onInputBlur = useCallback(() => {
+    const trimmed = inputValue.trim();
+    const text = validateLiteral(trimmed) ? trimmed : token.text;
+    dispatch({
+      text,
+      type: 'REPLACE_TOKEN',
+      token,
+    });
     resetInputValue();
-  }, [resetInputValue]);
+  }, [dispatch, inputValue, token, resetInputValue]);
 
   const onInputChange = useCallback(
     (evt: ChangeEvent<HTMLInputElement>) => {
@@ -314,8 +320,8 @@ const Row = styled('div')`
     [data-hidden-text='true']::before {
       content: '';
       position: absolute;
-      left: ${space(0.5)};
-      right: ${space(0.5)};
+      left: ${p => p.theme.space.xs};
+      right: ${p => p.theme.space.xs};
       top: 0;
       bottom: 0;
       background-color: ${p => p.theme.colors.gray100};
@@ -331,7 +337,7 @@ const GridCell = styled('div')`
 `;
 
 const LeftGridCell = styled(GridCell)`
-  padding-left: ${space(0.5)};
+  padding-left: ${p => p.theme.space.xs};
 `;
 
 const DeleteButton = styled('button')`
@@ -340,7 +346,7 @@ const DeleteButton = styled('button')`
   color: ${p => p.theme.tokens.content.secondary};
   outline: none;
   user-select: none;
-  padding-right: ${space(0.5)};
+  padding-right: ${p => p.theme.space.xs};
 
   :focus {
     background-color: ${p => p.theme.colors.gray100};

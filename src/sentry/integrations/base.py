@@ -27,7 +27,7 @@ from sentry.organizations.services.organization import (
     organization_service,
 )
 from sentry.pipeline.provider import PipelineProvider
-from sentry.pipeline.views.base import PipelineView
+from sentry.pipeline.views.base import ApiPipelineSteps, PipelineView
 from sentry.shared_integrations.constants import (
     ERR_INTERNAL,
     ERR_UNAUTHORIZED,
@@ -224,6 +224,9 @@ class IntegrationProvider(PipelineProvider["IntegrationPipeline"], abc.ABC):
     can_add = True
     """whether or not the integration installation be initiated from Sentry"""
 
+    allow_multiple = True
+    """whether multiple installations of this integration are allowed per organization"""
+
     can_disable = False
     """
     if the integration can be uninstalled in Sentry, set to False
@@ -237,17 +240,24 @@ class IntegrationProvider(PipelineProvider["IntegrationPipeline"], abc.ABC):
     the installer's identity to the organization integration
     """
 
-    is_region_restricted: bool = False
-    """
-    Returns True if each integration installation can only be connected on one region of Sentry at a
-    time. It will raise an error if any organization from another region attempts to install it.
-    """
+    # TODO(cells): Remove once jira integration is updated and works for multi-cell.
+    # No integrations should be cell restricted.
+    @property
+    def is_cell_restricted(self) -> bool:
+        """
+        Returns True if each integration installation can only be connected on one cell of Sentry at a
+        time. It will raise an error if any organization from another cell attempts to install it.
+        """
+        return False
 
     features: frozenset[IntegrationFeatures] = frozenset()
     """can be any number of IntegrationFeatures"""
 
     requires_feature_flag = False
     """if this is hidden without the feature flag"""
+
+    feature_flag_name: str | None = None
+    """override the feature flag checked when requires_feature_flag is True"""
 
     @classmethod
     def get_installation(
@@ -308,6 +318,14 @@ class IntegrationProvider(PipelineProvider["IntegrationPipeline"], abc.ABC):
         >>>    return []
         """
         raise NotImplementedError
+
+    def get_pipeline_api_steps(self) -> ApiPipelineSteps[IntegrationPipeline] | None:
+        """
+        Return API step objects for this provider's pipeline, or None if API
+        mode is not supported. Override to enable the pipeline API for this
+        integration.
+        """
+        return None
 
     def build_integration(self, state: Mapping[str, Any]) -> IntegrationData:
         """

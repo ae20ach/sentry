@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from sentry import features
 from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
-from sentry.api.base import region_silo_endpoint
+from sentry.api.base import cell_silo_endpoint
 from sentry.api.bases import NoProjects, OrganizationEventsEndpointBase
 from sentry.api.paginator import GenericOffsetPaginator
 from sentry.api.serializers.rest_framework import OrganizationAIConversationsSerializer
@@ -217,7 +217,7 @@ def _build_conversation_response(
     }
 
 
-@region_silo_endpoint
+@cell_silo_endpoint
 class OrganizationAIConversationsEndpoint(OrganizationEventsEndpointBase):
     publish_status = {
         "GET": ApiPublishStatus.PRIVATE,
@@ -365,7 +365,7 @@ class OrganizationAIConversationsEndpoint(OrganizationEventsEndpointBase):
     ) -> TableQuery:
         return TableQuery(
             name="enrichment",
-            query_string=f"gen_ai.conversation.id:[{','.join(conversation_ids)}]",
+            query_string=f"gen_ai.conversation.id:[{','.join(conversation_ids)}] has:gen_ai.operation.type",
             selected_columns=[
                 "gen_ai.conversation.id",
                 "gen_ai.operation.type",

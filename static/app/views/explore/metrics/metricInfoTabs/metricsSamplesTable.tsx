@@ -1,10 +1,12 @@
 import {useMemo} from 'react';
 import styled from '@emotion/styled';
 
-import LoadingIndicator from 'sentry/components/loadingIndicator';
+import {LoadingIndicator} from 'sentry/components/loadingIndicator';
 import {SimpleTable} from 'sentry/components/tables/simpleTable';
 import {IconWarning} from 'sentry/icons';
 import {t} from 'sentry/locale';
+import type {EventsMetaType} from 'sentry/utils/discover/eventView';
+import {useOrganization} from 'sentry/utils/useOrganization';
 import {
   TraceSamplesTableColumns,
   TraceSamplesTableEmbeddedColumns,
@@ -19,11 +21,15 @@ import {
 import {MetricsSamplesTableHeader} from 'sentry/views/explore/metrics/metricInfoTabs/metricsSamplesTableHeader';
 import {SampleTableRow} from 'sentry/views/explore/metrics/metricInfoTabs/metricsSamplesTableRow';
 import type {TraceMetric} from 'sentry/views/explore/metrics/metricQuery';
+import {canUseMetricsUIRefresh} from 'sentry/views/explore/metrics/metricsFlags';
 import {
   TraceMetricKnownFieldKey,
   type TraceMetricEventsResponseItem,
 } from 'sentry/views/explore/metrics/types';
-import {getMetricTableColumnType} from 'sentry/views/explore/metrics/utils';
+import {
+  getMetricTableColumnType,
+  mapMetricUnitToFieldType,
+} from 'sentry/views/explore/metrics/utils';
 import {GenericWidgetEmptyStateWarning} from 'sentry/views/performance/landing/widgets/components/selectableList';
 
 const RESULT_LIMIT = 50;
@@ -48,8 +54,16 @@ export function MetricsSamplesTable({
   isMetricOptionsEmpty,
   overrideTableData,
 }: MetricsSamplesTableProps) {
-  const columns = embedded ? TraceSamplesTableEmbeddedColumns : TraceSamplesTableColumns;
-  const fields = columns.filter(c => getMetricTableColumnType(c) !== 'stat');
+  const organization = useOrganization();
+  const hasMetricsUIRefresh = canUseMetricsUIRefresh(organization);
+
+  const allColumns = embedded
+    ? TraceSamplesTableEmbeddedColumns
+    : TraceSamplesTableColumns;
+  const columns = hasMetricsUIRefresh
+    ? allColumns.filter(c => getMetricTableColumnType(c) !== 'stat')
+    : allColumns;
+  const fields = allColumns.filter(c => getMetricTableColumnType(c) !== 'stat');
 
   const {
     result: {data},
@@ -65,19 +79,42 @@ export function MetricsSamplesTable({
   });
 
   const traceIds = useMemo(() => {
-    if (!data || embedded) {
+    if (!data || embedded || hasMetricsUIRefresh) {
       return [];
     }
     return data.map(row => row[TraceMetricKnownFieldKey.TRACE]).filter(Boolean);
-  }, [data, embedded]);
+  }, [data, embedded, hasMetricsUIRefresh]);
 
   const {data: telemetryData} = useTraceTelemetry({
-    enabled: Boolean(traceMetric?.name) && traceIds.length > 0 && !embedded,
+    enabled:
+      Boolean(traceMetric?.name) &&
+      traceIds.length > 0 &&
+      !embedded &&
+      !hasMetricsUIRefresh,
     traceIds,
   });
 
+  const metaWithValueUnit = useMemo<EventsMetaType>(() => {
+    const {fieldType, unit} = mapMetricUnitToFieldType(traceMetric?.unit);
+    return {
+      ...meta,
+      fields: {
+        ...meta.fields,
+        [TraceMetricKnownFieldKey.METRIC_VALUE]: fieldType,
+      },
+      units: {
+        ...meta.units,
+        [TraceMetricKnownFieldKey.METRIC_VALUE]: unit ?? '',
+      },
+    };
+  }, [meta, traceMetric?.unit]);
+
+  const TableWrapper = hasMetricsUIRefresh
+    ? SimpleTableGrid
+    : SimpleTableWithHiddenColumns;
+
   return (
-    <SimpleTableWithHiddenColumns numColumns={columns.length - 1} embedded={embedded}>
+    <TableWrapper numColumns={columns.length - 1} embedded={embedded}>
       {isFetching && <TransparentLoadingMask />}
       <MetricsSamplesTableHeader columns={columns} embedded={embedded} />
       <StyledSimpleTableBody>
@@ -92,7 +129,7 @@ export function MetricsSamplesTable({
               row={row}
               telemetryData={telemetryData}
               columns={columns}
-              meta={meta}
+              meta={metaWithValueUnit}
               embedded={embedded}
             />
           ))
@@ -106,9 +143,17 @@ export function MetricsSamplesTable({
           </SimpleTable.Empty>
         )}
       </StyledSimpleTableBody>
-    </SimpleTableWithHiddenColumns>
+    </TableWrapper>
   );
 }
+
+const SimpleTableGrid = styled(StyledSimpleTable)<{
+  embedded: boolean;
+  numColumns: number;
+}>`
+  grid-template-columns: repeat(${p => p.numColumns}, min-content) 1fr;
+  grid-column: 1 / -1;
+`;
 
 const SimpleTableWithHiddenColumns = styled(StyledSimpleTable)<{
   embedded: boolean;

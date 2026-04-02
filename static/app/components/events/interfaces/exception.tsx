@@ -1,7 +1,6 @@
 import {Fragment} from 'react';
 
-import {CommitRow} from 'sentry/components/commitRow';
-import ErrorBoundary from 'sentry/components/errorBoundary';
+import {ErrorBoundary} from 'sentry/components/errorBoundary';
 import {StacktraceContext} from 'sentry/components/events/interfaces/stackTraceContext';
 import {SuspectCommits} from 'sentry/components/events/suspectCommits';
 import {TraceEventDataSection} from 'sentry/components/events/traceEventDataSection';
@@ -14,7 +13,7 @@ import {SectionDivider} from 'sentry/views/issueDetails/streamline/foldSection';
 import {useHasStreamlinedUI} from 'sentry/views/issueDetails/utils';
 
 import {ExceptionContent} from './crashContent/exception';
-import NoStackTraceMessage from './noStackTraceMessage';
+import {NoStackTraceMessage} from './noStackTraceMessage';
 import {isStacktraceNewestFirst} from './utils';
 
 type Props = {
@@ -120,7 +119,6 @@ export function Exception({
                     projectSlug={projectSlug}
                     eventId={event.id}
                     group={group}
-                    commitRow={CommitRow}
                   />
                 </ErrorBoundary>
               </Fragment>

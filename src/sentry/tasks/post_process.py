@@ -4,7 +4,7 @@ import logging
 import random
 import uuid
 from collections.abc import MutableMapping, Sequence
-from datetime import datetime, timedelta
+from datetime import datetime
 from time import time
 from typing import TYPE_CHECKING, Any, TypedDict
 
@@ -22,9 +22,6 @@ from sentry.issues.issue_occurrence import IssueOccurrence
 from sentry.killswitches import killswitch_matches_context
 from sentry.replays.lib.event_linking import transform_event_for_linking_payload
 from sentry.replays.lib.kafka import initialize_replays_publisher
-from sentry.seer.autofix.constants import FixabilityScoreThresholds
-from sentry.sentry_metrics.client import generic_metrics_backend
-from sentry.sentry_metrics.use_case_id_registry import UseCaseID
 from sentry.signals import event_processed, issue_unignored
 from sentry.silo.base import SiloMode
 from sentry.tasks.base import instrumented_task
@@ -135,23 +132,7 @@ def _capture_event_stats(event: Event) -> None:
     platform = format_event_platform(event)
     tags = {"platform": platform}
     metrics.incr("events.processed", tags={"platform": platform}, skip_internal=False)
-    metrics.incr(f"events.processed.{platform}", skip_internal=False)
     metrics.distribution("events.size.data", event.size, tags=tags, unit="byte")
-
-
-def _update_escalating_metrics(event: Event) -> None:
-    """
-    Update metrics for escalating issues when an event is processed.
-    """
-    generic_metrics_backend.counter(
-        UseCaseID.ESCALATING_ISSUES,
-        org_id=event.project.organization_id,
-        project_id=event.project.id,
-        metric_name="event_ingested",
-        value=1,
-        tags={"group": str(event.group_id)},
-        unit=None,
-    )
 
 
 def _capture_group_stats(job: PostProcessJob) -> None:
@@ -497,19 +478,11 @@ def should_retry_fetch(attempt: int, e: Exception) -> bool:
 fetch_retry_policy = ConditionalRetryPolicy(should_retry_fetch, exponential_delay(1.00))
 
 
-def should_update_escalating_metrics(event: Event) -> bool:
-    return (
-        features.has("organizations:escalating-metrics-backend", event.project.organization)
-        and event.group is not None
-        and event.group.issue_type.should_detect_escalation()
-    )
-
-
 @instrumented_task(
     name="sentry.issues.tasks.post_process.post_process_group",
     namespace=ingest_errors_postprocess_tasks,
     processing_deadline_duration=120,
-    silo_mode=SiloMode.REGION,
+    silo_mode=SiloMode.CELL,
 )
 def post_process_group(
     is_new,
@@ -637,8 +610,6 @@ def post_process_group(
             group_event = update_event_group(event, group_state)
             bind_organization_context(event.project.organization)
             _capture_event_stats(event)
-            if should_update_escalating_metrics(event):
-                _update_escalating_metrics(event)
 
             group_event.occurrence = occurrence
 
@@ -1305,6 +1276,12 @@ def process_processing_errors_eap(job: PostProcessJob):
     produce_processing_errors_to_eap(event.project, event.data, processing_errors)
 
 
+def process_processing_issue_detection(job: PostProcessJob):
+    from sentry.processing_errors.detection import detect_processing_issues
+
+    detect_processing_issues(job)
+
+
 def sdk_crash_monitoring(job: PostProcessJob):
     from sentry.utils.sdk_crashes.sdk_crash_detection import sdk_crash_detection
 
@@ -1542,16 +1519,16 @@ def check_if_flags_sent(job: PostProcessJob) -> None:
 
 
 def kick_off_seer_automation(job: PostProcessJob) -> None:
-    from sentry.seer.autofix.issue_summary import (
-        get_issue_summary_cache_key,
-        get_issue_summary_lock_key,
+    from sentry.seer.autofix.issue_summary import get_issue_summary_cache_key
+    from sentry.seer.autofix.trigger import (
+        get_default_seer_automation_skip_reason,
+        get_seat_based_seer_automation_skip_reason,
     )
     from sentry.seer.autofix.utils import (
-        is_issue_eligible_for_seer_automation,
         is_seer_scanner_rate_limited,
         is_seer_seat_based_tier_enabled,
     )
-    from sentry.tasks.autofix import (
+    from sentry.tasks.seer.autofix import (
         generate_issue_summary_only,
         generate_summary_and_run_automation,
         run_automation_only_task,
@@ -1562,94 +1539,43 @@ def kick_off_seer_automation(job: PostProcessJob) -> None:
 
     # Default behaviour
     if not is_seer_seat_based_tier_enabled(group.organization):
-        # Only run on issues with no existing scan
-        if group.seer_fixability_score is not None:
-            return
-
-        if not is_issue_eligible_for_seer_automation(group):
-            return
-
-        # Don't run if there's already a task in progress for this issue
-        lock_key, lock_name = get_issue_summary_lock_key(group.id)
-        lock = locks.get(lock_key, duration=1, name=lock_name)
-        if lock.locked():
-            return
-
-        if is_seer_scanner_rate_limited(group.project, group.organization):
+        skip_reason = get_default_seer_automation_skip_reason(group, locks)
+        if skip_reason is not None:
+            metrics.incr(
+                "seer.automation.filtered", tags={"reason": skip_reason, "tier": "default"}
+            )
             return
 
         generate_summary_and_run_automation.delay(group.id, trigger_path="old_seer_automation")
     else:
         # Seat-based tier behaviour
-        # If event count < 10, only generate summary (no automation)
-        if group.times_seen_with_pending < 10:
-            # Check if summary exists in cache
-            cache_key = get_issue_summary_cache_key(group.id)
-            if cache.get(cache_key) is not None:
-                return
+        skip_reason = get_seat_based_seer_automation_skip_reason(group)
+        if skip_reason is not None:
+            metrics.incr(
+                "seer.automation.filtered", tags={"reason": skip_reason, "tier": "seat_based"}
+            )
+            if skip_reason == "below_occurrence_threshold":
+                generate_issue_summary_only.delay(group.id)
+            return
 
-            # Early returns for eligibility checks (cheap checks first)
-            if not is_issue_eligible_for_seer_automation(group):
-                return
-
-            # Atomically set cache to prevent duplicate summary generation
-            summary_dispatch_cache_key = f"seer-summary-dispatched:{group.id}"
-            if not cache.add(summary_dispatch_cache_key, True, timeout=30):
-                return  # Another process already dispatched summary generation
-
-            # Rate limit check must be last, after cache.add succeeds, to avoid wasting quota
-            if is_seer_scanner_rate_limited(group.project, group.organization):
-                return
-
-            generate_issue_summary_only.delay(group.id)
+        # Check if summary exists in cache
+        cache_key = get_issue_summary_cache_key(group.id)
+        if cache.get(cache_key) is not None:
+            # Summary exists, run automation directly
+            run_automation_only_task.delay(group.id)
         else:
-            # Event count >= 10: run automation
-            # Long-term check to avoid re-running
-            if group.seer_autofix_last_triggered is not None:
-                return
-
-            # Don't run automation on old issues
-            if group.first_seen < (timezone.now() - timedelta(days=14)):
-                return
-
-            # Will not run issues if they are not fixable at MEDIUM threshold
-            if group.seer_fixability_score is not None:
-                if (
-                    group.seer_fixability_score < FixabilityScoreThresholds.MEDIUM.value
-                    and not group.issue_type.always_trigger_seer_automation
-                ):
-                    return
-
-            # Early returns for eligibility checks (cheap checks first)
-            if not is_issue_eligible_for_seer_automation(group):
-                return
-
-            # Atomically set cache to prevent duplicate dispatches (returns False if key exists)
-            automation_dispatch_cache_key = f"seer-automation-dispatched:{group.id}"
-            if not cache.add(automation_dispatch_cache_key, True, timeout=300):
-                return  # Another process already dispatched automation
-
-            # Check if project has connected repositories - requirement for new pricing
-            # which triggers Django model loading before apps are ready
-            from sentry.seer.autofix.utils import has_project_connected_repos
-
-            if not has_project_connected_repos(group.organization.id, group.project.id):
-                return
-
-            # Check if summary exists in cache
-            cache_key = get_issue_summary_cache_key(group.id)
-            if cache.get(cache_key) is not None:
-                # Summary exists, run automation directly
-                run_automation_only_task.delay(group.id)
-            else:
-                # Rate limit check before generating summary
-                if is_seer_scanner_rate_limited(group.project, group.organization):
-                    return
-
-                # No summary yet, generate summary + run automation in one go
-                generate_summary_and_run_automation.delay(
-                    group.id, trigger_path="seat_based_seer_automation"
+            # Rate limit check before generating summary
+            if is_seer_scanner_rate_limited(group.project, group.organization):
+                metrics.incr(
+                    "seer.automation.filtered",
+                    tags={"reason": "rate_limited", "tier": "seat_based"},
                 )
+                return
+
+            # No summary yet, generate summary + run automation in one go
+            generate_summary_and_run_automation.delay(
+                group.id, trigger_path="seat_based_seer_automation"
+            )
 
 
 GROUP_CATEGORY_POST_PROCESS_PIPELINE = {
@@ -1676,6 +1602,7 @@ GROUP_CATEGORY_POST_PROCESS_PIPELINE = {
         detect_base_urls_for_uptime,
         check_if_flags_sent,
         process_processing_errors_eap,
+        process_processing_issue_detection,
     ],
     GroupCategory.FEEDBACK: [
         feedback_filter_decorator(process_snoozes),

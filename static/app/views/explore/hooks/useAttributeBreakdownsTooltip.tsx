@@ -1,9 +1,9 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import type {ECharts, TooltipComponentFormatterCallbackParams} from 'echarts';
+import type {TooltipComponentFormatterCallbackParams} from 'echarts';
 
 import type {TooltipOption} from 'sentry/components/charts/baseChart';
 import type {ReactEchartsRef} from 'sentry/types/echarts';
-import useCopyToClipboard from 'sentry/utils/useCopyToClipboard';
+import {useCopyToClipboard} from 'sentry/utils/useCopyToClipboard';
 import {
   useAddSearchFilter,
   useSetQueryParamsGroupBys,
@@ -65,8 +65,6 @@ export function useAttributeBreakdownsTooltipAction(): TooltipActions['onAction'
         case Actions.COPY_TO_CLIPBOARD:
           copyToClipboard.copy(value);
           break;
-        default:
-          break;
       }
     },
     [addSearchFilter, setGroupBys, copyToClipboard]
@@ -91,7 +89,7 @@ export function useAttributeBreakdownsTooltip({
   //   tooltip actions (if passed in).
   // - Sets up the listener for clicks anywhere on the chart to toggle the frozen tooltip state.
   useEffect(() => {
-    const chartInstance: ECharts | undefined = chartRef.current?.getEchartsInstance();
+    const chartInstance = chartRef.current?.getEchartsInstance();
     if (!chartInstance) return;
 
     if (frozenPosition) {
@@ -136,7 +134,6 @@ export function useAttributeBreakdownsTooltip({
     dom.addEventListener('click', handleClickAnywhere);
     dom.addEventListener('mouseleave', handleMouseLeave);
 
-    // eslint-disable-next-line consistent-return
     return () => {
       dom.removeEventListener('click', handleClickAnywhere);
       dom.removeEventListener('mouseleave', handleMouseLeave);
@@ -185,7 +182,6 @@ export function useAttributeBreakdownsTooltip({
     document.addEventListener('mouseover', handleMouseOver);
     document.addEventListener('mouseout', handleMouseOut);
 
-    // eslint-disable-next-line consistent-return
     return () => {
       document.removeEventListener('click', handleClickActions);
       document.removeEventListener('mouseover', handleMouseOver);

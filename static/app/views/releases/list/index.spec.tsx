@@ -11,10 +11,10 @@ import {
   within,
 } from 'sentry-test/reactTestingLibrary';
 
-import PageFiltersStore from 'sentry/components/pageFilters/store';
+import {PageFiltersStore} from 'sentry/components/pageFilters/store';
 import {PreprodBuildsDisplay} from 'sentry/components/preprod/preprodBuildsDisplay';
 import {ReleasesSortOption} from 'sentry/constants/releases';
-import ProjectsStore from 'sentry/stores/projectsStore';
+import {ProjectsStore} from 'sentry/stores/projectsStore';
 import ReleasesList from 'sentry/views/releases/list/';
 import {ReleasesDisplayOption} from 'sentry/views/releases/list/releasesDisplayOptions';
 import {ReleasesStatusOption} from 'sentry/views/releases/list/releasesStatusOptions';
@@ -94,6 +94,11 @@ describe('ReleasesList', () => {
     MockApiClient.addMockResponse({
       url: `/projects/org-slug/${projects[0]!.slug}/`,
       body: [],
+    });
+    MockApiClient.addMockResponse({
+      url: `/organizations/${organization.slug}/trace-items/attributes/validate/`,
+      method: 'POST',
+      body: {attributes: {}},
     });
   });
 
@@ -541,6 +546,11 @@ describe('ReleasesList', () => {
       body: [],
     });
 
+    MockApiClient.addMockResponse({
+      url: `/organizations/${organization.slug}/trace-items/attributes/`,
+      body: [],
+    });
+
     render(<ReleasesList />, {
       organization,
       initialRouterConfig: {
@@ -564,7 +574,7 @@ describe('ReleasesList', () => {
   it('toggles display mode in the mobile-builds tab', async () => {
     const organizationWithDistribution = OrganizationFixture({
       slug: organization.slug,
-      features: [...organization.features, 'preprod-build-distribution'],
+      features: [...organization.features],
     });
     const mobileProject = ProjectFixture({
       id: '15',
@@ -609,6 +619,11 @@ describe('ReleasesList', () => {
 
     MockApiClient.addMockResponse({
       url: `/organizations/${organization.slug}/recent-searches/`,
+      body: [],
+    });
+
+    MockApiClient.addMockResponse({
+      url: `/organizations/${organization.slug}/trace-items/attributes/`,
       body: [],
     });
 
@@ -677,10 +692,25 @@ describe('ReleasesList', () => {
     });
 
     MockApiClient.addMockResponse({
+      url: `/organizations/${organization.slug}/recent-searches/`,
+      method: 'POST',
+      body: [],
+    });
+
+    MockApiClient.addMockResponse({
+      url: `/organizations/${organization.slug}/trace-items/attributes/`,
+      body: [],
+    });
+
+    MockApiClient.addMockResponse({
       url: `/organizations/${organization.slug}/trace-items/attributes/branch/values/`,
       body: [],
     });
 
+    MockApiClient.addMockResponse({
+      url: `/organizations/${organization.slug}/trace-items/attributes/`,
+      body: [],
+    });
     render(<ReleasesList />, {
       organization,
       initialRouterConfig: {
@@ -750,6 +780,11 @@ describe('ReleasesList', () => {
 
     MockApiClient.addMockResponse({
       url: `/organizations/${organization.slug}/recent-searches/`,
+      body: [],
+    });
+
+    MockApiClient.addMockResponse({
+      url: `/organizations/${organization.slug}/trace-items/attributes/`,
       body: [],
     });
 

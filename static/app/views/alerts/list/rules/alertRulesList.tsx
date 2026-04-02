@@ -3,6 +3,7 @@ import styled from '@emotion/styled';
 import type {Location} from 'history';
 
 import {Alert} from '@sentry/scraps/alert';
+import {Stack} from '@sentry/scraps/layout';
 import {Link} from '@sentry/scraps/link';
 
 import {
@@ -10,37 +11,36 @@ import {
   addMessage,
   addSuccessMessage,
 } from 'sentry/actionCreators/indicator';
-import HookOrDefault from 'sentry/components/hookOrDefault';
+import {HookOrDefault} from 'sentry/components/hookOrDefault';
 import * as Layout from 'sentry/components/layouts/thirds';
-import LoadingError from 'sentry/components/loadingError';
-import PageFiltersContainer from 'sentry/components/pageFilters/container';
-import Pagination from 'sentry/components/pagination';
+import {LoadingError} from 'sentry/components/loadingError';
+import {PageFiltersContainer} from 'sentry/components/pageFilters/container';
+import {Pagination} from 'sentry/components/pagination';
 import {PanelTable} from 'sentry/components/panels/panelTable';
-import SentryDocumentTitle from 'sentry/components/sentryDocumentTitle';
+import {SentryDocumentTitle} from 'sentry/components/sentryDocumentTitle';
 import {IconArrow} from 'sentry/icons';
 import {t} from 'sentry/locale';
-import {space} from 'sentry/styles/space';
 import type {Project} from 'sentry/types/project';
 import {defined} from 'sentry/utils';
-import getApiUrl from 'sentry/utils/api/getApiUrl';
+import {getApiUrl} from 'sentry/utils/api/getApiUrl';
 import {uniq} from 'sentry/utils/array/uniq';
 import {VisuallyCompleteWithData} from 'sentry/utils/performanceForSentry';
-import Projects from 'sentry/utils/projects';
+import {Projects} from 'sentry/utils/projects';
 import type {ApiQueryKey} from 'sentry/utils/queryClient';
 import {setApiQueryData, useApiQuery, useQueryClient} from 'sentry/utils/queryClient';
-import useRouteAnalyticsEventNames from 'sentry/utils/routeAnalytics/useRouteAnalyticsEventNames';
-import useRouteAnalyticsParams from 'sentry/utils/routeAnalytics/useRouteAnalyticsParams';
-import useApi from 'sentry/utils/useApi';
+import {useRouteAnalyticsEventNames} from 'sentry/utils/routeAnalytics/useRouteAnalyticsEventNames';
+import {useRouteAnalyticsParams} from 'sentry/utils/routeAnalytics/useRouteAnalyticsParams';
+import {useApi} from 'sentry/utils/useApi';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useNavigate} from 'sentry/utils/useNavigate';
-import useOrganization from 'sentry/utils/useOrganization';
-import FilterBar from 'sentry/views/alerts/filterBar';
-import AlertHeader from 'sentry/views/alerts/list/header';
+import {useOrganization} from 'sentry/utils/useOrganization';
+import {FilterBar} from 'sentry/views/alerts/filterBar';
+import {AlertHeader} from 'sentry/views/alerts/list/header';
 import type {CombinedAlerts} from 'sentry/views/alerts/types';
 import {AlertRuleType, CombinedAlertType} from 'sentry/views/alerts/types';
 import {getTeamParams, isIssueAlert} from 'sentry/views/alerts/utils';
 
-import RuleListRow from './row';
+import {RuleListRow} from './row';
 
 type SortField = 'date_added' | 'name' | ['incident_status', 'date_triggered'];
 const defaultSort: SortField = ['incident_status', 'date_triggered'];
@@ -211,139 +211,141 @@ export default function AlertRulesList() {
     <Fragment>
       <SentryDocumentTitle title={t('Alerts')} orgSlug={organization.slug} />
 
-      <PageFiltersContainer>
-        <AlertHeader activeTab="rules" />
-        <Layout.Body>
-          <Layout.Main width="full">
-            <DataConsentBanner source="alerts" />
-            {!hasMetricAlertsFeature && hasAnyMetricAlerts && (
-              <Alert.Container>
-                <Alert variant="danger">
-                  Your metric alerts have been disabled. Upgrade your plan to re-enable
-                  them.
-                </Alert>
-              </Alert.Container>
-            )}
-            <FilterBar
-              location={location}
-              onChangeFilter={handleChangeFilter}
-              onChangeSearch={handleChangeSearch}
-              onChangeAlertType={handleChangeType}
-              hasTypeFilter
-            />
-            <StyledPanelTable
-              isLoading={isPending}
-              isEmpty={ruleList.length === 0 && !isError}
-              emptyMessage={t('No alert rules found for the current query.')}
-              headers={[
-                <StyledSortLink
-                  key="name"
-                  role="columnheader"
-                  aria-sort={
-                    sort.field === 'name'
-                      ? sort.asc
-                        ? 'ascending'
-                        : 'descending'
-                      : 'none'
-                  }
-                  to={{
-                    pathname: location.pathname,
-                    query: {
-                      ...currentQuery,
-                      // sort by name should start by ascending on first click
-                      asc: sort.field === 'name' && sort.asc ? undefined : '1',
-                      sort: 'name',
-                    },
-                  }}
-                >
-                  {t('Alert Rule')} {sort.field === 'name' ? sortArrow : null}
-                </StyledSortLink>,
-                <StyledSortLink
-                  key="status"
-                  role="columnheader"
-                  aria-sort={
-                    isAlertRuleSort ? (sort.asc ? 'ascending' : 'descending') : 'none'
-                  }
-                  to={{
-                    pathname: location.pathname,
-                    query: {
-                      ...currentQuery,
-                      asc: isAlertRuleSort && !sort.asc ? '1' : undefined,
-                      sort: ['incident_status', 'date_triggered'],
-                    },
-                  }}
-                >
-                  {t('Status')} {isAlertRuleSort ? sortArrow : null}
-                </StyledSortLink>,
-                t('Project'),
-                t('Team'),
-                t('Actions'),
-              ]}
-            >
-              {isError ? (
-                <StyledLoadingError
-                  message={t('There was an error loading alerts.')}
-                  onRetry={refetch}
-                />
-              ) : null}
-              <VisuallyCompleteWithData
-                id="AlertRules-Body"
-                hasData={ruleList.length > 0}
+      <Stack flex={1}>
+        <PageFiltersContainer>
+          <AlertHeader activeTab="rules" />
+          <Layout.Body>
+            <Layout.Main width="full">
+              <DataConsentBanner source="alerts" />
+              {!hasMetricAlertsFeature && hasAnyMetricAlerts && (
+                <Alert.Container>
+                  <Alert variant="danger">
+                    Your metric alerts have been disabled. Upgrade your plan to re-enable
+                    them.
+                  </Alert>
+                </Alert.Container>
+              )}
+              <FilterBar
+                location={location}
+                onChangeFilter={handleChangeFilter}
+                onChangeSearch={handleChangeSearch}
+                onChangeAlertType={handleChangeType}
+                hasTypeFilter
+              />
+              <StyledPanelTable
+                isLoading={isPending}
+                isEmpty={ruleList.length === 0 && !isError}
+                emptyMessage={t('No alert rules found for the current query.')}
+                headers={[
+                  <StyledSortLink
+                    key="name"
+                    role="columnheader"
+                    aria-sort={
+                      sort.field === 'name'
+                        ? sort.asc
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                    to={{
+                      pathname: location.pathname,
+                      query: {
+                        ...currentQuery,
+                        // sort by name should start by ascending on first click
+                        asc: sort.field === 'name' && sort.asc ? undefined : '1',
+                        sort: 'name',
+                      },
+                    }}
+                  >
+                    {t('Alert Rule')} {sort.field === 'name' ? sortArrow : null}
+                  </StyledSortLink>,
+                  <StyledSortLink
+                    key="status"
+                    role="columnheader"
+                    aria-sort={
+                      isAlertRuleSort ? (sort.asc ? 'ascending' : 'descending') : 'none'
+                    }
+                    to={{
+                      pathname: location.pathname,
+                      query: {
+                        ...currentQuery,
+                        asc: isAlertRuleSort && !sort.asc ? '1' : undefined,
+                        sort: ['incident_status', 'date_triggered'],
+                      },
+                    }}
+                  >
+                    {t('Status')} {isAlertRuleSort ? sortArrow : null}
+                  </StyledSortLink>,
+                  t('Project'),
+                  t('Team'),
+                  t('Actions'),
+                ]}
               >
-                <Projects orgId={organization.slug} slugs={projectsFromResults}>
-                  {({initiallyLoaded, projects}) =>
-                    ruleList.map(rule => {
-                      const isIssueAlertInstance = isIssueAlert(rule);
-                      const keyPrefix = isIssueAlertInstance
-                        ? AlertRuleType.ISSUE
-                        : rule.type === CombinedAlertType.UPTIME
-                          ? AlertRuleType.UPTIME
-                          : AlertRuleType.METRIC;
+                {isError ? (
+                  <StyledLoadingError
+                    message={t('There was an error loading alerts.')}
+                    onRetry={refetch}
+                  />
+                ) : null}
+                <VisuallyCompleteWithData
+                  id="AlertRules-Body"
+                  hasData={ruleList.length > 0}
+                >
+                  <Projects orgId={organization.slug} slugs={projectsFromResults}>
+                    {({initiallyLoaded, projects}) =>
+                      ruleList.map(rule => {
+                        const isIssueAlertInstance = isIssueAlert(rule);
+                        const keyPrefix = isIssueAlertInstance
+                          ? AlertRuleType.ISSUE
+                          : rule.type === CombinedAlertType.UPTIME
+                            ? AlertRuleType.UPTIME
+                            : AlertRuleType.METRIC;
 
-                      return (
-                        <RuleListRow
-                          // Metric and issue alerts can have the same id
-                          key={`${keyPrefix}-${rule.id}`}
-                          projectsLoaded={initiallyLoaded}
-                          projects={projects as Project[]}
-                          rule={rule}
-                          organization={organization}
-                          onOwnerChange={handleOwnerChange}
-                          onDelete={handleDeleteRule}
-                          hasEditAccess={hasEditAccess}
-                          hasMetricAlerts={hasMetricAlertsFeature}
-                        />
-                      );
-                    })
+                        return (
+                          <RuleListRow
+                            // Metric and issue alerts can have the same id
+                            key={`${keyPrefix}-${rule.id}`}
+                            projectsLoaded={initiallyLoaded}
+                            projects={projects as Project[]}
+                            rule={rule}
+                            organization={organization}
+                            onOwnerChange={handleOwnerChange}
+                            onDelete={handleDeleteRule}
+                            hasEditAccess={hasEditAccess}
+                            hasMetricAlerts={hasMetricAlertsFeature}
+                          />
+                        );
+                      })
+                    }
+                  </Projects>
+                </VisuallyCompleteWithData>
+              </StyledPanelTable>
+              <Pagination
+                pageLinks={ruleListPageLinks}
+                onCursor={(cursor, path, _direction) => {
+                  let team = currentQuery.team;
+                  // Keep team parameter, but empty to remove parameters
+                  if (!team || team.length === 0) {
+                    team = '';
                   }
-                </Projects>
-              </VisuallyCompleteWithData>
-            </StyledPanelTable>
-            <Pagination
-              pageLinks={ruleListPageLinks}
-              onCursor={(cursor, path, _direction) => {
-                let team = currentQuery.team;
-                // Keep team parameter, but empty to remove parameters
-                if (!team || team.length === 0) {
-                  team = '';
-                }
 
-                navigate({
-                  pathname: path,
-                  query: {...currentQuery, team, cursor},
-                });
-              }}
-            />
-          </Layout.Main>
-        </Layout.Body>
-      </PageFiltersContainer>
+                  navigate({
+                    pathname: path,
+                    query: {...currentQuery, team, cursor},
+                  });
+                }}
+              />
+            </Layout.Main>
+          </Layout.Body>
+        </PageFiltersContainer>
+      </Stack>
     </Fragment>
   );
 }
 
 const StyledLoadingError = styled(LoadingError)`
   grid-column: 1 / -1;
-  margin-bottom: ${space(4)};
+  margin-bottom: ${p => p.theme.space['3xl']};
   border-radius: 0;
   border-width: 1px 0;
 `;
@@ -352,7 +354,7 @@ const StyledSortLink = styled(Link)`
   color: inherit;
   display: flex;
   align-items: center;
-  gap: ${space(0.5)};
+  gap: ${p => p.theme.space.xs};
 
   :hover {
     color: inherit;

@@ -6,8 +6,9 @@ from pydantic import BaseModel, Field
 
 
 class ImageMetadata(BaseModel):
+    content_hash: str | None = None
     display_name: str | None = None
-    image_file_name: str
+    group: str | None = None
     width: int = Field(ge=0)
     height: int = Field(ge=0)
 
@@ -20,7 +21,7 @@ class SnapshotManifest(BaseModel):
 
 
 class ComparisonImageResult(BaseModel):
-    status: Literal["added", "removed", "changed", "unchanged", "errored"]
+    status: Literal["added", "removed", "changed", "unchanged", "errored", "renamed"]
     head_hash: str | None = None
     base_hash: str | None = None
     changed_pixels: int | None = None
@@ -33,6 +34,7 @@ class ComparisonImageResult(BaseModel):
     after_height: int | None = None
     aligned_height: int | None = None
     reason: str | None = None
+    previous_image_file_name: str | None = None
 
 
 class ComparisonSummary(BaseModel):
@@ -42,6 +44,7 @@ class ComparisonSummary(BaseModel):
     added: int
     removed: int
     errored: int
+    renamed: int
 
 
 class ComparisonManifest(BaseModel):

@@ -1,9 +1,9 @@
 import partition from 'lodash/partition';
 import * as qs from 'query-string';
 
-import getThreadException from 'sentry/components/events/interfaces/threads/threadSelector/getThreadException';
+import {getThreadException} from 'sentry/components/events/interfaces/threads/threadSelector/getThreadException';
 import {FILTER_MASK} from 'sentry/constants';
-import ConfigStore from 'sentry/stores/configStore';
+import {ConfigStore} from 'sentry/stores/configStore';
 import type {Image} from 'sentry/types/debugImage';
 import type {EntryRequest, EntryThreads, Event, Frame, Thread} from 'sentry/types/event';
 import {EntryType} from 'sentry/types/event';
@@ -278,7 +278,7 @@ export function parseAssembly(assembly: string | null) {
   for (let i = 1; i < pieces.length; i++) {
     const [key, value] = pieces[i]!.trim().split('=');
 
-    // eslint-disable-next-line default-case
+    // eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
     switch (key) {
       case 'Version':
         version = value;

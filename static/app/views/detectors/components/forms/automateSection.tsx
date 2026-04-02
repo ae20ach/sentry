@@ -5,14 +5,13 @@ import {Button} from '@sentry/scraps/button';
 import {Flex, Stack} from '@sentry/scraps/layout';
 import {Text} from '@sentry/scraps/text';
 
-import FormContext from 'sentry/components/forms/formContext';
-import useDrawer from 'sentry/components/globalDrawer';
+import {FormContext} from 'sentry/components/forms/formContext';
+import {useDrawer} from 'sentry/components/globalDrawer';
 import {useFormField} from 'sentry/components/workflowEngine/form/useFormField';
 import {Container} from 'sentry/components/workflowEngine/ui/container';
-import Section from 'sentry/components/workflowEngine/ui/section';
+import {FormSection} from 'sentry/components/workflowEngine/ui/formSection';
 import {IconAdd, IconEdit} from 'sentry/icons';
 import {t, tct} from 'sentry/locale';
-import {space} from 'sentry/styles/space';
 import {AutomationBuilderDrawerForm} from 'sentry/views/automations/components/automationBuilderDrawerForm';
 import {ConnectAutomationsDrawer} from 'sentry/views/detectors/components/connectAutomationsDrawer';
 import {ConnectedAutomationsList} from 'sentry/views/detectors/components/connectedAutomationList';
@@ -78,7 +77,7 @@ export function AutomateSection() {
   if (workflowIds.length > 0) {
     return (
       <Container>
-        <Section title={t('Connected Alerts')}>
+        <FormSection title={t('Connected Alerts')}>
           <ConnectedAutomationsList
             automationIds={workflowIds}
             cursor={undefined}
@@ -86,7 +85,7 @@ export function AutomateSection() {
             limit={null}
             openInNewTab
           />
-        </Section>
+        </FormSection>
         <ButtonWrapper justify="between">
           <Button size="sm" icon={<IconAdd />} onClick={openCreateDrawer}>
             {t('Create New Alert')}
@@ -101,7 +100,7 @@ export function AutomateSection() {
 
   return (
     <Container>
-      <Section
+      <FormSection
         title={t('Alert')}
         description={t('Configure alerting on this Monitor to get notified on issues.')}
       >
@@ -133,13 +132,13 @@ export function AutomateSection() {
             </Stack>
           }
         />
-      </Section>
+      </FormSection>
     </Container>
   );
 }
 
 const ButtonWrapper = styled(Flex)`
   border-top: 1px solid ${p => p.theme.tokens.border.primary};
-  padding: ${space(2)};
-  margin: -${space(2)};
+  padding: ${p => p.theme.space.xl};
+  margin: -${p => p.theme.space.xl};
 `;

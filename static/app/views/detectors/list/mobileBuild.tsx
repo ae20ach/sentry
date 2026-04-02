@@ -1,6 +1,6 @@
 import Feature from 'sentry/components/acl/feature';
-import SentryDocumentTitle from 'sentry/components/sentryDocumentTitle';
-import WorkflowEngineListLayout from 'sentry/components/workflowEngine/layout/list';
+import {SentryDocumentTitle} from 'sentry/components/sentryDocumentTitle';
+import {WorkflowEngineListLayout} from 'sentry/components/workflowEngine/layout/list';
 import {t} from 'sentry/locale';
 import {DetectorListActions} from 'sentry/views/detectors/list/common/detectorListActions';
 import {DetectorListContent} from 'sentry/views/detectors/list/common/detectorListContent';
@@ -22,7 +22,7 @@ export default function MobileBuildDetectorsList() {
     <Feature features="organizations:preprod-size-monitors-frontend">
       <SentryDocumentTitle title={TITLE}>
         <WorkflowEngineListLayout
-          actions={<DetectorListActions detectorType="preprod_size_analysis" />}
+          actions={<DetectorListActions />}
           title={TITLE}
           description={DESCRIPTION}
           docsUrl={DOCS_URL}

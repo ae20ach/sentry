@@ -1,18 +1,16 @@
 import type {Theme} from '@emotion/react';
 import styled from '@emotion/styled';
 
-import {space} from 'sentry/styles/space';
-
 export const DataSection = styled('div')`
   display: flex;
   flex-direction: column;
   margin: 0;
 
   /* Padding aligns with Layout.Body */
-  padding: ${space(1)} ${space(2)};
+  padding: ${p => p.theme.space.md} ${p => p.theme.space.xl};
 
   @media (min-width: ${p => p.theme.breakpoints.md}) {
-    padding: ${space(1.5)} ${space(4)};
+    padding: ${p => p.theme.space.lg} ${p => p.theme.space['3xl']};
   }
 `;
 
@@ -55,10 +53,10 @@ export const BannerSummary = styled('p')`
   display: flex;
   align-items: flex-start;
   margin-bottom: 0;
-  padding: ${space(2)} ${space(2)};
+  padding: ${p => p.theme.space.xl} ${p => p.theme.space.xl};
 
   @media (min-width: ${p => p.theme.breakpoints.lg}) {
-    padding: ${space(2)} ${space(4)};
+    padding: ${p => p.theme.space.xl} ${p => p.theme.space['3xl']};
   }
 
   /* Get icons in top right of content box */
@@ -66,7 +64,7 @@ export const BannerSummary = styled('p')`
   & > svg {
     flex-shrink: 0;
     flex-grow: 0;
-    margin-right: ${space(1)};
+    margin-right: ${p => p.theme.space.md};
     margin-top: 2px;
   }
 
@@ -76,30 +74,5 @@ export const BannerSummary = styled('p')`
 
   & > a {
     align-self: flex-end;
-  }
-`;
-
-export const SuspectCommitHeader = styled('div')`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: ${space(1)};
-
-  & button,
-  & h3 {
-    color: ${p => p.theme.tokens.content.secondary};
-    font-size: ${p => p.theme.font.size.md};
-    font-weight: ${p => p.theme.font.weight.sans.medium};
-  }
-
-  & h3 {
-    margin-bottom: 0;
-  }
-
-  & button {
-    background: none;
-    border: 0;
-    outline: none;
-    padding: 0;
   }
 `;

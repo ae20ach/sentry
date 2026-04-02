@@ -3,6 +3,8 @@ from __future__ import annotations
 import mimetypes
 import os
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+from datetime import timezone as dt_timezone
 from hashlib import sha1
 from io import BytesIO
 from typing import IO, Any
@@ -10,17 +12,22 @@ from typing import IO, Any
 import zstandard
 from django.core.cache import cache
 from django.db import models
+from django.db.models.expressions import DatabaseDefault
 from django.utils import timezone
+from objectstore_client import TimeToLive
 
 from sentry.attachments.base import CachedAttachment
 from sentry.backup.scopes import RelocationScope
-from sentry.db.models import BoundedBigIntegerField, Model, region_silo_model, sane_repr
+from sentry.db.models import BoundedBigIntegerField, Model, cell_silo_model, sane_repr
 from sentry.db.models.fields.bounded import BoundedIntegerField
 from sentry.db.models.manager.base_query_set import BaseQuerySet
 from sentry.models.files.utils import get_size_and_checksum, get_storage
-from sentry.objectstore import get_attachments_session
+from sentry.objectstore import default_attachment_retention, get_attachments_session
 from sentry.objectstore.metrics import measure_storage_operation
 from sentry.options.rollout import in_random_rollout
+
+# Sentinel value stored in `date_expires` to mean "no explicit expiry — use default retention".
+DATE_EXPIRES_SENTINEL = datetime(1970, 1, 1, 0, 0, 0, tzinfo=dt_timezone.utc)
 
 # Attachment file types that are considered a crash report (PII relevant)
 CRASH_REPORT_TYPES = ("event.minidump", "event.applecrashreport")
@@ -67,7 +74,7 @@ def can_store_inline(data: bytes) -> bool:
     return len(data) < 192 and all(byte > 0x00 and byte < 0x7F for byte in data)
 
 
-@region_silo_model
+@cell_silo_model
 class EventAttachment(Model):
     """
     Attachment Metadata and Storage
@@ -98,6 +105,10 @@ class EventAttachment(Model):
     sha1 = models.CharField(max_length=40, null=True)
 
     date_added = models.DateTimeField(default=timezone.now, db_index=True)
+    date_expires = models.DateTimeField(
+        db_default=DATE_EXPIRES_SENTINEL,
+        db_index=True,
+    )
 
     # storage:
     blob_path = models.TextField(null=True)
@@ -111,6 +122,13 @@ class EventAttachment(Model):
         )
 
     __repr__ = sane_repr("event_id", "name")
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # Computed here rather than as a field default to avoid freezing a callable
+        # reference into migrations, which would break if the function is ever renamed.
+        if self.date_expires is None or isinstance(self.date_expires, DatabaseDefault):  # type: ignore[unreachable]
+            self.date_expires = timezone.now() + timedelta(days=default_attachment_retention())  # type: ignore[unreachable]
+        super().save(*args, **kwargs)
 
     def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
         rv = super().delete(*args, **kwargs)
@@ -219,7 +237,11 @@ class EventAttachment(Model):
 
         else:
             organization_id = _get_organization(project_id)
-            blob_path = V2_PREFIX + get_attachments_session(organization_id, project_id).put(data)
+            session = get_attachments_session(organization_id, project_id)
+            key = session.put(
+                data, expiration_policy=TimeToLive(timedelta(days=attachment.retention_days))
+            )
+            blob_path = V2_PREFIX + key
 
         return PutfileResult(
             content_type=content_type, size=size, sha1=checksum, blob_path=blob_path

@@ -1,12 +1,12 @@
 import {useMemo} from 'react';
 import styled from '@emotion/styled';
 
-import SentryMemberTeamSelectorField from 'sentry/components/forms/fields/sentryMemberTeamSelectorField';
+import {SentryMemberTeamSelectorField} from 'sentry/components/forms/fields/sentryMemberTeamSelectorField';
 import {useFormField} from 'sentry/components/workflowEngine/form/useFormField';
 import {Container} from 'sentry/components/workflowEngine/ui/container';
-import Section from 'sentry/components/workflowEngine/ui/section';
+import {FormSection} from 'sentry/components/workflowEngine/ui/formSection';
 import {t} from 'sentry/locale';
-import useProjects from 'sentry/utils/useProjects';
+import {useProjects} from 'sentry/utils/useProjects';
 
 function AssigneeField({projectId}: {projectId?: string}) {
   const {projects} = useProjects();
@@ -32,9 +32,9 @@ export function AssignSection() {
 
   return (
     <Container>
-      <Section title={t('Assign')}>
+      <FormSection title={t('Assign')}>
         <AssigneeField projectId={projectId} />
-      </Section>
+      </FormSection>
     </Container>
   );
 }

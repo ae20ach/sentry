@@ -16,6 +16,7 @@ from sentry.grouping.ingest.grouphash_metadata import (
 from sentry.grouping.variants import BaseVariant
 from sentry.models.grouphash import GroupHash
 from sentry.models.project import Project
+from sentry.seer.signed_seer_api import SeerViewerContext
 from sentry.seer.similarity.config import (
     get_grouping_model_version,
     get_new_model_version,
@@ -35,7 +36,7 @@ from sentry.seer.similarity.utils import (
 )
 from sentry.services.eventstore.models import Event
 from sentry.utils import metrics
-from sentry.utils.circuit_breaker2 import CircuitBreaker
+from sentry.utils.circuit_breaker2 import CircuitBreaker, CountBasedTripStrategy
 from sentry.utils.safe import get_path
 
 logger = logging.getLogger("sentry.events.grouping")
@@ -245,7 +246,11 @@ def _ratelimiting_enabled(event: Event, project: Project, training_mode: bool = 
 
 def _circuit_breaker_broken(event: Event, project: Project, training_mode: bool = False) -> bool:
     breaker_config = options.get("seer.similarity.circuit-breaker-config")
-    circuit_breaker = CircuitBreaker(settings.SEER_SIMILARITY_CIRCUIT_BREAKER_KEY, breaker_config)
+    circuit_breaker = CircuitBreaker(
+        settings.SEER_SIMILARITY_CIRCUIT_BREAKER_KEY,
+        breaker_config,
+        CountBasedTripStrategy.from_config(breaker_config),
+    )
     circuit_broken = not circuit_breaker.should_allow_request()
 
     if circuit_broken:
@@ -311,9 +316,9 @@ def _build_seer_request(
         "exception_type": filter_null_from_string(exception_type) if exception_type else None,
         "k": options.get("seer.similarity.ingest.num_matches_to_request"),
         "referrer": "ingest",
-        "use_reranking": options.get("seer.similarity.ingest.use_reranking"),
         "model": model_version,
         "training_mode": training_mode,
+        "platform": event.platform or "unknown",
     }
     event.data.pop("stacktrace_string", None)
 
@@ -331,10 +336,11 @@ def get_seer_similar_issues(
     event: Event,
     event_grouphash: GroupHash,
     variants: dict[str, BaseVariant],
-) -> tuple[float | None, GroupHash | None]:
+) -> tuple[float | None, GroupHash | None, str | None]:
     """
-    Ask Seer for the given event's nearest neighbor(s) and return the stacktrace distance and
-    matching GroupHash of the closest match (if any), or `(None, None)` if no match found.
+    Ask Seer for the given event's nearest neighbor(s) and return the stacktrace distance,
+    matching GroupHash of the closest match (if any), and the model Seer actually used,
+    or `(None, None, None)` if no match found.
 
     Args:
         event: The event being grouped
@@ -347,9 +353,11 @@ def get_seer_similar_issues(
 
     request_data, seer_request_metric_tags = _build_seer_request(event, variants)
 
-    seer_results = get_similarity_data_from_seer(
+    viewer_context = SeerViewerContext(organization_id=event.project.organization_id)
+    seer_results, model_used = get_similarity_data_from_seer(
         request_data,
         {**seer_request_metric_tags, "hybrid_fingerprint": event_has_hybrid_fingerprint},
+        viewer_context=viewer_context,
     )
 
     # All of these will get overridden if we find a usable match
@@ -404,8 +412,6 @@ def get_seer_similar_issues(
             # By asking Seer to find zero matches, we can trick it into thinking there aren't
             # any, thereby forcing it to create the record
             "k": 0,
-            # Turn off re-ranking to speed up the process of finding nothing
-            "use_reranking": False,
         }
 
         # TODO: Temporary log to prove things are working as they should. This should come in a pair
@@ -415,7 +421,9 @@ def get_seer_similar_issues(
 
         # We only want this for the side effect, and we know it'll return no matches, so we don't
         # bother to capture the return value.
-        get_similarity_data_from_seer(request_data, seer_request_metric_tags)
+        get_similarity_data_from_seer(
+            request_data, seer_request_metric_tags, viewer_context=viewer_context
+        )
 
     is_hybrid_fingerprint_case = (
         event_has_hybrid_fingerprint
@@ -471,7 +479,7 @@ def get_seer_similar_issues(
         },
     )
 
-    return (stacktrace_distance, winning_parent_grouphash)
+    return (stacktrace_distance, winning_parent_grouphash, model_used)
 
 
 def _should_use_seer_match_for_grouping(
@@ -549,8 +557,8 @@ def maybe_check_seer_for_matching_grouphash(
         record_did_call_seer_metric(event, call_made=True, blocker="none")
 
         try:
-            # If no matching group is found in Seer, these will both be None
-            seer_match_distance, seer_matched_grouphash = get_seer_similar_issues(
+            # If no matching group is found in Seer, these will all be None
+            seer_match_distance, seer_matched_grouphash, seer_model_used = get_seer_similar_issues(
                 event, event_grouphash, variants
             )
         except Exception as e:  # Insurance - in theory we shouldn't ever land here
@@ -600,7 +608,7 @@ def maybe_check_seer_for_matching_grouphash(
                 date_added=gh_metadata.date_added or timestamp,
                 seer_date_sent=gh_metadata.date_added or timestamp,
                 seer_event_sent=event.event_id,
-                seer_model=model_version.value,
+                seer_model=seer_model_used or model_version.value,
                 seer_matched_grouphash=seer_matched_grouphash,
                 seer_match_distance=seer_match_distance,
                 seer_latest_training_model=model_version.value,
@@ -644,8 +652,11 @@ def maybe_send_seer_for_new_model_training(
 
     request_data, metric_tags = _build_seer_request(event, variants, training_mode=True)
 
+    viewer_context = SeerViewerContext(organization_id=event.project.organization_id)
     try:
-        get_similarity_data_from_seer(request_data, metric_tags, raise_on_error=True)
+        get_similarity_data_from_seer(
+            request_data, metric_tags, raise_on_error=True, viewer_context=viewer_context
+        )
     except Exception as e:
         sentry_sdk.capture_exception(
             e,

@@ -83,10 +83,14 @@ export type Project = {
   options?: Record<string, boolean | string>;
   preprodDistributionEnabledByCustomer?: boolean;
   preprodDistributionEnabledQuery?: string | null;
+  preprodDistributionPrCommentsEnabledByCustomer?: boolean;
   preprodSizeEnabledByCustomer?: boolean;
   preprodSizeEnabledQuery?: string | null;
   preprodSizeStatusChecksEnabled?: boolean;
   preprodSizeStatusChecksRules?: unknown[];
+  preprodSnapshotStatusChecksEnabled?: boolean;
+  preprodSnapshotStatusChecksFailOnAdded?: boolean;
+  preprodSnapshotStatusChecksFailOnRemoved?: boolean;
   securityToken?: string;
   securityTokenHeader?: string;
   seerScannerAutomation?: boolean;

@@ -1,17 +1,18 @@
 import {FeatureBadge} from '@sentry/scraps/badge';
+import {Stack} from '@sentry/scraps/layout';
 
-import FeedbackButton from 'sentry/components/feedbackButton/feedbackButton';
+import {FeedbackButton} from 'sentry/components/feedbackButton/feedbackButton';
 import * as Layout from 'sentry/components/layouts/thirds';
-import PageFiltersContainer from 'sentry/components/pageFilters/container';
-import SentryDocumentTitle from 'sentry/components/sentryDocumentTitle';
+import {PageFiltersContainer} from 'sentry/components/pageFilters/container';
+import {SentryDocumentTitle} from 'sentry/components/sentryDocumentTitle';
 import {t} from 'sentry/locale';
 import {DataCategory} from 'sentry/types/core';
 import {defined} from 'sentry/utils';
 import {useDatePageFilterProps} from 'sentry/utils/useDatePageFilterProps';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useMaxPickableDays} from 'sentry/utils/useMaxPickableDays';
-import useOrganization from 'sentry/utils/useOrganization';
-import ExploreBreadcrumb from 'sentry/views/explore/components/breadcrumb';
+import {useOrganization} from 'sentry/utils/useOrganization';
+import {ExploreBreadcrumb} from 'sentry/views/explore/components/breadcrumb';
 import {useGetSavedQuery} from 'sentry/views/explore/hooks/useGetSavedQueries';
 import {MetricsTabOnboarding} from 'sentry/views/explore/metrics/metricsOnboarding';
 import {MetricsTabContent} from 'sentry/views/explore/metrics/metricsTab';
@@ -48,7 +49,7 @@ export default function MetricsContent() {
             : undefined
         }
       >
-        <Layout.Page>
+        <Stack flex={1}>
           <MetricsHeader />
           {defined(onboardingProject) ? (
             <MetricsTabOnboarding
@@ -59,7 +60,7 @@ export default function MetricsContent() {
           ) : (
             <MetricsTabContent datePageFilterProps={datePageFilterProps} />
           )}
-        </Layout.Page>
+        </Stack>
       </PageFiltersContainer>
     </SentryDocumentTitle>
   );
@@ -94,7 +95,6 @@ function MetricsHeader() {
       </Layout.HeaderContent>
       <Layout.HeaderActions>
         <FeedbackButton
-          size="xs"
           feedbackOptions={{
             messagePlaceholder: t('How can we make metrics work better for you?'),
             tags: {

@@ -7,13 +7,13 @@ from sentry.monitors.models import Monitor, ScheduleType, is_monitor_muted
 from sentry.monitors.serializers import MonitorSerializer
 from sentry.monitors.types import DATA_SOURCE_CRON_MONITOR
 from sentry.testutils.cases import APITestCase
-from sentry.testutils.silo import region_silo_test
+from sentry.testutils.silo import cell_silo_test
 from sentry.workflow_engine.models import DataSource, DataSourceDetector, Detector
 
 
-@region_silo_test
+@cell_silo_test
 class BaseDetectorTestCase(APITestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         super().setUp()
         self.login_as(user=self.user)
         self.monitor = Monitor.objects.create(
@@ -44,11 +44,11 @@ class BaseDetectorTestCase(APITestCase):
         self.create_data_source_detector(data_source=self.data_source, detector=self.detector)
 
 
-@region_silo_test
+@cell_silo_test
 class OrganizationDetectorIndexGetTest(BaseDetectorTestCase):
     endpoint = "sentry-api-0-organization-detector-index"
 
-    def test_list_monitor_incident_detectors(self):
+    def test_list_monitor_incident_detectors(self) -> None:
         response = self.get_success_response(self.organization.slug)
 
         detector_data = response.data[2]
@@ -85,12 +85,12 @@ class OrganizationDetectorIndexGetTest(BaseDetectorTestCase):
         }
 
 
-@region_silo_test
+@cell_silo_test
 class OrganizationDetectorIndexPostTest(APITestCase):
     endpoint = "sentry-api-0-organization-detector-index"
     method = "post"
 
-    def setUp(self):
+    def setUp(self) -> None:
         super().setUp()
         self.login_as(user=self.user)
 
@@ -112,7 +112,7 @@ class OrganizationDetectorIndexPostTest(APITestCase):
         data.update(overrides)
         return data
 
-    def test_create_monitor_incident_detector_validates_correctly(self):
+    def test_create_monitor_incident_detector_validates_correctly(self) -> None:
         data = self._get_detector_post_data()
         response = self.get_success_response(
             self.organization.slug,
@@ -153,7 +153,7 @@ class OrganizationDetectorIndexPostTest(APITestCase):
         expected_monitor_data = serialize(monitor, user=self.user, serializer=MonitorSerializer())
         assert data_source_data["queryObj"] == expected_monitor_data
 
-    def test_create_monitor_incident_detector_validation_error(self):
+    def test_create_monitor_incident_detector_validation_error(self) -> None:
         data = self._get_detector_post_data(
             dataSources=[
                 {
@@ -172,7 +172,7 @@ class OrganizationDetectorIndexPostTest(APITestCase):
         assert "dataSources" in response.data
         assert "Either name or slug must be provided" in str(response.data["dataSources"])
 
-    def test_create_monitor_with_optional_fields(self):
+    def test_create_monitor_with_optional_fields(self) -> None:
         data = self._get_detector_post_data(
             dataSources=[
                 {
@@ -212,12 +212,12 @@ class OrganizationDetectorIndexPostTest(APITestCase):
         assert monitor.config["recovery_threshold"] == 2
 
 
-@region_silo_test
+@cell_silo_test
 class OrganizationDetectorIndexPutTest(BaseDetectorTestCase):
     endpoint = "sentry-api-0-organization-detector-details"
     method = "put"
 
-    def test_update_monitor_incident_detector(self):
+    def test_update_monitor_incident_detector(self) -> None:
         new_user = self.create_user()
         self.create_member(user=new_user, organization=self.organization)
         data = {
@@ -249,7 +249,7 @@ class OrganizationDetectorIndexPutTest(BaseDetectorTestCase):
         assert self.monitor.name == "Original Monitor"
         assert self.monitor.slug == "original-monitor"
 
-    def test_update_monitor_config_through_detector(self):
+    def test_update_monitor_config_through_detector(self) -> None:
         data = {
             "name": "Updated Detector With Monitor Config",
             "dataSources": [
@@ -281,12 +281,12 @@ class OrganizationDetectorIndexPutTest(BaseDetectorTestCase):
         assert self.monitor.config["max_runtime"] == 60
 
 
-@region_silo_test
+@cell_silo_test
 class OrganizationDetectorDeleteTest(BaseDetectorTestCase):
     endpoint = "sentry-api-0-organization-detector-details"
     method = "delete"
 
-    def test_delete_monitor_incident_detector(self):
+    def test_delete_monitor_incident_detector(self) -> None:
         detector_id = self.detector.id
         monitor_id = self.monitor.id
         self.get_success_response(

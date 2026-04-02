@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import concurrent.futures as cf
 import functools
 import logging
 from datetime import datetime
 from typing import TypedDict
 
-from django.conf import settings
 from google.cloud.exceptions import NotFound
 from snuba_sdk import (
     Column,
@@ -36,6 +34,8 @@ from sentry.replays.query import replay_url_parser_config
 from sentry.replays.usecases.events import archive_event
 from sentry.replays.usecases.query import execute_query, handle_search_filters
 from sentry.replays.usecases.query.configs.aggregate import search_config as agg_search_config
+from sentry.seer.signed_seer_api import SeerViewerContext
+from sentry.utils.concurrent import ContextPropagatingThreadPoolExecutor
 from sentry.utils.retries import ConditionalRetryPolicy, exponential_delay
 from sentry.utils.snuba import (
     QueryExecutionError,
@@ -76,7 +76,7 @@ def delete_replays(project_id: int, replay_ids: list[str]) -> None:
 
 
 def delete_replay_recordings(project_id: int, row: MatchedRow) -> None:
-    with cf.ThreadPoolExecutor(max_workers=100) as pool:
+    with ContextPropagatingThreadPoolExecutor(max_workers=100) as pool:
         pool.map(_delete_if_exists, _make_recording_filenames(project_id, row))
 
 
@@ -202,11 +202,14 @@ def delete_seer_replay_data(organization_id: int, project_id: int, replay_ids: l
         project_id=project_id,
     )
 
+    viewer_context = SeerViewerContext(organization_id=organization_id)
+
     try:
         response = make_replay_delete_request(
             seer_request,
-            timeout=getattr(settings, "SEER_DEFAULT_TIMEOUT", 5),
+            timeout=5,
             retries=Retry(total=1, backoff_factor=3),  # 1 retry after a 3 second delay.
+            viewer_context=viewer_context,
         )
     except Exception:
         logger.exception(

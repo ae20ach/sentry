@@ -6,9 +6,9 @@ import {Flex} from '@sentry/scraps/layout';
 import {CheckInPlaceholder} from 'sentry/components/checkInTimeline/checkInPlaceholder';
 import {CheckInTimeline} from 'sentry/components/checkInTimeline/checkInTimeline';
 import {useTimeWindowConfig} from 'sentry/components/checkInTimeline/hooks/useTimeWindowConfig';
-import SentryDocumentTitle from 'sentry/components/sentryDocumentTitle';
+import {SentryDocumentTitle} from 'sentry/components/sentryDocumentTitle';
 import {SimpleTable} from 'sentry/components/tables/simpleTable';
-import WorkflowEngineListLayout from 'sentry/components/workflowEngine/layout/list';
+import {WorkflowEngineListLayout} from 'sentry/components/workflowEngine/layout/list';
 import {t} from 'sentry/locale';
 import type {UptimeDetector} from 'sentry/types/workflowEngine/detectors';
 import {useDebouncedValue} from 'sentry/utils/useDebouncedValue';
@@ -105,7 +105,7 @@ export default function UptimeDetectorsList() {
     <MonitorViewContext.Provider value={contextValue}>
       <SentryDocumentTitle title={TITLE}>
         <WorkflowEngineListLayout
-          actions={<DetectorListActions detectorType="uptime_domain_failure" />}
+          actions={<DetectorListActions />}
           title={TITLE}
           description={DESCRIPTION}
           docsUrl={DOCS_URL}

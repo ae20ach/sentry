@@ -1,6 +1,6 @@
 import {Fragment, useCallback, useEffect, useRef} from 'react';
 import {createPortal} from 'react-dom';
-import {css} from '@emotion/react';
+import {css, type Interpolation, type Theme, useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
 import type {FocusTrap} from 'focus-trap';
 import {createFocusTrap} from 'focus-trap';
@@ -12,12 +12,12 @@ import {useScrollLock} from '@sentry/scraps/useScrollLock';
 
 import {useGlobalModal} from 'sentry/components/globalModal/useGlobalModal';
 import {ROOT_ELEMENT} from 'sentry/constants';
-import ModalStore from 'sentry/stores/modalStore';
-import {space} from 'sentry/styles/space';
-import getModalPortal from 'sentry/utils/getModalPortal';
-import testableTransition from 'sentry/utils/testableTransition';
+import {ModalStore} from 'sentry/stores/modalStore';
+import {getModalPortal} from 'sentry/utils/getModalPortal';
+import {testableTransition} from 'sentry/utils/testableTransition';
 import {useEffectAfterFirstRender} from 'sentry/utils/useEffectAfterFirstRender';
 import {useLocation} from 'sentry/utils/useLocation';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 import {makeClosableHeader, makeCloseButton, ModalBody, ModalFooter} from './components';
 
@@ -55,7 +55,7 @@ type ModalOptions = {
    * component. You may use the `[role="document"]` selector to target the
    * actual modal content to style the visual element of the modal.
    */
-  modalCss?: ReturnType<typeof css>;
+  modalCss?: Interpolation<Theme>;
   /**
    * Callback for when the modal is closed
    */
@@ -112,10 +112,11 @@ type Props = {
   onClose?: () => void;
 };
 
-function GlobalModal({onClose}: Props) {
-  const {renderer, options, visible} = useGlobalModal();
+export function GlobalModal({onClose}: Props) {
+  const {renderer, options, visible, triggerElement} = useGlobalModal();
+  const hasPageFrame = useHasPageFrameFeature();
   const location = useLocation();
-
+  const theme = useTheme();
   const closeEvents = options.closeEvents ?? 'all';
 
   const closeModal = useCallback(
@@ -172,8 +173,9 @@ function GlobalModal({onClose}: Props) {
     const reset = () => {
       scrollLock.release();
       root?.removeAttribute('aria-hidden');
-      focusTrap.current?.deactivate();
+      focusTrap.current?.deactivate({returnFocus: false});
       document.removeEventListener('keydown', handleEscapeClose);
+      triggerElement?.focus();
     };
 
     if (visible) {
@@ -187,14 +189,16 @@ function GlobalModal({onClose}: Props) {
     }
 
     return reset;
-  }, [portal, handleEscapeClose, visible, scrollLock]);
+  }, [portal, handleEscapeClose, visible, scrollLock, triggerElement]);
 
   // Close the modal when the browser history changes.
   //
   // XXX: We're using useEffectAfterFirstRender primarily to support tests
   // which render the GlobalModal after a modal has already been registered in
   // the modal store, meaning it would be closed immediately.
-  useEffectAfterFirstRender(() => ModalStore.closeModal(), [location.pathname]);
+  useEffectAfterFirstRender(() => {
+    ModalStore.closeModal();
+  }, [location.pathname]);
 
   // Default to enabled backdrop
   const backdrop = options.backdrop ?? true;
@@ -224,7 +228,11 @@ function GlobalModal({onClose}: Props) {
     <Fragment>
       <Backdrop
         data-overlay
-        style={backdrop && visible ? {opacity: 0.5, pointerEvents: 'auto'} : {}}
+        style={
+          backdrop && visible
+            ? {opacity: hasPageFrame ? 0.2 : 0.5, pointerEvents: 'auto'}
+            : {}
+        }
         css={options?.backdropCss}
       />
       <Container
@@ -247,14 +255,22 @@ function GlobalModal({onClose}: Props) {
                 role="dialog"
                 aria-modal
                 css={options.modalCss}
-                initial={{opacity: 0, y: -10}}
-                animate={{opacity: 1, y: 0}}
-                exit={{opacity: 0, y: 15}}
-                transition={testableTransition({
-                  type: 'spring',
-                  stiffness: 450,
-                  damping: 25,
-                })}
+                initial={hasPageFrame ? {opacity: 0, scale: 0.98} : {opacity: 0, y: -10}}
+                animate={hasPageFrame ? {opacity: 1, scale: 1} : {opacity: 1, y: 0}}
+                exit={
+                  hasPageFrame
+                    ? {opacity: 0, scale: 0.99, transition: theme.motion.framer.exit.fast}
+                    : {opacity: 0, y: 15}
+                }
+                transition={
+                  hasPageFrame
+                    ? theme.motion.framer.enter.moderate
+                    : testableTransition({
+                        type: 'spring',
+                        stiffness: 450,
+                        damping: 25,
+                      })
+                }
               >
                 <Surface variant="overlay" elevation="high">
                   {p => (
@@ -293,6 +309,7 @@ const Backdrop = styled('div')`
 
 const Container = styled('div')`
   ${fullPageCss};
+  right: var(--scrollbar-size, 0);
   z-index: ${p => p.theme.zIndex.modal};
   display: flex;
   justify-content: center;
@@ -305,21 +322,19 @@ const Modal = styled(motion.div)`
   width: 640px;
   pointer-events: auto;
   margin-top: 64px;
-  padding: ${space(2)} ${space(1.5)};
+  padding: ${p => p.theme.space.xl} ${p => p.theme.space.lg};
 
   @media (min-width: ${p => p.theme.breakpoints.md}) {
     margin-top: 50px;
-    padding: ${space(4)} ${space(2)};
+    padding: ${p => p.theme.space['3xl']} ${p => p.theme.space.xl};
   }
 `;
 
 const Content = styled('div')`
   position: relative;
-  padding: ${space(4)} ${space(3)};
+  padding: ${p => p.theme.space['3xl']} ${p => p.theme.space['2xl']};
 
   @media (min-width: ${p => p.theme.breakpoints.md}) {
-    padding: ${space(4)};
+    padding: ${p => p.theme.space['3xl']};
   }
 `;
-
-export default GlobalModal;
