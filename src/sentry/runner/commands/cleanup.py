@@ -374,6 +374,7 @@ def _cleanup(
                 return model.__name__.lower() not in model_list
 
             deletes = models_which_use_deletions_code_path()
+            expiry_deletes = models_which_use_expiry_deletions()
             bulk_query_deletes = generate_bulk_query_deletes()
 
             _run_specialized_cleanups(is_filtered, days, models_attempted)
@@ -402,6 +403,18 @@ def _cleanup(
                 deletes,
                 is_filtered,
                 days,
+                project,
+                project_id,
+                models_attempted,
+            )
+
+            # Expiry-based models always use days=0 so records are deleted exactly
+            # when they expire, regardless of the --days flag.
+            run_bulk_deletes_in_deletes(
+                task_queue,
+                expiry_deletes,
+                is_filtered,
+                0,
                 project,
                 project_id,
                 models_attempted,
@@ -665,7 +678,6 @@ def exported_data(
 def models_which_use_deletions_code_path() -> list[tuple[type[BaseModel], str, str]]:
     from sentry.models.artifactbundle import ArtifactBundle
     from sentry.models.commit import Commit
-    from sentry.models.eventattachment import EventAttachment
     from sentry.models.files.file import File
     from sentry.models.grouprulestatus import GroupRuleStatus
     from sentry.models.pullrequest import PullRequest
@@ -691,8 +703,16 @@ def models_which_use_deletions_code_path() -> list[tuple[type[BaseModel], str, s
         (File, "timestamp", "id"),
         (Commit, "date_added", "id"),
         (UptimeResponseCapture, "date_added", "date_added"),
-        # Delete based on a record's expiration date (variable retention policies)
-        # Use with `--days=0`
+    ]
+
+
+def models_which_use_expiry_deletions() -> list[tuple[type[BaseModel], str, str]]:
+    from sentry.models.eventattachment import EventAttachment
+
+    # Models deleted based on their per-record expiry date, independent of --days.
+    # Always run with days=0 so records are deleted exactly when they expire,
+    # regardless of the --days value passed to the cleanup command.
+    return [
         (EventAttachment, "date_expires", "date_expires"),
     ]
 
