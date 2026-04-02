@@ -1,21 +1,33 @@
 from __future__ import annotations
 
+from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Any
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from sentry.incidents.models.incident import IncidentStatus
-from sentry.incidents.typings.metric_detector import OpenPeriodContext
+from sentry.incidents.typings.metric_detector import AlertContext, OpenPeriodContext
+from sentry.models.activity import Activity
 from sentry.notifications.platform.slack.provider import SlackNotificationProvider
-from sentry.notifications.platform.slack.renderers.metric_alert import SlackMetricAlertRenderer
-from sentry.notifications.platform.templates.metric_alert import MetricAlertNotificationData
+from sentry.notifications.platform.slack.renderers.metric_alert import (
+    SlackMetricAlertRenderer,
+    _build_metric_issue_context_from_activity,
+)
+from sentry.notifications.platform.templates.metric_alert import (
+    ActivityMetricAlertNotificationData,
+    MetricAlertNotificationData,
+    SerializableAlertContext,
+)
 from sentry.notifications.platform.templates.seer import SeerAutofixError
 from sentry.notifications.platform.types import (
     NotificationCategory,
     NotificationRenderedTemplate,
 )
 from sentry.testutils.cases import TestCase
+from sentry.testutils.helpers.features import with_feature
+from sentry.types.activity import ActivityType
+from sentry.workflow_engine.types import DetectorPriorityLevel
 from tests.sentry.notifications.notification_action.test_metric_alert_registry_handlers import (
     MetricAlertHandlerBase,
 )
@@ -23,20 +35,23 @@ from tests.sentry.notifications.notification_action.test_metric_alert_registry_h
 MOCK_CHART_URL = "https://chart.example.com/metric.png"
 
 
-def _make_notification_data(**overrides: Any) -> MetricAlertNotificationData:
-    defaults: dict[str, Any] = dict(
+def _make_notification_data(**overrides: object) -> MetricAlertNotificationData:
+    defaults: dict[str, object] = dict(
+        event_id="abc123",
+        project_id=1,
         group_id=1,
         organization_id=1,
-        notification_uuid="test-uuid",
-        action_id=1,
+        detector_id=1,
+        alert_context=SerializableAlertContext(
+            name="Test Alert",
+            action_identifier_id=1,
+            detection_type="static",
+        ),
         open_period_context=OpenPeriodContext(
             id=1,
             date_started=datetime(2024, 1, 1, tzinfo=timezone.utc),
         ),
-        new_status=IncidentStatus.CRITICAL.value,
-        title="Critical: Test Alert",
-        title_link="https://sentry.io/alerts/1/",
-        text="123 events in the last 5 minutes",
+        notification_uuid="test-uuid",
     )
     defaults.update(overrides)
     return MetricAlertNotificationData(**defaults)
@@ -77,27 +92,43 @@ class SlackMetricAlertRendererTest(MetricAlertHandlerBase):
         super().setUp()
         self.create_models()
 
+        alert_context = AlertContext.from_workflow_engine_models(
+            self.detector,
+            self.evidence_data,
+            self.group.status,
+            DetectorPriorityLevel.HIGH,
+        )
         open_period_context = OpenPeriodContext.from_group(self.group)
 
-        self.notification_data = _make_notification_data(
+        self.notification_data = MetricAlertNotificationData(
+            event_id=self.group_event.event_id,
+            project_id=self.project.id,
             group_id=self.group.id,
             organization_id=self.organization.id,
-            action_id=1,
+            detector_id=self.detector.id,
+            alert_context=SerializableAlertContext.from_alert_context(alert_context),
             open_period_context=open_period_context,
-            new_status=IncidentStatus.CRITICAL.value,
-            title=f"Critical: {self.detector.name}",
-            title_link="https://sentry.io/alerts/1/",
-            text="123.45 events in the last minute",
+            notification_uuid="test-uuid",
         )
         self.rendered_template = NotificationRenderedTemplate(subject="Metric Alert", body=[])
 
-    def test_render_produces_blocks(self) -> None:
+    @patch(
+        "sentry.notifications.platform.slack.renderers.metric_alert.build_metric_alert_chart",
+        return_value=None,
+    )
+    @patch(
+        "sentry.notifications.platform.slack.renderers.metric_alert.eventstore.backend.get_event_by_id"
+    )
+    def test_render_produces_blocks(self, mock_get_event: MagicMock, mock_chart: MagicMock) -> None:
+        mock_get_event.return_value = self.group_event
+
         result = SlackMetricAlertRenderer.render(
             data=self.notification_data,
             rendered_template=self.rendered_template,
         )
 
         # Without a chart: exactly one section block with the metric text
+        # This is annoying but since Block is not indexable and we want to test the structure we need to say Any
         blocks: list[Any] = result["blocks"]
         assert len(blocks) == 1
         assert blocks[0]["type"] == "section"
@@ -106,24 +137,26 @@ class SlackMetricAlertRendererTest(MetricAlertHandlerBase):
         # Fallback text should reference the detector/alert name
         assert self.detector.name in result["text"]
 
-    def test_render_includes_image_block_when_chart_url_present(self) -> None:
-        data_with_chart = _make_notification_data(
-            group_id=self.group.id,
-            organization_id=self.organization.id,
-            open_period_context=OpenPeriodContext.from_group(self.group),
-            new_status=IncidentStatus.CRITICAL.value,
-            title=f"Critical: {self.detector.name}",
-            title_link="https://sentry.io/alerts/1/",
-            text="123.45 events in the last minute",
-            chart_url=MOCK_CHART_URL,
-        )
+    @patch(
+        "sentry.notifications.platform.slack.renderers.metric_alert.build_metric_alert_chart",
+        return_value=MOCK_CHART_URL,
+    )
+    @patch(
+        "sentry.notifications.platform.slack.renderers.metric_alert.eventstore.backend.get_event_by_id"
+    )
+    @with_feature({"organizations:metric-alert-chartcuterie": True})
+    def test_render_includes_image_block_when_chart_enabled(
+        self, mock_get_event: MagicMock, mock_chart: MagicMock
+    ) -> None:
+        mock_get_event.return_value = self.group_event
 
         result = SlackMetricAlertRenderer.render(
-            data=data_with_chart,
+            data=self.notification_data,
             rendered_template=self.rendered_template,
         )
 
         # With a chart: section block + image block
+        # This is annoying but since Block is not indexable and we want to test the structure we need to say Any
         blocks: list[Any] = result["blocks"]
         assert len(blocks) == 2
         assert blocks[0]["type"] == "section"
@@ -132,7 +165,67 @@ class SlackMetricAlertRendererTest(MetricAlertHandlerBase):
         assert blocks[1]["image_url"] == MOCK_CHART_URL
         assert blocks[1]["alt_text"] == "Metric Alert Chart"
 
-    def test_render_without_chart_url(self) -> None:
+    @patch("sentry.notifications.platform.slack.renderers.metric_alert.sentry_sdk")
+    @patch(
+        "sentry.notifications.platform.slack.renderers.metric_alert.build_metric_alert_chart",
+        side_effect=Exception("chart service unavailable"),
+    )
+    @patch(
+        "sentry.notifications.platform.slack.renderers.metric_alert.eventstore.backend.get_event_by_id"
+    )
+    def test_render_continues_when_chart_fails(
+        self, mock_get_event: MagicMock, mock_chart: MagicMock, mock_sdk: MagicMock
+    ) -> None:
+        mock_get_event.return_value = self.group_event
+
+        with self.feature("organizations:metric-alert-chartcuterie"):
+            result = SlackMetricAlertRenderer.render(
+                data=self.notification_data,
+                rendered_template=self.rendered_template,
+            )
+
+        mock_sdk.capture_exception.assert_called_once()
+        # Render completes without the chart — just the section block
+        # This is annoying but since Block is not indexable and we want to test the structure we need to say Any
+        blocks: list[Any] = result["blocks"]
+        assert len(blocks) == 1
+        assert blocks[0]["type"] == "section"
+
+
+class SlackActivityMetricAlertRendererTest(MetricAlertHandlerBase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.create_models()
+
+        activity = Activity(
+            project=self.project,
+            group=self.group,
+            type=ActivityType.SET_RESOLVED.value,
+            data=asdict(self.evidence_data),
+        )
+        activity.save()
+
+        alert_context = AlertContext.from_workflow_engine_models(
+            self.detector,
+            self.evidence_data,
+            self.group.status,
+            DetectorPriorityLevel.HIGH,
+        )
+        open_period_context = OpenPeriodContext.from_group(self.group)
+
+        self.notification_data = ActivityMetricAlertNotificationData(
+            group_id=self.group.id,
+            organization_id=self.organization.id,
+            detector_id=self.detector.id,
+            alert_context=SerializableAlertContext.from_alert_context(alert_context),
+            open_period_context=open_period_context,
+            activity_id=activity.id,
+            notification_uuid="test-uuid",
+        )
+        self.rendered_template = NotificationRenderedTemplate(subject="Metric Alert", body=[])
+
+    def test_render_produces_blocks_without_snuba(self) -> None:
+        # The Activity path re-fetches from Postgres only (no Snuba) — no eventstore mock needed
         result = SlackMetricAlertRenderer.render(
             data=self.notification_data,
             rendered_template=self.rendered_template,
@@ -141,22 +234,66 @@ class SlackMetricAlertRendererTest(MetricAlertHandlerBase):
         blocks: list[Any] = result["blocks"]
         assert len(blocks) == 1
         assert blocks[0]["type"] == "section"
+        assert blocks[0]["text"]["type"] == "mrkdwn"
+        # "Resolved" appears in the fallback title (result["text"]), not the metric body block
+        assert "Resolved" in result["text"]
+        assert self.detector.name in result["text"]
 
-    def test_render_resolved_status(self) -> None:
-        resolved_data = _make_notification_data(
-            group_id=self.group.id,
-            organization_id=self.organization.id,
-            open_period_context=OpenPeriodContext.from_group(self.group),
-            new_status=IncidentStatus.CLOSED.value,
-            title=f"Resolved: {self.detector.name}",
-            title_link="https://sentry.io/alerts/1/",
-            text="",
-        )
-
+    @patch(
+        "sentry.notifications.platform.slack.renderers.metric_alert.build_metric_alert_chart",
+        return_value=MOCK_CHART_URL,
+    )
+    @with_feature({"organizations:metric-alert-chartcuterie": True})
+    def test_render_includes_image_block_when_chart_enabled(self, mock_chart: MagicMock) -> None:
         result = SlackMetricAlertRenderer.render(
-            data=resolved_data,
+            data=self.notification_data,
             rendered_template=self.rendered_template,
         )
 
+        blocks: list[Any] = result["blocks"]
+        assert len(blocks) == 2
+        assert blocks[0]["type"] == "section"
         assert "Resolved" in result["text"]
-        assert self.detector.name in result["text"]
+        assert blocks[1]["type"] == "image"
+        assert blocks[1]["image_url"] == MOCK_CHART_URL
+        assert blocks[1]["alt_text"] == "Metric Alert Chart"
+
+
+class MetricIssueContextBuildersTest(MetricAlertHandlerBase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.create_models()
+
+    def test_build_from_activity_uses_ok_priority(self) -> None:
+        from sentry.incidents.models.incident import IncidentStatus
+
+        activity = Activity(
+            project=self.project,
+            group=self.group,
+            type=ActivityType.SET_RESOLVED.value,
+            data=asdict(self.evidence_data),
+        )
+        activity.save()
+
+        data = ActivityMetricAlertNotificationData(
+            group_id=self.group.id,
+            organization_id=self.organization.id,
+            detector_id=self.detector.id,
+            alert_context=SerializableAlertContext.from_alert_context(
+                AlertContext.from_workflow_engine_models(
+                    self.detector,
+                    self.evidence_data,
+                    self.group.status,
+                    DetectorPriorityLevel.HIGH,
+                )
+            ),
+            open_period_context=OpenPeriodContext.from_group(self.group),
+            activity_id=activity.id,
+            notification_uuid="test-uuid",
+        )
+
+        context = _build_metric_issue_context_from_activity(data)
+
+        # Activity path always resolves with DetectorPriorityLevel.OK → IncidentStatus.CLOSED
+        assert context.new_status == IncidentStatus.CLOSED
+        assert context.metric_value == self.evidence_data.value
