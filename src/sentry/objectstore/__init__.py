@@ -1,7 +1,7 @@
 import subprocess
 from datetime import timedelta
-from urllib.parse import urlparse, urlunparse
 from typing import TypedDict, Unpack
+from urllib.parse import urlparse, urlunparse
 
 import urllib3
 from django.conf import settings
@@ -75,7 +75,11 @@ def create_client(token_override: str | None = None) -> Client:
     token = token_override
     if signing_key_options := options.get("token_generator"):
         # We require the `kid` and `secret_key` keys be set, other options are optional
-        if token is None and signing_key_options.get("kid") and signing_key_options.get("secret_key"):
+        if (
+            token is None
+            and signing_key_options.get("kid")
+            and signing_key_options.get("secret_key")
+        ):
             token = TokenGenerator(
                 **signing_key_options,
             )
@@ -102,7 +106,9 @@ def default_client() -> Client:
     return _OBJECTSTORE_CLIENT
 
 
-def _get_session(usecase: Usecase, org: int, project: int | None, client: Client | None = None) -> Session:
+def _get_session(
+    usecase: Usecase, org: int, project: int | None, client: Client | None = None
+) -> Session:
     if client is None:
         client = default_client()
 
