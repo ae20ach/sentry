@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import uuid
 from collections.abc import Mapping
 from typing import Any
 
@@ -67,6 +66,6 @@ class GithubCopilotIntegrationProvider(CodingAgentIntegrationProvider):
     def build_integration(self, state: Mapping[str, Any]) -> IntegrationData:
         return {
             "name": "GitHub Copilot",
-            "external_id": str(uuid.uuid4()),
+            "external_id": "github_copilot",
             "metadata": {},
         }

@@ -25,10 +25,10 @@ class GithubCopilotIntegrationProviderTest(TestCase):
         assert "external_id" in data
         assert data["metadata"] == {}
 
-    def test_build_integration_generates_unique_external_ids(self):
+    def test_build_integration_uses_fixed_external_id(self):
         data1 = self.provider.build_integration({})
         data2 = self.provider.build_integration({})
-        assert data1["external_id"] != data2["external_id"]
+        assert data1["external_id"] == data2["external_id"] == "github_copilot"
 
     def test_direct_enable_aspect(self):
         assert self.provider.metadata.aspects.get("directEnable") is True
