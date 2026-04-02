@@ -1,7 +1,11 @@
-from typing import Optional
-
 import msgspec
 
+from sentry.scm.private.github.types import (
+    GitHubCheckRun,
+    GitHubIssue,
+    GitHubIssueComment,
+    GitHubPullRequest,
+)
 from sentry.scm.types import (
     CheckRunAction,
     CheckRunEvent,
@@ -23,73 +27,21 @@ from sentry.scm.types import (
 #   * "push"
 
 
-class GitHubUser(msgspec.Struct):
-    id: int
-    login: str  # Username
-    type: str | None = None
-
-
 class GitHubCheckRunEvent(msgspec.Struct, gc=False):
     action: CheckRunAction
-    check_run: "GitHubCheckRun"
-
-
-class GitHubCheckRun(msgspec.Struct, gc=False):
-    external_id: str
-    html_url: str
+    check_run: GitHubCheckRun
 
 
 class GitHubIssueCommentEvent(msgspec.Struct, gc=False):
     action: CommentAction
-    comment: "GitHubIssueComment"
-    issue: "GitHubIssue"
-
-
-class GitHubIssueComment(msgspec.Struct, gc=False):
-    id: int
-    user: GitHubUser | None
-    body: str | None = None
-
-
-class GitHubIssueCommentPullRequest(msgspec.Struct, gc=False):
-    pass
-
-
-class GitHubIssue(msgspec.Struct, gc=False):
-    number: int
-    pull_request: GitHubIssueCommentPullRequest | None = None
+    comment: GitHubIssueComment
+    issue: GitHubIssue
 
 
 class GitHubPullRequestEvent(msgspec.Struct, gc=False):
     action: PullRequestAction
     number: int
-    pull_request: "GitHubPullRequest"
-
-
-class GitHubPullRequest(msgspec.Struct, gc=False):
-    body: str | None
-    head: "GitHubPullRequestHead"
-    base: "GitHubPullRequestBase"
-    merge_commit_sha: str | None
-    title: str
-    user: GitHubUser
-    merged: bool | None = None
-
-
-class GitHubPullRequestBase(msgspec.Struct, gc=False):
-    ref: str
-    repo: "GitHubPullRequestRepo"
-    sha: str
-
-
-class GitHubPullRequestHead(msgspec.Struct, gc=False):
-    ref: str
-    repo: Optional["GitHubPullRequestRepo"]
-    sha: str
-
-
-class GitHubPullRequestRepo(msgspec.Struct, gc=False):
-    private: bool
+    pull_request: GitHubPullRequest
 
 
 check_run_decoder = msgspec.json.Decoder(GitHubCheckRunEvent)

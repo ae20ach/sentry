@@ -35,6 +35,7 @@ from sentry.scm.types import (
     GitRef,
     GitTree,
     InputTreeEntry,
+    MultilineReviewComment,
     PaginatedActionResult,
     PaginatedResponseMeta,
     PaginationParams,
@@ -821,7 +822,7 @@ class GitHubProvider:
         side: ReviewSide,
         start_line: int,
         end_line: int,
-    ) -> ActionResult[ReviewComment]:
+    ) -> ActionResult[MultilineReviewComment]:
         """Leave a review comment on a line span."""
         response = self.client.post(
             f"/repos/{self.repository['name']}/pulls/{pull_request_id}/comments",
@@ -834,7 +835,7 @@ class GitHubProvider:
                 "start_line": start_line,
             },
         )
-        return map_action(response, map_review_comment)
+        return map_action(response, map_multiline_review_comment)
 
     # create_review_comment_line: not supported
 
@@ -1083,6 +1084,25 @@ def map_review_comment(raw: dict[str, Any]) -> ReviewComment:
         html_url=raw["html_url"],
         path=raw["path"],
         body=raw["body"],
+    )
+
+
+def map_multiline_review_comment(raw: dict[str, Any]) -> MultilineReviewComment:
+    return MultilineReviewComment(
+        id=str(raw["id"]),
+        node_id=raw.get("node_id"),
+        html_url=raw["html_url"],
+        path=raw["path"],
+        body=raw["body"],
+        author=map_author(raw.get("user")),
+        created_at=raw.get("created_at"),
+        diff_hunk=raw.get("diff_hunk"),
+        pull_request_review_id=str(raw["pull_request_review_id"])
+        if raw.get("pull_request_review_id")
+        else None,
+        author_association=raw.get("author_association"),
+        original_commit_id=raw.get("original_commit_id"),
+        commit_id=raw.get("commit_id"),
     )
 
 

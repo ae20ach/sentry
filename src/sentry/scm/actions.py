@@ -78,6 +78,7 @@ from sentry.scm.types import (
     GitTree,
     InputTreeEntry,
     MinimizeCommentProtocol,
+    MultilineReviewComment,
     PaginatedActionResult,
     PaginationParams,
     Provider,
@@ -562,7 +563,7 @@ def create_review_comment_multiline(
     side: ReviewSide,
     start_line: int,
     end_line: int,
-) -> ActionResult[ReviewComment]:
+) -> ActionResult[MultilineReviewComment]:
     """Leave a review comment on a line span."""
     return scm.create_review_comment_multiline(
         pull_request_id, commit_id, body, path, side, start_line, end_line
