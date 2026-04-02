@@ -2,7 +2,6 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import styled from '@emotion/styled';
 import {parseAsStringEnum, useQueryState} from 'nuqs';
 
-import {Button} from '@sentry/scraps/button';
 import {Disclosure} from '@sentry/scraps/disclosure';
 import {InputGroup} from '@sentry/scraps/input';
 import {Flex, Stack} from '@sentry/scraps/layout';
@@ -221,8 +220,6 @@ export function SnapshotSidebarContent({
                 ref={section.type === sectionParam ? sectionRef : undefined}
               >
                 <SidebarSectionTitle
-                  priority="transparent"
-                  size="md"
                   onClick={() => handleExpandedChange(section.type, !isExpanded)}
                 >
                   <Flex align="center" justify="between" width="100%">
@@ -269,12 +266,18 @@ export function SnapshotSidebarContent({
   );
 }
 
-const SidebarSectionTitle = styled(Button)`
-  padding: ${p => p.theme.space.lg} ${p => p.theme.space.xl};
+const SidebarSectionTitle = styled('button')`
   display: block;
   width: 100%;
-  border-radius: 0;
+  padding: ${p => p.theme.space.lg} ${p => p.theme.space.xl};
+  border: none;
   border-bottom: 1px solid ${p => p.theme.tokens.border.secondary};
+  border-radius: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
 
   &:hover {
     background: ${p => p.theme.tokens.background.secondary};
