@@ -104,13 +104,7 @@ def generate_summary_and_run_automation(group_id: int, **kwargs) -> None:
         group=group, source=SeerAutomationSource.POST_PROCESS
     )
     if status_code == 200 and event is not None:
-        try:
-            run_automation(group, AnonymousUser(), event, SeerAutomationSource.POST_PROCESS)
-        except Exception:
-            logger.exception(
-                "Error auto-triggering autofix from issue summary",
-                extra={"group_id": group.id},
-            )
+        run_automation(group, AnonymousUser(), event, SeerAutomationSource.POST_PROCESS)
 
 
 @instrumented_task(
