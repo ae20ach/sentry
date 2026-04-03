@@ -353,15 +353,9 @@ class GitlabIntegration(
             ):
                 raise IntegrationError("Resolve and unresolve status are required.")
 
-            data["sync_status_forward"] = bool(project_mappings)
-
-            IntegrationExternalProject.objects.filter(
-                organization_integration_id=self.org_integration.id
-            ).delete()
-
+            # Validate status values before deleting existing records
+            valid_statuses = {GitLabIssueStatus.OPENED.value, GitLabIssueStatus.CLOSED.value}
             for project_path, statuses in project_mappings.items():
-                # Validate status values
-                valid_statuses = {GitLabIssueStatus.OPENED.value, GitLabIssueStatus.CLOSED.value}
                 if statuses["on_resolve"] not in valid_statuses:
                     raise IntegrationError(
                         f"Invalid resolve status: {statuses['on_resolve']}. Must be 'opened' or 'closed'."
@@ -371,6 +365,13 @@ class GitlabIntegration(
                         f"Invalid unresolve status: {statuses['on_unresolve']}. Must be 'opened' or 'closed'."
                     )
 
+            data["sync_status_forward"] = bool(project_mappings)
+
+            IntegrationExternalProject.objects.filter(
+                organization_integration_id=self.org_integration.id
+            ).delete()
+
+            for project_path, statuses in project_mappings.items():
                 IntegrationExternalProject.objects.create(
                     organization_integration_id=self.org_integration.id,
                     external_id=project_path,
