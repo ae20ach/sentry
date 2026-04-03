@@ -1442,6 +1442,11 @@ SENTRY_FEATURES: dict[str, bool | None] = {
     # the manager.add() call that defines the feature.
 }
 
+# Override experiment assignments for local development and testing.
+# Maps experiment name (without "organizations:" prefix) to assignment string.
+# Example: SENTRY_EXPERIMENTS = {"my-experiment": "active"}
+SENTRY_EXPERIMENTS: dict[str, str] = {}
+
 # Default time zone for localization in the UI.
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 SENTRY_DEFAULT_TIME_ZONE = "UTC"

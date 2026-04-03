@@ -424,7 +424,9 @@ class FeatureManager(RegisteredFeatureManager):
         Returns a dict mapping experiment name (without scope prefix) to
         assignment ("active" or "control") for all flags with experiment_mode set.
 
-        Delegates to the entity handler (FlagpoleFeatureHandler in getsentry).
+        Delegates to the entity handler (FlagpoleFeatureHandler in getsentry),
+        then falls back to settings.SENTRY_EXPERIMENTS for local development
+        and testing environments where the entity handler is not available.
         """
         try:
             if self._entity_handler:
@@ -432,7 +434,7 @@ class FeatureManager(RegisteredFeatureManager):
         except Exception:
             if in_random_rollout("features.error.capture_rate"):
                 logger.exception("Failed to get experiment assignments")
-        return {}
+        return dict(settings.SENTRY_EXPERIMENTS)
 
     @staticmethod
     def _shim_feature_strategy(

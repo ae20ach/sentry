@@ -470,6 +470,29 @@ class FeatureManagerTest(TestCase):
 
         assert result == {}
 
+    @override_settings(SENTRY_EXPERIMENTS={"test-experiment": "active"})
+    def test_get_experiment_assignments_falls_back_to_settings(self) -> None:
+        test_org = self.create_organization()
+
+        manager = features.FeatureManager()
+        result = manager.get_experiment_assignments(test_org)
+
+        assert result == {"test-experiment": "active"}
+
+    @override_settings(SENTRY_EXPERIMENTS={"test-experiment": "active"})
+    def test_get_experiment_assignments_entity_handler_takes_precedence(self) -> None:
+        test_org = self.create_organization()
+
+        handler = mock.Mock(spec=features.FeatureHandler)
+        handler.get_experiment_assignments.return_value = {"test-experiment": "control"}
+
+        manager = features.FeatureManager()
+        manager.add_entity_handler(handler)
+
+        result = manager.get_experiment_assignments(test_org, actor=None)
+
+        assert result == {"test-experiment": "control"}
+
     def test_get_experiment_assignments_handles_exception(self) -> None:
         test_org = self.create_organization()
 
