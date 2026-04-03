@@ -239,7 +239,7 @@ class IssueSummaryTest(APITestCase, SnubaTestCase, OccurrenceTestMixin):
             time.sleep(0.3)
             # Write to cache before returning (simulates behavior after lock release)
             cache.set(cache_key, generated_summary, timeout=60)
-            return generated_summary, 200
+            return generated_summary, 200, None
 
         mock_generate_summary.side_effect = side_effect_generate
 
@@ -292,7 +292,7 @@ class IssueSummaryTest(APITestCase, SnubaTestCase, OccurrenceTestMixin):
         """Test that force_event_id bypasses lock waiting."""
         # Mock summary generation
         forced_summary = {"headline": "Forced Summary", "event_id": "force_event"}
-        mock_generate_summary.return_value = (forced_summary, 200)
+        mock_generate_summary.return_value = (forced_summary, 200, None)
 
         # Ensure cache is empty and lock *could* be acquired if attempted
         cache_key = f"ai-group-summary-v2:{self.group.id}"

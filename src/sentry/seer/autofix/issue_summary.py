@@ -611,10 +611,10 @@ def get_issue_summary(
     if user is None:
         user = AnonymousUser()
     if not features.has("organizations:gen-ai-features", group.organization, actor=user):
-        return {"detail": "Feature flag not enabled"}, 400
+        return {"detail": "Feature flag not enabled"}, 400, None
 
     if group.organization.get_option("sentry:hide_ai_features"):
-        return {"detail": "AI features are disabled for this organization."}, 403
+        return {"detail": "AI features are disabled for this organization."}, 403, None
 
     cache_key = get_issue_summary_cache_key(group.id)
     lock_key, lock_name = get_issue_summary_lock_key(group.id)
