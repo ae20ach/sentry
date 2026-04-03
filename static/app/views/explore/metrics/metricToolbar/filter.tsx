@@ -36,14 +36,18 @@ interface FilterProps {
 }
 
 interface MetricsSearchBarProps {
+  traceMetric: TraceMetric;
   tracesItemSearchQueryBuilderProps: TraceItemSearchQueryBuilderProps;
 }
 
-function MetricsSearchBar({tracesItemSearchQueryBuilderProps}: MetricsSearchBarProps) {
+function MetricsSearchBar({
+  tracesItemSearchQueryBuilderProps,
+  traceMetric,
+}: MetricsSearchBarProps) {
   const {displayAskSeer} = useSearchQueryBuilder();
 
   if (displayAskSeer) {
-    return <MetricsTabSeerComboBox />;
+    return <MetricsTabSeerComboBox traceMetric={traceMetric} />;
   }
 
   return <TraceItemSearchQueryBuilder {...tracesItemSearchQueryBuilderProps} />;
@@ -55,7 +59,7 @@ export function Filter({traceMetric}: FilterProps) {
   const organization = useOrganization();
 
   const hasTranslateEndpoint = organization.features.includes(
-    'gen-ai-search-agent-translate'
+    'gen-ai-explore-metrics-search'
   );
 
   const traceMetricFilter = createTraceMetricFilter(traceMetric);
@@ -172,6 +176,7 @@ export function Filter({traceMetric}: FilterProps) {
     >
       <MetricsSearchBar
         tracesItemSearchQueryBuilderProps={tracesItemSearchQueryBuilderProps}
+        traceMetric={traceMetric}
       />
     </SearchQueryBuilderProvider>
   );

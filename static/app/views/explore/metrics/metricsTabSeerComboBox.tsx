@@ -16,6 +16,7 @@ import {useLocation} from 'sentry/utils/useLocation';
 import {useNavigate} from 'sentry/utils/useNavigate';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {useProjects} from 'sentry/utils/useProjects';
+import type {TraceMetric} from 'sentry/views/explore/metrics/metricQuery';
 import type {WritableAggregateField} from 'sentry/views/explore/queryParams/aggregateField';
 import {
   useQueryParams,
@@ -25,6 +26,10 @@ import {isGroupBy} from 'sentry/views/explore/queryParams/groupBy';
 import {Mode} from 'sentry/views/explore/queryParams/mode';
 import {isVisualize} from 'sentry/views/explore/queryParams/visualize';
 import type {ChartType} from 'sentry/views/insights/common/components/chart';
+
+interface MetricsTabSeerComboBoxProps {
+  traceMetric: TraceMetric;
+}
 
 interface Visualization {
   chartType: ChartType;
@@ -59,7 +64,7 @@ interface MetricsAskSeerTranslateResponse {
   unsupported_reason: string | null;
 }
 
-export function MetricsTabSeerComboBox() {
+export function MetricsTabSeerComboBox({traceMetric}: MetricsTabSeerComboBoxProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const {projects} = useProjects();
@@ -125,6 +130,13 @@ export function MetricsTabSeerComboBox() {
           project_ids: selectedProjects,
           strategy: 'Metrics',
           user_email: user?.email,
+          options: {
+            metric_context: {
+              metric_name: traceMetric.name,
+              metric_type: traceMetric.type,
+              metric_unit: traceMetric.unit ?? 'none',
+            },
+          },
         },
       });
 
@@ -281,7 +293,7 @@ export function MetricsTabSeerComboBox() {
   );
 
   const usePollingEndpoint = organization.features.includes(
-    'gen-ai-search-agent-translate'
+    'gen-ai-explore-metrics-search'
   );
 
   // Get selected project IDs for the polling variant
@@ -345,6 +357,13 @@ export function MetricsTabSeerComboBox() {
         initialQuery={initialSeerQuery}
         projectIds={selectedProjectIds}
         strategy="Metrics"
+        options={{
+          metric_context: {
+            metric_name: traceMetric.name,
+            metric_type: traceMetric.type,
+            metric_unit: traceMetric.unit ?? 'none',
+          },
+        }}
         applySeerSearchQuery={applySeerSearchQuery}
         transformResponse={transformResponse}
         analyticsSource="metrics"
