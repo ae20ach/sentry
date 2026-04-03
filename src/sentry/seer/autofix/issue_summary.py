@@ -520,7 +520,6 @@ def _generate_summary(
     group: Group,
     user: User | RpcUser | AnonymousUser,
     force_event_id: str | None,
-    source: SeerAutomationSource,
     cache_key: str,
 ) -> tuple[dict[str, Any], int, GroupEvent | None]:
     """Core logic to generate and cache the issue summary."""
@@ -623,9 +622,7 @@ def get_issue_summary(
 
     # if force_event_id is set, we always generate a new summary
     if force_event_id:
-        summary_dict, status_code, event = _generate_summary(
-            group, user, force_event_id, source, cache_key
-        )
+        summary_dict, status_code, event = _generate_summary(group, user, force_event_id, cache_key)
         _log_seer_scanner_billing_event(group, source)
         return convert_dict_key_case(summary_dict, snake_to_camel_case), status_code, event
 
@@ -646,7 +643,7 @@ def get_issue_summary(
 
             # Lock acquired and cache is still empty, proceed with generation
             summary_dict, status_code, event = _generate_summary(
-                group, user, force_event_id, source, cache_key
+                group, user, force_event_id, cache_key
             )
             _log_seer_scanner_billing_event(group, source)
             return convert_dict_key_case(summary_dict, snake_to_camel_case), status_code, event
