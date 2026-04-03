@@ -1,25 +1,43 @@
+import {useState} from 'react';
+import {SentryGlobalSearch} from '@sentry-internal/global-search';
+import DOMPurify from 'dompurify';
+
 import {ProjectAvatar} from '@sentry/scraps/avatar';
 
 import {addLoadingMessage, addSuccessMessage} from 'sentry/actionCreators/indicator';
 import {openInviteMembersModal} from 'sentry/actionCreators/modal';
-import type {CommandPaletteAction} from 'sentry/components/commandPalette/types';
-import {useCommandPaletteActions} from 'sentry/components/commandPalette/useCommandPaletteActions';
+import {useCommandPaletteActionsRegister} from 'sentry/components/commandPalette/context';
+import type {
+  CMDKQueryOptions,
+  CommandPaletteAction,
+  CommandPaletteAsyncResult,
+} from 'sentry/components/commandPalette/types';
+import {
+  DSN_PATTERN,
+  getDsnNavTargets,
+} from 'sentry/components/search/sources/dsnLookupUtils';
+import type {DsnLookupResponse} from 'sentry/components/search/sources/dsnLookupUtils';
 import {
   IconAdd,
   IconCompass,
   IconDashboard,
   IconDiscord,
   IconDocs,
+  IconSearch,
   IconGithub,
   IconGraph,
   IconIssues,
+  IconList,
   IconOpen,
   IconSettings,
   IconStar,
   IconUser,
   IconPanel,
+  IconLock,
 } from 'sentry/icons';
 import {t} from 'sentry/locale';
+import {apiOptions} from 'sentry/utils/api/apiOptions';
+import {queryOptions} from 'sentry/utils/queryClient';
 import {useMutateUserOptions} from 'sentry/utils/useMutateUserOptions';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {useProjects} from 'sentry/utils/useProjects';
@@ -33,6 +51,12 @@ import {ISSUE_TAXONOMY_CONFIG} from 'sentry/views/issueList/taxonomies';
 import {useStarredIssueViews} from 'sentry/views/navigation/secondary/sections/issues/issueViews/useStarredIssueViews';
 import {useSecondaryNavigation} from 'sentry/views/navigation/secondaryNavigationContext';
 import {getUserOrgNavigationConfiguration} from 'sentry/views/settings/organization/userOrgNavigationConfiguration';
+
+const DSN_ICONS: React.ReactElement[] = [
+  <IconIssues key="issues" />,
+  <IconSettings key="settings" />,
+  <IconList key="list" />,
+];
 
 // This hook generates actions for all pages in the primary and secondary navigation.
 // TODO: Consider refactoring the navigation so that this can read from the same source
@@ -296,13 +320,17 @@ function useNavigationToggleCollapsed(): CommandPaletteAction {
  */
 export function useGlobalCommandPaletteActions() {
   const organization = useOrganization();
+  const hasDsnLookup = organization.features.includes('cmd-k-dsn-lookup');
+  const {projects} = useProjects();
   const navigateActions = useNavigationActions();
   const {mutateAsync: mutateUserOptions} = useMutateUserOptions();
   const navigationToggleAction = useNavigationToggleCollapsed();
 
+  const [search] = useState(() => new SentryGlobalSearch(['docs', 'develop']));
+
   const navPrefix = `/organizations/${organization.slug}`;
 
-  useCommandPaletteActions([
+  useCommandPaletteActionsRegister([
     ...navigateActions,
     // BEGIN ADD ACTIONS
     {
@@ -315,6 +343,7 @@ export function useGlobalCommandPaletteActions() {
             label: t('Create Dashboard'),
             icon: <IconAdd />,
           },
+          keywords: [t('add dashboard')],
           to: `${navPrefix}/dashboards/new/`,
         },
         {
@@ -322,6 +351,7 @@ export function useGlobalCommandPaletteActions() {
             label: t('Create Alert'),
             icon: <IconAdd />,
           },
+          keywords: [t('add alert')],
           to: `${navPrefix}/issues/alerts/wizard/`,
         },
         {
@@ -329,6 +359,7 @@ export function useGlobalCommandPaletteActions() {
             label: t('Create Project'),
             icon: <IconAdd />,
           },
+          keywords: [t('add project')],
           to: `${navPrefix}/projects/new/`,
         },
         {
@@ -336,11 +367,70 @@ export function useGlobalCommandPaletteActions() {
             label: t('Invite Members'),
             icon: <IconUser />,
           },
-          onAction: () => openInviteMembersModal(),
+          keywords: [t('team invite')],
+          onAction: openInviteMembersModal,
         },
       ],
     },
     // END ADD
+    // BEGIN DSN LOOKUP
+    {
+      display: {label: t('DSN')},
+      keywords: [t('client keys')],
+      actions: [
+        {
+          display: {
+            label: t('Project DSN Keys'),
+            icon: <IconLock locked />,
+          },
+          keywords: [t('client keys'), t('dsn keys')],
+          actions: projects.map(project => ({
+            display: {
+              label: project.name,
+              icon: <ProjectAvatar project={project} size={16} />,
+            },
+            keywords: [`dsn ${project.name}`, `dsn ${project.slug}`],
+            to: `/settings/${organization.slug}/projects/${project.slug}/keys/`,
+          })),
+        },
+        hasDsnLookup
+          ? {
+              display: {
+                label: t('Reverse DSN lookup'),
+                details: t(
+                  'Paste a DSN into the search bar to find the project it belongs to.'
+                ),
+                icon: <IconSearch />,
+              },
+              actions: [],
+              resource: (query: string): CMDKQueryOptions => {
+                return queryOptions({
+                  ...apiOptions.as<DsnLookupResponse>()(
+                    '/organizations/$organizationIdOrSlug/dsn-lookup/',
+                    {
+                      path: {organizationIdOrSlug: organization.slug},
+                      query: {dsn: query},
+                      staleTime: 30_000,
+                    }
+                  ),
+                  enabled: DSN_PATTERN.test(query),
+                  select: data =>
+                    getDsnNavTargets(data.json).map((target, i) => ({
+                      to: target.to,
+                      display: {
+                        label: target.label,
+                        details: target.description,
+                        icon: DSN_ICONS[i],
+                      },
+                      keywords: [query],
+                    })),
+                });
+              },
+            }
+          : undefined,
+      ].filter(action => action !== undefined),
+    },
+    // END DSN LOOKUP
     // BEGIN HELP ACTIONS
     {
       display: {
@@ -379,8 +469,52 @@ export function useGlobalCommandPaletteActions() {
             window.open('https://sentry.io/changelog/', '_blank', 'noreferrer'),
         },
       ],
+      resource: (query: string) => {
+        return queryOptions({
+          queryKey: ['command-palette-help-search', query, search],
+          queryFn: () => {
+            return search.query(
+              query,
+              {
+                searchAllIndexes: true,
+              },
+              {
+                analyticsTags: ['source:command-palette'],
+              }
+            );
+          },
+          select: data => {
+            const actions: CommandPaletteAsyncResult[] = [];
+
+            for (const index of data) {
+              // We'll limit async results to avoid overwhelming the UI
+              for (const hit of index.hits.slice(0, 3)) {
+                actions.push({
+                  display: {
+                    label: DOMPurify.sanitize(hit.title ?? '', {ALLOWED_TAGS: []}),
+                    details: DOMPurify.sanitize(
+                      hit.context?.context1 ?? hit.context?.context2 ?? '',
+                      {ALLOWED_TAGS: []}
+                    ),
+                    icon: <IconDocs />,
+                  },
+                  keywords: [hit.context?.context1, hit.context?.context2].filter(
+                    value => value !== undefined && typeof value === 'string'
+                  ),
+                  onAction: () => {
+                    window.open(hit.url, '_blank', 'noreferrer');
+                  },
+                });
+              }
+            }
+
+            return actions;
+          },
+        });
+      },
     },
     // END HELP ACTIONS
+    // START UI ACTIONS
     {
       display: {
         label: t('Interface'),
@@ -427,5 +561,6 @@ export function useGlobalCommandPaletteActions() {
         },
       ],
     },
+    // END UI ACTIONS
   ]);
 }
