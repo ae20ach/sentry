@@ -61,7 +61,7 @@ def query_orgs_with_usage(request: GetOrgsWithUsageRequest) -> GetOrgsWithUsageR
 
     offset = request.page_token.offset if request.HasField("page_token") else 0
 
-    snuba_request = _build_orgs_query(
+    snuba_request = _build_distinct_orgs_query(
         start=start,
         end=end,
         categories=categories,
@@ -96,7 +96,9 @@ def query_outcomes_usage(request: GetUsageRequest) -> GetUsageResponse:
     # (e.g., proto ATTACHMENT=3 vs Relay ATTACHMENT=4). Convert before querying.
     categories = [proto_to_sentry_category(c) for c in request.categories]
 
-    snuba_request = _build_query(org_id, start, end, categories, total_outcomes=_BILLABLE_OUTCOMES)
+    snuba_request = _build_usage_query(
+        org_id, start, end, categories, total_outcomes=_BILLABLE_OUTCOMES
+    )
     result = raw_snql_query(snuba_request, referrer=_REFERRER)
     rows = result["data"]
 
@@ -114,7 +116,7 @@ def query_outcomes_usage(request: GetUsageRequest) -> GetUsageResponse:
     return _build_response(rows)
 
 
-def _build_orgs_query(
+def _build_distinct_orgs_query(
     start: datetime,
     end: datetime,
     categories: Sequence[int],
@@ -150,8 +152,8 @@ def _build_orgs_query(
     )
 
 
-def _build_query(
-    org_id: int,
+def _build_usage_query(
+    org_id: int | None,
     start: datetime,
     end: datetime,
     categories: Sequence[int],
@@ -160,14 +162,16 @@ def _build_query(
     limit: int = _QUERY_LIMIT,
     offset: int = 0,
 ) -> Request:
+    """Build a per-category, per-day usage breakdown query."""
     # Half-open interval [start, end) — standard sentry.snuba.outcomes convention.
     # `end` has already been shifted +1 day in query_outcomes_usage() to convert
     # the proto's inclusive end into the exclusive boundary Snuba expects.
     where = [
         Condition(Column("timestamp"), Op.GTE, start),
         Condition(Column("timestamp"), Op.LT, end),
-        Condition(Column("org_id"), Op.EQ, org_id),
     ]
+    if org_id is not None:
+        where.append(Condition(Column("org_id"), Op.EQ, org_id))
     if categories:
         where.append(Condition(Column("category"), Op.IN, categories))
 
@@ -224,10 +228,15 @@ def _build_query(
         ),
     ]
 
+    groupby = [Column("category"), Column("time")]
+    if org_id is None:
+        select.insert(0, Column("org_id"))
+        groupby.insert(0, Column("org_id"))
+
     query = Query(
         match=Entity("outcomes"),
         select=select,
-        groupby=[Column("category"), Column("time")],
+        groupby=groupby,
         where=where,
         orderby=[OrderBy(Column("time"), Direction.ASC)],
         granularity=Granularity(_DAILY_GRANULARITY),
@@ -235,11 +244,15 @@ def _build_query(
         offset=Offset(offset),
     )
 
+    tenant_ids: dict[str, int] = {}
+    if org_id is not None:
+        tenant_ids["organization_id"] = org_id
+
     return Request(
         dataset=_DATASET,
         app_id=_APP_ID,
         query=query,
-        tenant_ids={"organization_id": org_id},
+        tenant_ids=tenant_ids,
     )
 
 

@@ -18,8 +18,8 @@ from snuba_sdk import Column, Function, Op
 
 from sentry.billing.platform.services.usage._outcomes_query import (
     _BILLABLE_OUTCOMES,
-    _build_query,
     _build_response,
+    _build_usage_query,
     _over_quota_condition,
     _total_function,
     query_orgs_with_usage,
@@ -182,7 +182,7 @@ class TestBuildQuery:
         start = datetime(2025, 3, 1, tzinfo=timezone.utc)
         end = datetime(2025, 3, 31, tzinfo=timezone.utc)
 
-        snuba_request = _build_query(org_id=1, start=start, end=end, categories=[1, 2])
+        snuba_request = _build_usage_query(org_id=1, start=start, end=end, categories=[1, 2])
 
         query = snuba_request.query
         category_conditions = [
@@ -196,7 +196,7 @@ class TestBuildQuery:
         start = datetime(2025, 3, 1, tzinfo=timezone.utc)
         end = datetime(2025, 3, 31, tzinfo=timezone.utc)
 
-        snuba_request = _build_query(org_id=1, start=start, end=end, categories=[])
+        snuba_request = _build_usage_query(org_id=1, start=start, end=end, categories=[])
 
         query = snuba_request.query
         category_conditions = [
@@ -208,7 +208,7 @@ class TestBuildQuery:
         start = datetime(2025, 3, 1, tzinfo=timezone.utc)
         end = datetime(2025, 3, 31, tzinfo=timezone.utc)
 
-        snuba_request = _build_query(org_id=42, start=start, end=end, categories=[])
+        snuba_request = _build_usage_query(org_id=42, start=start, end=end, categories=[])
 
         assert snuba_request.dataset == "outcomes"
         assert snuba_request.app_id == "billing"
@@ -223,7 +223,7 @@ class TestBuildQuery:
         start = datetime(2025, 3, 1, tzinfo=timezone.utc)
         end = datetime(2025, 3, 31, tzinfo=timezone.utc)
 
-        snuba_request = _build_query(org_id=1, start=start, end=end, categories=[])
+        snuba_request = _build_usage_query(org_id=1, start=start, end=end, categories=[])
 
         groupby_names = [col.name for col in snuba_request.query.groupby]
         assert groupby_names == ["category", "time"]
@@ -232,7 +232,7 @@ class TestBuildQuery:
         start = datetime(2025, 3, 1, tzinfo=timezone.utc)
         end = datetime(2025, 3, 31, tzinfo=timezone.utc)
 
-        snuba_request = _build_query(
+        snuba_request = _build_usage_query(
             org_id=1, start=start, end=end, categories=[], total_outcomes=_BILLABLE_OUTCOMES
         )
 
@@ -258,7 +258,7 @@ class TestBuildQuery:
         start = datetime(2025, 3, 1, tzinfo=timezone.utc)
         end = datetime(2025, 3, 31, tzinfo=timezone.utc)
 
-        snuba_request = _build_query(
+        snuba_request = _build_usage_query(
             org_id=1, start=start, end=end, categories=[], total_outcomes=None
         )
 
@@ -281,7 +281,7 @@ class TestBuildQuery:
         start = datetime(2025, 3, 1, tzinfo=timezone.utc)
         end = datetime(2025, 3, 31, tzinfo=timezone.utc)
 
-        snuba_request = _build_query(org_id=1, start=start, end=end, categories=[])
+        snuba_request = _build_usage_query(org_id=1, start=start, end=end, categories=[])
 
         select = snuba_request.query.select
         aliases = []
