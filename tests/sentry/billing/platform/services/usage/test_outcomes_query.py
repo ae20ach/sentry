@@ -5,6 +5,11 @@ from unittest.mock import patch
 
 from google.protobuf.timestamp_pb2 import Timestamp
 from sentry_protos.billing.v1.date_pb2 import Date
+from sentry_protos.billing.v1.services.usage.v1.endpoint_orgs_with_usage_pb2 import (
+    GetOrgsWithUsageRequest,
+    GetOrgsWithUsageResponse,
+    PageToken,
+)
 from sentry_protos.billing.v1.services.usage.v1.endpoint_usage_pb2 import (
     GetUsageRequest,
     GetUsageResponse,
@@ -13,10 +18,12 @@ from snuba_sdk import Column, Function, Op
 
 from sentry.billing.platform.services.usage._outcomes_query import (
     _BILLABLE_OUTCOMES,
+    _QUERY_LIMIT,
     _build_query,
     _build_response,
     _over_quota_condition,
     _total_function,
+    query_orgs_with_usage,
     query_outcomes_usage,
 )
 from sentry.utils.outcomes import Outcome
@@ -363,3 +370,139 @@ class TestQueryOutcomesUsage:
         assert len(response.days) == 1
         assert response.days[0].date == Date(year=2025, month=3, day=15)
         assert response.days[0].usage[0].data.accepted == 200
+
+
+class TestQueryOrgsWithUsage:
+    @patch("sentry.billing.platform.services.usage._outcomes_query.raw_snql_query")
+    def test_returns_org_ids(self, mock_query):
+        mock_query.return_value = {
+            "data": [
+                {"org_id": 1, **_make_row()},
+                {"org_id": 42, **_make_row()},
+                {"org_id": 99, **_make_row()},
+            ]
+        }
+
+        start = _make_timestamp(datetime(2025, 3, 1, tzinfo=timezone.utc))
+        end = _make_timestamp(datetime(2025, 3, 1, tzinfo=timezone.utc))
+        request = GetOrgsWithUsageRequest(start=start, end=end)
+
+        response = query_orgs_with_usage(request)
+
+        assert isinstance(response, GetOrgsWithUsageResponse)
+        assert list(response.organization_ids) == [1, 42, 99]
+
+    @patch("sentry.billing.platform.services.usage._outcomes_query.raw_snql_query")
+    def test_empty_results(self, mock_query):
+        mock_query.return_value = {"data": []}
+
+        start = _make_timestamp(datetime(2025, 3, 1, tzinfo=timezone.utc))
+        end = _make_timestamp(datetime(2025, 3, 1, tzinfo=timezone.utc))
+        request = GetOrgsWithUsageRequest(start=start, end=end)
+
+        response = query_orgs_with_usage(request)
+
+        assert list(response.organization_ids) == []
+        assert not response.HasField("page_token")
+
+    @patch("sentry.billing.platform.services.usage._outcomes_query.raw_snql_query")
+    def test_query_has_no_org_id_filter(self, mock_query):
+        mock_query.return_value = {"data": []}
+
+        start = _make_timestamp(datetime(2025, 3, 1, tzinfo=timezone.utc))
+        end = _make_timestamp(datetime(2025, 3, 1, tzinfo=timezone.utc))
+        request = GetOrgsWithUsageRequest(start=start, end=end)
+
+        query_orgs_with_usage(request)
+
+        snuba_request = mock_query.call_args[0][0]
+        org_conditions = [
+            c for c in snuba_request.query.where if hasattr(c, "lhs") and c.lhs.name == "org_id"
+        ]
+        assert len(org_conditions) == 0
+
+    @patch("sentry.billing.platform.services.usage._outcomes_query.raw_snql_query")
+    def test_pagination_no_more_results(self, mock_query):
+        mock_query.return_value = {"data": [{"org_id": i, **_make_row()} for i in range(5)]}
+
+        start = _make_timestamp(datetime(2025, 3, 1, tzinfo=timezone.utc))
+        end = _make_timestamp(datetime(2025, 3, 1, tzinfo=timezone.utc))
+        request = GetOrgsWithUsageRequest(start=start, end=end, limit=10)
+
+        response = query_orgs_with_usage(request)
+
+        assert len(response.organization_ids) == 5
+        assert not response.HasField("page_token")
+
+    @patch("sentry.billing.platform.services.usage._outcomes_query.raw_snql_query")
+    def test_pagination_has_more(self, mock_query):
+        mock_query.return_value = {"data": [{"org_id": i, **_make_row()} for i in range(11)]}
+
+        start = _make_timestamp(datetime(2025, 3, 1, tzinfo=timezone.utc))
+        end = _make_timestamp(datetime(2025, 3, 1, tzinfo=timezone.utc))
+        request = GetOrgsWithUsageRequest(start=start, end=end, limit=10)
+
+        response = query_orgs_with_usage(request)
+
+        assert len(response.organization_ids) == 10
+        assert response.HasField("page_token")
+        assert response.page_token.offset == 10
+
+    @patch("sentry.billing.platform.services.usage._outcomes_query.raw_snql_query")
+    def test_pagination_with_page_token(self, mock_query):
+        """page_token offset is forwarded to the Snuba query."""
+        mock_query.return_value = {"data": [{"org_id": 99, **_make_row()}]}
+
+        start = _make_timestamp(datetime(2025, 3, 1, tzinfo=timezone.utc))
+        end = _make_timestamp(datetime(2025, 3, 1, tzinfo=timezone.utc))
+        request = GetOrgsWithUsageRequest(
+            start=start, end=end, limit=10, page_token=PageToken(offset=50)
+        )
+
+        response = query_orgs_with_usage(request)
+
+        snuba_request = mock_query.call_args[0][0]
+        assert snuba_request.query.offset.offset == 50
+        assert list(response.organization_ids) == [99]
+
+    @patch("sentry.billing.platform.services.usage._outcomes_query.raw_snql_query")
+    def test_pagination_next_offset_accounts_for_current(self, mock_query):
+        mock_query.return_value = {"data": [{"org_id": i, **_make_row()} for i in range(6)]}
+
+        start = _make_timestamp(datetime(2025, 3, 1, tzinfo=timezone.utc))
+        end = _make_timestamp(datetime(2025, 3, 1, tzinfo=timezone.utc))
+        request = GetOrgsWithUsageRequest(
+            start=start, end=end, limit=5, page_token=PageToken(offset=20)
+        )
+
+        response = query_orgs_with_usage(request)
+
+        assert len(response.organization_ids) == 5
+        assert response.page_token.offset == 25
+
+    @patch("sentry.billing.platform.services.usage._outcomes_query.raw_snql_query")
+    def test_default_limit_used_when_not_set(self, mock_query):
+        mock_query.return_value = {"data": []}
+
+        start = _make_timestamp(datetime(2025, 3, 1, tzinfo=timezone.utc))
+        end = _make_timestamp(datetime(2025, 3, 1, tzinfo=timezone.utc))
+        request = GetOrgsWithUsageRequest(start=start, end=end)
+
+        query_orgs_with_usage(request)
+
+        snuba_request = mock_query.call_args[0][0]
+        assert snuba_request.query.limit.limit == _QUERY_LIMIT + 1
+
+    @patch("sentry.billing.platform.services.usage._outcomes_query.raw_snql_query")
+    def test_queries_with_limit_plus_one(self, mock_query):
+        """Snuba query uses limit+1 to detect has_more."""
+        mock_query.return_value = {"data": []}
+
+        start = _make_timestamp(datetime(2025, 3, 1, tzinfo=timezone.utc))
+        end = _make_timestamp(datetime(2025, 3, 1, tzinfo=timezone.utc))
+        request = GetOrgsWithUsageRequest(start=start, end=end, limit=100)
+
+        query_orgs_with_usage(request)
+
+        snuba_request = mock_query.call_args[0][0]
+        assert snuba_request.query.limit.limit == 101

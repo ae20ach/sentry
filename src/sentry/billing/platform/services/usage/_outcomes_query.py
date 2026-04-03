@@ -7,6 +7,11 @@ from datetime import datetime, timedelta, timezone
 
 from google.protobuf.timestamp_pb2 import Timestamp
 from sentry_protos.billing.v1.date_pb2 import Date
+from sentry_protos.billing.v1.services.usage.v1.endpoint_orgs_with_usage_pb2 import (
+    GetOrgsWithUsageRequest,
+    GetOrgsWithUsageResponse,
+    PageToken,
+)
 from sentry_protos.billing.v1.services.usage.v1.endpoint_usage_pb2 import (
     CategoryUsage,
     DailyUsage,
@@ -21,6 +26,7 @@ from snuba_sdk import (
     Function,
     Granularity,
     Limit,
+    Offset,
     Op,
     OrderBy,
     Query,
@@ -46,6 +52,39 @@ _QUERY_LIMIT = 10000
 # filters to these three at ingest). The CH outcomes table also has
 # INVALID, ABUSE, CLIENT_DISCARD, and CARDINALITY_LIMITED.
 _BILLABLE_OUTCOMES = [Outcome.ACCEPTED, Outcome.FILTERED, Outcome.RATE_LIMITED]
+
+
+def query_orgs_with_usage(request: GetOrgsWithUsageRequest) -> GetOrgsWithUsageResponse:
+    start = _timestamp_to_datetime(request.start)
+    end = _timestamp_to_datetime(request.end) + timedelta(days=1)
+    categories = [proto_to_relay_category(c) for c in request.categories]
+
+    limit = request.limit if request.HasField("limit") else _QUERY_LIMIT
+    offset = request.page_token.offset if request.HasField("page_token") else 0
+
+    snuba_request = _build_query(
+        org_id=None,
+        start=start,
+        end=end,
+        categories=categories,
+        total_outcomes=_BILLABLE_OUTCOMES,
+        limit=limit + 1,
+        offset=offset,
+    )
+    result = raw_snql_query(snuba_request, referrer=_REFERRER)
+    rows = result["data"]
+
+    has_more = len(rows) > limit
+    if has_more:
+        rows.pop()
+
+    response = GetOrgsWithUsageResponse(
+        organization_ids=[int(row["org_id"]) for row in rows],
+    )
+    if has_more:
+        response.page_token.CopyFrom(PageToken(offset=offset + limit))
+
+    return response
 
 
 def query_outcomes_usage(request: GetUsageRequest) -> GetUsageResponse:
@@ -79,89 +118,105 @@ def query_outcomes_usage(request: GetUsageRequest) -> GetUsageResponse:
 
 
 def _build_query(
-    org_id: int,
+    org_id: int | None,
     start: datetime,
     end: datetime,
     categories: Sequence[int],
     *,
     total_outcomes: Sequence[int] | None = None,
+    limit: int = _QUERY_LIMIT,
+    offset: int = 0,
 ) -> Request:
     # Half-open interval [start, end) — standard sentry.snuba.outcomes convention.
     # `end` has already been shifted +1 day in query_outcomes_usage() to convert
     # the proto's inclusive end into the exclusive boundary Snuba expects.
     where = [
-        Condition(Column("org_id"), Op.EQ, org_id),
         Condition(Column("timestamp"), Op.GTE, start),
         Condition(Column("timestamp"), Op.LT, end),
     ]
+    if org_id is not None:
+        where.append(Condition(Column("org_id"), Op.EQ, org_id))
     if categories:
         where.append(Condition(Column("category"), Op.IN, categories))
 
+    select = [
+        Column("category"),
+        Column("time"),
+        _total_function(total_outcomes),
+        Function(
+            "sumIf",
+            [Column("quantity"), Function("equals", [Column("outcome"), Outcome.ACCEPTED])],
+            "accepted",
+        ),
+        Function(
+            "sumIf",
+            [
+                Column("quantity"),
+                Function("equals", [Column("outcome"), Outcome.RATE_LIMITED]),
+            ],
+            "dropped",
+        ),
+        Function(
+            "sumIf",
+            [Column("quantity"), Function("equals", [Column("outcome"), Outcome.FILTERED])],
+            "filtered",
+        ),
+        Function("sumIf", [Column("quantity"), _over_quota_condition()], "over_quota"),
+        Function(
+            "sumIf",
+            [
+                Column("quantity"),
+                Function(
+                    "and",
+                    [
+                        Function("equals", [Column("outcome"), Outcome.RATE_LIMITED]),
+                        Function("equals", [Column("reason"), "smart_rate_limit"]),
+                    ],
+                ),
+            ],
+            "spike_protection",
+        ),
+        Function(
+            "sumIf",
+            [
+                Column("quantity"),
+                Function(
+                    "and",
+                    [
+                        Function("equals", [Column("outcome"), Outcome.FILTERED]),
+                        Function("startsWith", [Column("reason"), "Sampled:"]),
+                    ],
+                ),
+            ],
+            "dynamic_sampling",
+        ),
+    ]
+
+    groupby = [Column("category"), Column("time")]
+    if org_id is None:
+        select.insert(0, Column("org_id"))
+        groupby.insert(0, Column("org_id"))
+
     query = Query(
         match=Entity("outcomes"),
-        select=[
-            Column("category"),
-            Column("time"),
-            _total_function(total_outcomes),
-            Function(
-                "sumIf",
-                [Column("quantity"), Function("equals", [Column("outcome"), Outcome.ACCEPTED])],
-                "accepted",
-            ),
-            Function(
-                "sumIf",
-                [
-                    Column("quantity"),
-                    Function("equals", [Column("outcome"), Outcome.RATE_LIMITED]),
-                ],
-                "dropped",
-            ),
-            Function(
-                "sumIf",
-                [Column("quantity"), Function("equals", [Column("outcome"), Outcome.FILTERED])],
-                "filtered",
-            ),
-            Function("sumIf", [Column("quantity"), _over_quota_condition()], "over_quota"),
-            Function(
-                "sumIf",
-                [
-                    Column("quantity"),
-                    Function(
-                        "and",
-                        [
-                            Function("equals", [Column("outcome"), Outcome.RATE_LIMITED]),
-                            Function("equals", [Column("reason"), "smart_rate_limit"]),
-                        ],
-                    ),
-                ],
-                "spike_protection",
-            ),
-            Function(
-                "sumIf",
-                [
-                    Column("quantity"),
-                    Function(
-                        "and",
-                        [
-                            Function("equals", [Column("outcome"), Outcome.FILTERED]),
-                            Function("startsWith", [Column("reason"), "Sampled:"]),
-                        ],
-                    ),
-                ],
-                "dynamic_sampling",
-            ),
-        ],
-        groupby=[Column("category"), Column("time")],
+        select=select,
+        groupby=groupby,
         where=where,
         orderby=[OrderBy(Column("time"), Direction.ASC)],
         granularity=Granularity(_DAILY_GRANULARITY),
-        limit=Limit(_QUERY_LIMIT),
+        limit=Limit(limit),
+        offset=Offset(offset),
     )
+
+    tenant_ids: dict[str, int] = {}
+    if org_id is not None:
+        tenant_ids["organization_id"] = org_id
+
     return Request(
         dataset=_DATASET,
         app_id=_APP_ID,
         query=query,
-        tenant_ids={"organization_id": org_id},
+        tenant_ids=tenant_ids,
     )
 
 

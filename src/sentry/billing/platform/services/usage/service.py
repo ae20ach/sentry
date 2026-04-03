@@ -6,7 +6,10 @@ from sentry_protos.billing.v1.services.usage.v1.endpoint_usage_pb2 import (
 )
 
 from sentry.billing.platform.core import BillingService, service_method
-from sentry.billing.platform.services.usage._outcomes_query import query_outcomes_usage
+from sentry.billing.platform.services.usage._outcomes_query import (
+    query_orgs_with_usage,
+    query_outcomes_usage,
+)
 
 
 class UsageService(BillingService):
@@ -20,3 +23,7 @@ class UsageService(BillingService):
         dynamic_sampling.
         """
         return query_outcomes_usage(request)
+
+    @service_method
+    def get_orgs_with_usage(self, request: GetOrgsWithUsageRequest) -> GetOrgsWithUsageResponse:
+        return query_orgs_with_usage(request)
