@@ -946,7 +946,7 @@ class BuildGroupAttachmentTest(TestCase, PerformanceIssueTestCase, OccurrenceTes
             patch(patch_path) as mock_get_summary,
             patch(serializer_path, serializer_mock),
         ):
-            mock_get_summary.return_value = (mock_summary, 200)
+            mock_get_summary.return_value = (mock_summary, 200, None)
 
             blocks = SlackIssuesMessageBuilder(group).build()
 
@@ -1037,7 +1037,7 @@ class BuildGroupAttachmentTest(TestCase, PerformanceIssueTestCase, OccurrenceTes
             patch(patch_path) as mock_get_summary,
             patch(serializer_path, serializer_mock),
         ):
-            mock_get_summary.return_value = (mock_summary, 200)
+            mock_get_summary.return_value = (mock_summary, 200, None)
             blocks = SlackIssuesMessageBuilder(group1, event1.for_group(group1)).build()
             title_text = blocks["blocks"][0]["text"]["text"]
 
@@ -1049,7 +1049,7 @@ class BuildGroupAttachmentTest(TestCase, PerformanceIssueTestCase, OccurrenceTes
             patch(patch_path) as mock_get_summary,
             patch(serializer_path, serializer_mock),
         ):
-            mock_get_summary.return_value = (mock_summary, 200)
+            mock_get_summary.return_value = (mock_summary, 200, None)
             blocks = SlackIssuesMessageBuilder(group2, event2.for_group(group2)).build()
             title_text = blocks["blocks"][0]["text"]["text"]
 
@@ -1092,7 +1092,7 @@ class BuildGroupAttachmentTest(TestCase, PerformanceIssueTestCase, OccurrenceTes
                 patch(patch_path) as mock_get_summary,
                 patch(serializer_path, serializer_mock),
             ):
-                mock_get_summary.return_value = (mock_summary, 200)
+                mock_get_summary.return_value = (mock_summary, 200, None)
                 blocks = SlackIssuesMessageBuilder(group_lb, event_lb.for_group(group_lb)).build()
                 title_block = blocks["blocks"][0]["text"]["text"]
                 assert f": {expected_headline_part}*>" in title_block, f"Failed for {name}"
@@ -1184,7 +1184,7 @@ class BuildGroupAttachmentTest(TestCase, PerformanceIssueTestCase, OccurrenceTes
             patch(patch_path) as mock_get_summary,
             patch(serializer_path, serializer_mock),
         ):
-            mock_get_summary.return_value = (mock_summary, 200)
+            mock_get_summary.return_value = (mock_summary, 200, None)
 
             blocks = SlackIssuesMessageBuilder(group).build()
 

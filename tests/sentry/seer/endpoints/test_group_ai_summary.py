@@ -54,7 +54,7 @@ class GroupAiSummaryEndpointTest(APITestCase, SnubaTestCase):
     @patch("sentry.seer.endpoints.group_ai_summary.get_issue_summary")
     def test_endpoint_with_error_response(self, mock_get_issue_summary: MagicMock) -> None:
         error_data = {"detail": "An error occurred"}
-        mock_get_issue_summary.return_value = (error_data, 400)
+        mock_get_issue_summary.return_value = (error_data, 400, None)
 
         response = self.client.post(self.url, format="json")
 

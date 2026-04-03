@@ -67,7 +67,7 @@ class FetchIssueSummaryTest(TestCase):
             "whatsWrong": "Something went wrong",
             "possibleCause": "Test cause",
         }
-        mock_get_issue_summary.return_value = (mock_summary, 200)
+        mock_get_issue_summary.return_value = (mock_summary, 200, None)
 
         result = fetch_issue_summary(self.group)
 
@@ -174,7 +174,7 @@ class FetchIssueSummaryTest(TestCase):
         mock_has_budget.return_value = True
 
         # Mock error response
-        mock_get_issue_summary.return_value = (None, 500)
+        mock_get_issue_summary.return_value = (None, 500, None)
 
         result = fetch_issue_summary(self.group)
 
