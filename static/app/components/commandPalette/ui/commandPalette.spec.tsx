@@ -52,7 +52,7 @@ function ActionsToJSX({actions}: {actions: CommandPaletteAction[]}) {
             <CMDKAction
               key={i}
               display={action.display}
-              to={String(action.to)}
+              to={action.to}
               keywords={action.keywords}
             />
           );
