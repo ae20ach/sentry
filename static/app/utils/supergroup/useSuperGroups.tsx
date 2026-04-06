@@ -1,4 +1,4 @@
-import {useMemo} from 'react';
+import {useMemo, useRef} from 'react';
 
 import {getApiUrl} from 'sentry/utils/api/getApiUrl';
 import {useApiQuery} from 'sentry/utils/queryClient';
@@ -17,8 +17,25 @@ export function useSuperGroups(groupIds: string[]): {
   isLoading: boolean;
 } {
   const organization = useOrganization();
+  const requestedGroupIdsRef = useRef(groupIds);
   const hasTopIssuesUI = organization.features.includes('top-issues-ui');
-  const enabled = hasTopIssuesUI && groupIds.length > 0;
+
+  const previousRequestedGroupIds = requestedGroupIdsRef.current;
+
+  // Stabilize the query key: if the new groupIds are a subset of what we
+  // already requested (groups were removed), reuse the previous set to
+  // avoid a redundant refetch.
+  const requestedGroupIds = useMemo(() => {
+    const prev = requestedGroupIdsRef.current;
+    if (groupIds.length === 0 || prev.length < groupIds.length) {
+      return groupIds;
+    }
+    const prevSet = new Set(prev);
+    return groupIds.every(id => prevSet.has(id)) ? prev : groupIds;
+  }, [groupIds]);
+
+  requestedGroupIdsRef.current = requestedGroupIds;
+  const enabled = hasTopIssuesUI && requestedGroupIds.length > 0;
 
   const {data: response, isLoading} = useApiQuery<{data: SupergroupDetail[]}>(
     [
@@ -27,13 +44,20 @@ export function useSuperGroups(groupIds: string[]): {
       }),
       {
         query: {
-          group_id: groupIds,
+          group_id: requestedGroupIds,
         },
       },
     ],
     {
       staleTime: 30_000,
       enabled,
+      placeholderData: previousData => {
+        if (!previousData) {
+          return undefined;
+        }
+        const prevSet = new Set(previousRequestedGroupIds);
+        return groupIds.some(id => prevSet.has(id)) ? previousData : undefined;
+      },
     }
   );
 
@@ -41,7 +65,6 @@ export function useSuperGroups(groupIds: string[]): {
     if (!response?.data) {
       return {};
     }
-
     const result: SupergroupLookup = Object.fromEntries(groupIds.map(id => [id, null]));
     for (const sg of response.data) {
       for (const groupId of sg.group_ids) {

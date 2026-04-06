@@ -5,7 +5,6 @@ import {Flex} from '@sentry/scraps/layout';
 import {Separator} from '@sentry/scraps/separator';
 import {Text} from '@sentry/scraps/text';
 
-import {CommitRow} from 'sentry/components/commitRow';
 import {CopyAsDropdown} from 'sentry/components/copyAsDropdown';
 import {ErrorBoundary} from 'sentry/components/errorBoundary';
 import {StacktraceBanners} from 'sentry/components/events/interfaces/crashContent/exception/banners/stacktraceBanners';
@@ -182,6 +181,8 @@ function IssueStackTraceContent({
           rawStacktraceContent({
             data: isMinified ? (exc.rawStacktrace ?? exc.stacktrace) : exc.stacktrace,
             platform: event.platform,
+            exception: isStandalone ? undefined : exc,
+            isMinified,
           })
         )
         .join('\n\n'),
@@ -209,7 +210,7 @@ function IssueStackTraceContent({
                       ? (exc.rawStacktrace ?? exc.stacktrace)
                       : exc.stacktrace,
                     platform: event.platform,
-                    exception: exc,
+                    exception: isStandalone ? undefined : exc,
                     isMinified,
                   })
                 )
@@ -378,12 +379,7 @@ function IssueStackTraceSuspectCommits({
 
   return (
     <ErrorBoundary mini message={t('There was an error loading suspect commits')}>
-      <SuspectCommits
-        projectSlug={projectSlug}
-        eventId={event.id}
-        group={group}
-        commitRow={CommitRow}
-      />
+      <SuspectCommits projectSlug={projectSlug} eventId={event.id} group={group} />
     </ErrorBoundary>
   );
 }

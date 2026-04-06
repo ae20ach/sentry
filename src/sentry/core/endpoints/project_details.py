@@ -119,6 +119,7 @@ class ProjectMemberSerializer(serializers.Serializer):
     preprodDistributionPrCommentsEnabledByCustomer = serializers.BooleanField(
         required=False, allow_null=True
     )
+    preprodSnapshotPrCommentsEnabled = serializers.BooleanField(required=False, allow_null=True)
     preprodSizeEnabledQuery = serializers.CharField(required=False, allow_null=True)
     preprodDistributionEnabledQuery = serializers.CharField(required=False, allow_null=True)
 
@@ -167,6 +168,7 @@ class ProjectMemberSerializer(serializers.Serializer):
         "preprodSnapshotStatusChecksFailOnAdded",
         "preprodSnapshotStatusChecksFailOnRemoved",
         "preprodDistributionPrCommentsEnabledByCustomer",
+        "preprodSnapshotPrCommentsEnabled",
     ]
 )
 class ProjectAdminSerializer(ProjectMemberSerializer):
@@ -257,6 +259,10 @@ E.g. `['release', 'environment']`""",
     targetSampleRate = serializers.FloatField(required=False, min_value=0, max_value=1)
     dynamicSamplingBiases = DynamicSamplingBiasSerializer(required=False, many=True)
     tempestFetchScreenshots = serializers.BooleanField(required=False)
+    scmSourceContextEnabled = serializers.BooleanField(
+        required=False,
+        help_text="Enable on-demand source context fetching from SCM integrations for stack traces.",
+    )
 
     # DO NOT ADD MORE TO OPTIONS
     # Each param should be a field in the serializer like above.
@@ -471,6 +477,15 @@ E.g. `['release', 'environment']`""",
             raise serializers.ValidationError(
                 "Organization does not have the tempest feature enabled."
             )
+        return value
+
+    def validate_scmSourceContextEnabled(self, value):
+        if value:
+            organization = self.context["project"].organization
+            if not features.has("organizations:scm-source-context", organization):
+                raise serializers.ValidationError(
+                    "Organization does not have the SCM source context feature enabled."
+                )
         return value
 
     def validate_debugFilesRole(self, value):
@@ -761,6 +776,13 @@ class ProjectDetailsEndpoint(ProjectEndpoint):
                 changed_proj_settings["sentry:tempest_fetch_screenshots"] = result[
                     "tempestFetchScreenshots"
                 ]
+        if result.get("scmSourceContextEnabled") is not None:
+            if project.update_option(
+                "sentry:scm_source_context_enabled", result["scmSourceContextEnabled"]
+            ):
+                changed_proj_settings["sentry:scm_source_context_enabled"] = result[
+                    "scmSourceContextEnabled"
+                ]
         if result.get("targetSampleRate") is not None:
             if project.update_option(
                 "sentry:target_sample_rate", round(result["targetSampleRate"], 4)
@@ -869,6 +891,14 @@ class ProjectDetailsEndpoint(ProjectEndpoint):
                 changed_proj_settings[
                     "sentry:preprod_distribution_pr_comments_enabled_by_customer"
                 ] = result["preprodDistributionPrCommentsEnabledByCustomer"]
+        if "preprodSnapshotPrCommentsEnabled" in result:
+            if project.update_option(
+                "sentry:preprod_snapshot_pr_comments_enabled",
+                result["preprodSnapshotPrCommentsEnabled"],
+            ):
+                changed_proj_settings["sentry:preprod_snapshot_pr_comments_enabled"] = result[
+                    "preprodSnapshotPrCommentsEnabled"
+                ]
         if "debugFilesRole" in result:
             if result["debugFilesRole"] is None:
                 project.delete_option("sentry:debug_files_role")
