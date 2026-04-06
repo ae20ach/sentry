@@ -41,8 +41,6 @@ const MotionButton = motion.create(Button);
 const MotionIconSearch = motion.create(IconSearch);
 const MotionContainer = motion.create(Container);
 
-export {CommandPaletteSlot};
-
 function makeLeadingItemAnimation(theme: Theme) {
   return {
     initial: {scale: 0.95, opacity: 0},
@@ -67,8 +65,8 @@ type CMDKFlatItem = CollectionTreeNode<CMDKActionData> & {
 };
 
 interface CommandPaletteProps {
+  children: React.ReactNode;
   onAction: (action: CollectionTreeNode<CMDKActionData>) => void;
-  children?: React.ReactNode;
 }
 
 export function CommandPalette(props: CommandPaletteProps) {

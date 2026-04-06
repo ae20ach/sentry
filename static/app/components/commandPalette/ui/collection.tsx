@@ -35,6 +35,7 @@ export interface CollectionInstance<T> {
 
 export function makeCollection<T>(): CollectionInstance<T> {
   const StoreContext = createContext<CollectionStore<T> | null>(null);
+
   const Context = createContext<string | null>(null);
 
   function Provider({children}: {children: React.ReactNode}) {
@@ -45,14 +46,11 @@ export function makeCollection<T>(): CollectionInstance<T> {
     // effect ordering: siblings register before their next sibling's subtree fires).
     const childIndex = useRef(new Map<string | null, Set<string>>());
 
-    // Tracks whether any registrations happened since the last flush.
-    // register/unregister mutate refs and increment this counter. They do NOT call
-    // bump() directly — that would cause a synchronous re-render mid-registration
-    // and leave consumers seeing a partial tree.
-    const pendingVersion = useRef(0);
-    const flushedVersion = useRef(0);
-
-    const [, bump] = useReducer(x => x + 1, 0);
+    // Increment version on every structural change (register/unregister).
+    // React 18 automatic batching ensures that multiple dispatches from a
+    // single commit's layout-effect phase are coalesced into one re-render,
+    // so callers always see a complete (non-partial) tree.
+    const [_, bump] = useReducer(x => (x + 1) % 2, 0);
 
     const store = useMemo<CollectionStore<T>>(
       () => ({
@@ -61,7 +59,7 @@ export function makeCollection<T>(): CollectionInstance<T> {
           const siblings = childIndex.current.get(node.parent) ?? new Set<string>();
           siblings.add(node.key);
           childIndex.current.set(node.parent, siblings);
-          pendingVersion.current++;
+          bump();
         },
 
         unregister(key) {
@@ -70,7 +68,7 @@ export function makeCollection<T>(): CollectionInstance<T> {
           nodes.current.delete(key);
           childIndex.current.get(node.parent)?.delete(key);
           childIndex.current.delete(key);
-          pendingVersion.current++;
+          bump();
         },
 
         tree(rootKey = null): Array<CollectionTreeNode<T>> {
@@ -88,16 +86,6 @@ export function makeCollection<T>(): CollectionInstance<T> {
       }),
       []
     );
-
-    // This effect runs AFTER all descendants' useLayoutEffects (parent fires last).
-    // If registrations changed since the last flush, trigger one re-render so
-    // consumers see the complete, stable tree.
-    useLayoutEffect(() => {
-      if (pendingVersion.current !== flushedVersion.current) {
-        flushedVersion.current = pendingVersion.current;
-        bump();
-      }
-    });
 
     return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
   }

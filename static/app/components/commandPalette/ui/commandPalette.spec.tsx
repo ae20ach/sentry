@@ -29,10 +29,8 @@ import {CommandPaletteProvider} from 'sentry/components/commandPalette/ui/cmdk';
 import {CMDKAction, CMDKGroup} from 'sentry/components/commandPalette/ui/cmdk';
 import type {CMDKActionData} from 'sentry/components/commandPalette/ui/cmdk';
 import type {CollectionTreeNode} from 'sentry/components/commandPalette/ui/collection';
-import {
-  CommandPalette,
-  CommandPaletteSlot,
-} from 'sentry/components/commandPalette/ui/commandPalette';
+import {CommandPalette} from 'sentry/components/commandPalette/ui/commandPalette';
+import {CommandPaletteSlot} from 'sentry/components/commandPalette/ui/commandPaletteSlot';
 import {useNavigate} from 'sentry/utils/useNavigate';
 
 /**
@@ -422,6 +420,78 @@ describe('CommandPalette', () => {
   });
 
   describe('slot rendering', () => {
+    it('task slot action is displayed in the palette', async () => {
+      render(
+        <CommandPaletteProvider>
+          <CommandPaletteSlot.Provider>
+            <CommandPaletteSlot name="task">
+              <CMDKAction display={{label: 'Task Action'}} onAction={jest.fn()} />
+            </CommandPaletteSlot>
+            <CommandPalette onAction={jest.fn()} />
+          </CommandPaletteSlot.Provider>
+        </CommandPaletteProvider>
+      );
+
+      expect(
+        await screen.findByRole('option', {name: 'Task Action'})
+      ).toBeInTheDocument();
+    });
+
+    it('task slot action triggers its callback when selected', async () => {
+      const onAction = jest.fn();
+      render(
+        <CommandPaletteProvider>
+          <CommandPaletteSlot.Provider>
+            <CommandPaletteSlot name="task">
+              <CMDKAction display={{label: 'Task Action'}} onAction={onAction} />
+            </CommandPaletteSlot>
+            <CommandPalette
+              onAction={node => ('onAction' in node ? node.onAction() : null)}
+            />
+          </CommandPaletteSlot.Provider>
+        </CommandPaletteProvider>
+      );
+
+      await userEvent.click(await screen.findByRole('option', {name: 'Task Action'}));
+      expect(onAction).toHaveBeenCalledTimes(1);
+    });
+
+    it('page slot action is displayed in the palette', async () => {
+      render(
+        <CommandPaletteProvider>
+          <CommandPaletteSlot.Provider>
+            <CommandPaletteSlot name="page">
+              <CMDKAction display={{label: 'Page Action'}} onAction={jest.fn()} />
+            </CommandPaletteSlot>
+            <CommandPalette onAction={jest.fn()} />
+          </CommandPaletteSlot.Provider>
+        </CommandPaletteProvider>
+      );
+
+      expect(
+        await screen.findByRole('option', {name: 'Page Action'})
+      ).toBeInTheDocument();
+    });
+
+    it('page slot action triggers its callback when selected', async () => {
+      const onAction = jest.fn();
+      render(
+        <CommandPaletteProvider>
+          <CommandPaletteSlot.Provider>
+            <CommandPaletteSlot name="page">
+              <CMDKAction display={{label: 'Page Action'}} onAction={onAction} />
+            </CommandPaletteSlot>
+            <CommandPalette
+              onAction={node => ('onAction' in node ? node.onAction() : null)}
+            />
+          </CommandPaletteSlot.Provider>
+        </CommandPaletteProvider>
+      );
+
+      await userEvent.click(await screen.findByRole('option', {name: 'Page Action'}));
+      expect(onAction).toHaveBeenCalledTimes(1);
+    });
+
     it('page slot actions are rendered before global actions', async () => {
       // This test mirrors the real app structure:
       //   - Global actions are registered directly in CMDKCollection (e.g. from the nav sidebar)

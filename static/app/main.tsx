@@ -9,7 +9,6 @@ import {NuqsAdapter} from 'nuqs/adapters/react-router/v6';
 
 import {AppQueryClientProvider} from 'sentry/appQueryClient';
 import {CommandPaletteProvider} from 'sentry/components/commandPalette/ui/cmdk';
-import {CommandPaletteSlot} from 'sentry/components/commandPalette/ui/commandPalette';
 import {FrontendVersionProvider} from 'sentry/components/frontendVersionContext';
 import {DocumentTitleManager} from 'sentry/components/sentryDocumentTitle/documentTitleManager';
 import {ThemeAndStyleProvider} from 'sentry/components/themeAndStyleProvider';
@@ -41,11 +40,9 @@ export function Main() {
           <ThemeAndStyleProvider>
             <NuqsAdapter defaultOptions={{shallow: false}}>
               <CommandPaletteProvider>
-                <CommandPaletteSlot.Provider>
-                  <RouteConfigProvider value={router.routes}>
-                    <RouterProvider router={router} />
-                  </RouteConfigProvider>
-                </CommandPaletteSlot.Provider>
+                <RouteConfigProvider value={router.routes}>
+                  <RouterProvider router={router} />
+                </RouteConfigProvider>
               </CommandPaletteProvider>
             </NuqsAdapter>
             {USE_TANSTACK_DEVTOOL && (
