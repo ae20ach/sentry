@@ -79,7 +79,8 @@ type CMDKActionProps =
  * current query and passes results to a render-prop children function.
  */
 export function CMDKGroup({display, keywords, resource, children}: CMDKGroupProps) {
-  const key = CMDKCollection.useRegisterNode({display, keywords, resource});
+  const ref = CommandPaletteSlot.useSlotOutletRef();
+  const key = CMDKCollection.useRegisterNode({display, keywords, resource, ref});
   const {query} = useCommandPaletteState();
 
   const {data} = useQuery({
@@ -101,6 +102,7 @@ export function CMDKGroup({display, keywords, resource, children}: CMDKGroupProp
  * Registers a leaf action node in the collection.
  */
 export function CMDKAction(props: CMDKActionProps) {
-  CMDKCollection.useRegisterNode(props);
+  const ref = CommandPaletteSlot.useSlotOutletRef();
+  CMDKCollection.useRegisterNode({...props, ref});
   return null;
 }

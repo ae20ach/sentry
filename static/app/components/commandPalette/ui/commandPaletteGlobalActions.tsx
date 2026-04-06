@@ -56,65 +56,6 @@ const DSN_ICONS: React.ReactElement[] = [
 
 const helpSearch = new SentryGlobalSearch(['docs', 'develop']);
 
-function dsnLookupResource(organizationSlug: string) {
-  return (query: string): CMDKQueryOptions =>
-    queryOptions({
-      ...apiOptions.as<DsnLookupResponse>()(
-        '/organizations/$organizationIdOrSlug/dsn-lookup/',
-        {
-          path: {organizationIdOrSlug: organizationSlug},
-          query: {dsn: query},
-          staleTime: 30_000,
-        }
-      ),
-      enabled: DSN_PATTERN.test(query),
-      select: data =>
-        getDsnNavTargets(data.json).map((target, i) => ({
-          to: target.to,
-          display: {
-            label: target.label,
-            details: target.description,
-            icon: DSN_ICONS[i],
-          },
-          keywords: [query],
-        })),
-    });
-}
-
-function helpSearchResource(query: string): CMDKQueryOptions {
-  return queryOptions({
-    queryKey: ['command-palette-help-search', query, helpSearch],
-    queryFn: () =>
-      helpSearch.query(
-        query,
-        {searchAllIndexes: true},
-        {analyticsTags: ['source:command-palette']}
-      ),
-    select: data => {
-      const results: CommandPaletteAsyncResult[] = [];
-      for (const index of data) {
-        for (const hit of index.hits.slice(0, 3)) {
-          results.push({
-            display: {
-              label: DOMPurify.sanitize(hit.title ?? '', {ALLOWED_TAGS: []}),
-              details: DOMPurify.sanitize(
-                hit.context?.context1 ?? hit.context?.context2 ?? '',
-                {ALLOWED_TAGS: []}
-              ),
-              icon: <IconDocs />,
-            },
-            keywords: [hit.context?.context1, hit.context?.context2].filter(
-              (v): v is string => typeof v === 'string'
-            ),
-            onAction: () => window.open(hit.url, '_blank', 'noreferrer'),
-          });
-        }
-      }
-      return results;
-    },
-  });
-}
-
 function renderAsyncResult(item: CommandPaletteAsyncResult, index: number) {
   if ('to' in item) {
     return <CMDKAction key={index} display={item.display} to={item.to} />;
@@ -165,7 +106,7 @@ export function GlobalCommandPaletteActions() {
           ))}
         </CMDKGroup>
 
-        {/* <CMDKGroup display={{label: t('Explore'), icon: <IconCompass />}}>
+        <CMDKGroup display={{label: t('Explore'), icon: <IconCompass />}}>
           <CMDKAction display={{label: t('Traces')}} to={`${prefix}/explore/traces/`} />
           {organization.features.includes('ourlogs-enabled') && (
             <CMDKAction display={{label: t('Logs')}} to={`${prefix}/explore/logs/`} />
@@ -319,7 +260,29 @@ export function GlobalCommandPaletteActions() {
               ),
               icon: <IconSearch />,
             }}
-            resource={dsnLookupResource(organization.slug)}
+            resource={(query: string): CMDKQueryOptions =>
+              queryOptions({
+                ...apiOptions.as<DsnLookupResponse>()(
+                  '/organizations/$organizationIdOrSlug/dsn-lookup/',
+                  {
+                    path: {organizationIdOrSlug: organization.slug},
+                    query: {dsn: query},
+                    staleTime: 30_000,
+                  }
+                ),
+                enabled: DSN_PATTERN.test(query),
+                select: data =>
+                  getDsnNavTargets(data.json).map((target, i) => ({
+                    to: target.to,
+                    display: {
+                      label: target.label,
+                      details: target.description,
+                      icon: DSN_ICONS[i],
+                    },
+                    keywords: [query],
+                  })),
+              })
+            }
           >
             {(data: CommandPaletteAsyncResult[]) =>
               data.map((item, i) => renderAsyncResult(item, i))
@@ -353,7 +316,39 @@ export function GlobalCommandPaletteActions() {
         />
         <CMDKGroup
           display={{label: t('Search Results')}}
-          resource={q => helpSearchResource(q)}
+          resource={(query: string): CMDKQueryOptions => {
+            return queryOptions({
+              queryKey: ['command-palette-help-search', query, helpSearch],
+              queryFn: () =>
+                helpSearch.query(
+                  query,
+                  {searchAllIndexes: true},
+                  {analyticsTags: ['source:command-palette']}
+                ),
+              select: data => {
+                const results: CommandPaletteAsyncResult[] = [];
+                for (const index of data) {
+                  for (const hit of index.hits.slice(0, 3)) {
+                    results.push({
+                      display: {
+                        label: DOMPurify.sanitize(hit.title ?? '', {ALLOWED_TAGS: []}),
+                        details: DOMPurify.sanitize(
+                          hit.context?.context1 ?? hit.context?.context2 ?? '',
+                          {ALLOWED_TAGS: []}
+                        ),
+                        icon: <IconDocs />,
+                      },
+                      keywords: [hit.context?.context1, hit.context?.context2].filter(
+                        (v): v is string => typeof v === 'string'
+                      ),
+                      onAction: () => window.open(hit.url, '_blank', 'noreferrer'),
+                    });
+                  }
+                }
+                return results;
+              },
+            });
+          }}
         >
           {(data: CommandPaletteAsyncResult[]) =>
             data.map((item, i) => renderAsyncResult(item, i))
@@ -387,7 +382,7 @@ export function GlobalCommandPaletteActions() {
               addSuccessMessage(t('Theme preference saved: Dark'));
             }}
           />
-        </CMDKGroup> */}
+        </CMDKGroup>
       </CMDKGroup>
     </CommandPaletteSlot>
   );

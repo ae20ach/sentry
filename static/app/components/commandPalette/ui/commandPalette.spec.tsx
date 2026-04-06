@@ -99,8 +99,7 @@ function GlobalActionsComponent({
     <CommandPaletteProvider>
       <CommandPaletteSlot.Provider>
         <ActionsToJSX actions={actions} />
-        <CommandPalette onAction={handleAction} />
-        {children}
+        <CommandPalette onAction={handleAction}>{children}</CommandPalette>
       </CommandPaletteSlot.Provider>
     </CommandPaletteProvider>
   );

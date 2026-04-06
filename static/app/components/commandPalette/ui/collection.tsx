@@ -4,8 +4,8 @@ import {
   useId,
   useLayoutEffect,
   useMemo,
-  useReducer,
   useRef,
+  useSyncExternalStore,
 } from 'react';
 
 type StoredNode<T> = {
@@ -21,7 +21,9 @@ export type CollectionTreeNode<T> = {
 } & T;
 
 export interface CollectionStore<T> {
+  getSnapshot: () => Map<string, StoredNode<T>>;
   register: (node: StoredNode<T>) => void;
+  subscribe: (callback: () => void) => () => void;
   tree: (rootKey?: string | null) => Array<CollectionTreeNode<T>>;
   unregister: (key: string) => void;
 }
@@ -46,14 +48,24 @@ export function makeCollection<T>(): CollectionInstance<T> {
     // effect ordering: siblings register before their next sibling's subtree fires).
     const childIndex = useRef(new Map<string | null, Set<string>>());
 
-    // Increment version on every structural change (register/unregister).
-    // React 18 automatic batching ensures that multiple dispatches from a
-    // single commit's layout-effect phase are coalesced into one re-render,
-    // so callers always see a complete (non-partial) tree.
-    const [_, bump] = useReducer(x => (x + 1) % 2, 0);
+    // Snapshot ref holds a new Map instance on every structural change so that
+    // useSyncExternalStore can detect updates via reference inequality.
+    const snapshot = useRef(nodes.current);
+
+    // Registered listener callbacks from useSyncExternalStore subscribers.
+    const listeners = useRef(new Set<() => void>());
 
     const store = useMemo<CollectionStore<T>>(
       () => ({
+        subscribe(callback) {
+          listeners.current.add(callback);
+          return () => listeners.current.delete(callback);
+        },
+
+        getSnapshot() {
+          return snapshot.current;
+        },
+
         register(node) {
           const existing = nodes.current.get(node.key);
           if (existing) {
@@ -69,7 +81,8 @@ export function makeCollection<T>(): CollectionInstance<T> {
           const siblings = childIndex.current.get(node.parent) ?? new Set<string>();
           siblings.add(node.key);
           childIndex.current.set(node.parent, siblings);
-          bump();
+          snapshot.current = new Map(nodes.current);
+          listeners.current.forEach(l => l());
         },
 
         unregister(key) {
@@ -78,7 +91,8 @@ export function makeCollection<T>(): CollectionInstance<T> {
           nodes.current.delete(key);
           childIndex.current.get(node.parent)?.delete(key);
           childIndex.current.delete(key);
-          bump();
+          snapshot.current = new Map(nodes.current);
+          listeners.current.forEach(l => l());
         },
 
         tree(rootKey = null): Array<CollectionTreeNode<T>> {
@@ -105,11 +119,37 @@ export function makeCollection<T>(): CollectionInstance<T> {
     if (!store) {
       throw new Error('useStore must be called inside the matching Collection Provider');
     }
-    return store;
+    // Subscribe to structural changes via useSyncExternalStore. Each registration
+    // or unregistration produces a new snapshot Map instance, so this causes a
+    // re-render whenever the node tree changes.
+    const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
+    // Return a new wrapper object on every snapshot change so that consumers
+    // using the return value as a useMemo / useCallback dependency get correct
+    // cache invalidation whenever the node tree changes.
+    return useMemo(
+      () => ({
+        subscribe: store.subscribe,
+        getSnapshot: store.getSnapshot,
+        register: store.register,
+        unregister: store.unregister,
+        // bind so that this.tree() works correctly in recursive calls
+        tree: store.tree.bind(store),
+      }),
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [snapshot, store]
+    );
   }
 
   function useRegisterNode(data: T): string {
-    const store = useStore();
+    // Read the stable store from context directly — NOT via useStore() — so
+    // that structural node changes (which produce a new useStore() reference)
+    // do not invalidate the layout-effect deps and trigger re-registration loops.
+    const store = useContext(StoreContext);
+    if (!store) {
+      throw new Error(
+        'useRegisterNode must be called inside the matching Collection Provider'
+      );
+    }
     const parentKey = useContext(Context);
 
     const key = useId();

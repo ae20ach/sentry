@@ -65,8 +65,8 @@ type CMDKFlatItem = CollectionTreeNode<CMDKActionData> & {
 };
 
 interface CommandPaletteProps {
-  children: React.ReactNode;
   onAction: (action: CollectionTreeNode<CMDKActionData>) => void;
+  children?: React.ReactNode;
 }
 
 export function CommandPalette(props: CommandPaletteProps) {
@@ -82,10 +82,11 @@ export function CommandPalette(props: CommandPaletteProps) {
     preload(errorIllustration, {as: 'image'});
   }
 
-  // The current navigation root: null = top-level, otherwise the key of the
-  // group the user has drilled into.
-  const currentRootKey = state.action?.value.key ?? null;
-  const currentNodes = presortBySlotRef(store.tree(currentRootKey));
+  const currentNodes = useMemo(() => {
+    const currentRootKey = state.action?.value.key ?? null;
+    const nodes = presortBySlotRef(store.tree(currentRootKey));
+    return nodes;
+  }, [store, state.action]);
 
   const actions = useMemo<CMDKFlatItem[]>(() => {
     if (!state.query) {
@@ -228,7 +229,6 @@ export function CommandPalette(props: CommandPaletteProps) {
 
   return (
     <Fragment>
-      {props.children}
       <Flex direction="column" align="start" gap="md">
         <Flex position="relative" direction="row" align="center" gap="xs" width="100%">
           {p => {
