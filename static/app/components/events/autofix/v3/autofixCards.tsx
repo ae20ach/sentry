@@ -34,7 +34,6 @@ import {IconOpen} from 'sentry/icons/iconOpen';
 import {IconPullRequest} from 'sentry/icons/iconPullRequest';
 import {t, tct, tn} from 'sentry/locale';
 import {defined} from 'sentry/utils';
-import {useOrganization} from 'sentry/utils/useOrganization';
 import {FileDiffViewer} from 'sentry/views/seerExplorer/fileDiffViewer';
 
 interface AutofixCardProps {
@@ -48,10 +47,22 @@ export function RootCauseCard({autofix, section}: AutofixCardProps) {
     return isRootCauseArtifact(sectionArtifact) ? sectionArtifact : null;
   }, [section]);
 
-  const {startStep} = autofix;
+  const {startStep, runState, isPolling} = autofix;
+  const runId = runState?.run_id;
 
   return (
-    <ArtifactCard icon={<IconBug />} title={t('Root Cause')}>
+    <ArtifactCard
+      icon={<IconBug />}
+      title={t('Root Cause')}
+      trailingItems={
+        section.status === 'completed' && artifact?.data ? (
+          <RetryButton
+            onClick={() => startStep('root_cause', runId, undefined, section.blockIndex)}
+            disabled={isPolling}
+          />
+        ) : undefined
+      }
+    >
       {section.status === 'processing' ? (
         <LoadingDetails
           messages={section.messages}
@@ -405,12 +416,6 @@ interface RetryButtonProps {
 }
 
 function RetryButton({onClick, disabled}: RetryButtonProps) {
-  const organization = useOrganization();
-
-  if (!organization.features.includes('autofix-retry-from-step')) {
-    return null;
-  }
-
   return (
     <Button
       size="xs"
