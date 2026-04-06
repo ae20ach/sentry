@@ -29,7 +29,10 @@ import {CommandPaletteProvider} from 'sentry/components/commandPalette/ui/cmdk';
 import {CMDKAction, CMDKGroup} from 'sentry/components/commandPalette/ui/cmdk';
 import type {CMDKActionData} from 'sentry/components/commandPalette/ui/cmdk';
 import type {CollectionTreeNode} from 'sentry/components/commandPalette/ui/collection';
-import {CommandPalette} from 'sentry/components/commandPalette/ui/commandPalette';
+import {
+  CommandPalette,
+  CommandPaletteSlot,
+} from 'sentry/components/commandPalette/ui/commandPalette';
 import {useNavigate} from 'sentry/utils/useNavigate';
 
 /**
@@ -96,9 +99,11 @@ function GlobalActionsComponent({
 
   return (
     <CommandPaletteProvider>
-      <ActionsToJSX actions={actions} />
-      <CommandPalette onAction={handleAction} />
-      {children}
+      <CommandPaletteSlot.Provider>
+        <ActionsToJSX actions={actions} />
+        <CommandPalette onAction={handleAction} />
+        {children}
+      </CommandPaletteSlot.Provider>
     </CommandPaletteProvider>
   );
 }
@@ -413,6 +418,35 @@ describe('CommandPalette', () => {
       );
 
       await waitFor(() => expect(input).toHaveValue('parent'));
+    });
+  });
+
+  describe('slot rendering', () => {
+    it('page slot actions are rendered before global actions', async () => {
+      // This test mirrors the real app structure:
+      //   - Global actions are registered directly in CMDKCollection (e.g. from the nav sidebar)
+      //   - Page-specific actions are registered via <CommandPaletteSlot name="page">
+      //
+      // Expected: page slot actions appear first in the list, global actions second.
+      // The "page" outlet is rendered above the "global" outlet inside CommandPalette,
+      // so page slot actions should always take priority in the list order.
+      render(
+        <CommandPaletteProvider>
+          <CommandPaletteSlot.Provider>
+            {/* Global action registered directly — simulates e.g. GlobalCommandPaletteActions */}
+            <CMDKAction display={{label: 'Global Action'}} onAction={jest.fn()} />
+            {/* Page-specific action portaled via the page slot */}
+            <CommandPaletteSlot name="page">
+              <CMDKAction display={{label: 'Page Action'}} onAction={jest.fn()} />
+            </CommandPaletteSlot>
+            <CommandPalette onAction={jest.fn()} />
+          </CommandPaletteSlot.Provider>
+        </CommandPaletteProvider>
+      );
+
+      const options = await screen.findAllByRole('option');
+      expect(options[0]).toHaveAccessibleName('Page Action');
+      expect(options[1]).toHaveAccessibleName('Global Action');
     });
   });
 });
