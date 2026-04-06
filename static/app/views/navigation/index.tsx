@@ -49,7 +49,6 @@ function UserAndOrganizationNavigation() {
 
   return (
     <NavigationLayout>
-      <GlobalCommandPaletteActions />
       <CommandPaletteHotkeys />
       {layout === 'mobile' ? (
         <MobileSecondaryNavigationContextProvider>

@@ -55,6 +55,16 @@ export function makeCollection<T>(): CollectionInstance<T> {
     const store = useMemo<CollectionStore<T>>(
       () => ({
         register(node) {
+          const existing = nodes.current.get(node.key);
+          if (existing) {
+            if (existing.parent === node.parent) {
+              // Same parent: no structural change, data is kept current via dataRef.
+              return;
+            }
+            // Different parent: remove from the old parent's child set before
+            // re-inserting under the new one, so the key never appears twice.
+            childIndex.current.get(existing.parent)?.delete(node.key);
+          }
           nodes.current.set(node.key, node);
           const siblings = childIndex.current.get(node.parent) ?? new Set<string>();
           siblings.add(node.key);
@@ -101,8 +111,8 @@ export function makeCollection<T>(): CollectionInstance<T> {
   function useRegisterNode(data: T): string {
     const store = useStore();
     const parentKey = useContext(Context);
-    const key = useId();
 
+    const key = useId();
     // Store data in a ref so tree() always reflects the latest value without
     // needing to re-register when data changes. Structural changes (parentKey)
     // still cause a full re-registration via the effect deps.
@@ -111,7 +121,9 @@ export function makeCollection<T>(): CollectionInstance<T> {
 
     useLayoutEffect(() => {
       store.register({key, parent: parentKey, dataRef});
-      return () => store.unregister(key);
+      return () => {
+        store.unregister(key);
+      };
     }, [key, parentKey, store]);
 
     return key;

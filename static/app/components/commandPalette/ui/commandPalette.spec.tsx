@@ -435,6 +435,7 @@ describe('CommandPalette', () => {
       expect(
         await screen.findByRole('option', {name: 'Task Action'})
       ).toBeInTheDocument();
+      expect(screen.getAllByRole('option', {name: 'Task Action'})).toHaveLength(1);
     });
 
     it('task slot action triggers its callback when selected', async () => {
@@ -471,6 +472,7 @@ describe('CommandPalette', () => {
       expect(
         await screen.findByRole('option', {name: 'Page Action'})
       ).toBeInTheDocument();
+      expect(screen.getAllByRole('option', {name: 'Page Action'})).toHaveLength(1);
     });
 
     it('page slot action triggers its callback when selected', async () => {
@@ -515,6 +517,7 @@ describe('CommandPalette', () => {
       );
 
       const options = await screen.findAllByRole('option');
+      expect(options).toHaveLength(2);
       expect(options[0]).toHaveAccessibleName('Page Action');
       expect(options[1]).toHaveAccessibleName('Global Action');
     });
@@ -538,9 +541,54 @@ describe('CommandPalette', () => {
       );
 
       const options = await screen.findAllByRole('option');
+      expect(options).toHaveLength(3);
       expect(options[0]).toHaveAccessibleName('Task Action');
       expect(options[1]).toHaveAccessibleName('Page Action');
       expect(options[2]).toHaveAccessibleName('Global Action');
+    });
+
+    it('actions passed as children to CommandPalette via global slot are not duplicated', async () => {
+      // This mirrors the real app setup in modal.tsx where GlobalCommandPaletteActions
+      // is passed as children to CommandPalette. Those actions use
+      // <CommandPaletteSlot name="global"> internally, which creates a circular portal:
+      // the consumer is rendered inside the global outlet div and then portals back to it.
+      // Registration must be idempotent so the slot→portal transition never yields duplicates.
+      function ActionsViaGlobalSlot() {
+        return (
+          <CommandPaletteSlot name="global">
+            <CMDKAction display={{label: 'Action A'}} onAction={jest.fn()} />
+            <CMDKAction display={{label: 'Action B'}} onAction={jest.fn()} />
+          </CommandPaletteSlot>
+        );
+      }
+
+      render(
+        <CommandPaletteProvider>
+          <CommandPalette onAction={jest.fn()}>
+            <ActionsViaGlobalSlot />
+          </CommandPalette>
+        </CommandPaletteProvider>
+      );
+
+      await screen.findByRole('option', {name: 'Action A'});
+
+      const options = screen.getAllByRole('option');
+      expect(options).toHaveLength(2);
+      expect(screen.getAllByRole('option', {name: 'Action A'})).toHaveLength(1);
+      expect(screen.getAllByRole('option', {name: 'Action B'})).toHaveLength(1);
+    });
+
+    it('direct CMDKAction registrations outside slots are not duplicated', async () => {
+      render(
+        <CommandPaletteProvider>
+          <CMDKAction display={{label: 'Direct Action'}} onAction={jest.fn()} />
+          <CommandPalette onAction={jest.fn()} />
+        </CommandPaletteProvider>
+      );
+
+      await screen.findByRole('option', {name: 'Direct Action'});
+      expect(screen.getAllByRole('option', {name: 'Direct Action'})).toHaveLength(1);
+      expect(screen.getAllByRole('option')).toHaveLength(1);
     });
   });
 });

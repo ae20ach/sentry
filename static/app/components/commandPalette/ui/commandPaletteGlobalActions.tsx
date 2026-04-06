@@ -141,7 +141,6 @@ export function GlobalCommandPaletteActions() {
 
   return (
     <CommandPaletteSlot name="global">
-      {/* ── Navigation ── */}
       <CMDKGroup display={{label: t('Go to...')}}>
         <CMDKGroup display={{label: t('Issues'), icon: <IconIssues />}}>
           <CMDKAction display={{label: t('Feed')}} to={`${prefix}/issues/`} />
@@ -166,7 +165,7 @@ export function GlobalCommandPaletteActions() {
           ))}
         </CMDKGroup>
 
-        <CMDKGroup display={{label: t('Explore'), icon: <IconCompass />}}>
+        {/* <CMDKGroup display={{label: t('Explore'), icon: <IconCompass />}}>
           <CMDKAction display={{label: t('Traces')}} to={`${prefix}/explore/traces/`} />
           {organization.features.includes('ourlogs-enabled') && (
             <CMDKAction display={{label: t('Logs')}} to={`${prefix}/explore/logs/`} />
@@ -271,7 +270,6 @@ export function GlobalCommandPaletteActions() {
         </CMDKGroup>
       </CMDKGroup>
 
-      {/* ── Add / Create ── */}
       <CMDKGroup display={{label: t('Add')}}>
         <CMDKAction
           display={{label: t('Create Dashboard'), icon: <IconAdd />}}
@@ -295,7 +293,6 @@ export function GlobalCommandPaletteActions() {
         />
       </CMDKGroup>
 
-      {/* ── DSN Lookup ── */}
       <CMDKGroup display={{label: t('DSN')}} keywords={[t('client keys')]}>
         <CMDKGroup
           display={{label: t('Project DSN Keys'), icon: <IconLock locked />}}
@@ -331,7 +328,6 @@ export function GlobalCommandPaletteActions() {
         )}
       </CMDKGroup>
 
-      {/* ── Help ── */}
       <CMDKGroup display={{label: t('Help')}}>
         <CMDKAction
           display={{label: t('Open Documentation'), icon: <IconDocs />}}
@@ -365,7 +361,6 @@ export function GlobalCommandPaletteActions() {
         </CMDKGroup>
       </CMDKGroup>
 
-      {/* ── Interface ── */}
       <CMDKGroup display={{label: t('Interface')}}>
         <CMDKGroup display={{label: t('Change Color Theme'), icon: <IconSettings />}}>
           <CMDKAction
@@ -392,7 +387,7 @@ export function GlobalCommandPaletteActions() {
               addSuccessMessage(t('Theme preference saved: Dark'));
             }}
           />
-        </CMDKGroup>
+        </CMDKGroup> */}
       </CMDKGroup>
     </CommandPaletteSlot>
   );

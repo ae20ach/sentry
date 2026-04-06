@@ -36,7 +36,18 @@ export function CommandPaletteDemo() {
           onAction={() => addSuccessMessage('Child action executed')}
         />
       </CMDKGroup>
-      <CommandPalette onAction={handleAction} />
+      <CommandPalette onAction={handleAction}>
+        <CMDKGroup display={{label: 'Issues List'}}>
+          <CMDKAction
+            display={{label: 'Select all'}}
+            onAction={() => addSuccessMessage('Select all')}
+          />
+          <CMDKAction
+            display={{label: 'Deselect all'}}
+            onAction={() => addSuccessMessage('Deselect all')}
+          />
+        </CMDKGroup>
+      </CommandPalette>
     </CommandPaletteProvider>
   );
 }
