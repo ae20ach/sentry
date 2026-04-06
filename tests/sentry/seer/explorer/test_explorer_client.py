@@ -733,10 +733,7 @@ class TestSeerExplorerClientPushChanges(TestCase):
     @patch("sentry.seer.explorer.client.has_seer_access_with_detail")
     @patch("sentry.seer.explorer.client.fetch_run_status")
     @patch("sentry.seer.explorer.client.make_explorer_update_request")
-    @patch("sentry.seer.explorer.client.time.sleep")
-    def test_push_changes_polls_until_complete(
-        self, mock_sleep, mock_post, mock_fetch, mock_access
-    ):
+    def test_push_changes_polls_until_complete(self, mock_post, mock_fetch, mock_access):
         """Test that push_changes polls until PR creation completes"""
         mock_access.return_value = (True, None)
         mock_post.return_value = MagicMock(status=200)
@@ -762,19 +759,17 @@ class TestSeerExplorerClientPushChanges(TestCase):
         mock_fetch.side_effect = [creating_state, completed_state]
 
         client = SeerExplorerClient(self.organization, self.user, enable_coding=True)
-        result = client.push_changes(123)
+        result = client.push_changes(123, poll_interval=0)
 
         assert mock_fetch.call_count == 2
-        assert mock_sleep.call_count == 1
         assert result is not None
         assert result.repo_pr_states["owner/repo"].pr_creation_status == "completed"
 
     @patch("sentry.seer.explorer.client.has_seer_access_with_detail")
     @patch("sentry.seer.explorer.client.fetch_run_status")
     @patch("sentry.seer.explorer.client.make_explorer_update_request")
-    @patch("sentry.seer.explorer.client.time.sleep")
     @patch("sentry.seer.explorer.client.time.time")
-    def test_push_changes_timeout(self, mock_time, mock_sleep, mock_post, mock_fetch, mock_access):
+    def test_push_changes_timeout(self, mock_time, mock_post, mock_fetch, mock_access):
         """Test that push_changes raises TimeoutError after timeout"""
         mock_access.return_value = (True, None)
         mock_post.return_value = MagicMock(status=200)
@@ -794,7 +789,7 @@ class TestSeerExplorerClientPushChanges(TestCase):
         client = SeerExplorerClient(self.organization, self.user, enable_coding=True)
 
         with pytest.raises(TimeoutError, match="PR creation timed out"):
-            client.push_changes(123, poll_timeout=120.0)
+            client.push_changes(123, poll_interval=0, poll_timeout=120.0)
 
 
 class TestSeerRunStateCodeChanges(TestCase):
