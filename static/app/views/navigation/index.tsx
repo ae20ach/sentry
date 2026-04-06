@@ -5,6 +5,7 @@ import {useHotkeys} from '@sentry/scraps/hotkey';
 import {Container, Flex} from '@sentry/scraps/layout';
 import {ExternalLink} from '@sentry/scraps/link';
 
+import {GlobalCommandPaletteActions} from 'sentry/components/commandPalette/ui/commandPaletteGlobalActions';
 import {CommandPaletteHotkeys} from 'sentry/components/commandPalette/ui/commandPaletteStateContext';
 import {useGlobalModal} from 'sentry/components/globalModal/useGlobalModal';
 import {t} from 'sentry/locale';
@@ -48,6 +49,7 @@ function UserAndOrganizationNavigation() {
 
   return (
     <NavigationLayout>
+      <GlobalCommandPaletteActions />
       <CommandPaletteHotkeys />
       {layout === 'mobile' ? (
         <MobileSecondaryNavigationContextProvider>
