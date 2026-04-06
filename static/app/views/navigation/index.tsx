@@ -7,7 +7,6 @@ import {ExternalLink} from '@sentry/scraps/link';
 
 import {GlobalCommandPaletteActions} from 'sentry/components/commandPalette/globalActions';
 import {CommandPaletteHotkeys} from 'sentry/components/commandPalette/ui/commandPaletteStateContext';
-import {useGlobalCommandPaletteActions} from 'sentry/components/commandPalette/useGlobalCommandPaletteActions';
 import {useGlobalModal} from 'sentry/components/globalModal/useGlobalModal';
 import {t} from 'sentry/locale';
 import {useOrganization} from 'sentry/utils/useOrganization';
@@ -35,7 +34,6 @@ function UserAndOrganizationNavigation() {
   const {visible} = useGlobalModal();
   const {view, setView} = useSecondaryNavigation();
 
-  useGlobalCommandPaletteActions();
   const hasPageFrame = useHasPageFrameFeature();
 
   useHotkeys(
