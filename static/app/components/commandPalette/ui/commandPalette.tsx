@@ -17,6 +17,7 @@ import {InputGroup} from '@sentry/scraps/input';
 import {Container, Flex, Stack} from '@sentry/scraps/layout';
 import {InnerWrap} from '@sentry/scraps/menuListItem';
 import type {MenuListItemProps} from '@sentry/scraps/menuListItem';
+import {slot} from '@sentry/scraps/slot';
 import {Text} from '@sentry/scraps/text';
 
 import type {CMDKActionData} from 'sentry/components/commandPalette/ui/cmdk';
@@ -39,6 +40,8 @@ import {useDebouncedValue} from 'sentry/utils/useDebouncedValue';
 const MotionButton = motion.create(Button);
 const MotionIconSearch = motion.create(IconSearch);
 const MotionContainer = motion.create(Container);
+
+export const CommandPaletteSlot = slot(['global', 'page', 'task']);
 
 function makeLeadingItemAnimation(theme: Theme) {
   return {
@@ -338,6 +341,22 @@ export function CommandPalette(props: CommandPaletteProps) {
           }}
         </Flex>
       </Flex>
+
+      <CommandPaletteSlot.Provider>
+        <CommandPaletteSlot.Outlet name="task">
+          {p => <div {...p} style={{display: 'contents'}} />}
+        </CommandPaletteSlot.Outlet>
+        <CommandPaletteSlot.Outlet name="page">
+          {p => <div {...p} style={{display: 'contents'}} />}
+        </CommandPaletteSlot.Outlet>
+        <CommandPaletteSlot.Outlet name="global">
+          {p => (
+            <div {...p} style={{display: 'contents'}}>
+              {props.children}
+            </div>
+          )}
+        </CommandPaletteSlot.Outlet>
+      </CommandPaletteSlot.Provider>
       {treeState.collection.size === 0 ? (
         <CommandPaletteNoResults />
       ) : (
