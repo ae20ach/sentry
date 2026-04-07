@@ -32,8 +32,7 @@ import {defined} from 'sentry/utils';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {toArray} from 'sentry/utils/array/toArray';
 import {browserHistory} from 'sentry/utils/browserHistory';
-import type EventView from 'sentry/utils/discover/eventView';
-import type {EventData, MetaType} from 'sentry/utils/discover/eventView';
+import type {EventData, EventView, MetaType} from 'sentry/utils/discover/eventView';
 import type {RateUnit} from 'sentry/utils/discover/fields';
 import {
   ABYTE_UNITS,
@@ -52,7 +51,7 @@ import {getShortEventId} from 'sentry/utils/events';
 import {formatRate} from 'sentry/utils/formatters';
 import {getDynamicText} from 'sentry/utils/getDynamicText';
 import {formatApdex} from 'sentry/utils/number/formatApdex';
-import {formatFloat} from 'sentry/utils/number/formatFloat';
+import {formatNumber} from 'sentry/utils/number/formatNumber';
 import {formatPercentage} from 'sentry/utils/number/formatPercentage';
 import {toPercent} from 'sentry/utils/number/toPercent';
 import {generateProfileFlamechartRouteWithQuery} from 'sentry/utils/profiling/routes';
@@ -64,7 +63,8 @@ import {
   findLinkedDashboardForField,
   getLinkedDashboardUrl,
 } from 'sentry/views/dashboards/utils/getLinkedDashboardUrl';
-import {NUMBER_MAX_FRACTION_DIGITS} from 'sentry/views/dashboards/widgets/common/settings';
+import {NUMBER_MIN_VALUE} from 'sentry/views/dashboards/widgets/common/settings';
+import {formatTooltipValue} from 'sentry/views/dashboards/widgets/timeSeriesWidget/formatters/formatTooltipValue';
 import {QuickContextHoverWrapper} from 'sentry/views/discover/table/quickContext/quickContextWrapper';
 import {ContextType} from 'sentry/views/discover/table/quickContext/utils';
 import type {TraceItemDetailsMeta} from 'sentry/views/explore/hooks/useTraceItemDetails';
@@ -303,18 +303,21 @@ export const FIELD_FORMATTERS: FieldFormatters = {
   },
   number: {
     isSortable: true,
-    renderFunc: (field, data) => (
-      <NumberContainer>
-        {typeof data[field] === 'number'
-          ? formatFloat(data[field], NUMBER_MAX_FRACTION_DIGITS).toLocaleString(
-              undefined,
-              {
-                maximumFractionDigits: NUMBER_MAX_FRACTION_DIGITS,
-              }
-            )
-          : emptyValue}
-      </NumberContainer>
-    ),
+    renderFunc: (field, data) => {
+      if (typeof data[field] !== 'number') {
+        return <NumberContainer>{emptyValue}</NumberContainer>;
+      }
+      if (data[field] > 0 && data[field] < NUMBER_MIN_VALUE) {
+        return (
+          <NumberContainer>
+            <Tooltip title={formatTooltipValue(data[field], 'number')}>
+              <span>{`<${NUMBER_MIN_VALUE}`}</span>
+            </Tooltip>
+          </NumberContainer>
+        );
+      }
+      return <NumberContainer>{formatNumber(data[field])}</NumberContainer>;
+    },
   },
   percentage: {
     isSortable: true,
