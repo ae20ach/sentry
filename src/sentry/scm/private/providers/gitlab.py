@@ -732,11 +732,22 @@ def map_tree_entry(raw: dict[str, Any]) -> TreeEntry:
 
 def map_review_comment(discussion_id: str) -> Callable[[dict[str, Any]], ReviewComment]:
     def _map_review_comment(raw: dict[str, Any]) -> ReviewComment:
+        author_raw = raw.get("author")
         return ReviewComment(
             id=f"{discussion_id}:{raw['id']}",
-            html_url=None,
-            path=raw["position"]["new_path"],
+            unique_id=f"{discussion_id}:{raw['id']}",
+            url=None,
+            file_path=raw["position"]["new_path"],
             body=raw["body"],
+            author=Author(id=str(author_raw["id"]), username=author_raw["username"])
+            if author_raw
+            else None,
+            created_at=raw.get("created_at"),
+            diff_hunk=None,
+            review_id=None,
+            author_association=None,
+            commit_sha=None,
+            head=None,
         )
 
     return _map_review_comment

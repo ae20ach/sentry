@@ -11072,9 +11072,17 @@ class ForwardToClientTest(NamedTuple):
             provider_return_value={
                 "data": {
                     "id": "c4604a0d82de5427ec0cdc8780c8f810ea9bec86:3149948866",
-                    "html_url": None,
-                    "path": "BLAH.md",
+                    "unique_id": "c4604a0d82de5427ec0cdc8780c8f810ea9bec86:3149948866",
+                    "url": None,
+                    "file_path": "BLAH.md",
                     "body": "A review comment, on a file, made by the API on 2026-03-11 11:06:19.945026.",
+                    "author": {"id": "150871", "username": "jacquev6"},
+                    "created_at": "2026-03-11T11:06:21.007Z",
+                    "diff_hunk": None,
+                    "review_id": None,
+                    "author_association": None,
+                    "commit_sha": None,
+                    "head": None,
                 },
                 "type": "gitlab",
                 "raw": {
@@ -11195,9 +11203,17 @@ class ForwardToClientTest(NamedTuple):
             provider_return_value={
                 "data": {
                     "id": "c4604a0d82de5427ec0cdc8780c8f810ea9bec86:3149949479",
-                    "html_url": None,
-                    "path": "BLAH.md",
+                    "unique_id": "c4604a0d82de5427ec0cdc8780c8f810ea9bec86:3149949479",
+                    "url": None,
+                    "file_path": "BLAH.md",
                     "body": "A reply to the previous comment, made by the API on 2026-03-11 11:06:21.487947.",
+                    "author": {"id": "150871", "username": "jacquev6"},
+                    "created_at": "2026-03-11T11:06:31.033Z",
+                    "diff_hunk": None,
+                    "review_id": None,
+                    "author_association": None,
+                    "commit_sha": None,
+                    "head": None,
                 },
                 "type": "gitlab",
                 "raw": {
