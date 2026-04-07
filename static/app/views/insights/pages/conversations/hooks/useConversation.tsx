@@ -195,22 +195,17 @@ export function useConversation(
     conversation.startTimestamp !== undefined && conversation.endTimestamp !== undefined;
 
   // When conversation timestamps are provided (e.g. from a shared link),
-  // search across all projects so the conversation is found regardless of
-  // which project the page filter is currently set to.
-  const projectFilter = hasConversationTimestamps
-    ? [ALL_ACCESS_PROJECTS]
-    : selection.projects;
-
+  // search across all projects and environments so the conversation is found
+  // regardless of which project/environment the page filter is currently set to.
   const queryParams = hasConversationTimestamps
     ? {
-        project: projectFilter,
-        environment: selection.environments,
+        project: [ALL_ACCESS_PROJECTS],
         start: new Date(conversation.startTimestamp! - ONE_HOUR_MS).toISOString(),
         end: new Date(conversation.endTimestamp! + ONE_HOUR_MS).toISOString(),
         per_page: 1000,
       }
     : {
-        project: projectFilter,
+        project: selection.projects,
         environment: selection.environments,
         ...normalizeDateTimeParams(selection.datetime),
         per_page: 1000,
