@@ -1,10 +1,8 @@
 import pickBy from 'lodash/pickBy';
 
 import {Link} from '@sentry/scraps/link';
-import {Text} from '@sentry/scraps/text';
-import {Tooltip} from '@sentry/scraps/tooltip';
 
-import {t} from 'sentry/locale';
+import {DisabledTraceLink} from 'sentry/components/explore/disabledTraceLink';
 import type {TagCollection} from 'sentry/types/group';
 import type {
   EventsStats,
@@ -434,11 +432,9 @@ function renderEventInTraceView(
 
   if (data.timestamp && isPartialSpanOrTraceData(data.timestamp)) {
     return (
-      <Tooltip showUnderline title={t('Span is older than 30 days')}>
-        <Container>
-          <Text variant="muted">{getShortEventId(spanId)}</Text>
-        </Container>
-      </Tooltip>
+      <Container>
+        <DisabledTraceLink type="span">{getShortEventId(spanId)}</DisabledTraceLink>
+      </Container>
     );
   }
 

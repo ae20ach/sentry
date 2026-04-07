@@ -4,13 +4,12 @@ import styled from '@emotion/styled';
 
 import {Container as ScrapsContainer} from '@sentry/scraps/layout';
 import {ExternalLink, Link} from '@sentry/scraps/link';
-import {Text} from '@sentry/scraps/text';
 import {Tooltip} from '@sentry/scraps/tooltip';
 
+import {DisabledTraceLink} from 'sentry/components/explore/disabledTraceLink';
 import ProjectBadge from 'sentry/components/idBadge/projectBadge';
 import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
 import {TimeSince} from 'sentry/components/timeSince';
-import {t, tct} from 'sentry/locale';
 import type {Project} from 'sentry/types/project';
 import {defined} from 'sentry/utils';
 import type {TableDataRow} from 'sentry/utils/discover/discoverQuery';
@@ -168,36 +167,20 @@ function BaseExploreFieldRenderer({
       }
       rendered = (
         <ScrapsContainer maxWidth="fit-content">
-          <Tooltip
-            isHoverable
-            showUnderline
-            title={
-              <Text>
-                {tct(
-                  'Trace is older than 30 days. [similarTraces] in the past 24 hours.',
-                  {
-                    similarTraces: (
-                      <Link
-                        to={getSimilarEventsUrl({
-                          queryString: queryString.formatString(),
-                          table: 'trace',
-                          organization,
-                          projectIds: defined(project?.id)
-                            ? [parseInt(project.id, 10)]
-                            : selection.projects,
-                          selection,
-                        })}
-                      >
-                        {t('View similar traces')}
-                      </Link>
-                    ),
-                  }
-                )}
-              </Text>
-            }
+          <DisabledTraceLink
+            type="trace"
+            similarEventsUrl={getSimilarEventsUrl({
+              queryString: queryString.formatString(),
+              table: 'trace',
+              organization,
+              projectIds: defined(project?.id)
+                ? [parseInt(project.id, 10)]
+                : selection.projects,
+              selection,
+            })}
           >
-            <Text variant="muted">{rendered}</Text>
-          </Tooltip>
+            {rendered}
+          </DisabledTraceLink>
         </ScrapsContainer>
       );
     } else {
@@ -234,32 +217,19 @@ function BaseExploreFieldRenderer({
 
       rendered = (
         <ScrapsContainer maxWidth="fit-content">
-          <Tooltip
-            isHoverable
-            showUnderline
-            title={
-              <Text>
-                {tct('Span is older than 30 days. [similarSpans] in the past 24 hours.', {
-                  similarSpans: (
-                    <Link
-                      to={getSimilarEventsUrl({
-                        queryString: queryString.formatString(),
-                        organization,
-                        projectIds: defined(project?.id)
-                          ? [parseInt(project.id, 10)]
-                          : selection.projects,
-                        selection,
-                      })}
-                    >
-                      {t('View similar spans')}
-                    </Link>
-                  ),
-                })}
-              </Text>
-            }
+          <DisabledTraceLink
+            type="span"
+            similarEventsUrl={getSimilarEventsUrl({
+              queryString: queryString.formatString(),
+              organization,
+              projectIds: defined(project?.id)
+                ? [parseInt(project.id, 10)]
+                : selection.projects,
+              selection,
+            })}
           >
-            <Text variant="muted">{rendered}</Text>
-          </Tooltip>
+            {rendered}
+          </DisabledTraceLink>
         </ScrapsContainer>
       );
     } else {

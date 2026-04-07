@@ -6,16 +6,16 @@ import type {Location} from 'history';
 import {Tag, type TagProps} from '@sentry/scraps/badge';
 import {Container, Stack} from '@sentry/scraps/layout';
 import {Link} from '@sentry/scraps/link';
-import {Text} from '@sentry/scraps/text';
 import {Tooltip} from '@sentry/scraps/tooltip';
 
+import {DisabledTraceLink} from 'sentry/components/explore/disabledTraceLink';
 import ProjectBadge from 'sentry/components/idBadge/projectBadge';
 import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
 import {RowRectangle} from 'sentry/components/performance/waterfall/rowBar';
 import {pickBarColor} from 'sentry/components/performance/waterfall/utils';
 import {PerformanceDuration} from 'sentry/components/performanceDuration';
 import {TimeSince} from 'sentry/components/timeSince';
-import {t, tct, tn} from 'sentry/locale';
+import {t, tn} from 'sentry/locale';
 import {defined} from 'sentry/utils';
 import {generateLinkToEventInTraceView} from 'sentry/utils/discover/urls';
 import {getShortEventId} from 'sentry/utils/events';
@@ -435,34 +435,21 @@ export function SpanIdRenderer({
     }
 
     return (
-      <Tooltip
-        showUnderline
-        isHoverable
-        title={
-          <Text>
-            {tct('Span is older than 30 days. [similarSpans] in the past 24 hours.', {
-              similarSpans: (
-                <Link
-                  to={getSimilarEventsUrl({
-                    queryString: search.formatString(),
-                    organization,
-                    projectIds,
-                    selection: {
-                      ...selection,
-                      projects: projectIds,
-                      datetime: {start: null, end: null, utc: null, period: '24h'},
-                    },
-                  })}
-                >
-                  {t('View similar spans')}
-                </Link>
-              ),
-            })}
-          </Text>
-        }
+      <DisabledTraceLink
+        type="span"
+        similarEventsUrl={getSimilarEventsUrl({
+          queryString: search.formatString(),
+          organization,
+          projectIds,
+          selection: {
+            ...selection,
+            projects: projectIds,
+            datetime: {start: null, end: null, utc: null, period: '24h'},
+          },
+        })}
       >
-        <Text variant="muted">{shortSpanId}</Text>
-      </Tooltip>
+        {shortSpanId}
+      </DisabledTraceLink>
     );
   }
 
@@ -525,37 +512,18 @@ export function TraceIdRenderer({
     }
 
     return (
-      <Tooltip
-        showUnderline
-        isHoverable
-        title={
-          <Text>
-            {tct('Trace is older than 30 days. [similarTraces] in the past 24 hours.', {
-              similarTraces: (
-                <Link
-                  to={getSimilarEventsUrl({
-                    queryString: search.formatString(),
-                    table: 'trace',
-                    organization,
-                    projectIds,
-                    selection,
-                  })}
-                >
-                  {t('View similar traces')}
-                </Link>
-              ),
-            })}
-          </Text>
-        }
+      <DisabledTraceLink
+        type="trace"
+        similarEventsUrl={getSimilarEventsUrl({
+          queryString: search.formatString(),
+          table: 'trace',
+          organization,
+          projectIds,
+          selection,
+        })}
       >
-        <Container minWidth="66px">
-          {props => (
-            <Text variant="muted" aria-disabled="true" role="link" {...props}>
-              {shortId}
-            </Text>
-          )}
-        </Container>
-      </Tooltip>
+        {shortId}
+      </DisabledTraceLink>
     );
   }
 
