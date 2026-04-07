@@ -8,6 +8,7 @@ import {Flex, Stack} from '@sentry/scraps/layout';
 import {EmptyMessage} from 'sentry/components/emptyMessage';
 import {DrawerBody, DrawerHeader} from 'sentry/components/globalDrawer/components';
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
+import {Tooltip} from 'sentry/components/tooltip';
 import {t} from 'sentry/locale';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {useOrganization} from 'sentry/utils/useOrganization';
@@ -79,14 +80,19 @@ const TraceViewDrawer = memo(function TraceViewDrawer({
       <StyledDrawerHeader>
         <Flex justify="between" align="center" flex="1">
           {t('Abbreviated Trace')}
-          <LinkButton
-            size="xs"
-            onClick={handleViewFullTraceClick}
-            to={nodeDetailsLink}
-            disabled={isTraceLinkDisabled}
+          <Tooltip
+            title={t('Trace data is only available for the last 30 days')}
+            disabled={!isTraceLinkDisabled}
           >
-            {t('View in Full Trace')}
-          </LinkButton>
+            <LinkButton
+              size="xs"
+              onClick={handleViewFullTraceClick}
+              to={nodeDetailsLink}
+              disabled={isTraceLinkDisabled}
+            >
+              {t('View in Full Trace')}
+            </LinkButton>
+          </Tooltip>
         </Flex>
       </StyledDrawerHeader>
       <StyledDrawerBody>
