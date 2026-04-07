@@ -327,4 +327,47 @@ describe('SentryAppExternalInstallation', () => {
       expect(getFeaturesMock).toHaveBeenCalled();
     });
   });
+
+  describe('sentry app fetch error', () => {
+    beforeEach(() => {
+      MockApiClient.addMockResponse({
+        url: '/organizations/',
+        body: [org1Lite],
+      });
+
+      window.__initialData = ConfigFixture({
+        customerDomain: {
+          subdomain: 'org1',
+          organizationUrl: 'https://org1.sentry.io',
+          sentryUrl: 'https://sentry.io',
+        },
+        links: {
+          ...window.__initialData?.links,
+          sentryUrl: 'https://sentry.io',
+        },
+      });
+      ConfigStore.loadInitialData(window.__initialData);
+    });
+
+    it('shows an error when the sentry app request fails (e.g. 403)', async () => {
+      MockApiClient.addMockResponse({
+        url: `/sentry-apps/${sentryApp.slug}/`,
+        statusCode: 403,
+        body: {detail: 'User must be in the app owner\'s organization for unpublished apps'},
+      });
+
+      render(<SentryAppExternalInstallation />, {
+        initialRouterConfig: {
+          route: `/sentry-apps/:sentryAppSlug/external-install/`,
+          location: {
+            pathname: `/sentry-apps/${sentryApp.slug}/external-install/`,
+          },
+        },
+      });
+
+      expect(
+        await screen.findByText('There was an error loading this integration.')
+      ).toBeInTheDocument();
+    });
+  });
 });

@@ -9,6 +9,7 @@ import {addErrorMessage} from 'sentry/actionCreators/indicator';
 import {fetchOrganizations} from 'sentry/actionCreators/organizations';
 import {installSentryApp} from 'sentry/actionCreators/sentryAppInstallations';
 import {FieldGroup} from 'sentry/components/forms/fieldGroup';
+import {LoadingError} from 'sentry/components/loadingError';
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
 import {SentryAppDetailsModal} from 'sentry/components/modals/sentryAppDetailsModal';
 import {NarrowLayout} from 'sentry/components/narrowLayout';
@@ -51,10 +52,15 @@ function SentryAppExternalInstallationContent() {
 
   const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
   const [orgsLoading, setOrgsLoading] = useState<boolean>(true);
+  const [orgsError, setOrgsError] = useState<boolean>(false);
   const [isInstalled, setIsInstalled] = useState<boolean>();
 
   // Load data on mount.
-  const {data: sentryApp, isPending: sentryAppLoading} = useApiQuery<SentryApp>(
+  const {
+    data: sentryApp,
+    isPending: sentryAppLoading,
+    isError: sentryAppError,
+  } = useApiQuery<SentryApp>(
     [
       getApiUrl('/sentry-apps/$sentryAppIdOrSlug/', {
         path: {sentryAppIdOrSlug: params.sentryAppSlug},
@@ -73,7 +79,7 @@ function SentryAppExternalInstallationContent() {
         setOrgsLoading(false);
       } catch (e) {
         setOrgsLoading(false);
-        // Do nothing.
+        setOrgsError(true);
       }
     }
     loadOrgs();
@@ -192,8 +198,26 @@ function SentryAppExternalInstallationContent() {
     return onClose();
   }, [api, organization, sentryApp, onClose, location.query.state]);
 
-  if (sentryAppLoading || orgsLoading || !sentryApp) {
+  if (sentryAppLoading || orgsLoading) {
     return <LoadingIndicator />;
+  }
+
+  if (sentryAppError) {
+    return (
+      <LoadingError message={t('There was an error loading this integration.')} />
+    );
+  }
+
+  if (orgsError) {
+    return (
+      <LoadingError message={t('There was an error loading your organizations.')} />
+    );
+  }
+
+  if (!sentryApp) {
+    return (
+      <LoadingError message={t('This integration could not be found.')} />
+    );
   }
 
   return (
