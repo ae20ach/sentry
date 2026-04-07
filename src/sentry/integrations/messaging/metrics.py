@@ -37,6 +37,7 @@ class MessagingInteractionType(StrEnum):
     VIEW_SUBMISSION = "VIEW_SUBMISSION"
     SEER_AUTOFIX_START = "SEER_AUTOFIX_START"
     APP_MENTION = "APP_MENTION"
+    DM_MESSAGE = "DM_MESSAGE"
 
     # Automatic behaviors
     PROCESS_SHARED_LINK = "PROCESS_SHARED_LINK"
@@ -114,6 +115,16 @@ class MessageInteractionFailureReason(StrEnum):
 
 class AppMentionHaltReason(StrEnum):
     """Reasons why an app mention event may halt without processing."""
+
+    NO_ORGANIZATION = "no_organization"
+    ORGANIZATION_NOT_FOUND = "organization_not_found"
+    ORGANIZATION_NOT_ACTIVE = "organization_not_active"
+    FEATURE_NOT_ENABLED = "feature_not_enabled"
+    MISSING_EVENT_DATA = "missing_event_data"
+
+
+class DmMessageHaltReason(StrEnum):
+    """Reasons why a DM message event may halt without processing."""
 
     NO_ORGANIZATION = "no_organization"
     ORGANIZATION_NOT_FOUND = "organization_not_found"
