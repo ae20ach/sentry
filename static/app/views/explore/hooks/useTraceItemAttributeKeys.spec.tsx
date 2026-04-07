@@ -255,4 +255,101 @@ describe('useTraceItemAttributeKeys', () => {
 
     expect(result.current.attributes).toEqual(expectedAttributes);
   });
+
+  it('keeps previous attributes without re-entering loading when search changes', async () => {
+    const defaultAttributeKeys: Tag[] = [
+      {
+        key: 'default.attribute',
+        name: 'Default Attribute',
+        kind: FieldKind.TAG,
+      },
+    ];
+    const searchedAttributeKeys: Tag[] = [
+      {
+        key: 'searched.attribute',
+        name: 'Searched Attribute',
+        kind: FieldKind.TAG,
+      },
+    ];
+
+    const defaultMock = MockApiClient.addMockResponse({
+      url: `/organizations/${organization.slug}/trace-items/attributes/`,
+      body: defaultAttributeKeys,
+      match: [
+        (_url: string, options: {query?: Record<string, any>}) => {
+          const query = options?.query || {};
+          return (
+            query.itemType === TraceItemDataset.LOGS &&
+            query.attributeType === 'string' &&
+            query.substringMatch === undefined
+          );
+        },
+      ],
+    });
+    const searchedMock = MockApiClient.addMockResponse({
+      url: `/organizations/${organization.slug}/trace-items/attributes/`,
+      body: searchedAttributeKeys,
+      match: [
+        (_url: string, options: {query?: Record<string, any>}) => {
+          const query = options?.query || {};
+          return (
+            query.itemType === TraceItemDataset.LOGS &&
+            query.attributeType === 'string' &&
+            query.substringMatch === 'searched'
+          );
+        },
+      ],
+    });
+
+    const defaultExpectedAttributes = {
+      'default.attribute': {
+        key: 'default.attribute',
+        name: 'Default Attribute',
+        kind: FieldKind.TAG,
+        secondaryAliases: [],
+      },
+    };
+    const searchedExpectedAttributes = {
+      'searched.attribute': {
+        key: 'searched.attribute',
+        name: 'Searched Attribute',
+        kind: FieldKind.TAG,
+        secondaryAliases: [],
+      },
+    };
+
+    const {result, rerender} = renderHookWithProviders(
+      ({search}: {search?: string}) =>
+        useTraceItemAttributeKeys({
+          search,
+          traceItemType: TraceItemDataset.LOGS,
+          type: 'string',
+        }),
+      {
+        initialProps: {search: undefined as string | undefined},
+        organization,
+      }
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.attributes).toEqual(defaultExpectedAttributes);
+    expect(defaultMock).toHaveBeenCalledTimes(1);
+
+    rerender({search: 'searched'});
+    await waitFor(() => expect(result.current.isLoading).toBe(true));
+    expect(result.current.attributes).toEqual(defaultExpectedAttributes);
+
+    await waitFor(() => expect(searchedMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.attributes).toEqual(searchedExpectedAttributes);
+
+    rerender({search: ''});
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.attributes).toEqual(defaultExpectedAttributes);
+
+    await waitFor(() => expect(defaultMock).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(result.current.attributes).toEqual(defaultExpectedAttributes)
+    );
+  });
 });
