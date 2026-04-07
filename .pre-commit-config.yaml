@@ -76,7 +76,11 @@ repos:
         always_run: true
         pass_filenames: false
         language: system
-
+      - id: codeowner-coverage
+        name: codeowner coverage
+        entry: .venv/bin/codeowners-coverage check
+        pass_filenames: false
+        language: system
       # Javascript linting, formatting.
       # We're using the local node_modules to simplify things, otherwise would
       # need an easy way to keep versions in sync. Furthermore some repositories
