@@ -12,6 +12,7 @@ from rest_framework.serializers import ValidationError
 from sentry import options
 from sentry.constants import ObjectStatus
 from sentry.identity.pipeline import IdentityPipeline
+from sentry.identity.vercel.provider import VercelIdentityProvider
 from sentry.integrations.base import (
     FeatureDescription,
     IntegrationData,
@@ -24,7 +25,7 @@ from sentry.integrations.models.integration import Integration
 from sentry.integrations.pipeline import IntegrationPipeline
 from sentry.integrations.services.integration import integration_service
 from sentry.organizations.services.organization.model import RpcOrganization
-from sentry.pipeline.views.base import PipelineView
+from sentry.pipeline.views.base import ApiPipelineSteps, PipelineView
 from sentry.pipeline.views.nested import NestedPipelineView
 from sentry.projects.services.project.model import RpcProject
 from sentry.projects.services.project_key import project_key_service
@@ -435,8 +436,22 @@ class VercelIntegrationProvider(IntegrationProvider):
     def get_pipeline_views(self) -> Sequence[PipelineView[IntegrationPipeline]]:
         return [self._identity_pipeline_view()]
 
+    def get_pipeline_api_steps(self) -> ApiPipelineSteps[IntegrationPipeline]:
+        provider = VercelIdentityProvider(
+            redirect_url=absolute_uri(self.oauth_redirect_url),
+        )
+        return [
+            provider.make_oauth_api_step(bind_key="oauth_data"),
+        ]
+
     def build_integration(self, state: Mapping[str, Any]) -> IntegrationData:
-        data = state["identity"]["data"]
+        # TODO: legacy views write token data to state["identity"]["data"] via
+        # NestedPipelineView. API steps write directly to state["oauth_data"].
+        # Remove the legacy path once the old views are retired.
+        if "oauth_data" in state:
+            data = state["oauth_data"]
+        else:
+            data = state["identity"]["data"]
         access_token = data["access_token"]
         team_id = data.get("team_id")
         client = VercelClient(access_token, team_id)
