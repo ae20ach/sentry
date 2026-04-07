@@ -366,6 +366,9 @@ tests/sentry/api/endpoints/test_organization_attribute_mappings.py          @get
 /static/app/utils/timeSeries/                                             @getsentry/data-browsing
 ## Endof Visibility
 
+## Visibility Migration Tests
+/tests/sentry/migrations/test_1064_discover_to_explore_queries_self_hosted.py @getsentry/data-browsing
+
 
 ## Profiling
 /static/app/components/profiling/                                     @getsentry/profiling
