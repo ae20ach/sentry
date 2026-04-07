@@ -286,6 +286,34 @@ class SlackIntegration(NotifyBasicMixin, IntegrationInstallation, IntegrationNot
                 extra={"channel_id": channel_id, "thread_ts": thread_ts},
             )
 
+    def set_suggested_prompts(
+        self,
+        *,
+        channel_id: str,
+        thread_ts: str,
+        prompts: Sequence[Mapping[str, str]],
+        title: str = "",
+    ) -> None:
+        """
+        Set suggested prompts in a Slack assistant thread.
+
+        Each prompt is a dict with ``title`` (display label) and ``message``
+        (the text sent when clicked).  Slack allows a maximum of 4 prompts.
+        """
+        client = self.get_client()
+        try:
+            client.assistant_threads_setSuggestedPrompts(
+                channel_id=channel_id,
+                thread_ts=thread_ts,
+                title=title,
+                prompts=list(prompts),
+            )
+        except SlackApiError:
+            _logger.warning(
+                "slack.set_suggested_prompts.error",
+                extra={"channel_id": channel_id, "thread_ts": thread_ts},
+            )
+
 
 class SlackIntegrationProvider(IntegrationProvider):
     key = IntegrationProviderSlug.SLACK.value

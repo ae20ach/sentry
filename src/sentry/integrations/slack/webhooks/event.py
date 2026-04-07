@@ -19,6 +19,7 @@ from sentry.api.base import all_silo_endpoint
 from sentry.constants import ObjectStatus
 from sentry.integrations.messaging.metrics import (
     AppMentionHaltReason,
+    AssistantThreadHaltReason,
     DmMessageHaltReason,
     MessagingInteractionEvent,
     MessagingInteractionType,
@@ -545,6 +546,98 @@ class SlackEventEndpoint(SlackDMEndpoint):
             )
             return self.respond()
 
+    def on_assistant_thread_started(self, slack_request: SlackDMRequest) -> Response:
+        """Handle assistant_thread_started events by sending suggested prompts."""
+        with MessagingInteractionEvent(
+            interaction_type=MessagingInteractionType.ASSISTANT_THREAD_STARTED,
+            spec=SlackMessagingSpec(),
+        ).capture() as lifecycle:
+            data = slack_request.data.get("event", {})
+            assistant_thread = data.get("assistant_thread", {})
+            lifecycle.add_extra("integration_id", slack_request.integration.id)
+
+            ois = integration_service.get_organization_integrations(
+                integration_id=slack_request.integration.id,
+                status=ObjectStatus.ACTIVE,
+                limit=1,
+            )
+            if not ois:
+                lifecycle.record_halt(AssistantThreadHaltReason.NO_ORGANIZATION)
+                return self.respond()
+
+            organization_id = ois[0].organization_id
+            lifecycle.add_extra("organization_id", organization_id)
+
+            installation = slack_request.integration.get_installation(
+                organization_id=organization_id
+            )
+            assert isinstance(installation, SlackIntegration)
+            try:
+                organization = installation.organization
+            except NotFound:
+                lifecycle.record_halt(AssistantThreadHaltReason.ORGANIZATION_NOT_FOUND)
+                return self.respond()
+
+            if organization.status != OrganizationStatus.ACTIVE:
+                lifecycle.add_extra("status", organization.status)
+                lifecycle.record_halt(AssistantThreadHaltReason.ORGANIZATION_NOT_ACTIVE)
+                return self.respond()
+
+            if not features.has("organizations:seer-slack-explorer", organization):
+                lifecycle.record_halt(AssistantThreadHaltReason.FEATURE_NOT_ENABLED)
+                return self.respond()
+
+            channel_id = assistant_thread.get("channel_id")
+            thread_ts = assistant_thread.get("thread_ts")
+
+            lifecycle.add_extras(
+                {
+                    "channel_id": channel_id,
+                    "thread_ts": thread_ts,
+                    "context": assistant_thread.get("context"),
+                }
+            )
+
+            if not channel_id or not thread_ts:
+                lifecycle.record_halt(AssistantThreadHaltReason.MISSING_EVENT_DATA)
+                return self.respond()
+
+            try:
+                installation.set_suggested_prompts(
+                    channel_id=channel_id,
+                    thread_ts=thread_ts,
+                    title="Hi there! I'm Seer, Sentry's AI assistant. How can I help?",
+                    prompts=[
+                        {
+                            "title": "Summarize recent issues",
+                            "message": "What are the most important unresolved issues in my projects right now?",
+                        },
+                        {
+                            "title": "Investigate an error",
+                            "message": "Help me investigate what's causing errors in my project.",
+                        },
+                        {
+                            "title": "Explain a stack trace",
+                            "message": "Can you explain the root cause of this stack trace?",
+                        },
+                        {
+                            "title": "Find similar issues",
+                            "message": "Are there any similar issues that might be related to each other?",
+                        },
+                    ],
+                )
+            except Exception:
+                _logger.exception(
+                    "slack.assistant_thread_started.set_suggested_prompts_failed",
+                    extra={
+                        "integration_id": slack_request.integration.id,
+                        "channel_id": channel_id,
+                        "thread_ts": thread_ts,
+                    },
+                )
+
+            return self.respond()
+
     # TODO(dcramer): implement app_uninstalled and tokens_revoked
     def post(self, request: Request) -> Response:
         try:
@@ -564,6 +657,9 @@ class SlackEventEndpoint(SlackDMEndpoint):
 
         if slack_request.type == "app_mention":
             return self.on_app_mention(slack_request)
+
+        if slack_request.type == "assistant_thread_started":
+            return self.on_assistant_thread_started(slack_request)
 
         if slack_request.type == "message":
             if slack_request.is_bot():
