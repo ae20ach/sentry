@@ -8,7 +8,12 @@ const TRACE_DATA_RETENTION_DAYS = 30;
  *
  * Handles timestamps in seconds, milliseconds, or ISO string format.
  */
-export function isPartialSpanOrTraceData(timestamp: string | number): boolean {
+export function isPartialSpanOrTraceData(
+  timestamp: string | number | undefined
+): boolean {
+  if (timestamp === undefined) {
+    return false;
+  }
   const now = moment();
   // Numbers < 1e12 are likely seconds (epoch), not milliseconds.
   // e.g. 1712002518 is seconds, 1712002518000 is milliseconds.

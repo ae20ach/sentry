@@ -478,6 +478,7 @@ const StyledMenuItem = styled(MenuItem)<{width: 'small' | 'large'}>`
 type DropdownItemProps = {
   children: React.ReactNode;
   allowDefaultEvent?: boolean;
+  disabled?: boolean;
   onSelect?: (eventKey: any) => void;
   to?: LocationDescriptor;
   width?: 'small' | 'large';
@@ -487,6 +488,7 @@ function DropdownItem({
   children,
   onSelect,
   allowDefaultEvent,
+  disabled,
   to,
   width = 'large',
 }: DropdownItemProps) {
@@ -496,6 +498,7 @@ function DropdownItem({
       to={to}
       onSelect={onSelect}
       width={width}
+      disabled={disabled}
       allowDefaultEvent={allowDefaultEvent}
     >
       <Flex justify="between" width="100%">
