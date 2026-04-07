@@ -66,7 +66,7 @@ export function useTraceItemAttributeKeys({
   return {
     attributes: data,
     error,
-    isLoading: isPending || (isFetching && normalizedSearch !== undefined),
+    isLoading: isFetching && (isPending || normalizedSearch !== undefined),
   };
 }
 

@@ -352,4 +352,19 @@ describe('useTraceItemAttributeKeys', () => {
       expect(result.current.attributes).toEqual(defaultExpectedAttributes)
     );
   });
+
+  it('does not stay loading when the query is disabled', () => {
+    const {result} = renderHookWithProviders(
+      () =>
+        useTraceItemAttributeKeys({
+          enabled: false,
+          traceItemType: TraceItemDataset.LOGS,
+          type: 'string',
+        }),
+      {organization}
+    );
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.attributes).toBeUndefined();
+  });
 });
