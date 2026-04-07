@@ -3,8 +3,7 @@ import {useMemo} from 'react';
 import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
 import type {TagCollection} from 'sentry/types/group';
 import {defined} from 'sentry/utils';
-import {useQuery} from 'sentry/utils/queryClient';
-import {usePrevious} from 'sentry/utils/usePrevious';
+import {keepPreviousData, useQuery} from 'sentry/utils/queryClient';
 import {
   makeTraceItemAttributeKeysQueryOptions,
   useGetTraceItemAttributeKeys,
@@ -28,6 +27,7 @@ export function useTraceItemAttributeKeys({
   search,
 }: UseTraceItemAttributeKeysProps) {
   const {selection} = usePageFilters();
+  const normalizedSearch = search || undefined;
 
   const projectIds =
     explicitProjectIds ??
@@ -56,18 +56,17 @@ export function useTraceItemAttributeKeys({
   });
 
   // eslint-disable-next-line @tanstack/query/exhaustive-deps
-  const {data, isFetching, error} = useQuery({
+  const {data, isFetching, isPending, error} = useQuery({
     enabled,
-    queryKey: [...queryKey, search],
-    queryFn: () => getTraceItemAttributeKeys(search),
+    placeholderData: keepPreviousData,
+    queryKey: [...queryKey, normalizedSearch],
+    queryFn: () => getTraceItemAttributeKeys(normalizedSearch),
   });
 
-  const previous = usePrevious(data, isFetching);
-
   return {
-    attributes: isFetching ? previous : data,
+    attributes: data,
     error,
-    isLoading: isFetching,
+    isLoading: isPending || (isFetching && normalizedSearch !== undefined),
   };
 }
 
