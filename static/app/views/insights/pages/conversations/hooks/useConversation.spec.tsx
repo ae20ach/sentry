@@ -229,12 +229,14 @@ describe('useConversation', () => {
     });
 
     // Verify the API was called with correct timestamps (with 1-hour padding)
+    // and ALL_ACCESS_PROJECTS (-1) so it searches across all projects
     expect(mockRequest).toHaveBeenCalledWith(
       expect.stringContaining('/ai-conversations/conv-timestamps/'),
       expect.objectContaining({
         query: expect.objectContaining({
           start: new Date(startTimestamp - 60 * 60 * 1000).toISOString(),
           end: new Date(endTimestamp + 60 * 60 * 1000).toISOString(),
+          project: [-1],
         }),
       })
     );
