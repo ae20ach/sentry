@@ -515,7 +515,6 @@ interface TierGroup {
   dataCategoryId: string;
   disabled: boolean;
   groupKey: string;
-  isFirstForCategory: boolean;
   tierNumber: number;
   categoryCode?: string;
   tallyType?: string;
@@ -592,7 +591,6 @@ function MergedPriceTiersTable({
 
     const isVolumeConstant = (v: number) => v === -1 || v === -2;
 
-    let isFirstForCategory = true;
     const result: TierGroup[] = [];
     for (const [tierNumber, bands] of Array.from(byTier.entries()).sort(
       ([a], [b]) => a - b
@@ -613,9 +611,7 @@ function MergedPriceTiersTable({
           dataCategoryId,
           categoryLabel,
           disabled,
-          isFirstForCategory,
         });
-        isFirstForCategory = false;
       }
       if (scalarBands.length > 0) {
         result.push({
@@ -630,9 +626,7 @@ function MergedPriceTiersTable({
           dataCategoryId,
           categoryLabel,
           disabled,
-          isFirstForCategory,
         });
-        isFirstForCategory = false;
       }
     }
     return result;
