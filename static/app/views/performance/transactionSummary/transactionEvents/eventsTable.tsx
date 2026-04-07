@@ -10,6 +10,7 @@ import {LinkButton} from '@sentry/scraps/button';
 import {Link} from '@sentry/scraps/link';
 import {Tooltip} from '@sentry/scraps/tooltip';
 
+import {DisabledTraceLink} from 'sentry/components/explore/disabledTraceLink';
 import {Pagination} from 'sentry/components/pagination';
 import {QuestionTooltip} from 'sentry/components/questionTooltip';
 import {GridEditable} from 'sentry/components/tables/gridEditable';
@@ -269,9 +270,7 @@ export function EventsTable({
             {target ? (
               <Link to={target}>{rendered}</Link>
             ) : isOld ? (
-              <Tooltip showUnderline title={t('Trace is older than 30 days')}>
-                {rendered}
-              </Tooltip>
+              <DisabledTraceLink type="trace">{rendered}</DisabledTraceLink>
             ) : (
               rendered
             )}

@@ -6,6 +6,7 @@ import {LinkButton} from '@sentry/scraps/button';
 import {Link} from '@sentry/scraps/link';
 import {Tooltip} from '@sentry/scraps/tooltip';
 
+import {DisabledTraceLink} from 'sentry/components/explore/disabledTraceLink';
 import type {CursorHandler} from 'sentry/components/pagination';
 import {Pagination} from 'sentry/components/pagination';
 import type {
@@ -78,9 +79,9 @@ export function EventSamplesTable({
     if (column.key === eventIdKey) {
       if (row.timestamp && isPartialSpanOrTraceData(row.timestamp)) {
         return (
-          <Tooltip showUnderline title={t('Trace is older than 30 days')}>
-            <span>{row[eventIdKey].slice(0, 8)}</span>
-          </Tooltip>
+          <DisabledTraceLink type="trace">
+            {row[eventIdKey].slice(0, 8)}
+          </DisabledTraceLink>
         );
       }
       return (

@@ -4,6 +4,7 @@ import {Tooltip} from '@sentry/scraps/tooltip';
 
 import {getContextKeys} from 'sentry/components/events/contexts/utils';
 import {getEventTimestampInSeconds} from 'sentry/components/events/interfaces/utils';
+import {DisabledTraceLink} from 'sentry/components/explore/disabledTraceLink';
 import {generateTraceTarget} from 'sentry/components/quickTrace/utils';
 import {t} from 'sentry/locale';
 import type {Event} from 'sentry/types/event';
@@ -77,11 +78,7 @@ export function getTraceContextData({
               return {
                 key: ctxKey,
                 subject: t('Trace ID'),
-                value: (
-                  <Tooltip showUnderline title={t('Trace is older than 30 days')}>
-                    {traceId}
-                  </Tooltip>
-                ),
+                value: <DisabledTraceLink type="trace">{traceId}</DisabledTraceLink>,
               };
             }
 

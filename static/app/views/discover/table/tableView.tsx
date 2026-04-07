@@ -6,10 +6,10 @@ import * as Sentry from '@sentry/react';
 import type {Location, LocationDescriptorObject} from 'history';
 
 import {Link} from '@sentry/scraps/link';
-import {Text} from '@sentry/scraps/text';
 import {Tooltip} from '@sentry/scraps/tooltip';
 
 import {openModal} from 'sentry/actionCreators/modal';
+import {DisabledTraceLink} from 'sentry/components/explore/disabledTraceLink';
 import {COL_WIDTH_MINIMUM, GridEditable} from 'sentry/components/tables/gridEditable';
 import {SortLink} from 'sentry/components/tables/gridEditable/sortLink';
 import {useQueryBasedColumnResize} from 'sentry/components/tables/gridEditable/useQueryBasedColumnResize';
@@ -204,13 +204,9 @@ export function TableView(props: TableViewProps) {
 
         if (dataRow.timestamp && isPartialSpanOrTraceData(dataRow.timestamp)) {
           return [
-            <Tooltip
-              key={`disabled-trace-${rowIndex}`}
-              showUnderline
-              title={t('Trace is older than 30 days')}
-            >
-              <Text variant="muted">{value}</Text>
-            </Tooltip>,
+            <DisabledTraceLink key={`disabled-trace-${rowIndex}`} type="trace">
+              {value}
+            </DisabledTraceLink>,
           ];
         }
 
@@ -400,11 +396,7 @@ export function TableView(props: TableViewProps) {
       const dateSelection = eventView.normalizeDateSelection(location);
       if (dataRow.trace) {
         if (timestamp && isPartialSpanOrTraceData(timestamp)) {
-          cell = (
-            <Tooltip showUnderline title={t('Trace is older than 30 days')}>
-              <Text variant="muted">{cell}</Text>
-            </Tooltip>
-          );
+          cell = <DisabledTraceLink type="trace">{cell}</DisabledTraceLink>;
         } else {
           const target = getTraceDetailsUrl({
             organization,

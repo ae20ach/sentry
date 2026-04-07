@@ -10,6 +10,7 @@ import {ExternalLink, Link} from '@sentry/scraps/link';
 import {OverlayTrigger} from '@sentry/scraps/overlayTrigger';
 import {Tooltip} from '@sentry/scraps/tooltip';
 
+import {DisabledTraceLink} from 'sentry/components/explore/disabledTraceLink';
 import {Pagination} from 'sentry/components/pagination';
 import {TransactionSearchQueryBuilder} from 'sentry/components/performance/transactionSearchQueryBuilder';
 import type {
@@ -495,9 +496,9 @@ export function PageSamplePerformanceTable({transaction, search, limit = 9}: Pro
       if (key === 'id' && 'id' in row) {
         if (isOld) {
           return (
-            <Tooltip showUnderline title={t('Trace is older than 30 days')}>
-              <NoOverflow>{getShortEventId(row.trace)}</NoOverflow>
-            </Tooltip>
+            <DisabledTraceLink type="trace">
+              {getShortEventId(row.trace)}
+            </DisabledTraceLink>
           );
         }
         return (

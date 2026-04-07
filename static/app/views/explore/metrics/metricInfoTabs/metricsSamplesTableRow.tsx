@@ -7,6 +7,7 @@ import {Link} from '@sentry/scraps/link';
 import {Tooltip} from '@sentry/scraps/tooltip';
 
 import {Count} from 'sentry/components/count';
+import {DisabledTraceLink} from 'sentry/components/explore/disabledTraceLink';
 import ProjectBadge from 'sentry/components/idBadge/projectBadge';
 import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
 import {IconChevron} from 'sentry/icons';
@@ -153,9 +154,7 @@ export function SampleTableRow({
     if (timestamp && isPartialSpanOrTraceData(timestamp)) {
       return (
         <WrappingText>
-          <Tooltip showUnderline title={t('Trace is older than 30 days')}>
-            <span style={{minWidth: '66px'}}>{getShortEventId(traceId)}</span>
-          </Tooltip>
+          <DisabledTraceLink type="trace">{getShortEventId(traceId)}</DisabledTraceLink>
         </WrappingText>
       );
     }

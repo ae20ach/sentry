@@ -5,6 +5,7 @@ import styled from '@emotion/styled';
 import {Link} from '@sentry/scraps/link';
 import {Tooltip} from '@sentry/scraps/tooltip';
 
+import {DisabledTraceLink} from 'sentry/components/explore/disabledTraceLink';
 import {DrawerHeader} from 'sentry/components/globalDrawer/components';
 import type {
   GridColumnHeader,
@@ -298,9 +299,7 @@ export function PageOverviewWebVitalsDetailPanel({
         });
       if (isOld) {
         return (
-          <Tooltip showUnderline title={t('Trace is older than 30 days')}>
-            <NoOverflow>{getShortEventId(row.trace)}</NoOverflow>
-          </Tooltip>
+          <DisabledTraceLink type="trace">{getShortEventId(row.trace)}</DisabledTraceLink>
         );
       }
       return (

@@ -2,12 +2,12 @@ import styled from '@emotion/styled';
 import * as Sentry from '@sentry/react';
 
 import {Link} from '@sentry/scraps/link';
-import {Text} from '@sentry/scraps/text';
 import {Tooltip} from '@sentry/scraps/tooltip';
 
 import {doEventsRequest} from 'sentry/actionCreators/events';
 import type {ResponseMeta} from 'sentry/api';
 import {isMultiSeriesStats} from 'sentry/components/charts/utils';
+import {DisabledTraceLink} from 'sentry/components/explore/disabledTraceLink';
 import {t} from 'sentry/locale';
 import type {SelectValue} from 'sentry/types/core';
 import type {TagCollection} from 'sentry/types/group';
@@ -362,11 +362,9 @@ export function renderTraceAsLinkable(widget?: Widget) {
 
     if (traceTimestamp && isPartialSpanOrTraceData(traceTimestamp)) {
       return (
-        <Tooltip showUnderline title={t('Trace is older than 30 days')}>
-          <Container>
-            <Text variant="muted">{getShortEventId(id)}</Text>
-          </Container>
-        </Tooltip>
+        <Container>
+          <DisabledTraceLink type="trace">{getShortEventId(id)}</DisabledTraceLink>
+        </Container>
       );
     }
 

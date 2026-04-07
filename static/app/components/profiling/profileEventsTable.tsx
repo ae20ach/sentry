@@ -2,10 +2,10 @@ import {useCallback} from 'react';
 import type {Location} from 'history';
 
 import {Link} from '@sentry/scraps/link';
-import {Tooltip} from '@sentry/scraps/tooltip';
 
 import {Count} from 'sentry/components/count';
 import {DateTime} from 'sentry/components/dateTime';
+import {DisabledTraceLink} from 'sentry/components/explore/disabledTraceLink';
 import ProjectBadge from 'sentry/components/idBadge/projectBadge';
 import {PerformanceDuration} from 'sentry/components/performanceDuration';
 import type {
@@ -179,9 +179,7 @@ function ProfileEventsCell<F extends FieldType>(props: ProfileEventsCellProps<F>
 
     if (isPartialSpanOrTraceData(timestamp)) {
       return (
-        <Tooltip showUnderline title={t('Trace is older than 30 days')}>
-          <Container>{getShortEventId(traceId)}</Container>
-        </Tooltip>
+        <DisabledTraceLink type="trace">{getShortEventId(traceId)}</DisabledTraceLink>
       );
     }
 

@@ -7,6 +7,7 @@ import {Button} from '@sentry/scraps/button';
 import {Link} from '@sentry/scraps/link';
 
 import {DateTime} from 'sentry/components/dateTime';
+import {DisabledTraceLink} from 'sentry/components/explore/disabledTraceLink';
 import ProjectBadge from 'sentry/components/idBadge/projectBadge';
 import {Version} from 'sentry/components/version';
 import {t} from 'sentry/locale';
@@ -287,6 +288,8 @@ function TransactionEventDetails({
         value:
           transactionTarget && !isPartialSpanOrTraceData(transaction.endTimestamp) ? (
             <Link to={transactionTarget}>{transaction.title}</Link>
+          ) : isPartialSpanOrTraceData(transaction.endTimestamp) ? (
+            <DisabledTraceLink type="trace">{transaction.title}</DisabledTraceLink>
           ) : (
             transaction.title
           ),
