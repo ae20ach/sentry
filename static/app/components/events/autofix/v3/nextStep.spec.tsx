@@ -91,6 +91,7 @@ function makeSection(
 ): AutofixSection {
   return {
     step,
+    blockIndex: 0,
     artifacts: artifacts ?? defaultArtifacts(step),
     messages: [],
     status: 'completed',

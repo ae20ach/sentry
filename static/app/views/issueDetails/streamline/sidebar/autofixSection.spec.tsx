@@ -301,6 +301,7 @@ describe('AutofixSection', () => {
                   },
                 },
               ],
+              pr_commit_shas: {'org/repo': 'abc123'},
             },
           ],
           repo_pr_states: {
