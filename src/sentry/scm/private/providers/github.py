@@ -1077,15 +1077,6 @@ def map_git_commit_object(raw: dict[str, Any]) -> GitCommitObject:
     )
 
 
-def map_review_comment(raw: dict[str, Any]) -> ReviewComment:
-    return ReviewComment(
-        id=str(raw["id"]),
-        html_url=raw["html_url"],
-        path=raw["path"],
-        body=raw["body"],
-    )
-
-
 def map_review(raw: dict[str, Any]) -> Review:
     return Review(
         id=str(raw["id"]),
@@ -1184,7 +1175,9 @@ def deserialize_pull_request_review_comment(content: bytes) -> ReviewComment:
     comment = msgspec.json.decode(content, type=GitHubPullRequestReviewComment)
     return {
         "author_association": comment.author_association,
-        "author": {"id": str(comment.user.id), "username": comment.user.login},
+        "author": Author(id=str(comment.user.id), username=comment.user.login)
+        if comment.user
+        else None,
         "body": comment.body,
         "commit_sha": comment.original_commit_id,
         "created_at": comment.created_at.isoformat(),
