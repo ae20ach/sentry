@@ -185,7 +185,23 @@ export function getBucket({
       return buckets[slot]!;
     }
   }
-  throw new Error('Invalid data category for plan');
+
+  // Report to Sentry but don't crash the page
+  Sentry.withScope(scope => {
+    scope.setExtras({
+      buckets,
+      events,
+      price,
+      shouldMinimize,
+    });
+    Sentry.captureException(new Error('Invalid data category for plan'));
+  });
+
+  // Return a fallback bucket with zero price to prevent crashes
+  return {
+    price: 0,
+    quantity: events ?? 0,
+  };
 }
 
 type ReservedTotalProps = {
