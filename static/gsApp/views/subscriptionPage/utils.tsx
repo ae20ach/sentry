@@ -34,7 +34,8 @@ export function calculateCategorySpend(
   const priceBucket = getBucket({events: categoryInfo.reserved, buckets: slots});
   if (!priceBucket) {
     return {
-      reservedUse: 0,
+      prepaidSpent: 0,
+      onDemandSpent: 0,
       unitPrice: 0,
       onDemandUnitPrice: 0,
       prepaidPrice: 0,
