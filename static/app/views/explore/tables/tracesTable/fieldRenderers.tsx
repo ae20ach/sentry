@@ -21,6 +21,7 @@ import {generateLinkToEventInTraceView} from 'sentry/utils/discover/urls';
 import {getShortEventId} from 'sentry/utils/events';
 import {Projects} from 'sentry/utils/projects';
 import {MutableSearch} from 'sentry/utils/tokenizeSearch';
+import {isPartialSpanOrTraceData} from 'sentry/utils/trace/isOlderThan30Days';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {useProjects} from 'sentry/utils/useProjects';
@@ -32,12 +33,7 @@ import {TraceViewSources} from 'sentry/views/performance/newTraceDetails/traceHe
 import {getTraceDetailsUrl} from 'sentry/views/performance/traceDetails/utils';
 
 import type {Field} from './data';
-import {
-  getShortenedSdkName,
-  getSimilarEventsUrl,
-  getStylingSliceName,
-  isPartialSpanOrTraceData,
-} from './utils';
+import {getShortenedSdkName, getSimilarEventsUrl, getStylingSliceName} from './utils';
 
 export const ProjectBadgeWrapper = styled('span')`
   /**

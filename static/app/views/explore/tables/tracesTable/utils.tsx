@@ -33,8 +33,6 @@ export function getShortenedSdkName(sdkName: string | null) {
   return sdkNameParts[sdkNameParts.length - 1];
 }
 
-export {isPartialSpanOrTraceData} from 'sentry/utils/trace/isOlderThan30Days';
-
 interface GetSimilarEventsUrlArgs {
   organization: Organization;
   projectIds: number[];
