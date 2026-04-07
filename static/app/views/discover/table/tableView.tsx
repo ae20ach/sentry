@@ -6,6 +6,7 @@ import * as Sentry from '@sentry/react';
 import type {Location, LocationDescriptorObject} from 'history';
 
 import {Link} from '@sentry/scraps/link';
+import {Text} from '@sentry/scraps/text';
 import {Tooltip} from '@sentry/scraps/tooltip';
 
 import {openModal} from 'sentry/actionCreators/modal';
@@ -46,6 +47,7 @@ import {getShortEventId} from 'sentry/utils/events';
 import {generateProfileFlamechartRoute} from 'sentry/utils/profiling/routes';
 import {decodeList} from 'sentry/utils/queryString';
 import {MutableSearch} from 'sentry/utils/tokenizeSearch';
+import {isPartialSpanOrTraceData} from 'sentry/utils/trace/isOlderThan30Days';
 import {normalizeUrl} from 'sentry/utils/url/normalizeUrl';
 import {useNavigate} from 'sentry/utils/useNavigate';
 import {useProjects} from 'sentry/utils/useProjects';
@@ -198,6 +200,18 @@ export function TableView(props: TableViewProps) {
           throw new Error(
             'Transaction event should always have a trace associated with it.'
           );
+        }
+
+        if (dataRow.timestamp && isPartialSpanOrTraceData(dataRow.timestamp)) {
+          return [
+            <Tooltip
+              key={`disabled-trace-${rowIndex}`}
+              showUnderline
+              title={t('Trace is older than 30 days')}
+            >
+              <Text variant="muted">{value}</Text>
+            </Tooltip>,
+          ];
         }
 
         target = generateLinkToEventInTraceView({
@@ -385,22 +399,30 @@ export function TableView(props: TableViewProps) {
       );
       const dateSelection = eventView.normalizeDateSelection(location);
       if (dataRow.trace) {
-        const target = getTraceDetailsUrl({
-          organization,
-          traceSlug: String(dataRow.trace),
-          dateSelection,
-          timestamp,
-          location,
-          source: TraceViewSources.DISCOVER,
-        });
+        if (timestamp && isPartialSpanOrTraceData(timestamp)) {
+          cell = (
+            <Tooltip showUnderline title={t('Trace is older than 30 days')}>
+              <Text variant="muted">{cell}</Text>
+            </Tooltip>
+          );
+        } else {
+          const target = getTraceDetailsUrl({
+            organization,
+            traceSlug: String(dataRow.trace),
+            dateSelection,
+            timestamp,
+            location,
+            source: TraceViewSources.DISCOVER,
+          });
 
-        cell = (
-          <Tooltip title={t('View Trace')}>
-            <StyledLink data-test-id="view-trace" to={target}>
-              {cell}
-            </StyledLink>
-          </Tooltip>
-        );
+          cell = (
+            <Tooltip title={t('View Trace')}>
+              <StyledLink data-test-id="view-trace" to={target}>
+                {cell}
+              </StyledLink>
+            </Tooltip>
+          );
+        }
       }
     } else if (columnKey === 'replayId') {
       if (dataRow.replayId) {

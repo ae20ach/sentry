@@ -1,7 +1,10 @@
 import pickBy from 'lodash/pickBy';
 
 import {Link} from '@sentry/scraps/link';
+import {Text} from '@sentry/scraps/text';
+import {Tooltip} from '@sentry/scraps/tooltip';
 
+import {t} from 'sentry/locale';
 import type {TagCollection} from 'sentry/types/group';
 import type {
   EventsStats,
@@ -30,6 +33,7 @@ import {
   NO_ARGUMENT_SPAN_AGGREGATES,
 } from 'sentry/utils/fields';
 import {MutableSearch} from 'sentry/utils/tokenizeSearch';
+import {isPartialSpanOrTraceData} from 'sentry/utils/trace/isOlderThan30Days';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {
   handleOrderByReset,
@@ -426,6 +430,16 @@ function renderEventInTraceView(
 
   if (!data.trace) {
     return <Container>{getShortEventId(spanId)}</Container>;
+  }
+
+  if (data.timestamp && isPartialSpanOrTraceData(data.timestamp)) {
+    return (
+      <Tooltip showUnderline title={t('Span is older than 30 days')}>
+        <Container>
+          <Text variant="muted">{getShortEventId(spanId)}</Text>
+        </Container>
+      </Tooltip>
+    );
   }
 
   const target = generateLinkToEventInTraceView({

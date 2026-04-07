@@ -2,6 +2,7 @@ import styled from '@emotion/styled';
 import * as Sentry from '@sentry/react';
 
 import {Link} from '@sentry/scraps/link';
+import {Text} from '@sentry/scraps/text';
 import {Tooltip} from '@sentry/scraps/tooltip';
 
 import {doEventsRequest} from 'sentry/actionCreators/events';
@@ -44,6 +45,7 @@ import {
 import {getShortEventId} from 'sentry/utils/events';
 import {FieldKey} from 'sentry/utils/fields';
 import {getMeasurements} from 'sentry/utils/measurements/measurements';
+import {isPartialSpanOrTraceData} from 'sentry/utils/trace/isOlderThan30Days';
 import type {DatasetConfig} from 'sentry/views/dashboards/datasetConfig/base';
 import {handleOrderByReset} from 'sentry/views/dashboards/datasetConfig/base';
 import type {DashboardFilters, Widget, WidgetQuery} from 'sentry/views/dashboards/types';
@@ -354,12 +356,26 @@ export function renderTraceAsLinkable(widget?: Widget) {
     if (!eventView || typeof id !== 'string') {
       return <Container>{emptyStringValue}</Container>;
     }
+    const traceTimestamp = getTimeStampFromTableDateField(
+      data['max(timestamp)'] ?? data.timestamp
+    );
+
+    if (traceTimestamp && isPartialSpanOrTraceData(traceTimestamp)) {
+      return (
+        <Tooltip showUnderline title={t('Trace is older than 30 days')}>
+          <Container>
+            <Text variant="muted">{getShortEventId(id)}</Text>
+          </Container>
+        </Tooltip>
+      );
+    }
+
     const dateSelection = eventView.normalizeDateSelection(location);
     const target = getTraceDetailsUrl({
       organization,
       traceSlug: String(data.trace),
       dateSelection,
-      timestamp: getTimeStampFromTableDateField(data['max(timestamp)'] ?? data.timestamp),
+      timestamp: traceTimestamp,
       location: widget
         ? {
             ...location,

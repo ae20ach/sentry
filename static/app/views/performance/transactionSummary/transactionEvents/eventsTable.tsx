@@ -37,6 +37,7 @@ import {ViewReplayLink} from 'sentry/utils/discover/viewReplayLink';
 import {isEmptyObject} from 'sentry/utils/object/isEmptyObject';
 import {parseLinkHeader} from 'sentry/utils/parseLinkHeader';
 import {VisuallyCompleteWithData} from 'sentry/utils/performanceForSentry';
+import {isPartialSpanOrTraceData} from 'sentry/utils/trace/isOlderThan30Days';
 import {useApi} from 'sentry/utils/useApi';
 import {useNavigate} from 'sentry/utils/useNavigate';
 import {Actions, CellAction, updateQuery} from 'sentry/views/discover/table/cellAction';
@@ -231,8 +232,12 @@ export function EventsTable({
 
       if (field === 'id' || field === 'trace') {
         const isIssue = !!issueId;
+        const isOld = dataRow.timestamp && isPartialSpanOrTraceData(dataRow.timestamp);
         let target: LocationDescriptor | null = null;
-        if (isIssue && !isRegressionIssue && field === 'id') {
+        if (isOld) {
+          // Trace data older than 30 days is no longer available
+          target = null;
+        } else if (isIssue && !isRegressionIssue && field === 'id') {
           target = {
             pathname: `/organizations/${organization.slug}/issues/${issueId}/events/${dataRow.id}/`,
           };
@@ -261,7 +266,15 @@ export function EventsTable({
             handleCellAction={cellActionHandler}
             allowActions={allowActions}
           >
-            {target ? <Link to={target}>{rendered}</Link> : rendered}
+            {target ? (
+              <Link to={target}>{rendered}</Link>
+            ) : isOld ? (
+              <Tooltip showUnderline title={t('Trace is older than 30 days')}>
+                {rendered}
+              </Tooltip>
+            ) : (
+              rendered
+            )}
           </CellAction>
         );
       }

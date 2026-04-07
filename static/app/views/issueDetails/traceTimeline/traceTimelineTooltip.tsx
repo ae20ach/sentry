@@ -2,13 +2,16 @@ import styled from '@emotion/styled';
 import type {Location} from 'history';
 
 import {Link} from '@sentry/scraps/link';
+import {Text} from '@sentry/scraps/text';
 
 import {useAnalyticsArea} from 'sentry/components/analyticsArea';
+import {getEventTimestampInSeconds} from 'sentry/components/events/interfaces/utils';
 import ProjectBadge from 'sentry/components/idBadge/projectBadge';
 import {generateTraceTarget} from 'sentry/components/quickTrace/utils';
 import {t, tn} from 'sentry/locale';
 import type {Event} from 'sentry/types/event';
 import {trackAnalytics} from 'sentry/utils/analytics';
+import {isPartialSpanOrTraceData} from 'sentry/utils/trace/isOlderThan30Days';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {useProjects} from 'sentry/utils/useProjects';
@@ -21,9 +24,7 @@ interface TraceTimelineTooltipProps {
 }
 
 export function TraceTimelineTooltip({event, timelineEvents}: TraceTimelineTooltipProps) {
-  const organization = useOrganization();
   const location = useLocation();
-  const area = useAnalyticsArea();
 
   // TODO: should handling of current event + other events look different
   if (timelineEvents.length === 1 && timelineEvents[0]!.id === event.id) {
@@ -53,32 +54,7 @@ export function TraceTimelineTooltip({event, timelineEvents}: TraceTimelineToolt
       </EventItemsWrapper>
       {filteredTimelineEvents.length > 3 && (
         <TraceItem>
-          <Link
-            to={generateTraceTarget(event, organization, location)}
-            onClick={() => {
-              if (area.startsWith('issue_details')) {
-                // Track this event for backwards compatibility. TODO: remove after issues team dashboards/queries are migrated
-                trackAnalytics(
-                  'issue_details.issue_tab.trace_timeline_more_events_clicked',
-                  {
-                    organization,
-                    num_hidden: filteredTimelineEvents.length - 3,
-                  }
-                );
-              }
-              trackAnalytics('trace_timeline_more_events_clicked', {
-                organization,
-                num_hidden: filteredTimelineEvents.length - 3,
-                area,
-              });
-            }}
-          >
-            {tn(
-              'View %s more event',
-              'View %s more events',
-              filteredTimelineEvents.length - 3
-            )}
-          </Link>
+          <MoreEventsLink event={event} filteredTimelineEvents={filteredTimelineEvents} />
         </TraceItem>
       )}
     </UnstyledUnorderedList>
@@ -140,6 +116,48 @@ function EventItem({timelineEvent, location}: EventItemProps) {
         </EventDescription>
       </EventTitleWrapper>
     </EventItemRoot>
+  );
+}
+
+function MoreEventsLink({
+  event,
+  filteredTimelineEvents,
+}: {
+  event: Event;
+  filteredTimelineEvents: TimelineEvent[];
+}) {
+  const organization = useOrganization();
+  const location = useLocation();
+  const area = useAnalyticsArea();
+  const eventTimestamp = getEventTimestampInSeconds(event);
+
+  if (eventTimestamp && isPartialSpanOrTraceData(eventTimestamp)) {
+    return (
+      <Text variant="muted">
+        {tn('%s more event', '%s more events', filteredTimelineEvents.length - 3)}
+      </Text>
+    );
+  }
+
+  return (
+    <Link
+      to={generateTraceTarget(event, organization, location)}
+      onClick={() => {
+        if (area.startsWith('issue_details')) {
+          trackAnalytics('issue_details.issue_tab.trace_timeline_more_events_clicked', {
+            organization,
+            num_hidden: filteredTimelineEvents.length - 3,
+          });
+        }
+        trackAnalytics('trace_timeline_more_events_clicked', {
+          organization,
+          num_hidden: filteredTimelineEvents.length - 3,
+          area,
+        });
+      }}
+    >
+      {tn('View %s more event', 'View %s more events', filteredTimelineEvents.length - 3)}
+    </Link>
   );
 }
 

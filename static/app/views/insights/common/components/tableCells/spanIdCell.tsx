@@ -2,8 +2,10 @@ import type {Location} from 'history';
 
 import {Link} from '@sentry/scraps/link';
 
+import {DisabledTraceLink} from 'sentry/components/links/disabledTraceLink';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {generateLinkToEventInTraceView} from 'sentry/utils/discover/urls';
+import {isPartialSpanOrTraceData} from 'sentry/utils/trace/isOlderThan30Days';
 import {normalizeUrl} from 'sentry/utils/url/normalizeUrl';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {SPAN_ID_DISPLAY_LENGTH} from 'sentry/views/insights/http/settings';
@@ -34,6 +36,15 @@ export function SpanIdCell({
 }: Props) {
   const organization = useOrganization();
   const domainViewFilters = useDomainViewFilters();
+
+  if (isPartialSpanOrTraceData(timestamp)) {
+    return (
+      <DisabledTraceLink type="span">
+        {spanId.slice(0, SPAN_ID_DISPLAY_LENGTH)}
+      </DisabledTraceLink>
+    );
+  }
+
   const url = normalizeUrl(
     generateLinkToEventInTraceView({
       eventId: transactionId,

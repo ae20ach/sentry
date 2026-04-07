@@ -9,6 +9,7 @@ import {Link} from '@sentry/scraps/link';
 import {Text} from '@sentry/scraps/text';
 import {Tooltip} from '@sentry/scraps/tooltip';
 
+import {DisabledTraceLink} from 'sentry/components/links/disabledTraceLink';
 import {normalizeDateTimeParams} from 'sentry/components/pageFilters/parse';
 import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
 import {Pagination} from 'sentry/components/pagination';
@@ -23,6 +24,7 @@ import {useStateBasedColumnResize} from 'sentry/components/tables/gridEditable/u
 import {TimeSince} from 'sentry/components/timeSince';
 import {IconArrow} from 'sentry/icons';
 import {t} from 'sentry/locale';
+import {isPartialSpanOrTraceData} from 'sentry/utils/trace/isOlderThan30Days';
 import {isOverflown} from 'sentry/utils/useHoverOverlay';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useOrganization} from 'sentry/utils/useOrganization';
@@ -351,6 +353,13 @@ const BodyCell = memo(function BodyCell({
   switch (column.key) {
     case 'traceId':
       if (linkToTraceView || !openTraceViewDrawer) {
+        if (isPartialSpanOrTraceData(dataRow.timestamp)) {
+          return (
+            <DisabledTraceLink type="trace">
+              {dataRow.traceId.slice(0, 8)}
+            </DisabledTraceLink>
+          );
+        }
         const traceUrl = getTraceDetailsUrl({
           organization,
           traceSlug: dataRow.traceId,

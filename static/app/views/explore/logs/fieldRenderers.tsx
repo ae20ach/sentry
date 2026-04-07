@@ -9,6 +9,7 @@ import {Tooltip} from '@sentry/scraps/tooltip';
 import {DateTime} from 'sentry/components/dateTime';
 import {Duration} from 'sentry/components/duration/duration';
 import {useStacktraceLink} from 'sentry/components/events/interfaces/frame/useStacktraceLink';
+import {DisabledTraceLink} from 'sentry/components/links/disabledTraceLink';
 import {Version} from 'sentry/components/version';
 import {IconPlay} from 'sentry/icons';
 import {tct} from 'sentry/locale';
@@ -23,6 +24,7 @@ import {type ColumnValueType} from 'sentry/utils/discover/fields';
 import {VersionContainer} from 'sentry/utils/discover/styles';
 import {ViewReplayLink} from 'sentry/utils/discover/viewReplayLink';
 import {getShortEventId} from 'sentry/utils/events';
+import {isPartialSpanOrTraceData} from 'sentry/utils/trace/isOlderThan30Days';
 import {normalizeUrl} from 'sentry/utils/url/normalizeUrl';
 import {useRelease} from 'sentry/utils/useRelease';
 import {QuickContextHoverWrapper} from 'sentry/views/discover/table/quickContext/quickContextWrapper';
@@ -404,12 +406,18 @@ function TraceIDRenderer(props: LogFieldRendererProps) {
   const traceId = adjustLogTraceID(props.item.value as string);
   const location = stripLogParamsFromLocation(props.extra.location);
   const timestamp = props.extra.attributes?.[OurLogKnownFieldKey.TIMESTAMP];
+  const validTimestamp =
+    typeof timestamp === 'string' || typeof timestamp === 'number'
+      ? timestamp
+      : undefined;
+
+  if (validTimestamp && isPartialSpanOrTraceData(validTimestamp)) {
+    return <DisabledTraceLink type="trace">{props.basicRendered}</DisabledTraceLink>;
+  }
+
   const target = getTraceDetailsUrl({
     traceSlug: traceId,
-    timestamp:
-      typeof timestamp === 'string' || typeof timestamp === 'number'
-        ? timestamp
-        : undefined,
+    timestamp: validTimestamp,
     organization: props.extra.organization,
     dateSelection: props.extra.location,
     location,

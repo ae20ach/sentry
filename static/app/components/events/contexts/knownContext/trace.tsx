@@ -3,12 +3,14 @@ import type {Location} from 'history';
 import {Tooltip} from '@sentry/scraps/tooltip';
 
 import {getContextKeys} from 'sentry/components/events/contexts/utils';
+import {getEventTimestampInSeconds} from 'sentry/components/events/interfaces/utils';
 import {generateTraceTarget} from 'sentry/components/quickTrace/utils';
 import {t} from 'sentry/locale';
 import type {Event} from 'sentry/types/event';
 import type {KeyValueListData} from 'sentry/types/group';
 import type {Organization} from 'sentry/types/organization';
 import {defined} from 'sentry/utils';
+import {isPartialSpanOrTraceData} from 'sentry/utils/trace/isOlderThan30Days';
 import {transactionSummaryRouteWithQuery} from 'sentry/views/performance/transactionSummary/utils';
 
 enum TraceContextKeys {
@@ -66,6 +68,23 @@ export function getTraceContextData({
           const traceWasSampled = data?.sampled ?? true;
 
           if (traceWasSampled) {
+            const eventTimestamp = getEventTimestampInSeconds(event);
+            const isOld = eventTimestamp
+              ? isPartialSpanOrTraceData(eventTimestamp)
+              : false;
+
+            if (isOld) {
+              return {
+                key: ctxKey,
+                subject: t('Trace ID'),
+                value: (
+                  <Tooltip showUnderline title={t('Trace is older than 30 days')}>
+                    {traceId}
+                  </Tooltip>
+                ),
+              };
+            }
+
             const link = generateTraceTarget(event, organization, location);
             const hasPerformanceView = organization.features.includes('performance-view');
 

@@ -39,6 +39,7 @@ import type {
 } from 'sentry/utils/performance/segmentExplorer/tagKeyHistogramQuery';
 import {TagTransactionsQuery} from 'sentry/utils/performance/segmentExplorer/tagTransactionsQuery';
 import {decodeScalar} from 'sentry/utils/queryString';
+import {isPartialSpanOrTraceData} from 'sentry/utils/trace/isOlderThan30Days';
 import {useDomainViewFilters} from 'sentry/views/insights/pages/useFilters';
 import {TraceViewSources} from 'sentry/views/performance/newTraceDetails/traceHeader/breadcrumbs';
 import {Tab} from 'sentry/views/performance/transactionSummary/tabs';
@@ -355,24 +356,33 @@ export function TagsHeatMap(
                   <div>
                     {transactionTableData?.data.length ? null : <Placeholder />}
                     {[...(transactionTableData?.data ?? [])].slice(0, 3).map(row => {
-                      const target = generateLinkToEventInTraceView({
-                        eventId: row.id,
-                        traceSlug: row.trace?.toString()!,
-                        timestamp: row.timestamp!,
-                        location: {
-                          ...location,
-                          query: {
-                            ...location.query,
-                            tab: Tab.TAGS,
-                          },
-                        },
-                        organization,
-                        source: TraceViewSources.PERFORMANCE_TRANSACTION_SUMMARY,
-                        view,
-                      });
+                      const isOld =
+                        row.timestamp && isPartialSpanOrTraceData(row.timestamp);
+                      const target = isOld
+                        ? null
+                        : generateLinkToEventInTraceView({
+                            eventId: row.id,
+                            traceSlug: row.trace?.toString()!,
+                            timestamp: row.timestamp!,
+                            location: {
+                              ...location,
+                              query: {
+                                ...location.query,
+                                tab: Tab.TAGS,
+                              },
+                            },
+                            organization,
+                            source: TraceViewSources.PERFORMANCE_TRANSACTION_SUMMARY,
+                            view,
+                          });
 
                       return (
-                        <DropdownItem width="small" key={row.id} to={target}>
+                        <DropdownItem
+                          width="small"
+                          key={row.id}
+                          to={target ?? undefined}
+                          disabled={!target}
+                        >
                           <Flex justify="between" width="100%">
                             <Truncate value={row.id} maxLength={12} />
                             <SectionSubtext>
