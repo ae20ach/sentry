@@ -8,7 +8,6 @@ import {
 } from 'sentry/utils/discover/fieldRenderers';
 import {generateLinkToEventInTraceView} from 'sentry/utils/discover/urls';
 import type {Theme} from 'sentry/utils/theme';
-import {isPartialSpanOrTraceData} from 'sentry/utils/trace/isOlderThan30Days';
 import {useNavigate} from 'sentry/utils/useNavigate';
 import {
   AttributesTree,
@@ -82,10 +81,6 @@ export function TraceSpanLinks({
       const prefix = `span_link_${linkIndex + 1}`;
 
       customRenderers[`${prefix}.trace_id`] = () => {
-        if (isPartialSpanOrTraceData(node.value.start_timestamp)) {
-          return <span>{traceIdRenderer({trace: link.traceId}, renderBaggage)}</span>;
-        }
-
         const traceTarget = generateLinkToEventInTraceView({
           organization,
           location,
@@ -111,10 +106,6 @@ export function TraceSpanLinks({
       };
 
       customRenderers[`${prefix}.span_id`] = () => {
-        if (isPartialSpanOrTraceData(node.value.start_timestamp)) {
-          return <span>{spanIdRenderer({span_id: link.itemId}, renderBaggage)}</span>;
-        }
-
         const spanTarget = generateLinkToEventInTraceView({
           organization,
           location,
