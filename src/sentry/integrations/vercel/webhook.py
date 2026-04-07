@@ -24,6 +24,7 @@ from sentry.api.base import Endpoint, control_silo_endpoint
 from sentry.hybridcloud.services.organization_mapping import organization_mapping_service
 from sentry.integrations.models.integration import Integration
 from sentry.integrations.models.organization_integration import OrganizationIntegration
+from sentry.integrations.utils.webhook_viewer_context import webhook_viewer_context
 from sentry.models.project import Project
 from sentry.projects.services.project import project_service
 from sentry.sentry_apps.models.sentry_app_installation_for_provider import (
@@ -353,80 +354,85 @@ class VercelWebhookEndpoint(Endpoint):
                     continue
                 sentry_project_id = matched_mappings[0][0]
 
-                logging_params["organization_id"] = organization.id
-                logging_params["project_id"] = sentry_project_id
+                with webhook_viewer_context(organization.id):
+                    logging_params["organization_id"] = organization.id
+                    logging_params["project_id"] = sentry_project_id
 
-                try:
-                    release_payload, token = get_payload_and_token(
-                        payload, organization.id, sentry_project_id
-                    )
-                except Project.DoesNotExist:
-                    logger.info("Project not found", extra=logging_params)
-                    return self.respond({"detail": "Project not found"}, status=404)
-                except SentryAppInstallationForProvider.DoesNotExist:
-                    logger.info("Installation not found", extra=logging_params)
-                    return self.respond({"detail": "Installation not found"}, status=404)
-                except SentryAppInstallationToken.DoesNotExist:
-                    logger.info("Token not found", extra=logging_params)
-                    return self.respond({"detail": "Token not found"}, status=404)
-                except NoCommitFoundError:
-                    logger.info("No commit found", extra=logging_params)
-                    return self.respond({"detail": "No commit found"}, status=404)
-                except MissingRepositoryError:
-                    logger.info("Could not determine repository", extra=logging_params)
-                    return self.respond({"detail": "Could not determine repository"}, status=400)
-
-                url = absolute_uri(f"/api/0/organizations/{organization.slug}/releases/")
-                headers = {
-                    "Accept": "application/json",
-                    "Authorization": f"Bearer {token}",
-                    "User-Agent": f"sentry_vercel/{VERSION}",
-                }
-                json_error = None
-
-                no_ref_payload = {
-                    "version": release_payload["version"],
-                    "projects": release_payload["projects"],
-                }
-
-                with http.build_session() as session:
                     try:
-                        resp = session.post(url, json=no_ref_payload, headers=headers)
-                        json_error = safe_json_parse(resp)
-                        resp.raise_for_status()
-                    except RequestException as e:
-                        # errors here should be uncommon but we should be aware of them
-                        logger.warning(
-                            "Error creating release: %s - %s",
-                            e,
-                            json_error,
-                            extra=logging_params,
+                        release_payload, token = get_payload_and_token(
+                            payload, organization.id, sentry_project_id
                         )
-                        # 400 probably isn't the right status code but oh well
-                        return self.respond({"detail": f"Error creating release: {e}"}, status=400)
+                    except Project.DoesNotExist:
+                        logger.info("Project not found", extra=logging_params)
+                        return self.respond({"detail": "Project not found"}, status=404)
+                    except SentryAppInstallationForProvider.DoesNotExist:
+                        logger.info("Installation not found", extra=logging_params)
+                        return self.respond({"detail": "Installation not found"}, status=404)
+                    except SentryAppInstallationToken.DoesNotExist:
+                        logger.info("Token not found", extra=logging_params)
+                        return self.respond({"detail": "Token not found"}, status=404)
+                    except NoCommitFoundError:
+                        logger.info("No commit found", extra=logging_params)
+                        return self.respond({"detail": "No commit found"}, status=404)
+                    except MissingRepositoryError:
+                        logger.info("Could not determine repository", extra=logging_params)
+                        return self.respond(
+                            {"detail": "Could not determine repository"}, status=400
+                        )
 
-                    # set the refs
-                    try:
-                        resp = session.post(
-                            url,
-                            json=release_payload,
-                            headers=headers,
-                        )
-                        json_error = safe_json_parse(resp)
-                        resp.raise_for_status()
-                    except RequestException as e:
-                        # errors will probably be common if the user doesn't have repos set up
-                        logger.info(
-                            "Error setting refs: %s - %s",
-                            e,
-                            json_error,
-                            extra=logging_params,
-                            exc_info=True,
-                        )
-                        # 400 probably isn't the right status code but oh well
-                        return self.respond({"detail": f"Error setting refs: {e}"}, status=400)
+                    url = absolute_uri(f"/api/0/organizations/{organization.slug}/releases/")
+                    headers = {
+                        "Accept": "application/json",
+                        "Authorization": f"Bearer {token}",
+                        "User-Agent": f"sentry_vercel/{VERSION}",
+                    }
+                    json_error = None
 
-                # we are going to quit after the first project match as there shouldn't be multiple matches
-                return self.respond(status=201)
+                    no_ref_payload = {
+                        "version": release_payload["version"],
+                        "projects": release_payload["projects"],
+                    }
+
+                    with http.build_session() as session:
+                        try:
+                            resp = session.post(url, json=no_ref_payload, headers=headers)
+                            json_error = safe_json_parse(resp)
+                            resp.raise_for_status()
+                        except RequestException as e:
+                            # errors here should be uncommon but we should be aware of them
+                            logger.warning(
+                                "Error creating release: %s - %s",
+                                e,
+                                json_error,
+                                extra=logging_params,
+                            )
+                            # 400 probably isn't the right status code but oh well
+                            return self.respond(
+                                {"detail": f"Error creating release: {e}"}, status=400
+                            )
+
+                        # set the refs
+                        try:
+                            resp = session.post(
+                                url,
+                                json=release_payload,
+                                headers=headers,
+                            )
+                            json_error = safe_json_parse(resp)
+                            resp.raise_for_status()
+                        except RequestException as e:
+                            # errors will probably be common if the user doesn't have repos set up
+                            logger.info(
+                                "Error setting refs: %s - %s",
+                                e,
+                                json_error,
+                                extra=logging_params,
+                                exc_info=True,
+                            )
+                            # 400 probably isn't the right status code but oh well
+                            return self.respond({"detail": f"Error setting refs: {e}"}, status=400)
+
+                    # we are going to quit after the first project match as there shouldn't be multiple matches
+                    return self.respond(status=201)
 
         return self.respond(status=204)
