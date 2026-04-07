@@ -74,7 +74,7 @@ describe('AutofixSection', () => {
       organization,
     });
 
-    expect(screen.getByText('Seer')).toBeInTheDocument();
+    expect(screen.getByText('Seer Autofix')).toBeInTheDocument();
   });
 
   it('renders Resources section when AI features are disabled', () => {
@@ -90,7 +90,10 @@ describe('AutofixSection', () => {
       platform: 'javascript',
     };
 
-    const javascriptProject: Project = {...mockProject, platform: 'javascript'};
+    const javascriptProject: Project = {
+      ...mockProject,
+      platform: 'javascript',
+    };
 
     render(
       <AutofixSection
@@ -159,6 +162,10 @@ describe('AutofixSection', () => {
     expect(await screen.findByText('Root Cause')).toBeInTheDocument();
     expect(screen.getByText('Null pointer in user handler')).toBeInTheDocument();
     expect(screen.getByRole('button', {name: 'Open Seer'})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Open Seer'})).toHaveAttribute(
+      'href',
+      expect.stringContaining('seerDrawer=true')
+    );
   });
 
   it('renders solution artifact', async () => {
@@ -198,7 +205,7 @@ describe('AutofixSection', () => {
       organization,
     });
 
-    expect(await screen.findByText('Implementation Plan')).toBeInTheDocument();
+    expect(await screen.findByText('Plan')).toBeInTheDocument();
     expect(screen.getByText('Add null check before accessing user')).toBeInTheDocument();
     expect(screen.getByRole('button', {name: 'Open Seer'})).toBeInTheDocument();
   });
@@ -378,7 +385,7 @@ describe('AutofixSection', () => {
     });
 
     // The Seer title should still render
-    expect(screen.getByText('Seer')).toBeInTheDocument();
+    expect(screen.getByText('Seer Autofix')).toBeInTheDocument();
     expect(await screen.findByTestId('loading-placeholder')).toBeInTheDocument();
   });
 
@@ -394,7 +401,7 @@ describe('AutofixSection', () => {
     });
 
     // The Seer title should still render
-    expect(screen.getByText('Seer')).toBeInTheDocument();
+    expect(screen.getByText('Seer Autofix')).toBeInTheDocument();
     expect(await screen.findByText('Have Seer...')).toBeInTheDocument();
   });
 
@@ -480,7 +487,7 @@ describe('AutofixSection', () => {
     });
 
     expect(await screen.findByText('Root Cause')).toBeInTheDocument();
-    expect(screen.getByText('Implementation Plan')).toBeInTheDocument();
+    expect(screen.getByText('Plan')).toBeInTheDocument();
     expect(screen.getByText('Code Changes')).toBeInTheDocument();
     expect(screen.getByRole('button', {name: 'Open Seer'})).toBeInTheDocument();
   });
@@ -535,7 +542,9 @@ describe('AutofixSection', () => {
     });
 
     expect(await screen.findByText('Finish Configuring Seer')).toBeInTheDocument();
-    const link = screen.getByRole('button', {name: 'Set Up Seer for This Project'});
+    const link = screen.getByRole('button', {
+      name: 'Set Up Seer for This Project',
+    });
     expect(link).toHaveAttribute(
       'href',
       `/settings/${organization.slug}/projects/${mockProject.slug}/seer/`
@@ -563,7 +572,9 @@ describe('AutofixSection', () => {
     });
 
     expect(await screen.findByText('Finish Configuring Seer')).toBeInTheDocument();
-    const link = screen.getByRole('button', {name: 'Set Up Seer for This Project'});
+    const link = screen.getByRole('button', {
+      name: 'Set Up Seer for This Project',
+    });
     expect(link).toHaveAttribute(
       'href',
       `/settings/${organization.slug}/projects/${mockProject.slug}/seer/`
@@ -588,6 +599,10 @@ describe('AutofixSection', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Outline a plan')).toBeInTheDocument();
     expect(screen.getByText('Create a code fix')).toBeInTheDocument();
-    expect(screen.getByRole('button', {name: 'Fix the Issue'})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Start Analysis'})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Start Analysis'})).toHaveAttribute(
+      'href',
+      expect.stringContaining('seerDrawer=true')
+    );
   });
 });
