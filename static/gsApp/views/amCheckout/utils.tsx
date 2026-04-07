@@ -178,14 +178,14 @@ export function getBucket({
   events?: number;
   price?: number;
   shouldMinimize?: boolean; // the slot strategy when `events` does not exist in `buckets`
-}): EventBucket {
+}): EventBucket | null {
   if (buckets) {
     const slot = getSlot(events, price, buckets, shouldMinimize);
     if (slot in buckets) {
       return buckets[slot]!;
     }
   }
-  throw new Error('Invalid data category for plan');
+  return null;
 }
 
 type ReservedTotalProps = {
@@ -217,7 +217,7 @@ function getReservedPriceForReservedBudgetCategory({
       events: RESERVED_BUDGET_QUOTA,
       buckets: plan.planCategories[dataCategory],
     });
-    return acc + bucket.price;
+    return acc + (bucket?.price ?? 0);
   }, 0);
 }
 
@@ -246,10 +246,11 @@ export function getReservedPriceCents({
 
   Object.entries(reserved).forEach(
     ([category, quantity]) =>
-      (reservedCents += getBucket({
-        events: quantity,
-        buckets: plan.planCategories[category as DataCategory],
-      }).price)
+      (reservedCents +=
+        getBucket({
+          events: quantity,
+          buckets: plan.planCategories[category as DataCategory],
+        })?.price ?? 0)
   );
 
   Object.entries(addOns ?? {}).forEach(([apiName, {enabled}]) => {

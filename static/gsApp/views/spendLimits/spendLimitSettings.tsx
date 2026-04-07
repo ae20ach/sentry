@@ -112,7 +112,7 @@ function getPaygPpe({
     events: reserved === RESERVED_BUDGET_QUOTA ? reserved : reserved + 1, // +1 to get the next bucket, if any
     shouldMinimize: false,
   });
-  return bucket.onDemandPrice ?? 0;
+  return bucket?.onDemandPrice ?? 0;
 }
 
 function SpendLimitInput({

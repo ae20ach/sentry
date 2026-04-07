@@ -32,10 +32,19 @@ export function calculateCategorySpend(
   }
 
   const priceBucket = getBucket({events: categoryInfo.reserved, buckets: slots});
-  const eventsByPrice = getBucket({
-    price: priceBucket.price,
-    buckets: slots,
-  }).events;
+  if (!priceBucket) {
+    return {
+      reservedUse: 0,
+      unitPrice: 0,
+      onDemandUnitPrice: 0,
+      prepaidPrice: 0,
+    };
+  }
+  const eventsByPrice =
+    getBucket({
+      price: priceBucket.price,
+      buckets: slots,
+    })?.events ?? 0;
 
   const unitPrice = priceBucket.unitPrice ?? 0;
   // Subtract gifted usage from total usage

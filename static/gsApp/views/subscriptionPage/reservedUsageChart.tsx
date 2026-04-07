@@ -164,7 +164,7 @@ function calculateCategoryPrepaidUsage(
   // This will be 0 when they are using the included amount
   const prepaidPrice = hasReservedBudget
     ? prepaid
-    : (prepaidPriceBucket.price ?? 0) / (isMonthly ? 1 : 12);
+    : (prepaidPriceBucket?.price ?? 0) / (isMonthly ? 1 : 12);
 
   // Calculate spend based on percentage used
   const prepaidSpend = (prepaidPercentUsed / 100) * prepaidPrice;

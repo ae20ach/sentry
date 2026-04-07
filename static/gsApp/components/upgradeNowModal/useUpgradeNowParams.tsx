@@ -79,12 +79,13 @@ export function useUpgradeNowParams({organization, subscription, enabled = true}
           let events = currentHistory?.reserved ?? 0;
 
           if (canCompare) {
-            const price = getBucket({events, buckets: eventBuckets}).price;
-            const eventsByPrice = getBucket({
-              price,
-              // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-              buckets: am2Plan.planCategories[category],
-            }).events;
+            const price = getBucket({events, buckets: eventBuckets})?.price ?? 0;
+            const eventsByPrice =
+              getBucket({
+                price,
+                // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+                buckets: am2Plan.planCategories[category],
+              })?.events ?? 0;
             events = Math.max(events, eventsByPrice);
           }
           return [category, events];

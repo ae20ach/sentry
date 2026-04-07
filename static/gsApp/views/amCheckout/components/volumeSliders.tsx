@@ -102,6 +102,9 @@ export function VolumeSliders({
             events: currentSliderValues[category],
             buckets: activePlan.planCategories[category],
           });
+          if (!eventBucket) {
+            return null;
+          }
 
           const categoryInfo = getCategoryInfoFromPlural(category);
 

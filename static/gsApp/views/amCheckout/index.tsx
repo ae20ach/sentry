@@ -317,7 +317,7 @@ function AMCheckout(props: Props) {
             events: value,
             buckets: plan.planCategories[category as DataCategory],
             shouldMinimize: hasPartnerMigrationFeature(organization),
-          }).events,
+          })?.events ?? value,
         ])
       );
 
@@ -390,11 +390,12 @@ function AMCheckout(props: Props) {
             let events = (!isTrialPlan(planDetails.id) && currentHistory?.reserved) || 0;
 
             if (canCompare) {
-              const price = getBucket({events, buckets: eventBuckets}).price;
-              const eventsByPrice = getBucket({
-                price,
-                buckets: initialPlan.planCategories[category],
-              }).events;
+              const price = getBucket({events, buckets: eventBuckets})?.price ?? 0;
+              const eventsByPrice =
+                getBucket({
+                  price,
+                  buckets: initialPlan.planCategories[category],
+                })?.events ?? 0;
               events = Math.max(events, eventsByPrice);
             }
             return [category, events];

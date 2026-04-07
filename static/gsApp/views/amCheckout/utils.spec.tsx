@@ -93,7 +93,8 @@ describe('utils', () => {
     it('can get exact bucket by events', () => {
       const events = 100_000;
       const bucket = utils.getBucket({events, buckets: bizPlan.planCategories.errors});
-      expect(bucket.events).toBe(events);
+      expect(bucket).not.toBeNull();
+      expect(bucket!.events).toBe(events);
     });
 
     it('can get exact bucket by events with minimize strategy', () => {
@@ -103,13 +104,15 @@ describe('utils', () => {
         buckets: bizPlan.planCategories.errors,
         shouldMinimize: true,
       });
-      expect(bucket.events).toBe(events);
+      expect(bucket).not.toBeNull();
+      expect(bucket!.events).toBe(events);
     });
 
     it('can get approximate bucket if event level does not exist', () => {
       const events = 90_000;
       const bucket = utils.getBucket({events, buckets: bizPlan.planCategories.errors});
-      expect(bucket.events).toBeGreaterThanOrEqual(events);
+      expect(bucket).not.toBeNull();
+      expect(bucket!.events).toBeGreaterThanOrEqual(events);
     });
 
     it('can get approximate bucket if event level does not exist with minimize strategy', () => {
@@ -119,7 +122,8 @@ describe('utils', () => {
         buckets: bizPlan.planCategories.errors,
         shouldMinimize: true,
       });
-      expect(bucket.events).toBeLessThanOrEqual(events);
+      expect(bucket).not.toBeNull();
+      expect(bucket!.events).toBeLessThanOrEqual(events);
     });
 
     it('can get first bucket by events', () => {
@@ -128,7 +132,8 @@ describe('utils', () => {
         events,
         buckets: teamPlan.planCategories.transactions,
       });
-      expect(bucket.events).toBeGreaterThanOrEqual(events);
+      expect(bucket).not.toBeNull();
+      expect(bucket!.events).toBeGreaterThanOrEqual(events);
     });
 
     it('can get first bucket by events with minimize strategy', () => {
@@ -138,7 +143,8 @@ describe('utils', () => {
         buckets: teamPlan.planCategories.transactions,
         shouldMinimize: true,
       });
-      expect(bucket.events).toBeGreaterThanOrEqual(events);
+      expect(bucket).not.toBeNull();
+      expect(bucket!.events).toBeGreaterThanOrEqual(events);
     });
 
     it('can get last bucket by events', () => {
@@ -147,7 +153,8 @@ describe('utils', () => {
         events,
         buckets: teamPlan.planCategories.attachments,
       });
-      expect(bucket.events).toBeLessThanOrEqual(events);
+      expect(bucket).not.toBeNull();
+      expect(bucket!.events).toBeLessThanOrEqual(events);
     });
 
     it('can get last bucket by events with minimize strategy', () => {
@@ -157,7 +164,8 @@ describe('utils', () => {
         buckets: teamPlan.planCategories.attachments,
         shouldMinimize: true,
       });
-      expect(bucket.events).toBeLessThanOrEqual(events);
+      expect(bucket).not.toBeNull();
+      expect(bucket!.events).toBeLessThanOrEqual(events);
     });
 
     it('can get exact bucket by price', () => {
@@ -166,8 +174,9 @@ describe('utils', () => {
         price,
         buckets: bizPlan.planCategories.transactions,
       });
-      expect(bucket.price).toBe(price);
-      expect(bucket.events).toBe(3_500_000);
+      expect(bucket).not.toBeNull();
+      expect(bucket!.price).toBe(price);
+      expect(bucket!.events).toBe(3_500_000);
     });
 
     it('can get exact bucket by price with minimize strategy', () => {
@@ -177,8 +186,9 @@ describe('utils', () => {
         buckets: bizPlan.planCategories.transactions,
         shouldMinimize: true,
       });
-      expect(bucket.price).toBe(price);
-      expect(bucket.events).toBe(3_500_000);
+      expect(bucket).not.toBeNull();
+      expect(bucket!.price).toBe(price);
+      expect(bucket!.events).toBe(3_500_000);
     });
 
     it('can get approximate bucket if price level does not exist', () => {
@@ -187,8 +197,9 @@ describe('utils', () => {
         price,
         buckets: bizPlan.planCategories.transactions,
       });
-      expect(bucket.price).toBeGreaterThanOrEqual(price);
-      expect(bucket.events).toBe(4_500_000);
+      expect(bucket).not.toBeNull();
+      expect(bucket!.price).toBeGreaterThanOrEqual(price);
+      expect(bucket!.events).toBe(4_500_000);
     });
 
     it('can get approximate bucket if price level does not exist with minimize strategy', () => {
@@ -198,8 +209,9 @@ describe('utils', () => {
         buckets: bizPlan.planCategories.transactions,
         shouldMinimize: true,
       });
-      expect(bucket.price).toBeLessThanOrEqual(price);
-      expect(bucket.events).toBe(4_000_000);
+      expect(bucket).not.toBeNull();
+      expect(bucket!.price).toBeLessThanOrEqual(price);
+      expect(bucket!.events).toBe(4_000_000);
     });
 
     it('can get first bucket by price', () => {
@@ -208,7 +220,8 @@ describe('utils', () => {
         price,
         buckets: teamPlan.planCategories.transactions,
       });
-      expect(bucket.price).toBe(price);
+      expect(bucket).not.toBeNull();
+      expect(bucket!.price).toBe(price);
     });
 
     it('can get first bucket by price with minimize strategy', () => {
@@ -218,7 +231,8 @@ describe('utils', () => {
         buckets: teamPlan.planCategories.transactions,
         shouldMinimize: true,
       });
-      expect(bucket.price).toBe(price);
+      expect(bucket).not.toBeNull();
+      expect(bucket!.price).toBe(price);
     });
 
     it('can get last bucket by price', () => {
@@ -227,7 +241,8 @@ describe('utils', () => {
         price,
         buckets: teamPlan.planCategories.transactions,
       });
-      expect(bucket.price).toBeLessThanOrEqual(price);
+      expect(bucket).not.toBeNull();
+      expect(bucket!.price).toBeLessThanOrEqual(price);
     });
 
     it('can get last bucket by price with minimize strategy', () => {
@@ -237,7 +252,12 @@ describe('utils', () => {
         buckets: teamPlan.planCategories.transactions,
         shouldMinimize: true,
       });
-      expect(bucket.price).toBeLessThanOrEqual(price);
+      expect(bucket).not.toBeNull();
+      expect(bucket!.price).toBeLessThanOrEqual(price);
+    });
+
+    it('returns null when buckets are missing', () => {
+      expect(utils.getBucket({events: 1000, buckets: undefined})).toBeNull();
     });
   });
 

@@ -2,6 +2,7 @@ import moment from 'moment-timezone';
 import {OrganizationFixture} from 'sentry-fixture/organization';
 
 import {CustomerUsageFixture} from 'getsentry-test/fixtures/customerUsage';
+import {MetricHistoryFixture} from 'getsentry-test/fixtures/metricHistory';
 import {
   SubscriptionFixture,
   SubscriptionWithLegacySeerFixture,
@@ -497,5 +498,32 @@ describe('UsageOverviewTable', () => {
 
     // All disabled rows must appear after all enabled rows
     expect(lastEnabledIndex).toBeLessThan(firstDisabledIndex);
+  });
+
+  it('renders categories that are missing plan buckets without crashing', async () => {
+    const sub = SubscriptionFixture({organization, plan: 'am2_business'});
+    sub.categories.spansIndexed = MetricHistoryFixture({
+      category: DataCategory.SPANS_INDEXED,
+      reserved: 1000,
+      prepaid: 1000,
+      usage: 500,
+      order: 99,
+    });
+    SubscriptionStore.set(organization.slug, sub);
+
+    render(
+      <UsageOverviewTable
+        subscription={sub}
+        organization={organization}
+        usageData={usageData}
+        onRowClick={jest.fn()}
+        selectedProduct={DataCategory.ERRORS}
+      />
+    );
+
+    await screen.findByRole('columnheader', {name: 'Feature'});
+
+    expect(screen.getByTestId('product-row-errors')).toBeInTheDocument();
+    expect(screen.getByTestId('product-row-spansIndexed')).toBeInTheDocument();
   });
 });

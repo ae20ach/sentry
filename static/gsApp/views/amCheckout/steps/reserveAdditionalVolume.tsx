@@ -46,7 +46,7 @@ export function ReserveAdditionalVolume({
               getBucket({
                 buckets: activePlan.planCategories[category],
                 events: reserved ?? 0,
-              }).price > 0
+              })?.price > 0
           )
   );
   const [reserved, setReserved] = useState<Partial<Record<DataCategory, number>>>(
