@@ -128,7 +128,7 @@ describe('FieldRenderer tests', () => {
       );
 
       expect(screen.getByText('spanId')).toBeInTheDocument();
-      expect(screen.queryByRole('link')).not.toBeInTheDocument();
+      expect(screen.getByRole('link')).toHaveAttribute('aria-disabled', 'true');
 
       await userEvent.hover(screen.getByText('spanId'));
       expect(await screen.findByText(/Span is older than 30 days/)).toBeInTheDocument();
@@ -136,7 +136,9 @@ describe('FieldRenderer tests', () => {
       const queryString = encodeURIComponent(
         'span.name:"HTTP GET /foo" span.description:"GET /foo"'
       );
-      expect(await screen.findByRole('link')).toHaveAttribute(
+      expect(
+        await screen.findByRole('link', {name: 'View similar spans'})
+      ).toHaveAttribute(
         'href',
         `/organizations/org-slug/explore/traces/?mode=samples&project=1&query=${queryString}&referrer=partial-trace&statsPeriod=24h`
       );
@@ -186,7 +188,7 @@ describe('FieldRenderer tests', () => {
       );
 
       expect(screen.getByText('transactionId')).toBeInTheDocument();
-      expect(screen.queryByRole('link')).not.toBeInTheDocument();
+      expect(screen.getByRole('link')).toHaveAttribute('aria-disabled', 'true');
 
       await userEvent.hover(screen.getByText('transactionId'));
       expect(await screen.findByText(/Span is older than 30 days/)).toBeInTheDocument();
@@ -194,7 +196,9 @@ describe('FieldRenderer tests', () => {
       const queryString = encodeURIComponent(
         'is_transaction:true span.name:"HTTP GET /foo" span.description:"GET /foo"'
       );
-      expect(await screen.findByRole('link')).toHaveAttribute(
+      expect(
+        await screen.findByRole('link', {name: 'View similar spans'})
+      ).toHaveAttribute(
         'href',
         `/organizations/org-slug/explore/traces/?mode=samples&project=1&query=${queryString}&referrer=partial-trace&statsPeriod=24h`
       );
@@ -244,7 +248,7 @@ describe('FieldRenderer tests', () => {
       );
 
       expect(screen.getByText('traceId')).toBeInTheDocument();
-      expect(screen.queryByRole('link')).not.toBeInTheDocument();
+      expect(screen.getByRole('link')).toHaveAttribute('aria-disabled', 'true');
 
       await userEvent.hover(screen.getByText('traceId'));
       expect(await screen.findByText(/Trace is older than 30 days/)).toBeInTheDocument();
@@ -252,7 +256,9 @@ describe('FieldRenderer tests', () => {
       const queryString = encodeURIComponent(
         'span.name:"HTTP GET /foo" span.description:"GET /foo"'
       );
-      expect(await screen.findByRole('link')).toHaveAttribute(
+      expect(
+        await screen.findByRole('link', {name: 'View similar traces'})
+      ).toHaveAttribute(
         'href',
         `/organizations/org-slug/explore/traces/?mode=samples&project=1&query=${queryString}&referrer=partial-trace&statsPeriod=24h&table=trace`
       );
