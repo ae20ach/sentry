@@ -1,4 +1,4 @@
-import {useMemo} from 'react';
+import {useMemo, useRef} from 'react';
 
 import {Select} from '@sentry/scraps/select';
 
@@ -9,6 +9,7 @@ import {trackAnalytics} from 'sentry/utils/analytics';
 import {useOrganization} from 'sentry/utils/useOrganization';
 
 import {ScmSearchControl} from './scmSearchControl';
+import {makeVirtualizedMenuList} from './scmVirtualizedMenuList';
 import {useScmRepoSearch} from './useScmRepoSearch';
 import {useScmRepoSelection} from './useScmRepoSelection';
 
@@ -24,7 +25,10 @@ export function ScmRepoSelector({integration}: ScmRepoSelectorProps) {
     reposByIdentifier,
     dropdownItems,
     isFetching,
+    isFetchingNextPage,
     isError,
+    hasNextPage,
+    fetchNextPage,
     debouncedSearch,
     setSearch,
   } = useScmRepoSearch(integration.id, selectedRepository);
@@ -34,6 +38,21 @@ export function ScmRepoSelector({integration}: ScmRepoSelectorProps) {
     onSelect: setSelectedRepository,
     reposByIdentifier,
   });
+
+  const onNearBottomRef = useRef<(() => void) | undefined>(undefined);
+  onNearBottomRef.current = () => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  };
+
+  const components = useMemo(
+    () => ({
+      Control: ScmSearchControl,
+      MenuList: makeVirtualizedMenuList(onNearBottomRef),
+    }),
+    []
+  );
 
   // Prepend the selected repo so the Select can always resolve and display
   // it, even when search results no longer include it.
@@ -82,7 +101,7 @@ export function ScmRepoSelector({integration}: ScmRepoSelectorProps) {
         'No repositories found. Check your installation permissions to ensure your integration has access.'
       );
     }
-    return t('Type to search repositories');
+    return t('No repositories available');
   }
 
   return (
@@ -96,14 +115,12 @@ export function ScmRepoSelector({integration}: ScmRepoSelectorProps) {
           setSearch(value);
         }
       }}
-      // Disable client-side filtering; search is handled server-side.
-      filterOption={() => true}
       noOptionsMessage={noOptionsMessage}
-      isLoading={isFetching}
+      isLoading={isFetching || isFetchingNextPage}
       isDisabled={busy}
       clearable
       searchable
-      components={{Control: ScmSearchControl}}
+      components={components}
     />
   );
 }

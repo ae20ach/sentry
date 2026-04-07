@@ -2,7 +2,7 @@ import {useMemo, useState} from 'react';
 
 import type {IntegrationRepository, Repository} from 'sentry/types/integrations';
 import {getApiUrl} from 'sentry/utils/api/getApiUrl';
-import {fetchDataQuery, useQuery} from 'sentry/utils/queryClient';
+import {fetchDataQuery, useInfiniteApiQuery, useQuery} from 'sentry/utils/queryClient';
 import {useDebouncedValue} from 'sentry/utils/useDebouncedValue';
 import {useOrganization} from 'sentry/utils/useOrganization';
 
@@ -15,17 +15,32 @@ export function useScmRepoSearch(integrationId: string, selectedRepo?: Repositor
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search, 200);
 
-  const searchQuery = useQuery({
+  const reposUrl = getApiUrl(
+    `/organizations/$organizationIdOrSlug/integrations/$integrationId/repos/`,
+    {
+      path: {
+        organizationIdOrSlug: organization.slug,
+        integrationId,
+      },
+    }
+  );
+
+  // Browse: paginated, fires on mount. Additional pages are fetched on
+  // demand when the user scrolls near the bottom of the dropdown.
+  const browseResult = useInfiniteApiQuery<ScmRepoSearchResult>({
     queryKey: [
-      getApiUrl(
-        `/organizations/$organizationIdOrSlug/integrations/$integrationId/repos/`,
-        {
-          path: {
-            organizationIdOrSlug: organization.slug,
-            integrationId,
-          },
-        }
-      ),
+      {infinite: true, version: 'v1' as const},
+      reposUrl,
+      {method: 'GET', query: {accessibleOnly: true, paginate: true}},
+    ],
+    staleTime: 20_000,
+  });
+
+  // Search: non-paginated, fires when user types. Uses server-side filtering
+  // with accessibleOnly=true to guarantee accurate results.
+  const searchResult = useQuery({
+    queryKey: [
+      reposUrl,
       {method: 'GET', query: {search: debouncedSearch, accessibleOnly: true}},
     ] as const,
     queryFn: async context => {
@@ -33,15 +48,24 @@ export function useScmRepoSearch(integrationId: string, selectedRepo?: Repositor
     },
     retry: 0,
     staleTime: 20_000,
-    placeholderData: previousData => (debouncedSearch ? previousData : undefined),
+    placeholderData: previousData => previousData,
     enabled: !!debouncedSearch,
   });
+
+  const isSearching = !!debouncedSearch;
+
+  const repos = useMemo(() => {
+    if (isSearching) {
+      return searchResult.data?.[0]?.repos ?? [];
+    }
+    return browseResult.data?.pages.flatMap(([data]) => data?.repos ?? []) ?? [];
+  }, [isSearching, searchResult.data, browseResult.data]);
 
   const selectedRepoSlug = selectedRepo?.externalSlug;
 
   const {reposByIdentifier, dropdownItems} = useMemo(
     () =>
-      (searchQuery.data?.[0]?.repos ?? []).reduce<{
+      repos.reduce<{
         dropdownItems: Array<{
           disabled: boolean;
           label: string;
@@ -63,14 +87,17 @@ export function useScmRepoSearch(integrationId: string, selectedRepo?: Repositor
           dropdownItems: [],
         }
       ),
-    [searchQuery.data, selectedRepoSlug]
+    [repos, selectedRepoSlug]
   );
 
   return {
     reposByIdentifier,
     dropdownItems,
-    isFetching: searchQuery.isFetching,
-    isError: searchQuery.isError,
+    isFetching: isSearching ? searchResult.isFetching : browseResult.isFetching,
+    isFetchingNextPage: browseResult.isFetchingNextPage,
+    isError: isSearching ? searchResult.isError : browseResult.isError,
+    hasNextPage: browseResult.hasNextPage,
+    fetchNextPage: browseResult.fetchNextPage,
     debouncedSearch,
     setSearch,
   };
