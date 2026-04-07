@@ -335,15 +335,7 @@ class GitHubIntegration(
         """
         if not query or accessible_only:
             all_repos = self.get_client().get_repos(page_number_limit=page_number_limit)
-            repos = [
-                {
-                    "name": i["name"],
-                    "identifier": i["full_name"],
-                    "default_branch": i.get("default_branch"),
-                }
-                for i in all_repos
-                if not i.get("archived")
-            ]
+            repos = self._format_repos(all_repos)
             if query:
                 query_lower = query.lower()
                 repos = [r for r in repos if query_lower in r["identifier"].lower()]
@@ -358,6 +350,28 @@ class GitHubIntegration(
                 "default_branch": i.get("default_branch"),
             }
             for i in response.get("items", [])
+        ]
+
+    def get_repositories_page(
+        self, page: int = 1, per_page: int = 25
+    ) -> tuple[list[dict[str, Any]], bool]:
+        """
+        Fetch a single page of non-archived repositories.
+        Returns (formatted_repos, has_next_page).
+        """
+        raw_repos, has_next = self.get_client().get_repos_page(page=page, per_page=per_page)
+        return self._format_repos(raw_repos), has_next
+
+    @staticmethod
+    def _format_repos(raw_repos: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return [
+            {
+                "name": i["name"],
+                "identifier": i["full_name"],
+                "default_branch": i.get("default_branch"),
+            }
+            for i in raw_repos
+            if not i.get("archived")
         ]
 
     def get_unmigratable_repositories(self) -> list[RpcRepository]:

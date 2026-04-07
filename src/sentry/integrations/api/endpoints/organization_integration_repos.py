@@ -15,6 +15,7 @@ from sentry.integrations.source_code_management.repository import RepositoryInte
 from sentry.models.organization import Organization
 from sentry.models.repository import Repository
 from sentry.shared_integrations.exceptions import IntegrationError
+from sentry.utils.cursors import Cursor, CursorResult
 
 
 class IntegrationRepository(TypedDict):
@@ -69,28 +70,81 @@ class OrganizationIntegrationReposEndpoint(CellOrganizationIntegrationBaseEndpoi
         if isinstance(install, RepositoryIntegration):
             search = request.GET.get("search")
             accessible_only = request.GET.get("accessibleOnly", "false").lower() == "true"
+            paginate = request.GET.get("paginate", "false").lower() == "true"
+
+            # Paginated path: opt-in via paginate=true, only when not
+            # searching, and only for integrations that support it.
+            if paginate and not search:
+                result = self._get_paginated_repos(request, install, installed_repo_names)
+                if result is not None:
+                    return result
 
             try:
                 repositories = install.get_repositories(search, accessible_only=accessible_only)
             except (IntegrationError, IdentityNotValid) as e:
                 return self.respond({"detail": str(e)}, status=400)
 
-            installable_only = request.GET.get("installableOnly", "false").lower() == "true"
-
-            # Include a repository if the request is for all repositories, or if we want
-            # installable-only repositories and the repository isn't already installed
-            serialized_repositories = [
-                IntegrationRepository(
-                    name=repo["name"],
-                    identifier=repo["identifier"],
-                    defaultBranch=repo.get("default_branch"),
-                    isInstalled=repo["identifier"] in installed_repo_names,
-                )
-                for repo in repositories
-                if not installable_only or repo["identifier"] not in installed_repo_names
-            ]
             return self.respond(
-                {"repos": serialized_repositories, "searchable": install.repo_search}
+                {
+                    "repos": self._serialize_repos(repositories, installed_repo_names, request),
+                    "searchable": install.repo_search,
+                }
             )
 
         return self.respond({"detail": "Repositories not supported"}, status=400)
+
+    def _get_paginated_repos(
+        self,
+        request: Request,
+        install: RepositoryIntegration,
+        installed_repo_names: set[str],
+    ) -> Response | None:
+        cursor_param = request.GET.get("cursor")
+        try:
+            cursor = Cursor.from_string(cursor_param) if cursor_param else Cursor(0, 0, False)
+            per_page = min(int(request.GET.get("per_page", 25)), 100)
+        except (ValueError, TypeError):
+            return self.respond({"detail": "Invalid cursor or per_page parameter."}, status=400)
+        page_number = (cursor.offset // per_page) + 1
+
+        try:
+            result = install.get_repositories_page(page=page_number, per_page=per_page)
+        except (IntegrationError, IdentityNotValid) as e:
+            return self.respond({"detail": str(e)}, status=400)
+
+        if result is None:
+            return None
+
+        repositories, has_next = result
+
+        response = self.respond(
+            {
+                "repos": self._serialize_repos(repositories, installed_repo_names, request),
+                "searchable": install.repo_search,
+            }
+        )
+        cursor_result = CursorResult(
+            results=[],
+            prev=Cursor(0, max(0, cursor.offset - per_page), True, cursor.offset > 0),
+            next=Cursor(0, cursor.offset + per_page, False, has_next),
+        )
+        self.add_cursor_headers(request, response, cursor_result)
+        return response
+
+    @staticmethod
+    def _serialize_repos(
+        repositories: list[dict[str, Any]],
+        installed_repo_names: set[str],
+        request: Request,
+    ) -> list[IntegrationRepository]:
+        installable_only = request.GET.get("installableOnly", "false").lower() == "true"
+        return [
+            IntegrationRepository(
+                name=repo["name"],
+                identifier=repo["identifier"],
+                defaultBranch=repo.get("default_branch"),
+                isInstalled=repo["identifier"] in installed_repo_names,
+            )
+            for repo in repositories
+            if not installable_only or repo["identifier"] not in installed_repo_names
+        ]

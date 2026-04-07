@@ -60,6 +60,19 @@ class BaseRepositoryIntegration(ABC):
         """
         raise NotImplementedError
 
+    def get_repositories_page(
+        self,
+        page: int = 1,
+        per_page: int = 25,
+    ) -> tuple[list[dict[str, Any]], bool] | None:
+        """
+        Fetch a single page of repositories. Override to support
+        page-by-page fetching for cursor-based pagination.
+
+        Returns (repos, has_next_page) or None if not supported.
+        """
+        return None
+
 
 class RepositoryIntegration(IntegrationInstallation, BaseRepositoryIntegration, ABC):
     @property

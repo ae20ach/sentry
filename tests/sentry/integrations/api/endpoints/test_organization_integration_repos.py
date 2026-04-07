@@ -262,6 +262,123 @@ class OrganizationIntegrationReposTest(APITestCase):
             "searchable": True,
         }
 
+    @patch(
+        "sentry.integrations.github.integration.GitHubIntegration.get_repositories_page",
+        return_value=([], False),
+    )
+    def test_paginate_first_page(self, get_repositories_page: MagicMock) -> None:
+        """paginate=true uses get_repositories_page for single-page fetching."""
+        get_repositories_page.return_value = (
+            [
+                {"name": "repo-a", "identifier": "Example/repo-a", "default_branch": "main"},
+                {"name": "repo-b", "identifier": "Example/repo-b", "default_branch": "main"},
+            ],
+            True,
+        )
+        response = self.client.get(self.path, format="json", data={"paginate": "true"})
+
+        assert response.status_code == 200, response.content
+        get_repositories_page.assert_called_once_with(page=1, per_page=25)
+        assert response.data == {
+            "repos": [
+                {
+                    "name": "repo-a",
+                    "identifier": "Example/repo-a",
+                    "defaultBranch": "main",
+                    "isInstalled": False,
+                },
+                {
+                    "name": "repo-b",
+                    "identifier": "Example/repo-b",
+                    "defaultBranch": "main",
+                    "isInstalled": False,
+                },
+            ],
+            "searchable": True,
+        }
+        assert 'results="true"' in response["Link"]
+
+    @patch(
+        "sentry.integrations.github.integration.GitHubIntegration.get_repositories_page",
+        return_value=([], False),
+    )
+    def test_paginate_second_page(self, get_repositories_page: MagicMock) -> None:
+        """Passing a cursor fetches the corresponding page."""
+        get_repositories_page.return_value = (
+            [{"name": "repo-c", "identifier": "Example/repo-c", "default_branch": "main"}],
+            False,
+        )
+        response = self.client.get(
+            self.path, format="json", data={"paginate": "true", "cursor": "0:25:0"}
+        )
+
+        assert response.status_code == 200, response.content
+        get_repositories_page.assert_called_once_with(page=2, per_page=25)
+        # next cursor should indicate no more results
+        assert 'rel="next"; results="false"' in response["Link"]
+        # prev cursor should indicate results exist
+        assert 'rel="previous"; results="true"' in response["Link"]
+
+    @patch(
+        "sentry.integrations.github.integration.GitHubIntegration.get_repositories",
+        return_value=[],
+    )
+    def test_paginate_with_search_falls_through(self, get_repositories: MagicMock) -> None:
+        """paginate=true with search uses the non-paginated path."""
+        get_repositories.return_value = [
+            {"name": "rad-repo", "identifier": "Example/rad-repo", "default_branch": "main"},
+        ]
+        response = self.client.get(
+            self.path, format="json", data={"paginate": "true", "search": "rad"}
+        )
+
+        assert response.status_code == 200, response.content
+        get_repositories.assert_called_once()
+        assert "Link" not in response
+
+    @patch(
+        "sentry.integrations.github.integration.GitHubIntegration.get_repositories",
+        return_value=[],
+    )
+    def test_no_paginate_param_uses_existing_path(self, get_repositories: MagicMock) -> None:
+        """Without paginate=true, get_repositories is called (not get_repositories_page)."""
+        get_repositories.return_value = [
+            {"name": "rad-repo", "identifier": "Example/rad-repo", "default_branch": "main"},
+        ]
+        response = self.client.get(self.path, format="json")
+
+        assert response.status_code == 200, response.content
+        get_repositories.assert_called_once()
+        assert "Link" not in response
+
+    @patch(
+        "sentry.integrations.github.integration.GitHubIntegration.get_repositories_page",
+        return_value=([], False),
+    )
+    def test_paginate_installable_only(self, get_repositories_page: MagicMock) -> None:
+        """installableOnly filter works with the paginated path."""
+        get_repositories_page.return_value = (
+            [
+                {"name": "installed", "identifier": "Example/installed", "default_branch": "main"},
+                {"name": "new-repo", "identifier": "Example/new-repo", "default_branch": "main"},
+            ],
+            False,
+        )
+        self.create_repo(
+            project=self.project,
+            integration_id=self.integration.id,
+            name="Example/installed",
+        )
+        response = self.client.get(
+            self.path,
+            format="json",
+            data={"paginate": "true", "installableOnly": "true"},
+        )
+
+        assert response.status_code == 200, response.content
+        assert len(response.data["repos"]) == 1
+        assert response.data["repos"][0]["identifier"] == "Example/new-repo"
+
     def test_no_repository_method(self) -> None:
         integration = self.create_integration(
             organization=self.org, provider="jira", name="Example", external_id="example:1"

@@ -549,6 +549,29 @@ class GitHubBaseClient(
                 page_number_limit=page_number_limit,
             )
 
+    def get_repos_page(
+        self, page: int = 1, per_page: int | None = None
+    ) -> tuple[list[dict[str, Any]], bool]:
+        """
+        Fetch a single page of repositories accessible to the GitHub App installation.
+        Returns (repositories, has_next_page).
+
+        Unlike get_repos() which aggregates all pages, this returns one page at a time
+        for cursor-based pagination support.
+        """
+        if per_page is None:
+            per_page = self.page_size
+        with SCMIntegrationInteractionEvent(
+            interaction_type=SCMIntegrationInteractionType.GET_REPOSITORIES,
+            provider_key=self.integration_name,
+            integration_id=self.integration.id,
+        ).capture():
+            resp = self.get(
+                "/installation/repositories",
+                params={"per_page": per_page, "page": page},
+            )
+            return resp["repositories"], get_next_link(resp) is not None
+
     def search_repositories(self, query: bytes) -> Mapping[str, Sequence[Any]]:
         """
         Find repositories matching a query.
