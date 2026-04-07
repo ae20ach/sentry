@@ -1,5 +1,3 @@
-import moment from 'moment-timezone';
-
 import type {PageFilters} from 'sentry/types/core';
 import type {Organization} from 'sentry/types/organization';
 import {Mode} from 'sentry/views/explore/queryParams/mode';
@@ -35,11 +33,7 @@ export function getShortenedSdkName(sdkName: string | null) {
   return sdkNameParts[sdkNameParts.length - 1];
 }
 
-export function isPartialSpanOrTraceData(timestamp: string | number) {
-  const now = moment();
-  const timestampDate = moment(timestamp);
-  return now.diff(timestampDate, 'days') > 30;
-}
+export {isPartialSpanOrTraceData} from 'sentry/utils/trace/isOlderThan30Days';
 
 interface GetSimilarEventsUrlArgs {
   organization: Organization;
