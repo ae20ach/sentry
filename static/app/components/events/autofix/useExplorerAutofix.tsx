@@ -382,7 +382,8 @@ export function getOrderedAutofixSections(runState: ExplorerAutofixState | null)
     const repoPRStates = runState?.repo_pr_states ?? {};
     const pullRequests = Object.values(repoPRStates);
     const anyCreating = pullRequests.some(pr => pr.pr_creation_status === 'creating');
-    if (anyCreating || areAllPRsInSync(blocks, repoPRStates)) {
+    const anyError = pullRequests.some(pr => pr.pr_creation_status === 'error');
+    if (anyCreating || anyError || areAllPRsInSync(blocks, repoPRStates)) {
       sections.push({
         step: 'pull_request',
         blockIndex: blocks.length,
