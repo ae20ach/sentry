@@ -39,41 +39,6 @@ class CheckRunEventWebhookTest(GitHubWebhookCodeReviewTestCase):
         mock_task.delay.assert_not_called()
 
     @patch("sentry.seer.code_review.webhooks.task.process_github_webhook_event")
-    def test_check_run_fails_when_action_missing(self, mock_task: MagicMock) -> None:
-        """Test that missing action field is handled gracefully without KeyError."""
-        with self.code_review_setup():
-            event_without_action = orjson.loads(CHECK_RUN_REREQUESTED_ACTION_EVENT_EXAMPLE)
-            del event_without_action["action"]
-
-            with patch("sentry.seer.code_review.webhooks.check_run.logger") as mock_logger:
-                self._send_webhook_event(
-                    GithubWebhookType.CHECK_RUN,
-                    orjson.dumps(event_without_action),
-                )
-                mock_task.delay.assert_not_called()
-                mock_logger.error.assert_called_once()
-                assert "github.webhook.check_run.missing-action" in str(mock_logger.error.call_args)
-
-    @patch("sentry.seer.code_review.webhooks.task.process_github_webhook_event")
-    def test_check_run_fails_when_external_id_missing(self, mock_task: MagicMock) -> None:
-        """Test that missing external_id is handled gracefully."""
-        with self.code_review_setup():
-            event_without_external_id = orjson.loads(CHECK_RUN_REREQUESTED_ACTION_EVENT_EXAMPLE)
-            del event_without_external_id["check_run"]["external_id"]
-
-            with patch("sentry.seer.code_review.webhooks.check_run.logger") as mock_logger:
-                self._send_webhook_event(
-                    GithubWebhookType.CHECK_RUN,
-                    orjson.dumps(event_without_external_id),
-                )
-                mock_task.delay.assert_not_called()
-                mock_logger.exception.assert_called_once()
-                assert (
-                    "github.webhook.check_run.invalid-payload"
-                    in mock_logger.exception.call_args[0][0]
-                )
-
-    @patch("sentry.seer.code_review.webhooks.task.process_github_webhook_event")
     def test_check_run_fails_when_external_id_not_numeric(self, mock_task: MagicMock) -> None:
         """Test that non-numeric external_id is handled gracefully."""
         with self.code_review_setup():

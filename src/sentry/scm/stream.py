@@ -5,6 +5,7 @@
 # Example:
 #
 #    from sentry.my_module import check_run_listener, pull_request_listener
+import sentry.seer.code_review.webhooks.scm_listeners  # noqa: F401 - registers listeners on import
 from sentry.scm.private.event_stream import scm_event_stream
 from sentry.scm.types import (
     CheckRunEvent,
@@ -13,26 +14,6 @@ from sentry.scm.types import (
     PullRequestEvent,
     SubscriptionEvent,
 )
-
-# DEFAULT LISTENERS
-#
-# TODO: Remove after production testing.
-
-
-@scm_event_stream.listen_for(event_type="check_run")
-def listen_for_check_run(e):
-    return None
-
-
-@scm_event_stream.listen_for(event_type="comment")
-def listen_for_comment(e):
-    return None
-
-
-@scm_event_stream.listen_for(event_type="pull_request")
-def listen_for_pull_request(e):
-    return None
-
 
 # Do not re-export your listener here.
 __all__ = [

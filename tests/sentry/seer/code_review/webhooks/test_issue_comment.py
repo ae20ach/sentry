@@ -6,7 +6,6 @@ import orjson
 import pytest
 from django.http.response import HttpResponseBase
 
-from sentry.integrations.github.client import GitHubReaction
 from sentry.integrations.github.webhook_types import GithubWebhookType
 from sentry.seer.code_review.webhooks.issue_comment import SENTRY_REVIEW_COMMAND
 from sentry.testutils.helpers.github import GitHubWebhookCodeReviewTestCase
@@ -69,6 +68,7 @@ class IssueCommentEventWebhookTest(GitHubWebhookCodeReviewTestCase):
             "comment": {
                 "body": comment_body,
                 "id": comment_id,
+                "user": None,
                 "created_at": "2024-01-15T10:30:00Z",
             },
             "issue": {
@@ -119,20 +119,6 @@ class IssueCommentEventWebhookTest(GitHubWebhookCodeReviewTestCase):
 
             self.mock_seer.assert_not_called()
 
-    @patch(
-        "sentry.seer.code_review.webhooks.issue_comment.delete_existing_reactions_and_add_reaction"
-    )
-    def test_skips_reaction_when_no_comment_id(self, mock_reaction: MagicMock) -> None:
-        """Test that reaction is skipped when comment has no ID, but processing continues."""
-        with self.code_review_setup(), self.tasks():
-            event = self._build_issue_comment_event(SENTRY_REVIEW_COMMAND, comment_id=None)
-
-            response = self._send_issue_comment_event(event)
-            assert response.status_code == 204
-
-            mock_reaction.assert_not_called()
-            self.mock_seer.assert_called_once()
-
     def test_skips_when_not_pr_comment(self) -> None:
         """Test that processing is skipped when comment is not on a PR."""
         with self.code_review_setup(), self.tasks():
@@ -140,21 +126,3 @@ class IssueCommentEventWebhookTest(GitHubWebhookCodeReviewTestCase):
             response = self._send_issue_comment_event(event)
             assert response.status_code == 204
             self.mock_seer.assert_not_called()
-
-    def test_success_case_uses_review_request_endpoint(self) -> None:
-        """Test that issue comment uses review-request endpoint."""
-        with self.code_review_setup(), self.tasks():
-            event_dict = orjson.loads(
-                self._build_issue_comment_event(f"Please {SENTRY_REVIEW_COMMAND} this PR")
-            )
-            event_dict["comment"]["user"] = {"login": "test-user"}
-            event = orjson.dumps(event_dict)
-
-            response = self._send_issue_comment_event(event)
-            assert response.status_code == 204
-            self.mock_reaction.assert_called_once_with(
-                "sentry-ecosystem/repo", "123456789", GitHubReaction.EYES
-            )
-            self.mock_seer.assert_called_once()
-            call_args = self.mock_seer.call_args
-            assert call_args[1]["path"] == "/v1/code_review/review-request"

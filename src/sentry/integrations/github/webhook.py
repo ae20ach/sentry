@@ -59,9 +59,6 @@ from sentry.preprod.vcs.webhooks import handle_preprod_check_run_event
 from sentry.scm.private.stream_producer import produce_event_to_scm_stream
 from sentry.seer.autofix.webhooks import handle_github_pr_webhook_for_autofix
 from sentry.seer.code_review.contributor_seats import track_contributor_seat
-from sentry.seer.code_review.webhooks.handlers import (
-    handle_webhook_event as code_review_handle_webhook_event,
-)
 from sentry.shared_integrations.exceptions import ApiError
 from sentry.silo.base import SiloMode
 from sentry.users.services.user.service import user_service
@@ -847,10 +844,7 @@ class PullRequestEventWebhook(GitHubWebhook):
     """https://developer.github.com/v3/activity/events/types/#pullrequestevent"""
 
     EVENT_TYPE = IntegrationWebhookEventType.MERGE_REQUEST
-    WEBHOOK_EVENT_PROCESSORS = (
-        _handle_pr_webhook_for_autofix_processor,
-        code_review_handle_webhook_event,
-    )
+    WEBHOOK_EVENT_PROCESSORS = (_handle_pr_webhook_for_autofix_processor,)
 
     def _handle(
         self,
@@ -976,10 +970,7 @@ class CheckRunEventWebhook(GitHubWebhook):
     """
 
     EVENT_TYPE = IntegrationWebhookEventType.CI_CHECK
-    WEBHOOK_EVENT_PROCESSORS = (
-        code_review_handle_webhook_event,
-        handle_preprod_check_run_event,
-    )
+    WEBHOOK_EVENT_PROCESSORS = (handle_preprod_check_run_event,)
 
 
 class IssueCommentEventWebhook(GitHubWebhook):
@@ -989,7 +980,7 @@ class IssueCommentEventWebhook(GitHubWebhook):
     """
 
     EVENT_TYPE = IntegrationWebhookEventType.ISSUE_COMMENT
-    WEBHOOK_EVENT_PROCESSORS = (code_review_handle_webhook_event,)
+    WEBHOOK_EVENT_PROCESSORS = ()
 
 
 @all_silo_endpoint
@@ -1150,7 +1141,7 @@ class GitHubIntegrationsWebhookEndpoint(Endpoint):
             {
                 "event_type_hint": request.headers.get(GITHUB_WEBHOOK_TYPE_HEADER_KEY),
                 "event": request.body.decode("utf-8"),
-                "extra": {},
+                "extra": {"github_delivery_id": github_delivery_id},
                 "received_at": int(time.time()),
                 "sentry_meta": None,
                 "type": IntegrationProviderSlug.GITHUB.value,

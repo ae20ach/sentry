@@ -19,6 +19,9 @@ from sentry.integrations.github.webhook_types import GithubWebhookType
 from sentry.integrations.models.integration import Integration
 from sentry.models.organizationcontributors import OrganizationContributors
 from sentry.models.repositorysettings import CodeReviewTrigger
+from sentry.scm.private.event_stream import scm_event_stream
+from sentry.scm.private.ipc import produce_to_listeners, run_listener
+from sentry.scm.types import EventTypeHint, HybridCloudSilo, SubscriptionEvent
 from sentry.seer.code_review.utils import get_pr_author_id
 from sentry.silo.base import SiloMode
 from sentry.testutils.cases import APITestCase
@@ -218,4 +221,31 @@ class GitHubWebhookCodeReviewTestCase(GitHubWebhookTestCase):
 
         response = self.send_github_webhook_event(github_event, event_data)
         assert response.status_code == 204
+
+        # Synchronously invoke the SCM stream listeners.
+        # The HTTP endpoint dispatches to the stream asynchronously (via taskbroker), but
+        # integration tests need synchronous execution. We build a SubscriptionEvent from the
+        # same raw bytes and run each registered listener inline, bypassing the task queue.
+        event_bytes = event_data.encode("utf-8") if isinstance(event_data, str) else event_data
+        subscription_event: SubscriptionEvent = {
+            "received_at": int(datetime.now().timestamp()),
+            "type": "github",
+            "event_type_hint": github_event.value,
+            "event": event_bytes.decode("utf-8"),
+            "extra": {"github_delivery_id": None},
+            "sentry_meta": None,
+        }
+
+        def _sync_listener(
+            message: str, event_type_hint: EventTypeHint, listener_name: str, _silo: str
+        ) -> None:
+            run_listener(listener_name, message, event_type_hint, stream=scm_event_stream)
+
+        silo: HybridCloudSilo = (
+            "region" if SiloMode.get_current_mode() == SiloMode.CELL else "control"
+        )
+        produce_to_listeners(
+            subscription_event, silo, produce_to_listener=_sync_listener, stream=scm_event_stream
+        )
+
         return response

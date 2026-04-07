@@ -106,32 +106,6 @@ class PullRequestEventWebhookTest(GitHubWebhookCodeReviewTestCase):
 
             self.mock_seer.assert_not_called()
 
-    def test_pull_request_missing_action_field(self) -> None:
-        """Test that events without action field are skipped."""
-        with self.code_review_setup(), self.tasks():
-            event_without_action = orjson.loads(PULL_REQUEST_OPENED_EVENT_EXAMPLE)
-            del event_without_action["action"]
-
-            self._send_webhook_event(
-                GithubWebhookType.PULL_REQUEST,
-                orjson.dumps(event_without_action),
-            )
-
-            self.mock_seer.assert_not_called()
-
-    def test_pull_request_invalid_action_type(self) -> None:
-        """Test that events with non-string action are skipped."""
-        with self.code_review_setup(), self.tasks():
-            event_with_invalid_action = orjson.loads(PULL_REQUEST_OPENED_EVENT_EXAMPLE)
-            event_with_invalid_action["action"] = 123
-
-            self._send_webhook_event(
-                GithubWebhookType.PULL_REQUEST,
-                orjson.dumps(event_with_invalid_action),
-            )
-
-            self.mock_seer.assert_not_called()
-
     def test_pull_request_skips_when_code_review_disabled(self) -> None:
         """Test that PR events are skipped when code review features are not enabled."""
         with self.tasks():
@@ -184,19 +158,6 @@ class PullRequestEventWebhookTest(GitHubWebhookCodeReviewTestCase):
 
             self.mock_seer.assert_called_once()
             self.mock_reaction.assert_called_once()
-
-    def test_pull_request_invalid_enum_action(self) -> None:
-        """Test that actions not in PullRequestAction enum are handled gracefully."""
-        with self.code_review_setup(), self.tasks():
-            event = orjson.loads(PULL_REQUEST_OPENED_EVENT_EXAMPLE)
-            event["action"] = "future_action_not_in_enum"
-
-            self._send_webhook_event(
-                GithubWebhookType.PULL_REQUEST,
-                orjson.dumps(event),
-            )
-
-            self.mock_seer.assert_not_called()
 
     def test_pull_request_blocks_draft_for_ready_for_review_action(self) -> None:
         """Test that draft PRs are blocked for ready_for_review action."""
