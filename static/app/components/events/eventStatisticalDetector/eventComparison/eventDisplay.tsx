@@ -217,6 +217,32 @@ function EventDisplay({
     location,
     organization,
   });
+
+  const minimapContent = (
+    <MinimapContainer>
+      <MinimapPositioningContainer>
+        <ActualMinimap
+          theme={theme}
+          spans={waterfallModel.getWaterfall({
+            viewStart: 0,
+            viewEnd: 1,
+          })}
+          generateBounds={waterfallModel.generateBounds({
+            viewStart: 0,
+            viewEnd: 1,
+          })}
+          dividerPosition={0}
+          rootSpan={waterfallModel.rootSpan.span}
+        />
+      </MinimapPositioningContainer>
+    </MinimapContainer>
+  );
+  const minimap = isOld ? (
+    minimapContent
+  ) : (
+    <Link to={fullEventTarget}>{minimapContent}</Link>
+  );
+
   return (
     <Stack gap="md">
       <div>
@@ -287,45 +313,7 @@ function EventDisplay({
           </div>
         </Flex>
         <ComparisonContentWrapper>
-          {isOld ? (
-            <MinimapContainer>
-              <MinimapPositioningContainer>
-                <ActualMinimap
-                  theme={theme}
-                  spans={waterfallModel.getWaterfall({
-                    viewStart: 0,
-                    viewEnd: 1,
-                  })}
-                  generateBounds={waterfallModel.generateBounds({
-                    viewStart: 0,
-                    viewEnd: 1,
-                  })}
-                  dividerPosition={0}
-                  rootSpan={waterfallModel.rootSpan.span}
-                />
-              </MinimapPositioningContainer>
-            </MinimapContainer>
-          ) : (
-            <Link to={fullEventTarget}>
-              <MinimapContainer>
-                <MinimapPositioningContainer>
-                  <ActualMinimap
-                    theme={theme}
-                    spans={waterfallModel.getWaterfall({
-                      viewStart: 0,
-                      viewEnd: 1,
-                    })}
-                    generateBounds={waterfallModel.generateBounds({
-                      viewStart: 0,
-                      viewEnd: 1,
-                    })}
-                    dividerPosition={0}
-                    rootSpan={waterfallModel.rootSpan.span}
-                  />
-                </MinimapPositioningContainer>
-              </MinimapContainer>
-            </Link>
-          )}
+          {minimap}
 
           <OpsBreakdown event={eventData} operationNameFilters={noFilter} hideHeader />
         </ComparisonContentWrapper>
