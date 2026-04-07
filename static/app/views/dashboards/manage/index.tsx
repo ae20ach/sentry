@@ -9,20 +9,17 @@ import {Alert} from '@sentry/scraps/alert';
 import {FeatureBadge} from '@sentry/scraps/badge';
 import {Button} from '@sentry/scraps/button';
 import {CompactSelect} from '@sentry/scraps/compactSelect';
-import {Flex, Grid} from '@sentry/scraps/layout';
+import {Flex, Grid, Stack} from '@sentry/scraps/layout';
 import {OverlayTrigger} from '@sentry/scraps/overlayTrigger';
 import {SegmentedControl} from '@sentry/scraps/segmentedControl';
 import {Switch} from '@sentry/scraps/switch';
 
 import {createDashboard} from 'sentry/actionCreators/dashboards';
 import {addLoadingMessage, addSuccessMessage} from 'sentry/actionCreators/indicator';
-import {
-  openGenerateDashboardFromSeerModal,
-  openImportDashboardFromFileModal,
-} from 'sentry/actionCreators/modal';
+import {openImportDashboardFromFileModal} from 'sentry/actionCreators/modal';
 import Feature from 'sentry/components/acl/feature';
 import {DropdownMenu} from 'sentry/components/dropdownMenu';
-import ErrorBoundary from 'sentry/components/errorBoundary';
+import {ErrorBoundary} from 'sentry/components/errorBoundary';
 import {FeedbackButton} from 'sentry/components/feedbackButton/feedbackButton';
 import * as Layout from 'sentry/components/layouts/thirds';
 import {NoProjectMessage} from 'sentry/components/noProjectMessage';
@@ -173,6 +170,9 @@ function ManageDashboards() {
   const isOnlyPrebuilt =
     hasPrebuiltDashboards && urlFilter === DashboardFilter.ONLY_PREBUILT;
 
+  const areAiFeaturesAllowed =
+    !organization.hideAiFeatures && organization.features.includes('gen-ai-features');
+
   const [showTemplates, setShowTemplatesLocal] = useLocalStorageState(
     SHOW_TEMPLATES_KEY,
     shouldShowTemplates()
@@ -211,7 +211,9 @@ function ManageDashboards() {
           pin: 'favorites',
           per_page:
             dashboardsLayout === GRID ? rowCount * columnCount : DASHBOARD_TABLE_NUM_ROWS,
-          ...(isOnlyPrebuilt ? {filter: DashboardFilter.ONLY_PREBUILT} : {}),
+          ...(isOnlyPrebuilt
+            ? {filter: DashboardFilter.ONLY_PREBUILT}
+            : {filter: DashboardFilter.EXCLUDE_PREBUILT}),
         },
       },
     ],
@@ -476,13 +478,13 @@ function ManageDashboards() {
 
   function renderNoAccess() {
     return (
-      <Layout.Page>
+      <Stack flex={1}>
         <Alert.Container>
           <Alert variant="warning" showIcon={false}>
             {t("You don't have access to this feature")}
           </Alert>
         </Alert.Container>
-      </Layout.Page>
+      </Stack>
     );
   }
 
@@ -492,7 +494,6 @@ function ManageDashboards() {
         api={api}
         dashboards={dashboards}
         organization={organization}
-        location={location}
         onDashboardsChange={() => refetchDashboards()}
         isLoading={isLoading}
         rowCount={rowCount}
@@ -541,19 +542,12 @@ function ManageDashboards() {
     );
   }
 
-  const {query: _query, ...queryWithoutSearch} = location.query;
-
   function onCreate() {
     trackAnalytics('dashboards_manage.create.start', {
       organization,
     });
 
-    navigate(
-      normalizeUrl({
-        pathname: `/organizations/${organization.slug}/dashboards/new/`,
-        query: queryWithoutSearch,
-      })
-    );
+    navigate(normalizeUrl(`/organizations/${organization.slug}/dashboards/new/`));
   }
 
   async function onAdd(dashboard: DashboardDetails) {
@@ -576,10 +570,7 @@ function ManageDashboards() {
 
   function loadDashboard(dashboardId: string) {
     navigate(
-      normalizeUrl({
-        pathname: `/organizations/${organization.slug}/dashboards/${dashboardId}/`,
-        query: queryWithoutSearch,
-      })
+      normalizeUrl(`/organizations/${organization.slug}/dashboards/${dashboardId}/`)
     );
   }
 
@@ -590,9 +581,17 @@ function ManageDashboards() {
     });
 
     navigate(
+      normalizeUrl(`/organizations/${organization.slug}/dashboards/new/${dashboardId}/`)
+    );
+  }
+
+  function onGenerateDashboard() {
+    trackAnalytics('dashboards_manage.generate.start', {
+      organization,
+    });
+    navigate(
       normalizeUrl({
-        pathname: `/organizations/${organization.slug}/dashboards/new/${dashboardId}/`,
-        query: queryWithoutSearch,
+        pathname: `/organizations/${organization.slug}/dashboards/new/from-seer/`,
       })
     );
   }
@@ -609,11 +608,11 @@ function ManageDashboards() {
       >
         <ErrorBoundary>
           {isError ? (
-            <Layout.Page withPadding>
+            <Stack flex={1} padding="2xl 3xl">
               <RouteError error={error} />
-            </Layout.Page>
+            </Stack>
           ) : (
-            <Layout.Page>
+            <Stack flex={1}>
               <NoProjectMessage organization={organization}>
                 <Layout.Header unified>
                   <Layout.HeaderContent unified>
@@ -647,9 +646,9 @@ function ManageDashboards() {
                       )}
 
                       <FeedbackButton />
-                      <Feature features="dashboards-ai-generate">
+                      <Feature features={['dashboards-ai-generate']}>
                         {({hasFeature: hasAiGenerate}) =>
-                          hasAiGenerate ? (
+                          hasAiGenerate && areAiFeaturesAllowed ? (
                             <DashboardCreateLimitWrapper>
                               {({
                                 hasReachedDashboardLimit,
@@ -660,7 +659,7 @@ function ManageDashboards() {
                                   items={[
                                     {
                                       key: 'create-dashboard',
-                                      label: t('Create Manually'),
+                                      label: t('Create dashboard manually'),
                                       onAction: () => onCreate(),
                                       disabled:
                                         hasReachedDashboardLimit ||
@@ -669,18 +668,14 @@ function ManageDashboards() {
                                     },
                                     {
                                       key: 'create-dashboard-agent',
+                                      textValue: t('Generate dashboard'),
                                       label: (
                                         <Flex gap="sm" align="center" as="span">
-                                          {t('Create with Agent')}
-                                          <FeatureBadge type="experimental" />
+                                          {t('Generate dashboard')}
+                                          <FeatureBadge type="beta" />
                                         </Flex>
                                       ),
-                                      onAction: () =>
-                                        openGenerateDashboardFromSeerModal({
-                                          organization,
-                                          location,
-                                          navigate,
-                                        }),
+                                      onAction: () => onGenerateDashboard(),
                                     },
                                   ]}
                                   trigger={triggerProps => (
@@ -761,7 +756,7 @@ function ManageDashboards() {
                   </Layout.Main>
                 </Layout.Body>
               </NoProjectMessage>
-            </Layout.Page>
+            </Stack>
           )}
         </ErrorBoundary>
       </SentryDocumentTitle>

@@ -31,8 +31,7 @@ import {defined} from 'sentry/utils';
 import {CAN_MARK, trackAnalytics} from 'sentry/utils/analytics';
 import {getUtcDateString} from 'sentry/utils/dates';
 import type {TableDataWithTitle} from 'sentry/utils/discover/discoverQuery';
-import type EventView from 'sentry/utils/discover/eventView';
-import type {MetaType} from 'sentry/utils/discover/eventView';
+import type {EventView, MetaType} from 'sentry/utils/discover/eventView';
 import type {RenderFunctionBaggage} from 'sentry/utils/discover/fieldRenderers';
 import type {Sort} from 'sentry/utils/discover/fields';
 import {
@@ -71,7 +70,11 @@ import type {
   DashboardPermissions,
   Widget,
 } from 'sentry/views/dashboards/types';
-import {DisplayType, WidgetType} from 'sentry/views/dashboards/types';
+import {
+  DisplayType,
+  PREBUILT_DASHBOARD_LABEL,
+  WidgetType,
+} from 'sentry/views/dashboards/types';
 import {
   dashboardFiltersToString,
   eventViewFromWidget,
@@ -105,7 +108,7 @@ import {ReleaseWidgetQueries} from 'sentry/views/dashboards/widgetCard/releaseWi
 import {VisualizationWidget} from 'sentry/views/dashboards/widgetCard/visualizationWidget';
 import {WidgetCardChartContainer} from 'sentry/views/dashboards/widgetCard/widgetCardChartContainer';
 import {WidgetQueries} from 'sentry/views/dashboards/widgetCard/widgetQueries';
-import type WidgetLegendSelectionState from 'sentry/views/dashboards/widgetLegendSelectionState';
+import type {WidgetLegendSelectionState} from 'sentry/views/dashboards/widgetLegendSelectionState';
 import {AgentsTracesTableWidgetVisualization} from 'sentry/views/dashboards/widgets/agentsTracesTableWidget/agentsTracesTableWidgetVisualization';
 import {ALLOWED_CELL_ACTIONS} from 'sentry/views/dashboards/widgets/common/settings';
 import {TableWidgetVisualization} from 'sentry/views/dashboards/widgets/tableWidget/tableWidgetVisualization';
@@ -130,6 +133,7 @@ export interface DataWidgetViewerModalOptions {
   dashboardCreator?: User;
   dashboardFilters?: DashboardFilters;
   dashboardPermissions?: DashboardPermissions;
+  isPrebuiltDashboard?: boolean;
   onEdit?: () => void;
   widgetInterval?: string;
 }
@@ -198,6 +202,7 @@ function DataWidgetViewerModal(props: Props) {
     widgetLegendState,
     dashboardPermissions,
     dashboardCreator,
+    isPrebuiltDashboard,
     widgetInterval,
   } = props;
   const theme = useTheme();
@@ -617,13 +622,14 @@ function DataWidgetViewerModal(props: Props) {
 
   const currentUser = useUser();
   const {teams: userTeams} = useUserTeams();
-  const hasEditAccess = checkUserHasEditAccess(
-    currentUser,
-    userTeams,
-    organization,
-    dashboardPermissions,
-    dashboardCreator
-  );
+  const hasEditAccess =
+    checkUserHasEditAccess(
+      currentUser,
+      userTeams,
+      organization,
+      dashboardPermissions,
+      dashboardCreator
+    ) && !isPrebuiltDashboard;
 
   const shouldRenderChartVisualization =
     widget.displayType !== DisplayType.TABLE &&
@@ -841,9 +847,13 @@ function DataWidgetViewerModal(props: Props) {
                           }}
                           disabled={!hasEditAccess}
                           tooltipProps={{
-                            title:
-                              !hasEditAccess &&
-                              t('You do not have permission to edit this widget'),
+                            title: hasEditAccess
+                              ? undefined
+                              : isPrebuiltDashboard
+                                ? tct('[label] dashboards cannot be edited', {
+                                    label: PREBUILT_DASHBOARD_LABEL,
+                                  })
+                                : t('You do not have permission to edit this widget'),
                           }}
                         >
                           {t('Edit Widget')}
@@ -1097,6 +1107,7 @@ function ViewerTableV2({
   }
 
   const cellActions =
+    organization.features.includes('visibility-explore-view') &&
     tableWidget.widgetType === WidgetType.SPANS
       ? [...ALLOWED_CELL_ACTIONS, Actions.OPEN_ROW_IN_EXPLORE]
       : ALLOWED_CELL_ACTIONS;

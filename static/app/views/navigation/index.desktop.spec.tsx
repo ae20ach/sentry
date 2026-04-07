@@ -5,6 +5,7 @@ import {OrganizationFixture} from 'sentry-fixture/organization';
 import {UserFixture} from 'sentry-fixture/user';
 
 import {
+  fireEvent,
   render,
   screen,
   userEvent,
@@ -616,6 +617,36 @@ describe('desktop navigation', () => {
         ).not.toBeInTheDocument();
       });
 
+      it('can collapse the sidebar via Ctrl+B keyboard shortcut', () => {
+        render(
+          <PrimaryNavigationContextProvider>
+            <Navigation />
+          </PrimaryNavigationContextProvider>,
+          navigationContext()
+        );
+
+        fireEvent.keyDown(document, {keyCode: 66 /* b */, ctrlKey: true});
+
+        expect(screen.getByTestId('collapsed-secondary-sidebar')).toBeInTheDocument();
+      });
+
+      it('can expand a collapsed sidebar via Ctrl+B keyboard shortcut', () => {
+        render(
+          <PrimaryNavigationContextProvider>
+            <Navigation />
+          </PrimaryNavigationContextProvider>,
+          navigationContext()
+        );
+
+        fireEvent.keyDown(document, {keyCode: 66 /* b */, ctrlKey: true});
+        expect(screen.getByTestId('collapsed-secondary-sidebar')).toBeInTheDocument();
+
+        fireEvent.keyDown(document, {keyCode: 66 /* b */, ctrlKey: true});
+        expect(
+          screen.queryByTestId('collapsed-secondary-sidebar')
+        ).not.toBeInTheDocument();
+      });
+
       describe('persistence', () => {
         it('defaults to expanded when no localStorage key exists', () => {
           render(
@@ -820,9 +851,8 @@ describe('desktop navigation', () => {
 
           await userEvent.hover(screen.getByRole('link', {name: 'Explore'}));
 
-          expect(
-            await within(secondaryNav).findByRole('link', {name: 'Traces'})
-          ).toBeInTheDocument();
+          // Re-query secondary nav because AnimatePresence remounts it with a new key
+          expect(await screen.findByRole('link', {name: 'Traces'})).toBeInTheDocument();
         });
 
         it('shows hovered group content in the peek view when sidebar is collapsed', async () => {
