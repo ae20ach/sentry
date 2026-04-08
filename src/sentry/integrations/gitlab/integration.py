@@ -6,7 +6,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from django import forms
-from django.db import transaction
+from django.db import router, transaction
 from django.http.request import HttpRequest
 from django.http.response import HttpResponseBase
 from django.urls import reverse
@@ -356,7 +356,7 @@ class GitlabIntegration(
 
             data["sync_status_forward"] = bool(project_mappings)
 
-            with transaction.atomic():
+            with transaction.atomic(using=router.db_for_write(IntegrationExternalProject)):
                 IntegrationExternalProject.objects.filter(
                     organization_integration_id=self.org_integration.id
                 ).delete()
