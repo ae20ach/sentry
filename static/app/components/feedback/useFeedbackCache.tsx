@@ -5,7 +5,7 @@ import {useFeedbackQueryKeys} from 'sentry/components/feedback/useFeedbackQueryK
 import {defined} from 'sentry/utils';
 import type {ApiResponse} from 'sentry/utils/api/apiFetch';
 import type {FeedbackIssue, FeedbackIssueListItem} from 'sentry/utils/feedback/types';
-import type {ApiQueryKey, InfiniteData, QueryState} from 'sentry/utils/queryClient';
+import type {ApiQueryKey, InfiniteData} from 'sentry/utils/queryClient';
 import {setApiQueryData, useQueryClient} from 'sentry/utils/queryClient';
 import {useOrganization} from 'sentry/utils/useOrganization';
 
@@ -115,11 +115,11 @@ export function useFeedbackCache() {
         queryClient.refetchQueries({
           queryKey: listQueryKey,
           predicate: query => {
-            // Check if any of the pages contain the items we want to invalidate
+            const data = query.state.data as
+              | InfiniteData<ApiResponse<FeedbackIssueListItem[]>>
+              | undefined;
             return Boolean(
-              (
-                query.state.data as QueryState<InfiniteData<FeedbackIssueListItem[]>>
-              ).data?.pages.some(items => items.some(item => ids.includes(item.id)))
+              data?.pages.some(page => page.json.some(item => ids.includes(item.id)))
             );
           },
         });
