@@ -114,28 +114,8 @@ class MessageInteractionFailureReason(StrEnum):
     MISSING_ACTION = "missing_action"
 
 
-class AppMentionHaltReason(StrEnum):
-    """Reasons why an app mention event may halt without processing."""
-
-    NO_ORGANIZATION = "no_organization"
-    ORGANIZATION_NOT_FOUND = "organization_not_found"
-    ORGANIZATION_NOT_ACTIVE = "organization_not_active"
-    FEATURE_NOT_ENABLED = "feature_not_enabled"
-    MISSING_EVENT_DATA = "missing_event_data"
-
-
-class DmMessageHaltReason(StrEnum):
-    """Reasons why a DM message event may halt without processing."""
-
-    NO_ORGANIZATION = "no_organization"
-    ORGANIZATION_NOT_FOUND = "organization_not_found"
-    ORGANIZATION_NOT_ACTIVE = "organization_not_active"
-    FEATURE_NOT_ENABLED = "feature_not_enabled"
-    MISSING_EVENT_DATA = "missing_event_data"
-
-
-class AssistantThreadHaltReason(StrEnum):
-    """Reasons why an assistant_thread_started event may halt without processing."""
+class SeerSlackHaltReason(StrEnum):
+    """Reasons why a Seer Slack event (app mention, DM, assistant thread) may halt."""
 
     NO_ORGANIZATION = "no_organization"
     ORGANIZATION_NOT_FOUND = "organization_not_found"

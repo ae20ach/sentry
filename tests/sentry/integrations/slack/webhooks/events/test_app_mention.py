@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from sentry.integrations.messaging.metrics import AppMentionHaltReason
+from sentry.integrations.messaging.metrics import SeerSlackHaltReason
 from sentry.testutils.asserts import assert_halt_metric
 
 from . import BaseEventTest
@@ -73,7 +73,7 @@ class AppMentionEventTest(BaseEventTest):
 
         assert resp.status_code == 200
         mock_apply_async.assert_not_called()
-        assert_halt_metric(mock_record, AppMentionHaltReason.FEATURE_NOT_ENABLED)
+        assert_halt_metric(mock_record, SeerSlackHaltReason.FEATURE_NOT_ENABLED)
 
     @patch("sentry.integrations.utils.metrics.EventLifecycle.record_event")
     @patch("sentry.seer.entrypoints.slack.tasks.process_mention_for_slack.apply_async")
@@ -84,7 +84,7 @@ class AppMentionEventTest(BaseEventTest):
 
         assert resp.status_code == 200
         mock_apply_async.assert_not_called()
-        assert_halt_metric(mock_record, AppMentionHaltReason.MISSING_EVENT_DATA)
+        assert_halt_metric(mock_record, SeerSlackHaltReason.MISSING_EVENT_DATA)
 
     @patch("sentry.integrations.utils.metrics.EventLifecycle.record_event")
     @patch("sentry.seer.entrypoints.slack.tasks.process_mention_for_slack.apply_async")
@@ -99,7 +99,7 @@ class AppMentionEventTest(BaseEventTest):
 
         assert resp.status_code == 200
         mock_apply_async.assert_not_called()
-        assert_halt_metric(mock_record, AppMentionHaltReason.NO_ORGANIZATION)
+        assert_halt_metric(mock_record, SeerSlackHaltReason.NO_ORGANIZATION)
 
     @patch("sentry.integrations.utils.metrics.EventLifecycle.record_event")
     @patch("sentry.seer.entrypoints.slack.tasks.process_mention_for_slack.apply_async")
@@ -113,4 +113,4 @@ class AppMentionEventTest(BaseEventTest):
 
         assert resp.status_code == 200
         mock_apply_async.assert_not_called()
-        assert_halt_metric(mock_record, AppMentionHaltReason.ORGANIZATION_NOT_FOUND)
+        assert_halt_metric(mock_record, SeerSlackHaltReason.ORGANIZATION_NOT_FOUND)

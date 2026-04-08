@@ -18,11 +18,9 @@ from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import all_silo_endpoint
 from sentry.constants import ObjectStatus
 from sentry.integrations.messaging.metrics import (
-    AppMentionHaltReason,
-    AssistantThreadHaltReason,
-    DmMessageHaltReason,
     MessagingInteractionEvent,
     MessagingInteractionType,
+    SeerSlackHaltReason,
 )
 from sentry.integrations.services.integration import integration_service
 from sentry.integrations.slack.analytics import SlackIntegrationChartUnfurl
@@ -45,6 +43,17 @@ from .base import SlackDMEndpoint
 from .command import LINK_FROM_CHANNEL_MESSAGE
 
 _logger = logging.getLogger(__name__)
+
+_SEER_LOADING_MESSAGES = [
+    "Digging through your errors...",
+    "Sifting through stack traces...",
+    "Blaming the right code...",
+    "Following the breadcrumbs...",
+    "Asking the stack trace nicely...",
+    "Reading between the stack frames...",
+    "Hold on, I've seen this one before...",
+    "It worked on my machine...",
+]
 
 
 @all_silo_endpoint  # Only challenge verification is handled at control
@@ -332,10 +341,55 @@ class SlackEventEndpoint(SlackDMEndpoint):
 
         return True
 
-    def on_app_mention(self, slack_request: SlackDMRequest) -> Response:
-        """Handle @mention events for Seer Explorer."""
+    def _resolve_seer_organization(self, slack_request, lifecycle):
+        """Resolve and validate the organization for a Seer Slack event.
+
+        Returns ``(organization_id, installation)`` or ``None`` when the
+        event should be halted (the halt reason is already recorded).
+        """
+        ois = integration_service.get_organization_integrations(
+            integration_id=slack_request.integration.id,
+            status=ObjectStatus.ACTIVE,
+            limit=1,
+        )
+        if not ois:
+            lifecycle.record_halt(SeerSlackHaltReason.NO_ORGANIZATION)
+            return None
+
+        organization_id = ois[0].organization_id
+        lifecycle.add_extra("organization_id", organization_id)
+
+        installation = slack_request.integration.get_installation(organization_id=organization_id)
+        assert isinstance(installation, SlackIntegration)
+        try:
+            organization = installation.organization
+        except NotFound:
+            lifecycle.record_halt(SeerSlackHaltReason.ORGANIZATION_NOT_FOUND)
+            return None
+
+        if organization.status != OrganizationStatus.ACTIVE:
+            lifecycle.add_extra("status", organization.status)
+            lifecycle.record_halt(SeerSlackHaltReason.ORGANIZATION_NOT_ACTIVE)
+            return None
+
+        if not features.has("organizations:seer-slack-explorer", organization):
+            lifecycle.record_halt(SeerSlackHaltReason.FEATURE_NOT_ENABLED)
+            return None
+
+        return organization_id, installation
+
+    def _handle_seer_mention(
+        self,
+        slack_request: SlackDMRequest,
+        interaction_type: MessagingInteractionType,
+    ) -> Response | None:
+        """Shared handler for app mentions and DMs that trigger the Seer workflow.
+
+        Returns ``None`` when the feature flag is off (DM messages only),
+        allowing the caller to fall back to alternative handling.
+        """
         with MessagingInteractionEvent(
-            interaction_type=MessagingInteractionType.APP_MENTION,
+            interaction_type=interaction_type,
             spec=SlackMessagingSpec(),
         ).capture() as lifecycle:
             data = slack_request.data.get("event", {})
@@ -346,143 +400,14 @@ class SlackEventEndpoint(SlackDMEndpoint):
                 }
             )
 
-            ois = integration_service.get_organization_integrations(
-                integration_id=slack_request.integration.id,
-                status=ObjectStatus.ACTIVE,
-                limit=1,
-            )
-            if not ois:
-                lifecycle.record_halt(AppMentionHaltReason.NO_ORGANIZATION)
+            result = self._resolve_seer_organization(slack_request, lifecycle)
+            if result is None:
+                # For DMs, return None on feature-flag halt so caller can
+                # fall back to the help message.
+                if interaction_type == MessagingInteractionType.DM_MESSAGE:
+                    return None
                 return self.respond()
-
-            organization_id = ois[0].organization_id
-            lifecycle.add_extra("organization_id", organization_id)
-
-            installation = slack_request.integration.get_installation(
-                organization_id=organization_id
-            )
-            assert isinstance(installation, SlackIntegration)
-            try:
-                organization = installation.organization
-            except NotFound:
-                lifecycle.record_halt(AppMentionHaltReason.ORGANIZATION_NOT_FOUND)
-                return self.respond()
-
-            if organization.status != OrganizationStatus.ACTIVE:
-                lifecycle.add_extra("status", organization.status)
-                lifecycle.record_halt(AppMentionHaltReason.ORGANIZATION_NOT_ACTIVE)
-                return self.respond()
-
-            if not features.has("organizations:seer-slack-explorer", organization):
-                lifecycle.record_halt(AppMentionHaltReason.FEATURE_NOT_ENABLED)
-                return self.respond()
-
-            channel_id = data.get("channel")
-            text = data.get("text")
-            ts = data.get("ts")
-            thread_ts = data.get("thread_ts")  # None for top-level messages
-
-            lifecycle.add_extras(
-                {
-                    "channel_id": channel_id,
-                    "text": text,
-                    "ts": ts,
-                    "thread_ts": thread_ts,
-                    "user_id": slack_request.user_id,
-                }
-            )
-
-            if not channel_id or not text or not ts or not slack_request.user_id:
-                lifecycle.record_halt(AppMentionHaltReason.MISSING_EVENT_DATA)
-                return self.respond()
-
-            try:
-                installation.set_thread_status(
-                    channel_id=channel_id,
-                    thread_ts=thread_ts or ts,
-                    status="Thinking...",
-                    loading_messages=[
-                        "Digging through your errors...",
-                        "Sifting through stack traces...",
-                        "Blaming the right code...",
-                        "Following the breadcrumbs...",
-                        "Asking the stack trace nicely...",
-                        "Reading between the stack frames...",
-                        "Hold on, I've seen this one before...",
-                        "It worked on my machine...",
-                    ],
-                )
-            except Exception:
-                _logger.exception(
-                    "slack.assistant_threads_setStatus.failed",
-                    extra={
-                        "integration_id": slack_request.integration.id,
-                        "channel_id": channel_id,
-                        "thread_ts": thread_ts or ts,
-                    },
-                )
-
-            authorizations = slack_request.data.get("authorizations") or []
-            bot_user_id = authorizations[0].get("user_id", "") if authorizations else ""
-
-            process_mention_for_slack.apply_async(
-                kwargs={
-                    "integration_id": slack_request.integration.id,
-                    "organization_id": organization_id,
-                    "channel_id": channel_id,
-                    "ts": ts,
-                    "thread_ts": thread_ts,
-                    "text": text,
-                    "slack_user_id": slack_request.user_id,
-                    "bot_user_id": bot_user_id,
-                }
-            )
-            return self.respond()
-
-    def on_dm(self, slack_request: SlackDMRequest) -> Response | None:
-        """Handle DM messages by kicking off the Seer Explorer agentic workflow."""
-        with MessagingInteractionEvent(
-            interaction_type=MessagingInteractionType.DM_MESSAGE,
-            spec=SlackMessagingSpec(),
-        ).capture() as lifecycle:
-            data = slack_request.data.get("event", {})
-            lifecycle.add_extras(
-                {
-                    "integration_id": slack_request.integration.id,
-                    "thread_ts": data.get("thread_ts"),
-                }
-            )
-
-            ois = integration_service.get_organization_integrations(
-                integration_id=slack_request.integration.id,
-                status=ObjectStatus.ACTIVE,
-                limit=1,
-            )
-            if not ois:
-                lifecycle.record_halt(DmMessageHaltReason.NO_ORGANIZATION)
-                return self.respond()
-
-            organization_id = ois[0].organization_id
-            lifecycle.add_extra("organization_id", organization_id)
-
-            installation = slack_request.integration.get_installation(
-                organization_id=organization_id
-            )
-            assert isinstance(installation, SlackIntegration)
-            try:
-                organization = installation.organization
-            except NotFound:
-                lifecycle.record_halt(DmMessageHaltReason.ORGANIZATION_NOT_FOUND)
-                return self.respond()
-
-            if organization.status != OrganizationStatus.ACTIVE:
-                lifecycle.add_extra("status", organization.status)
-                lifecycle.record_halt(DmMessageHaltReason.ORGANIZATION_NOT_ACTIVE)
-                return self.respond()
-
-            if not features.has("organizations:seer-slack-explorer", organization):
-                lifecycle.record_halt(DmMessageHaltReason.FEATURE_NOT_ENABLED)
-                return None
+            organization_id, installation = result
 
             channel_id = data.get("channel")
             text = data.get("text")
@@ -500,7 +425,7 @@ class SlackEventEndpoint(SlackDMEndpoint):
             )
 
             if not channel_id or not text or not ts or not slack_request.user_id:
-                lifecycle.record_halt(DmMessageHaltReason.MISSING_EVENT_DATA)
+                lifecycle.record_halt(SeerSlackHaltReason.MISSING_EVENT_DATA)
                 return self.respond()
 
             try:
@@ -508,16 +433,7 @@ class SlackEventEndpoint(SlackDMEndpoint):
                     channel_id=channel_id,
                     thread_ts=thread_ts or ts,
                     status="Thinking...",
-                    loading_messages=[
-                        "Digging through your errors...",
-                        "Sifting through stack traces...",
-                        "Blaming the right code...",
-                        "Following the breadcrumbs...",
-                        "Asking the stack trace nicely...",
-                        "Reading between the stack frames...",
-                        "Hold on, I've seen this one before...",
-                        "It worked on my machine...",
-                    ],
+                    loading_messages=_SEER_LOADING_MESSAGES,
                 )
             except Exception:
                 _logger.exception(
@@ -546,6 +462,14 @@ class SlackEventEndpoint(SlackDMEndpoint):
             )
             return self.respond()
 
+    def on_app_mention(self, slack_request: SlackDMRequest) -> Response:
+        """Handle @mention events for Seer Explorer."""
+        return self._handle_seer_mention(slack_request, MessagingInteractionType.APP_MENTION)
+
+    def on_dm(self, slack_request: SlackDMRequest) -> Response | None:
+        """Handle DM messages via the Seer workflow; returns None to fall back to help."""
+        return self._handle_seer_mention(slack_request, MessagingInteractionType.DM_MESSAGE)
+
     def on_assistant_thread_started(self, slack_request: SlackDMRequest) -> Response:
         """Handle assistant_thread_started events by sending suggested prompts."""
         with MessagingInteractionEvent(
@@ -556,36 +480,10 @@ class SlackEventEndpoint(SlackDMEndpoint):
             assistant_thread = data.get("assistant_thread", {})
             lifecycle.add_extra("integration_id", slack_request.integration.id)
 
-            ois = integration_service.get_organization_integrations(
-                integration_id=slack_request.integration.id,
-                status=ObjectStatus.ACTIVE,
-                limit=1,
-            )
-            if not ois:
-                lifecycle.record_halt(AssistantThreadHaltReason.NO_ORGANIZATION)
+            result = self._resolve_seer_organization(slack_request, lifecycle)
+            if result is None:
                 return self.respond()
-
-            organization_id = ois[0].organization_id
-            lifecycle.add_extra("organization_id", organization_id)
-
-            installation = slack_request.integration.get_installation(
-                organization_id=organization_id
-            )
-            assert isinstance(installation, SlackIntegration)
-            try:
-                organization = installation.organization
-            except NotFound:
-                lifecycle.record_halt(AssistantThreadHaltReason.ORGANIZATION_NOT_FOUND)
-                return self.respond()
-
-            if organization.status != OrganizationStatus.ACTIVE:
-                lifecycle.add_extra("status", organization.status)
-                lifecycle.record_halt(AssistantThreadHaltReason.ORGANIZATION_NOT_ACTIVE)
-                return self.respond()
-
-            if not features.has("organizations:seer-slack-explorer", organization):
-                lifecycle.record_halt(AssistantThreadHaltReason.FEATURE_NOT_ENABLED)
-                return self.respond()
+            _organization_id, installation = result
 
             channel_id = assistant_thread.get("channel_id")
             thread_ts = assistant_thread.get("thread_ts")
@@ -599,7 +497,7 @@ class SlackEventEndpoint(SlackDMEndpoint):
             )
 
             if not channel_id or not thread_ts:
-                lifecycle.record_halt(AssistantThreadHaltReason.MISSING_EVENT_DATA)
+                lifecycle.record_halt(SeerSlackHaltReason.MISSING_EVENT_DATA)
                 return self.respond()
 
             try:

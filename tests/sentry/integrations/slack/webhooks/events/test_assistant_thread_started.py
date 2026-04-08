@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from sentry.integrations.messaging.metrics import AssistantThreadHaltReason
+from sentry.integrations.messaging.metrics import SeerSlackHaltReason
 from sentry.testutils.asserts import assert_halt_metric
 
 from . import BaseEventTest
@@ -60,7 +60,7 @@ class AssistantThreadStartedEventTest(BaseEventTest):
 
         assert resp.status_code == 200
         mock_set_prompts.assert_not_called()
-        assert_halt_metric(mock_record, AssistantThreadHaltReason.FEATURE_NOT_ENABLED)
+        assert_halt_metric(mock_record, SeerSlackHaltReason.FEATURE_NOT_ENABLED)
 
     @patch("sentry.integrations.utils.metrics.EventLifecycle.record_event")
     @patch(
@@ -76,7 +76,7 @@ class AssistantThreadStartedEventTest(BaseEventTest):
 
         assert resp.status_code == 200
         mock_set_prompts.assert_not_called()
-        assert_halt_metric(mock_record, AssistantThreadHaltReason.NO_ORGANIZATION)
+        assert_halt_metric(mock_record, SeerSlackHaltReason.NO_ORGANIZATION)
 
     @patch("sentry.integrations.utils.metrics.EventLifecycle.record_event")
     @patch(
@@ -95,7 +95,7 @@ class AssistantThreadStartedEventTest(BaseEventTest):
 
         assert resp.status_code == 200
         mock_set_prompts.assert_not_called()
-        assert_halt_metric(mock_record, AssistantThreadHaltReason.MISSING_EVENT_DATA)
+        assert_halt_metric(mock_record, SeerSlackHaltReason.MISSING_EVENT_DATA)
 
     @patch("sentry.integrations.utils.metrics.EventLifecycle.record_event")
     @patch(
@@ -114,7 +114,7 @@ class AssistantThreadStartedEventTest(BaseEventTest):
 
         assert resp.status_code == 200
         mock_set_prompts.assert_not_called()
-        assert_halt_metric(mock_record, AssistantThreadHaltReason.MISSING_EVENT_DATA)
+        assert_halt_metric(mock_record, SeerSlackHaltReason.MISSING_EVENT_DATA)
 
     @patch(
         "sentry.integrations.slack.integration.SlackIntegration.set_suggested_prompts",

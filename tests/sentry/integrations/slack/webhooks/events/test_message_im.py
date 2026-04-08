@@ -4,7 +4,7 @@ import orjson
 import pytest
 from slack_sdk.web import SlackResponse
 
-from sentry.integrations.messaging.metrics import DmMessageHaltReason
+from sentry.integrations.messaging.metrics import SeerSlackHaltReason
 from sentry.integrations.types import EventLifecycleOutcome
 from sentry.silo.base import SiloMode
 from sentry.testutils.asserts import assert_halt_metric, assert_slo_metric
@@ -268,7 +268,7 @@ class MessageIMDmAgentTest(BaseEventTest):
 
         assert resp.status_code == 200
         mock_apply_async.assert_not_called()
-        assert_halt_metric(mock_record, DmMessageHaltReason.FEATURE_NOT_ENABLED)
+        assert_halt_metric(mock_record, SeerSlackHaltReason.FEATURE_NOT_ENABLED)
 
     @patch("sentry.integrations.utils.metrics.EventLifecycle.record_event")
     @patch("sentry.seer.entrypoints.slack.tasks.process_mention_for_slack.apply_async")
@@ -282,7 +282,7 @@ class MessageIMDmAgentTest(BaseEventTest):
 
         assert resp.status_code == 200
         mock_apply_async.assert_not_called()
-        assert_halt_metric(mock_record, DmMessageHaltReason.NO_ORGANIZATION)
+        assert_halt_metric(mock_record, SeerSlackHaltReason.NO_ORGANIZATION)
 
     @patch("sentry.integrations.utils.metrics.EventLifecycle.record_event")
     @patch("sentry.seer.entrypoints.slack.tasks.process_mention_for_slack.apply_async")
@@ -293,4 +293,4 @@ class MessageIMDmAgentTest(BaseEventTest):
 
         assert resp.status_code == 200
         mock_apply_async.assert_not_called()
-        assert_halt_metric(mock_record, DmMessageHaltReason.MISSING_EVENT_DATA)
+        assert_halt_metric(mock_record, SeerSlackHaltReason.MISSING_EVENT_DATA)
