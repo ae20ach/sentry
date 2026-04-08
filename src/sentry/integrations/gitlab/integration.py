@@ -6,6 +6,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from django import forms
+from django.db import transaction
 from django.http.request import HttpRequest
 from django.http.response import HttpResponseBase
 from django.urls import reverse
@@ -355,29 +356,33 @@ class GitlabIntegration(
 
             data["sync_status_forward"] = bool(project_mappings)
 
-            IntegrationExternalProject.objects.filter(
-                organization_integration_id=self.org_integration.id
-            ).delete()
+            with transaction.atomic():
+                IntegrationExternalProject.objects.filter(
+                    organization_integration_id=self.org_integration.id
+                ).delete()
 
-            for project_path, statuses in project_mappings.items():
-                # Validate status values
-                valid_statuses = {GitLabIssueStatus.OPENED.value, GitLabIssueStatus.CLOSED.value}
-                if statuses["on_resolve"] not in valid_statuses:
-                    raise IntegrationError(
-                        f"Invalid resolve status: {statuses['on_resolve']}. Must be 'opened' or 'closed'."
-                    )
-                if statuses["on_unresolve"] not in valid_statuses:
-                    raise IntegrationError(
-                        f"Invalid unresolve status: {statuses['on_unresolve']}. Must be 'opened' or 'closed'."
-                    )
+                for project_path, statuses in project_mappings.items():
+                    # Validate status values
+                    valid_statuses = {
+                        GitLabIssueStatus.OPENED.value,
+                        GitLabIssueStatus.CLOSED.value,
+                    }
+                    if statuses["on_resolve"] not in valid_statuses:
+                        raise IntegrationError(
+                            f"Invalid resolve status: {statuses['on_resolve']}. Must be 'opened' or 'closed'."
+                        )
+                    if statuses["on_unresolve"] not in valid_statuses:
+                        raise IntegrationError(
+                            f"Invalid unresolve status: {statuses['on_unresolve']}. Must be 'opened' or 'closed'."
+                        )
 
-                IntegrationExternalProject.objects.create(
-                    organization_integration_id=self.org_integration.id,
-                    external_id=project_path,
-                    name=project_path,
-                    resolved_status=statuses["on_resolve"],
-                    unresolved_status=statuses["on_unresolve"],
-                )
+                    IntegrationExternalProject.objects.create(
+                        organization_integration_id=self.org_integration.id,
+                        external_id=project_path,
+                        name=project_path,
+                        resolved_status=statuses["on_resolve"],
+                        unresolved_status=statuses["on_unresolve"],
+                    )
 
         # Check webhook version BEFORE updating config to determine if migration is needed
         current_webhook_version = config.get(GITLAB_WEBHOOK_VERSION_KEY, 0)
