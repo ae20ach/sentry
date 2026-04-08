@@ -117,8 +117,6 @@ class MessageInteractionFailureReason(StrEnum):
 class SeerSlackHaltReason(StrEnum):
     """Reasons why a Seer Slack event (app mention, DM, assistant thread) may halt."""
 
-    NO_ORGANIZATION = "no_organization"
-    ORGANIZATION_NOT_FOUND = "organization_not_found"
-    ORGANIZATION_NOT_ACTIVE = "organization_not_active"
-    FEATURE_NOT_ENABLED = "feature_not_enabled"
+    NO_VALID_INTEGRATION = "no_valid_integration"
+    NO_VALID_ORGANIZATION = "no_valid_organization"
     MISSING_EVENT_DATA = "missing_event_data"

@@ -291,7 +291,7 @@ class SlackIntegration(NotifyBasicMixin, IntegrationInstallation, IntegrationNot
         *,
         channel_id: str,
         thread_ts: str,
-        prompts: Sequence[Mapping[str, str]],
+        prompts: Sequence[dict[str, str]],
         title: str = "",
     ) -> None:
         """

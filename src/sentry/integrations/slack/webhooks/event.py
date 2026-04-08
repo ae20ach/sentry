@@ -7,7 +7,6 @@ from typing import Any
 
 import orjson
 import sentry_sdk
-from rest_framework.exceptions import NotFound
 from rest_framework.request import Request
 from rest_framework.response import Response
 from slack_sdk.errors import SlackApiError
@@ -34,9 +33,11 @@ from sentry.integrations.slack.spec import SlackMessagingSpec
 from sentry.integrations.slack.unfurl.handlers import link_handlers, match_link
 from sentry.integrations.slack.unfurl.types import LinkType, UnfurlableUrl
 from sentry.integrations.slack.views.link_identity import build_linking_url
-from sentry.models.organization import OrganizationStatus
+from sentry.integrations.types import IntegrationProviderSlug
+from sentry.models.organization import Organization, OrganizationStatus
 from sentry.organizations.services.organization import organization_service
 from sentry.organizations.services.organization.model import RpcOrganization
+from sentry.seer.entrypoints.slack.entrypoint import SlackExplorerEntrypoint
 from sentry.seer.entrypoints.slack.tasks import process_mention_for_slack
 
 from .base import SlackDMEndpoint
@@ -54,6 +55,7 @@ _SEER_LOADING_MESSAGES = [
     "Hold on, I've seen this one before...",
     "It worked on my machine...",
 ]
+SLACK_PROVIDERS = {IntegrationProviderSlug.SLACK, IntegrationProviderSlug.SLACK_STAGING}
 
 
 @all_silo_endpoint  # Only challenge verification is handled at control
@@ -341,42 +343,49 @@ class SlackEventEndpoint(SlackDMEndpoint):
 
         return True
 
-    def _resolve_seer_organization(self, slack_request, lifecycle):
-        """Resolve and validate the organization for a Seer Slack event.
+    def _resolve_seer_organization(
+        self, slack_request, lifecycle
+    ) -> tuple[int, SlackIntegration] | None:
+        """Resolve and validate an organization for a Seer Slack event.
 
         Returns ``(organization_id, installation)`` or ``None`` when the
         event should be halted (the halt reason is already recorded).
+
+        Note: There is a limitation here of only grabbing the first organization with access to Seer.
+        If a Slack installation corresponds to multiple organizations with Seer access, this will not work,
+        and must be revisited.
         """
         ois = integration_service.get_organization_integrations(
             integration_id=slack_request.integration.id,
             status=ObjectStatus.ACTIVE,
-            limit=1,
+            providers=SLACK_PROVIDERS,
         )
         if not ois:
-            lifecycle.record_halt(SeerSlackHaltReason.NO_ORGANIZATION)
+            lifecycle.record_halt(SeerSlackHaltReason.NO_VALID_INTEGRATION)
             return None
 
-        organization_id = ois[0].organization_id
-        lifecycle.add_extra("organization_id", organization_id)
+        lifecycle.add_extra("organization_ids", [oi.organization_id for oi in ois])
+        for oi in ois:
+            organization_id = oi.organization_id
+            try:
+                organization = Organization.objects.get_from_cache(id=organization_id)
+            except Organization.DoesNotExist:
+                continue
 
-        installation = slack_request.integration.get_installation(organization_id=organization_id)
-        assert isinstance(installation, SlackIntegration)
-        try:
-            organization = installation.organization
-        except NotFound:
-            lifecycle.record_halt(SeerSlackHaltReason.ORGANIZATION_NOT_FOUND)
-            return None
+            installation = slack_request.integration.get_installation(
+                organization_id=organization_id
+            )
+            assert isinstance(installation, SlackIntegration)
 
-        if organization.status != OrganizationStatus.ACTIVE:
-            lifecycle.add_extra("status", organization.status)
-            lifecycle.record_halt(SeerSlackHaltReason.ORGANIZATION_NOT_ACTIVE)
-            return None
+            if organization.status != OrganizationStatus.ACTIVE:
+                continue
 
-        if not features.has("organizations:seer-slack-explorer", organization):
-            lifecycle.record_halt(SeerSlackHaltReason.FEATURE_NOT_ENABLED)
-            return None
+            if not SlackExplorerEntrypoint.has_access(organization):
+                continue
 
-        return organization_id, installation
+            return organization_id, installation
+        lifecycle.record_halt(SeerSlackHaltReason.NO_VALID_ORGANIZATION)
+        return None
 
     def _handle_seer_mention(
         self,
@@ -464,7 +473,10 @@ class SlackEventEndpoint(SlackDMEndpoint):
 
     def on_app_mention(self, slack_request: SlackDMRequest) -> Response:
         """Handle @mention events for Seer Explorer."""
-        return self._handle_seer_mention(slack_request, MessagingInteractionType.APP_MENTION)
+        return (
+            self._handle_seer_mention(slack_request, MessagingInteractionType.APP_MENTION)
+            or self.respond()
+        )
 
     def on_dm(self, slack_request: SlackDMRequest) -> Response | None:
         """Handle DM messages via the Seer workflow; returns None to fall back to help."""
@@ -565,13 +577,12 @@ class SlackEventEndpoint(SlackDMEndpoint):
 
             command, _ = slack_request.get_command_and_args()
 
+            resp: Response | None
             if command in COMMANDS:
                 resp = super().post_dispatcher(slack_request)
             else:
                 # Try the agentic workflow first; falls back to help if feature is off.
-                resp = self.on_dm(slack_request)
-                if resp is None:
-                    resp = self.on_message(request, slack_request)
+                resp = self.on_dm(slack_request) or self.on_message(request, slack_request)
 
             if resp:
                 return resp

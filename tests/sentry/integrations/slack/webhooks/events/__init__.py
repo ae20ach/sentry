@@ -7,6 +7,12 @@ from sentry.testutils.helpers import install_slack
 
 UNSET = object()
 
+SEER_EXPLORER_FEATURES = {
+    "organizations:seer-slack-explorer": True,
+    "organizations:gen-ai-features": True,
+    "organizations:seer-explorer": True,
+}
+
 LINK_SHARED_EVENT = """{
     "type": "link_shared",
     "channel": "Cxxxxxx",

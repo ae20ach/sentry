@@ -13,7 +13,7 @@ from sentry.testutils.helpers import get_response_text
 from sentry.testutils.silo import assume_test_silo_mode
 from sentry.users.models.identity import Identity, IdentityStatus
 
-from . import BaseEventTest
+from . import SEER_EXPLORER_FEATURES, BaseEventTest
 
 MESSAGE_IM_EVENT = """{
     "type": "message",
@@ -215,7 +215,7 @@ class MessageIMDmAgentTest(BaseEventTest):
 
     @patch("sentry.seer.entrypoints.slack.tasks.process_mention_for_slack.apply_async")
     def test_dm_dispatches_task(self, mock_apply_async):
-        with self.feature("organizations:seer-slack-explorer"):
+        with self.feature(SEER_EXPLORER_FEATURES):
             resp = self.post_webhook(event_data=MESSAGE_IM_DM_EVENT, data=AUTHORIZATIONS_DATA)
 
         assert resp.status_code == 200
@@ -232,7 +232,7 @@ class MessageIMDmAgentTest(BaseEventTest):
 
     @patch("sentry.seer.entrypoints.slack.tasks.process_mention_for_slack.apply_async")
     def test_dm_threaded_dispatches_task(self, mock_apply_async):
-        with self.feature("organizations:seer-slack-explorer"):
+        with self.feature(SEER_EXPLORER_FEATURES):
             resp = self.post_webhook(
                 event_data=MESSAGE_IM_DM_EVENT_THREADED, data=AUTHORIZATIONS_DATA
             )
@@ -245,7 +245,7 @@ class MessageIMDmAgentTest(BaseEventTest):
 
     @patch("sentry.seer.entrypoints.slack.tasks.process_mention_for_slack.apply_async")
     def test_dm_no_authorizations(self, mock_apply_async):
-        with self.feature("organizations:seer-slack-explorer"):
+        with self.feature(SEER_EXPLORER_FEATURES):
             resp = self.post_webhook(event_data=MESSAGE_IM_DM_EVENT)
 
         assert resp.status_code == 200
@@ -268,27 +268,27 @@ class MessageIMDmAgentTest(BaseEventTest):
 
         assert resp.status_code == 200
         mock_apply_async.assert_not_called()
-        assert_halt_metric(mock_record, SeerSlackHaltReason.FEATURE_NOT_ENABLED)
+        assert_halt_metric(mock_record, SeerSlackHaltReason.NO_VALID_ORGANIZATION)
 
     @patch("sentry.integrations.utils.metrics.EventLifecycle.record_event")
     @patch("sentry.seer.entrypoints.slack.tasks.process_mention_for_slack.apply_async")
-    def test_dm_no_organization(self, mock_apply_async, mock_record):
+    def test_dm_no_integration(self, mock_apply_async, mock_record):
         with patch(
             "sentry.integrations.slack.webhooks.event.integration_service.get_organization_integrations",
             return_value=[],
         ):
-            with self.feature("organizations:seer-slack-explorer"):
+            with self.feature(SEER_EXPLORER_FEATURES):
                 resp = self.post_webhook(event_data=MESSAGE_IM_DM_EVENT)
 
         assert resp.status_code == 200
         mock_apply_async.assert_not_called()
-        assert_halt_metric(mock_record, SeerSlackHaltReason.NO_ORGANIZATION)
+        assert_halt_metric(mock_record, SeerSlackHaltReason.NO_VALID_INTEGRATION)
 
     @patch("sentry.integrations.utils.metrics.EventLifecycle.record_event")
     @patch("sentry.seer.entrypoints.slack.tasks.process_mention_for_slack.apply_async")
     def test_dm_empty_text(self, mock_apply_async, mock_record):
         event_data = {**MESSAGE_IM_DM_EVENT, "text": ""}
-        with self.feature("organizations:seer-slack-explorer"):
+        with self.feature(SEER_EXPLORER_FEATURES):
             resp = self.post_webhook(event_data=event_data)
 
         assert resp.status_code == 200
