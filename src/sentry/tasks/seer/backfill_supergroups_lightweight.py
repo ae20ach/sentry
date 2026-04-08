@@ -44,7 +44,7 @@ def backfill_supergroups_lightweight_for_org(
     except Organization.DoesNotExist:
         return
 
-    if not features.has("organizations:supergroups-lightweight-rca-clustering", organization):
+    if not features.has("organizations:supergroups-lightweight-rca-clustering-write", organization):
         logger.info(
             "supergroups_backfill_lightweight.feature_not_enabled",
             extra={"organization_id": organization_id},

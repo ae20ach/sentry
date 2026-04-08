@@ -22,7 +22,7 @@ class BackfillSupergroupsLightweightForOrgTest(TestCase):
         self.group.substatus = GroupSubStatus.NEW
         self.group.save(update_fields=["substatus"])
 
-    @with_feature("organizations:supergroups-lightweight-rca-clustering")
+    @with_feature("organizations:supergroups-lightweight-rca-clustering-write")
     @patch(
         "sentry.tasks.seer.backfill_supergroups_lightweight.make_lightweight_rca_cluster_request"
     )
@@ -39,7 +39,7 @@ class BackfillSupergroupsLightweightForOrgTest(TestCase):
         assert body["issue"]["id"] == self.group.id
         assert len(body["issue"]["events"]) == 1
 
-    @with_feature("organizations:supergroups-lightweight-rca-clustering")
+    @with_feature("organizations:supergroups-lightweight-rca-clustering-write")
     @patch(
         "sentry.tasks.seer.backfill_supergroups_lightweight.make_lightweight_rca_cluster_request"
     )
@@ -61,7 +61,7 @@ class BackfillSupergroupsLightweightForOrgTest(TestCase):
         project_ids = {call.args[0]["project_id"] for call in mock_request.call_args_list}
         assert project_ids == {self.project.id, project2.id}
 
-    @with_feature("organizations:supergroups-lightweight-rca-clustering")
+    @with_feature("organizations:supergroups-lightweight-rca-clustering-write")
     @patch(
         "sentry.tasks.seer.backfill_supergroups_lightweight.make_lightweight_rca_cluster_request"
     )
@@ -92,7 +92,7 @@ class BackfillSupergroupsLightweightForOrgTest(TestCase):
             assert call_kwargs["last_project_id"] == self.project.id
             assert call_kwargs["last_group_id"] > 0
 
-    @with_feature("organizations:supergroups-lightweight-rca-clustering")
+    @with_feature("organizations:supergroups-lightweight-rca-clustering-write")
     @patch(
         "sentry.tasks.seer.backfill_supergroups_lightweight.make_lightweight_rca_cluster_request"
     )
@@ -123,7 +123,7 @@ class BackfillSupergroupsLightweightForOrgTest(TestCase):
 
         mock_request.assert_not_called()
 
-    @with_feature("organizations:supergroups-lightweight-rca-clustering")
+    @with_feature("organizations:supergroups-lightweight-rca-clustering-write")
     @patch(
         "sentry.tasks.seer.backfill_supergroups_lightweight.make_lightweight_rca_cluster_request"
     )
@@ -145,7 +145,7 @@ class BackfillSupergroupsLightweightForOrgTest(TestCase):
 
         assert mock_request.call_count == 2
 
-    @with_feature("organizations:supergroups-lightweight-rca-clustering")
+    @with_feature("organizations:supergroups-lightweight-rca-clustering-write")
     @patch(
         "sentry.tasks.seer.backfill_supergroups_lightweight.make_lightweight_rca_cluster_request"
     )
@@ -157,7 +157,7 @@ class BackfillSupergroupsLightweightForOrgTest(TestCase):
 
         mock_request.assert_not_called()
 
-    @with_feature("organizations:supergroups-lightweight-rca-clustering")
+    @with_feature("organizations:supergroups-lightweight-rca-clustering-write")
     @patch(
         "sentry.tasks.seer.backfill_supergroups_lightweight.make_lightweight_rca_cluster_request"
     )
@@ -169,7 +169,7 @@ class BackfillSupergroupsLightweightForOrgTest(TestCase):
 
         mock_request.assert_not_called()
 
-    @with_feature("organizations:supergroups-lightweight-rca-clustering")
+    @with_feature("organizations:supergroups-lightweight-rca-clustering-write")
     @patch(
         "sentry.tasks.seer.backfill_supergroups_lightweight.make_lightweight_rca_cluster_request"
     )

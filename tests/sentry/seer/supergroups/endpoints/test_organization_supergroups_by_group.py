@@ -88,7 +88,7 @@ class OrganizationSupergroupsByGroupEndpointTest(APITestCase):
             )
 
         body = mock_seer.call_args.args[0]
-        assert body["rca_source"] == "explorer"
+        assert body["rca_source"] == "EXPLORER"
 
     @patch(
         "sentry.seer.supergroups.endpoints.organization_supergroups_by_group.make_supergroups_get_by_group_ids_request"
@@ -99,7 +99,7 @@ class OrganizationSupergroupsByGroupEndpointTest(APITestCase):
         with self.feature(
             {
                 "organizations:top-issues-ui": True,
-                "organizations:supergroups-lightweight-rca-clustering": True,
+                "organizations:supergroups-lightweight-rca-clustering-read": True,
             }
         ):
             self.get_success_response(
@@ -108,4 +108,4 @@ class OrganizationSupergroupsByGroupEndpointTest(APITestCase):
             )
 
         body = mock_seer.call_args.args[0]
-        assert body["rca_source"] == "lightweight"
+        assert body["rca_source"] == "LIGHTWEIGHT"
