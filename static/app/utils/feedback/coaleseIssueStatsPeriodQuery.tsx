@@ -38,7 +38,7 @@ export function coaleseIssueStatsPeriodQuery({
     const intervalMS = ONE_DAY_MS;
     const start = new Date(listHeadTime).toISOString();
     const end = new Date(listHeadTime + intervalMS).toISOString();
-    return statsPeriod ? {start, end, statsPeriod: undefined} : undefined;
+    return statsPeriod ? {limit: 1, start, end, statsPeriod: undefined} : undefined;
   }
 
   const intervalMS = intervalToMilliseconds(statsPeriod ?? '');
