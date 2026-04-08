@@ -347,6 +347,7 @@ class SlackIntegrationProvider(IntegrationProvider):
             SlackScope.CHANNELS_HISTORY,
             SlackScope.GROUPS_HISTORY,
             SlackScope.APP_MENTIONS_READ,
+            SlackScope.ASSISTANT_WRITE,
         ]
     )
     user_scopes = frozenset(
