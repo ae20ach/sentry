@@ -480,29 +480,26 @@ export function PageSamplePerformanceTable({transaction, search, limit = 9}: Pro
     }
 
     if (key === 'id' || key === SpanFields.SPAN_DESCRIPTION) {
-      const isOld = row.timestamp && isPartialSpanOrTraceData(row.timestamp);
-      const traceViewLink = isOld
-        ? null
-        : generateLinkToEventInTraceView({
-            traceSlug: row.trace,
-            eventId: row.id,
-            timestamp: row.timestamp,
-            organization,
-            location,
-            view: domainViewFilters.view,
-            source: TraceViewSources.WEB_VITALS_MODULE,
-          });
-
       if (key === 'id' && 'id' in row) {
+        const isOld = row.timestamp && isPartialSpanOrTraceData(row.timestamp);
         if (isOld) {
           return (
             <DisabledTraceLink type="trace">{getShortEventId(row.id)}</DisabledTraceLink>
           );
         }
+        const traceViewLink = generateLinkToEventInTraceView({
+          traceSlug: row.trace,
+          eventId: row.id,
+          timestamp: row.timestamp,
+          organization,
+          location,
+          view: domainViewFilters.view,
+          source: TraceViewSources.WEB_VITALS_MODULE,
+        });
         return (
           <Tooltip title={t('View Trace')}>
             <NoOverflow>
-              <Link to={traceViewLink!}>{getShortEventId(row.trace)}</Link>
+              <Link to={traceViewLink}>{getShortEventId(row.trace)}</Link>
             </NoOverflow>
           </Tooltip>
         );
