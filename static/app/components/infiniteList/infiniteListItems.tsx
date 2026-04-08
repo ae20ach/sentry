@@ -54,7 +54,7 @@ export function InfiniteListItems<ListItem, Response = Array<ApiResult<ListItem[
   queryResult,
 }: Props<ListItem, Response>) {
   const {data, hasNextPage, isFetchingNextPage, fetchNextPage} = queryResult;
-  const loadedRows = deduplicateItems(data?.pages ?? []);
+  const loadedRows = deduplicateItems?.(data?.pages ?? []);
   const parentRef = useRef<HTMLDivElement>(null);
 
   const rowVirtualizer = useVirtualizer({

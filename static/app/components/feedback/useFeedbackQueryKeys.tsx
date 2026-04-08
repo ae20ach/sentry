@@ -2,10 +2,8 @@ import type {ReactNode} from 'react';
 import {createContext, useCallback, useContext, useRef, useState} from 'react';
 
 import {getFeedbackItemQueryKey} from 'sentry/components/feedback/getFeedbackItemQueryKey';
-import {useFeedbackListQueryKey} from 'sentry/components/feedback/useFeedbackListQueryKey';
 import type {Organization} from 'sentry/types/organization';
-import {parseQueryKey} from 'sentry/utils/api/apiQueryKey';
-import type {ApiQueryKey, InfiniteApiQueryKey} from 'sentry/utils/queryClient';
+import type {ApiQueryKey} from 'sentry/utils/queryClient';
 
 interface Props {
   children: ReactNode;
@@ -20,8 +18,6 @@ type ItemQueryKeys = {
 interface TContext {
   getItemQueryKeys: (id: string) => ItemQueryKeys;
   listHeadTime: number;
-  listPrefetchQueryKey: ApiQueryKey | undefined;
-  listQueryKey: InfiniteApiQueryKey | undefined;
   resetListHeadTime: () => void;
 }
 
@@ -30,8 +26,6 @@ const EMPTY_ITEM_QUERY_KEYS = {issueQueryKey: undefined, eventQueryKey: undefine
 const DEFAULT_CONTEXT: TContext = {
   getItemQueryKeys: () => EMPTY_ITEM_QUERY_KEYS,
   listHeadTime: 0,
-  listPrefetchQueryKey: undefined,
-  listQueryKey: undefined,
   resetListHeadTime: () => undefined,
 };
 
@@ -61,39 +55,17 @@ export function FeedbackQueryKeys({children, organization}: Props) {
     [organization]
   );
 
-  const listQueryKey = useFeedbackListQueryKey({
-    listHeadTime,
-    organization,
-    prefetch: false,
-  });
-
-  const listPrefetchQueryKey = useFeedbackListQueryKey({
-    listHeadTime,
-    organization,
-    prefetch: true,
-  });
-
   return (
     <FeedbackQueryKeysProvider.Provider
       value={{
         getItemQueryKeys,
         listHeadTime,
-        listPrefetchQueryKey,
-        listQueryKey: getInfiniteListQueryKey(listQueryKey),
         resetListHeadTime,
       }}
     >
       {children}
     </FeedbackQueryKeysProvider.Provider>
   );
-}
-
-function getInfiniteListQueryKey(listQueryKey: ApiQueryKey | undefined) {
-  if (!listQueryKey) {
-    return undefined;
-  }
-  const {url, options} = parseQueryKey(listQueryKey);
-  return [{infinite: true, version: 'v1'}, url, options] as InfiniteApiQueryKey;
 }
 
 export function useFeedbackQueryKeys() {

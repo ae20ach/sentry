@@ -7,7 +7,7 @@ describe('coaleseIssueStatsPeriodQuery', () => {
   it('should convert a statsPeriod into start+end fields', () => {
     const result = coaleseIssueStatsPeriodQuery({
       listHeadTime: Oct31.getTime(),
-      queryView: {statsPeriod: '14d'},
+      statsPeriod: '14d',
     });
     expect(result).toEqual({
       start: '2024-10-17T00:00:00.000Z', // Oct 18, 14 days earlier
@@ -18,7 +18,7 @@ describe('coaleseIssueStatsPeriodQuery', () => {
   it('should default to 0d when statsPeriod is missing', () => {
     const result = coaleseIssueStatsPeriodQuery({
       listHeadTime: Oct31.getTime(),
-      queryView: {statsPeriod: ''},
+      statsPeriod: '',
     });
     expect(result).toEqual({});
   });
@@ -26,7 +26,7 @@ describe('coaleseIssueStatsPeriodQuery', () => {
   it('should ignore statsPeriod and start+end fields that have 1 day between them when prefetch is true', () => {
     const result = coaleseIssueStatsPeriodQuery({
       listHeadTime: Jan1st.getTime(),
-      queryView: {statsPeriod: '14d'},
+      statsPeriod: '14d',
       prefetch: true,
     });
     expect(result).toEqual({
@@ -39,7 +39,7 @@ describe('coaleseIssueStatsPeriodQuery', () => {
   it('should undefined when there is no statsPeriod and prefetch is true', () => {
     const result = coaleseIssueStatsPeriodQuery({
       listHeadTime: Jan1st.getTime(),
-      queryView: {statsPeriod: ''},
+      statsPeriod: '',
       prefetch: true,
     });
     expect(result).toBeUndefined();

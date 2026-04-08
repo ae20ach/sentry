@@ -7,19 +7,20 @@ import waitingForEventImg from 'sentry-images/spot/waiting-for-event.svg';
 import {Stack} from '@sentry/scraps/layout';
 import {Tooltip} from '@sentry/scraps/tooltip';
 
-import type {ApiResult} from 'sentry/api';
 import {ErrorBoundary} from 'sentry/components/errorBoundary';
 import {FeedbackListHeader} from 'sentry/components/feedback/list/feedbackListHeader';
 import {FeedbackListItem} from 'sentry/components/feedback/list/feedbackListItem';
+import {useInfiniteFeedbackListQueryOptions} from 'sentry/components/feedback/useFeedbackListQueryOptions';
 import {useFeedbackQueryKeys} from 'sentry/components/feedback/useFeedbackQueryKeys';
 import {InfiniteListItems} from 'sentry/components/infiniteList/infiniteListItems';
 import {InfiniteListState} from 'sentry/components/infiniteList/infiniteListState';
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
 import {t} from 'sentry/locale';
+import type {ApiResponse} from 'sentry/utils/api/apiFetch';
 import type {FeedbackIssueListItem} from 'sentry/utils/feedback/types';
 import {useListItemCheckboxContext} from 'sentry/utils/list/useListItemCheckboxState';
-import {useInfiniteApiQuery} from 'sentry/utils/queryClient';
-import type {InfiniteApiQueryKey} from 'sentry/utils/queryClient';
+import {useInfiniteQuery} from 'sentry/utils/queryClient';
+import {useOrganization} from 'sentry/utils/useOrganization';
 
 function NoFeedback() {
   return (
@@ -36,25 +37,33 @@ interface Props {
 }
 
 export function FeedbackList({onItemSelect}: Props) {
-  const {listQueryKey} = useFeedbackQueryKeys();
-  const queryResult = useInfiniteApiQuery<FeedbackIssueListItem[]>({
-    queryKey:
-      listQueryKey ??
-      ([{infinite: true, version: 'v1'}, ''] as unknown as InfiniteApiQueryKey),
-    enabled: Boolean(listQueryKey),
+  const {listHeadTime} = useFeedbackQueryKeys();
+  const organization = useOrganization();
+  const listQueryOptions = useInfiniteFeedbackListQueryOptions({
+    listHeadTime,
+    organization,
+  });
+  const queryResult = useInfiniteQuery({
+    ...listQueryOptions,
+    enabled: Boolean(listQueryOptions.queryKey),
   });
 
-  // Deduplicated issues. In case one page overlaps with another.
+  // Can't use `select()` in useInfiniteQuery() because `<InfiniteListItems>`
+  // has it's own stuff going on, and that's a larger refactor for another time.
   const issues = useMemo(
-    () => uniqBy(queryResult.data?.pages.flatMap(result => result[0]) ?? [], 'id'),
+    () =>
+      uniqBy(
+        queryResult.data?.pages.flatMap(result => result.json ?? []),
+        'id'
+      ),
     [queryResult.data?.pages]
   );
+  const hits = queryResult.data?.pages[0]?.headers['X-Hits'] ?? issues.length;
+
   const checkboxState = useListItemCheckboxContext({
-    hits: Number(
-      queryResult.data?.pages[0]?.[2]?.getResponseHeader('X-Hits') ?? issues.length
-    ),
+    hits,
     knownIds: issues.map(issue => issue.id),
-    queryKey: listQueryKey,
+    queryKey: listQueryOptions.queryKey,
   });
 
   return (
@@ -66,10 +75,10 @@ export function FeedbackList({onItemSelect}: Props) {
           backgroundUpdatingMessage={() => null}
           loadingMessage={() => <LoadingIndicator />}
         >
-          <InfiniteListItems<FeedbackIssueListItem, ApiResult<FeedbackIssueListItem[]>>
+          <InfiniteListItems<FeedbackIssueListItem, ApiResponse<FeedbackIssueListItem[]>>
             deduplicateItems={pages =>
               uniqBy(
-                pages.flatMap(page => page[0]),
+                pages.flatMap(page => page.json ?? []),
                 'id'
               )
             }

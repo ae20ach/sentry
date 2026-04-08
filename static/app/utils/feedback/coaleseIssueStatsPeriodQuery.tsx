@@ -2,19 +2,17 @@ import {intervalToMilliseconds} from 'sentry/utils/duration/intervalToMillisecon
 
 const ONE_DAY_MS = intervalToMilliseconds('1d');
 
-interface Props<QueryView extends {statsPeriod: string}> {
+interface Props {
   listHeadTime: number;
-  queryView: QueryView;
-  defaultStatsPeriod?: string;
+  statsPeriod: string | null;
   prefetch?: boolean;
 }
 
-export function coaleseIssueStatsPeriodQuery<QueryView extends {statsPeriod: string}>({
-  queryView,
+export function coaleseIssueStatsPeriodQuery({
+  statsPeriod = '0d',
   listHeadTime,
-  defaultStatsPeriod,
   prefetch = false,
-}: Props<QueryView>) {
+}: Props) {
   // We don't want to use `statsPeriod` directly, because that will mean the
   // start time of our infinite list will change, shifting the index/page
   // where items appear if we invalidate the cache and refetch specific pages.
@@ -31,7 +29,6 @@ export function coaleseIssueStatsPeriodQuery<QueryView extends {statsPeriod: str
   // Note: The ApiQueryKey that we return isn't actually for a full page of
   // prefetched data, it's just one row actually.
   if (prefetch) {
-    const {statsPeriod, ...rest} = queryView;
     if (!statsPeriod) {
       // We shouldn't prefetch if the query uses an absolute date range
       return undefined;
@@ -41,12 +38,11 @@ export function coaleseIssueStatsPeriodQuery<QueryView extends {statsPeriod: str
     const intervalMS = ONE_DAY_MS;
     const start = new Date(listHeadTime).toISOString();
     const end = new Date(listHeadTime + intervalMS).toISOString();
-    return statsPeriod ? {...rest, limit: 1, start, end} : undefined;
+    return statsPeriod ? {start, end, statsPeriod: undefined} : undefined;
   }
 
-  const {statsPeriod = defaultStatsPeriod, ...rest} = queryView;
   const intervalMS = intervalToMilliseconds(statsPeriod ?? '');
   const start = new Date(listHeadTime - intervalMS).toISOString();
   const end = new Date(listHeadTime).toISOString();
-  return statsPeriod ? {...rest, start, end} : rest;
+  return statsPeriod ? {start, end, statsPeriod: undefined} : {};
 }

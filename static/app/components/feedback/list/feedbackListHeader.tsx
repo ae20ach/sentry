@@ -34,8 +34,8 @@ export function FeedbackListHeader({
 }: Props) {
   const [mailbox, setMailbox] = useMailbox();
 
-  const {listPrefetchQueryKey, resetListHeadTime} = useFeedbackQueryKeys();
-  const hasNewItems = useFeedbackHasNewItems({listPrefetchQueryKey});
+  const {listHeadTime, resetListHeadTime} = useFeedbackQueryKeys();
+  const hasNewItems = useFeedbackHasNewItems({listHeadTime});
   const {invalidateListCache} = useFeedbackCache();
 
   return (

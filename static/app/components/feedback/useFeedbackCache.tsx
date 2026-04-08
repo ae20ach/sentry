@@ -1,17 +1,19 @@
 import {useCallback} from 'react';
 
-import type {ApiResult} from 'sentry/api';
+import {useInfiniteFeedbackListQueryOptions} from 'sentry/components/feedback/useFeedbackListQueryOptions';
 import {useFeedbackQueryKeys} from 'sentry/components/feedback/useFeedbackQueryKeys';
 import {defined} from 'sentry/utils';
+import type {ApiResponse} from 'sentry/utils/api/apiFetch';
 import type {FeedbackIssue, FeedbackIssueListItem} from 'sentry/utils/feedback/types';
 import type {ApiQueryKey, InfiniteData, QueryState} from 'sentry/utils/queryClient';
 import {setApiQueryData, useQueryClient} from 'sentry/utils/queryClient';
+import {useOrganization} from 'sentry/utils/useOrganization';
 
 type TFeedbackIds = 'all' | string[];
 
 type ListCache = {
   pageParams: unknown[];
-  pages: Array<ApiResult<FeedbackIssueListItem[]>>;
+  pages: Array<ApiResponse<FeedbackIssueListItem[]>>;
 };
 
 const issueApiEndpointRegexp = /^\/organizations\/\w+\/issues\/\d+\/$/;
@@ -22,7 +24,13 @@ function isIssueEndpointUrl(query: any) {
 
 export function useFeedbackCache() {
   const queryClient = useQueryClient();
-  const {getItemQueryKeys, listQueryKey} = useFeedbackQueryKeys();
+  const {getItemQueryKeys, listHeadTime} = useFeedbackQueryKeys();
+  const organization = useOrganization();
+  const listQueryOptions = useInfiniteFeedbackListQueryOptions({
+    listHeadTime,
+    organization,
+  });
+  const listQueryKey = listQueryOptions.queryKey;
 
   const updateCachedQueryKey = useCallback(
     (queryKey: ApiQueryKey, payload: Partial<FeedbackIssue>) => {
@@ -58,13 +66,12 @@ export function useFeedbackCache() {
       }
       const listData = queryClient.getQueryData<ListCache>(listQueryKey);
       if (listData) {
-        const pages = listData.pages.map(([data, statusText, resp]) => [
-          data.map(item =>
+        const pages = listData.pages.map(({json, headers}) => ({
+          json: json.map(item =>
             ids === 'all' || ids.includes(item.id) ? {...item, ...payload} : item
           ),
-          statusText,
-          resp,
-        ]);
+          headers,
+        }));
         queryClient.setQueryData(listQueryKey, {...listData, pages});
       }
     },
