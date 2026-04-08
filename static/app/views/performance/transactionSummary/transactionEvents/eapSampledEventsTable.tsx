@@ -9,6 +9,7 @@ import {Link} from '@sentry/scraps/link';
 import {Tooltip} from '@sentry/scraps/tooltip';
 
 import {Duration} from 'sentry/components/duration';
+import {DisabledTraceLink} from 'sentry/components/explore/disabledTraceLink';
 import {normalizeDateTimeParams} from 'sentry/components/pageFilters/parse';
 import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
 import {Pagination, type CursorHandler} from 'sentry/components/pagination';
@@ -34,6 +35,7 @@ import {decodeScalar, decodeSorts} from 'sentry/utils/queryString';
 import {projectSupportsReplay} from 'sentry/utils/replays/projectSupportsReplay';
 import type {Theme} from 'sentry/utils/theme';
 import {MutableSearch} from 'sentry/utils/tokenizeSearch';
+import {isPartialSpanOrTraceData} from 'sentry/utils/trace/isOlderThan30Days';
 import {normalizeUrl} from 'sentry/utils/url/normalizeUrl';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useOrganization} from 'sentry/utils/useOrganization';
@@ -283,6 +285,23 @@ function renderBodyCell(
   if (column.key === 'trace') {
     const traceId = row.trace?.toString() ?? '';
     if (traceId) {
+      const isOld = row.timestamp && isPartialSpanOrTraceData(row.timestamp);
+      let rendered: React.ReactNode = traceId;
+
+      if (meta?.fields) {
+        const renderer = getFieldRenderer('trace', meta.fields, false);
+        rendered = renderer(row, {
+          location,
+          organization,
+          theme,
+          unit: meta.units?.trace,
+        });
+      }
+
+      if (isOld) {
+        return <DisabledTraceLink type="trace">{rendered}</DisabledTraceLink>;
+      }
+
       const target = getTraceDetailsUrl({
         organization,
         traceSlug: traceId,
@@ -290,18 +309,6 @@ function renderBodyCell(
         timestamp: row.timestamp,
         location,
         source: TraceViewSources.PERFORMANCE_TRANSACTION_SUMMARY,
-      });
-
-      if (!meta?.fields) {
-        return <Link to={target}>{traceId}</Link>;
-      }
-
-      const renderer = getFieldRenderer('trace', meta.fields, false);
-      const rendered = renderer(row, {
-        location,
-        organization,
-        theme,
-        unit: meta.units?.trace,
       });
 
       return <Link to={target}>{rendered}</Link>;

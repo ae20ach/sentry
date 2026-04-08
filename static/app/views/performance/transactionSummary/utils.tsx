@@ -12,6 +12,7 @@ import {
   generateProfileFlamechartRoute,
 } from 'sentry/utils/profiling/routes';
 import {MutableSearch} from 'sentry/utils/tokenizeSearch';
+import {isPartialSpanOrTraceData} from 'sentry/utils/trace/isOlderThan30Days';
 import {normalizeUrl} from 'sentry/utils/url/normalizeUrl';
 import {DOMAIN_VIEW_BASE_URL} from 'sentry/views/insights/pages/settings';
 import type {DomainView} from 'sentry/views/insights/pages/useFilters';
@@ -139,7 +140,10 @@ export function generateTraceLink(dateSelection: any, view?: DomainView) {
     location: Location
   ): LocationDescriptor => {
     const traceId = tableRow.trace ? `${tableRow.trace}` : '';
-    if (!traceId) {
+    if (
+      !traceId ||
+      (tableRow.timestamp && isPartialSpanOrTraceData(tableRow.timestamp))
+    ) {
       return {};
     }
 
@@ -162,6 +166,10 @@ export function generateTransactionIdLink(view?: DomainView) {
     location: Location,
     spanId?: string
   ): LocationDescriptor => {
+    if (tableRow.timestamp && isPartialSpanOrTraceData(tableRow.timestamp)) {
+      return {};
+    }
+
     return generateLinkToEventInTraceView({
       eventId: tableRow.id,
       timestamp: tableRow.timestamp!,

@@ -6,6 +6,7 @@ import type {Location, LocationDescriptor} from 'history';
 import {LinkButton} from '@sentry/scraps/button';
 import {Link} from '@sentry/scraps/link';
 
+import {DisabledTraceLink} from 'sentry/components/explore/disabledTraceLink';
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
 import {PanelTable} from 'sentry/components/panels/panelTable';
 import {QuestionTooltip} from 'sentry/components/questionTooltip';
@@ -21,6 +22,7 @@ import {fieldAlignment, getAggregateAlias} from 'sentry/utils/discover/fields';
 import {ViewReplayLink} from 'sentry/utils/discover/viewReplayLink';
 import {isEmptyObject} from 'sentry/utils/object/isEmptyObject';
 import {VisuallyCompleteWithData} from 'sentry/utils/performanceForSentry';
+import {isPartialSpanOrTraceData} from 'sentry/utils/trace/isOlderThan30Days';
 import type {Actions} from 'sentry/views/discover/table/cellAction';
 import {CellAction} from 'sentry/views/discover/table/cellAction';
 import type {TableColumn} from 'sentry/views/discover/table/types';
@@ -147,6 +149,11 @@ export function TransactionsTable(props: Props) {
       let rendered = fieldRenderer(row, {organization, location, theme});
 
       const target = generateLink?.[field]?.(organization, row, location);
+      const isOldTraceTarget =
+        ['id', 'trace'].includes(field) &&
+        !!row.trace &&
+        !!row.timestamp &&
+        isPartialSpanOrTraceData(row.timestamp);
 
       if (fields[index] === 'profile.id') {
         rendered = (
@@ -160,6 +167,8 @@ export function TransactionsTable(props: Props) {
             <IconProfiling size="xs" />
           </LinkButton>
         );
+      } else if (isOldTraceTarget) {
+        rendered = <DisabledTraceLink type="trace">{rendered}</DisabledTraceLink>;
       } else if (target && !isEmptyObject(target)) {
         if (fields[index] === 'replayId') {
           rendered = (

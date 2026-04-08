@@ -4,6 +4,7 @@ import {PageFiltersFixture} from 'sentry-fixture/pageFilters';
 import {ProjectFixture} from 'sentry-fixture/project';
 
 import {render, screen} from 'sentry-test/reactTestingLibrary';
+import {resetMockDate, setMockDate} from 'sentry-test/utils';
 
 import {PageFiltersStore} from 'sentry/components/pageFilters/store';
 import {ProjectsStore} from 'sentry/stores/projectsStore';
@@ -85,6 +86,7 @@ describe('EAP SampledEventsTable', () => {
   afterEach(() => {
     MockApiClient.clearMockResponses();
     ProjectsStore.reset();
+    resetMockDate();
   });
 
   it('renders the table with data', async () => {
@@ -125,5 +127,37 @@ describe('EAP SampledEventsTable', () => {
 
     // Verify ops breakdown renders
     expect(screen.getByTestId('relative-ops-breakdown')).toBeInTheDocument();
+  });
+
+  it('renders a disabled trace link when the trace is older than 30 days', async () => {
+    setMockDate(new Date('2025-02-15T00:00:00Z').getTime());
+
+    const eventView = EventView.fromNewQueryWithLocation(
+      {
+        id: undefined,
+        version: 2,
+        name: 'test',
+        fields: ['span_id', 'trace', 'timestamp'],
+        query: '',
+        projects: [Number(project.id)],
+        orderby: '-timestamp',
+      },
+      LocationFixture({pathname: '/'})
+    );
+
+    render(
+      <SampledEventsTable
+        eventView={eventView}
+        transactionName="/api/test"
+        maxDuration={5000}
+        isMaxDurationLoading={false}
+        cursor={undefined}
+        onCursor={() => {}}
+      />,
+      {organization}
+    );
+
+    const traceLink = await screen.findByRole('link', {name: 'trace123'});
+    expect(traceLink).toHaveAttribute('aria-disabled', 'true');
   });
 });
