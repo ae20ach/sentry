@@ -1,3 +1,4 @@
+import type {AutofixStoppingPoint} from 'sentry/components/events/autofix/types';
 import type {AggregationOutputType} from 'sentry/utils/discover/fields';
 import type {
   DatasetSource,
@@ -64,6 +65,7 @@ export interface Organization extends OrganizationSummary {
   dataScrubber: boolean;
   dataScrubberDefaults: boolean;
   debugFilesRole: string;
+  defaultAutomatedRunStoppingPoint: AutofixStoppingPoint;
   defaultCodeReviewTriggers: CodeReviewTrigger[];
   defaultCodingAgent: string | null;
   defaultCodingAgentIntegrationId: string | number | null;
@@ -101,6 +103,7 @@ export interface Organization extends OrganizationSummary {
   teamRoleList: TeamRole[];
   trustedRelays: Relay[];
   consoleSdkInviteQuota?: number;
+  dashboardsAsyncQueueParallelLimit?: number;
   defaultAutofixAutomationTuning?:
     | 'off'
     | 'super_low'
@@ -114,6 +117,7 @@ export interface Organization extends OrganizationSummary {
   enableSeerCoding?: boolean;
   enableSeerEnhancedAlerts?: boolean;
   enabledConsolePlatforms?: string[];
+  experiments?: Record<string, string>;
   extraOptions?: {
     traces: {
       checkSpanExtractionDate: boolean;

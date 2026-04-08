@@ -39,6 +39,7 @@ import {AddGiftEventsAction} from 'admin/components/addGiftEventsAction';
 import {triggerAddToStartupProgramModal} from 'admin/components/addToStartupProgramAction';
 import {CancelSubscriptionAction} from 'admin/components/cancelSubscriptionAction';
 import {triggerChangeBalanceModal} from 'admin/components/changeBalanceAction';
+import {openChangeDashboardsParallelLimitModal} from 'admin/components/changeDashboardsParallelLimitModal';
 import {triggerChangeDatesModal} from 'admin/components/changeDatesAction';
 import {triggerGoogleDomainModal} from 'admin/components/changeGoogleDomainAction';
 import {triggerChangePlanAction} from 'admin/components/changePlanAction';
@@ -89,7 +90,7 @@ const DEFAULT_ERROR_MESSAGE = 'Unable to update the customer account';
 
 function makeSubscriptionQueryKey(orgId: string): ApiQueryKey {
   return [
-    getApiUrl(`/customers/$organizationIdOrSlug/`, {
+    getApiUrl('/customers/$organizationIdOrSlug/', {
       path: {organizationIdOrSlug: orgId},
     }),
   ];
@@ -97,7 +98,7 @@ function makeSubscriptionQueryKey(orgId: string): ApiQueryKey {
 
 function makeOrganizationQueryKey(orgId: string): ApiQueryKey {
   return [
-    getApiUrl(`/organizations/$organizationIdOrSlug/`, {
+    getApiUrl('/organizations/$organizationIdOrSlug/', {
       path: {organizationIdOrSlug: orgId},
     }),
     {query: {detailed: 0, include_feature_flags: 1}},
@@ -106,7 +107,7 @@ function makeOrganizationQueryKey(orgId: string): ApiQueryKey {
 
 function makeBillingConfigQueryKey(orgId: string): ApiQueryKey {
   return [
-    getApiUrl(`/customers/$organizationIdOrSlug/billing-config/`, {
+    getApiUrl('/customers/$organizationIdOrSlug/billing-config/', {
       path: {organizationIdOrSlug: orgId},
     }),
     {query: {tier: 'all'}},
@@ -855,6 +856,18 @@ export function CustomerDetails() {
               openUpdateRetentionSettingsModal({
                 organization,
                 subscription,
+                onSuccess: reloadData,
+              });
+            },
+          },
+          {
+            key: 'changeDashboardsParallelLimit',
+            name: 'Change Dashboard Parallel Query Limit',
+            help: 'Adjust how many dashboard widget queries can run in parallel for this organization.',
+            skipConfirmModal: true,
+            onAction: () => {
+              openChangeDashboardsParallelLimitModal({
+                organization,
                 onSuccess: reloadData,
               });
             },
