@@ -129,9 +129,8 @@ function MoreEventsLink({
   const organization = useOrganization();
   const location = useLocation();
   const area = useAnalyticsArea();
-  const eventTimestamp = getEventTimestampInSeconds(event);
 
-  if (eventTimestamp && isPartialSpanOrTraceData(eventTimestamp)) {
+  if (isPartialSpanOrTraceData(getEventTimestampInSeconds(event))) {
     return (
       <Text variant="muted">
         {tn('%s more event', '%s more events', filteredTimelineEvents.length - 3)}

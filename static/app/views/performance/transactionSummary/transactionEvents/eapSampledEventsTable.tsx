@@ -285,7 +285,6 @@ function renderBodyCell(
   if (column.key === 'trace') {
     const traceId = row.trace?.toString() ?? '';
     if (traceId) {
-      const isOld = isPartialSpanOrTraceData(row.timestamp);
       let rendered: React.ReactNode = traceId;
 
       if (meta?.fields) {
@@ -298,7 +297,7 @@ function renderBodyCell(
         });
       }
 
-      if (isOld) {
+      if (isPartialSpanOrTraceData(row.timestamp)) {
         return <DisabledTraceLink type="trace">{rendered}</DisabledTraceLink>;
       }
 

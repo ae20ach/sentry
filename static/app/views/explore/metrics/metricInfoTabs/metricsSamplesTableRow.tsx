@@ -151,7 +151,7 @@ export function SampleTableRow({
     const spanIdToUse = oldSpanId || spanId;
     const strippedLocation = stripMetricParamsFromLocation(location);
 
-    if (timestamp && isPartialSpanOrTraceData(timestamp)) {
+    if (isPartialSpanOrTraceData(timestamp)) {
       return (
         <WrappingText>
           <DisabledTraceLink type="trace">{getShortEventId(traceId)}</DisabledTraceLink>

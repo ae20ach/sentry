@@ -59,8 +59,8 @@ export function ProjectEventRedirect() {
     {staleTime: 2 * 60 * 1000} // 2 minutes in milliseconds
   );
 
-  const traceTimestamp = event ? getEventTimestampInSeconds(event) : undefined;
-  const isOldTrace = traceTimestamp ? isPartialSpanOrTraceData(traceTimestamp) : false;
+  const traceTimestamp = getEventTimestampInSeconds(event);
+  const isOldTrace = isPartialSpanOrTraceData(traceTimestamp);
   const willRedirectToIssueEvent = !!event?.groupID && !!event?.eventID;
 
   useEffect(() => {

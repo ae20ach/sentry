@@ -140,9 +140,8 @@ export function Attributes({
     },
     [FieldKey.TRACE]: (props: CustomRenderersProps) => {
       const traceSlug = String(props.item.value);
-      const isOld = isPartialSpanOrTraceData(node.value.start_timestamp);
 
-      if (isOld) {
+      if (isPartialSpanOrTraceData(node.value.start_timestamp)) {
         return <DisabledTraceLink type="trace">{props.item.value}</DisabledTraceLink>;
       }
 

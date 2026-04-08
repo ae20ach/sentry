@@ -26,7 +26,7 @@ export function useNodeDetailsLink({
   const targetId = node?.transactionId;
   const timestamp = node?.startTimestamp;
 
-  const isDisabled = timestamp ? isPartialSpanOrTraceData(timestamp) : false;
+  const isDisabled = isPartialSpanOrTraceData(timestamp);
 
   const url = getTraceDetailsUrl({
     source,

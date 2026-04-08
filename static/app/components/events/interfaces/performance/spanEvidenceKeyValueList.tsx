@@ -376,8 +376,7 @@ function AIDetectedSpanEvidence({
     organization,
   });
 
-  const eventTimestamp = getEventTimestampInSeconds(event);
-  const isOld = eventTimestamp ? isPartialSpanOrTraceData(eventTimestamp) : false;
+  const isOld = isPartialSpanOrTraceData(getEventTimestampInSeconds(event));
   const actionButton = projectSlug ? (
     <Tooltip
       title={t('Trace data is only available for the last 30 days')}
@@ -625,8 +624,7 @@ const makeTransactionNameRow = (
     organization,
   });
 
-  const eventTimestamp = getEventTimestampInSeconds(event);
-  const isOld = eventTimestamp ? isPartialSpanOrTraceData(eventTimestamp) : false;
+  const isOld = isPartialSpanOrTraceData(getEventTimestampInSeconds(event));
   const actionButton = projectSlug ? (
     <Tooltip
       title={t('Trace data is only available for the last 30 days')}

@@ -209,7 +209,6 @@ function EventDisplay({
 
   const waterfallModel = new WaterfallModel(eventData);
   const traceSlug = eventData.contexts?.trace?.trace_id ?? '';
-  const isOld = isPartialSpanOrTraceData(eventData.endTimestamp);
   const fullEventTarget = generateLinkToEventInTraceView({
     eventId: eventData.id,
     traceSlug,
@@ -237,6 +236,8 @@ function EventDisplay({
       </MinimapPositioningContainer>
     </MinimapContainer>
   );
+
+  const isOld = isPartialSpanOrTraceData(eventData.endTimestamp);
   const minimap = isOld ? (
     minimapContent
   ) : (

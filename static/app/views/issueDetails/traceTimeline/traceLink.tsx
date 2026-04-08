@@ -57,8 +57,7 @@ export function TraceLink({event}: TraceLinkProps) {
     );
   }
 
-  const eventTimestamp = getEventTimestampInSeconds(event);
-  if (eventTimestamp && isPartialSpanOrTraceData(eventTimestamp)) {
+  if (isPartialSpanOrTraceData(getEventTimestampInSeconds(event))) {
     return (
       <Tooltip showUnderline title={t('Trace is older than 30 days')} position="bottom">
         <NoTraceAvailable>

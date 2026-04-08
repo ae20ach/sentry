@@ -83,7 +83,6 @@ export function TraceSummarySection({traceSlug}: {traceSlug: string}) {
   const timestamp = Array.isArray(location.query.timestamp)
     ? location.query.timestamp[0]
     : location.query.timestamp;
-  const isOld = !!timestamp && isPartialSpanOrTraceData(timestamp);
 
   if (traceContent.isPending) {
     return <LoadingIndicator />;
@@ -146,7 +145,7 @@ export function TraceSummarySection({traceSlug}: {traceSlug: string}) {
         <StyledList>
           {investigations.map((span, idx) => (
             <StyledListItem key={span.spanId || idx}>
-              {isOld ? (
+              {isPartialSpanOrTraceData(timestamp) ? (
                 <DisabledTraceLink type="span">{span.spanOp}</DisabledTraceLink>
               ) : (
                 <StyledLink

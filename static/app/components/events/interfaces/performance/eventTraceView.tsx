@@ -177,8 +177,7 @@ export function EventTraceView({group, event, organization}: EventTraceViewProps
   );
 
   const hasTracePreviewFeature = organization.features.includes('profiling');
-  const eventTimestamp = getEventTimestampInSeconds(event);
-  const isOld = eventTimestamp ? isPartialSpanOrTraceData(eventTimestamp) : false;
+  const isOld = isPartialSpanOrTraceData(getEventTimestampInSeconds(event));
 
   return (
     <InterimSection

@@ -360,7 +360,7 @@ export function renderTraceAsLinkable(widget?: Widget) {
       data['max(timestamp)'] ?? data.timestamp
     );
 
-    if (traceTimestamp && isPartialSpanOrTraceData(traceTimestamp)) {
+    if (isPartialSpanOrTraceData(traceTimestamp)) {
       return (
         <Container>
           <DisabledTraceLink type="trace">{getShortEventId(id)}</DisabledTraceLink>

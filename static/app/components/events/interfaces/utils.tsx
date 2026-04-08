@@ -372,7 +372,9 @@ const timestampsFieldCandidates = [
   'endTimestamp',
 ];
 
-export function getEventTimestampInSeconds(event: Event): number | undefined {
+export function getEventTimestampInSeconds(event?: Event): number | undefined {
+  if (!event) return undefined;
+
   for (const key of timestampsFieldCandidates) {
     if (key in event) {
       const value = event[key as keyof Event];

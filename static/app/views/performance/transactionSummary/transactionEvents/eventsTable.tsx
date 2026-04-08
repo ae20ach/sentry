@@ -235,6 +235,7 @@ export function EventsTable({
         const isIssue = !!issueId;
         const isOld = isPartialSpanOrTraceData(dataRow.timestamp);
         let target: LocationDescriptor | null = null;
+
         if (isIssue && !isRegressionIssue && field === 'id') {
           target = {
             pathname: `/organizations/${organization.slug}/issues/${issueId}/events/${dataRow.id}/`,

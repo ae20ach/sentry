@@ -27,9 +27,9 @@ function normalizeTimestamp(timestamp: string | number): string | number {
  * Handles timestamps in seconds, milliseconds, or ISO string format.
  */
 export function isPartialSpanOrTraceData(
-  timestamp: string | number | undefined
+  timestamp: string | number | undefined | null
 ): boolean {
-  if (timestamp === undefined) {
+  if (timestamp === undefined || timestamp === null) {
     return false;
   }
   const now = moment();

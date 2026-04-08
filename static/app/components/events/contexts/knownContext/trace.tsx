@@ -69,12 +69,7 @@ export function getTraceContextData({
           const traceWasSampled = data?.sampled ?? true;
 
           if (traceWasSampled) {
-            const eventTimestamp = getEventTimestampInSeconds(event);
-            const isOld = eventTimestamp
-              ? isPartialSpanOrTraceData(eventTimestamp)
-              : false;
-
-            if (isOld) {
+            if (isPartialSpanOrTraceData(getEventTimestampInSeconds(event))) {
               return {
                 key: ctxKey,
                 subject: t('Trace ID'),

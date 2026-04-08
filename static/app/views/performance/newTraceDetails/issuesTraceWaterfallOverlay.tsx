@@ -133,9 +133,7 @@ export function IssueTraceWaterfallOverlay({
     : [`txn-${event.eventID}`];
   const baseLink = getTraceLinkForIssue(traceTarget, baseNodePath);
 
-  const eventTimestamp = getEventTimestampInSeconds(event);
-  const isOld = eventTimestamp ? isPartialSpanOrTraceData(eventTimestamp) : false;
-  if (isOld) {
+  if (isPartialSpanOrTraceData(getEventTimestampInSeconds(event))) {
     return null;
   }
 
