@@ -78,11 +78,12 @@ export function TraceSpanLinks({
     theme,
   };
 
+  const isOld = isPartialSpanOrTraceData(node.value.start_timestamp);
+
   const linksAsAttributes: TraceItemResponseAttribute[] = links.flatMap(
     (link, linkIndex) => {
       const prefix = `span_link_${linkIndex + 1}`;
       const isCrossTraceLink = !tree || link.traceId !== traceId;
-      const isOld = isPartialSpanOrTraceData(node.value.start_timestamp);
 
       customRenderers[`${prefix}.trace_id`] = () => {
         const traceLabel = traceIdRenderer({trace: link.traceId}, renderBaggage);

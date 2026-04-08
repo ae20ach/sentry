@@ -2,6 +2,11 @@ import moment from 'moment-timezone';
 
 const TRACE_DATA_RETENTION_DAYS = 30;
 
+/**
+ * Converts a timestamp to milliseconds for moment.js consumption.
+ * Expects Unix epoch seconds, Unix epoch milliseconds, or ISO 8601 strings.
+ * Pure numeric strings like "20250801" will be misinterpreted as epoch values.
+ */
 function normalizeTimestamp(timestamp: string | number): string | number {
   if (typeof timestamp === 'number') {
     return timestamp < 1e12 ? timestamp * 1000 : timestamp;
