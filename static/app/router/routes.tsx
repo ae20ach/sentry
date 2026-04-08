@@ -309,12 +309,12 @@ function buildRoutes(): RouteObject[] {
     {
       path: '/stories/*',
       withOrgPath: true,
-      // eslint-disable-next-line boundaries/element-types -- storybook entrypoint
+      // eslint-disable-next-line boundaries/dependencies -- storybook entrypoint
       component: make(() => import('sentry/stories/view/index')),
     },
     {
       path: '/debug/notifications/:notificationSource?/',
-      // eslint-disable-next-line boundaries/element-types -- debug tools entrypoint
+      // eslint-disable-next-line boundaries/dependencies -- debug tools entrypoint
       component: make(() => import('sentry/debug/notifications/views/index')),
       withOrgPath: true,
     },
@@ -569,7 +569,7 @@ function buildRoutes(): RouteObject[] {
     {
       path: 'seer/',
       name: t('Seer'),
-      // eslint-disable-next-line boundaries/element-types -- TODO: move to getsentry routes
+      // eslint-disable-next-line boundaries/dependencies -- TODO: move to getsentry routes
       component: make(() => import('getsentry/views/seerAutomation/projectDetails')),
     },
     {
@@ -1742,6 +1742,19 @@ function buildRoutes(): RouteObject[] {
     children: discoverChildren,
   };
 
+  const errorsChildren: SentryRouteObject[] = [
+    {
+      index: true,
+      component: make(() => import('sentry/views/explore/errors/content')),
+    },
+  ];
+  const errorsRoutes: SentryRouteObject = {
+    path: '/errors/',
+    component: make(() => import('sentry/views/explore/errors')),
+    withOrgPath: true,
+    children: errorsChildren,
+  };
+
   // Redirects for old LLM monitoring routes
   const llmMonitoringRedirects: SentryRouteObject = {
     children: [
@@ -2232,11 +2245,7 @@ function buildRoutes(): RouteObject[] {
     },
     {
       path: 'summary/:projectId/',
-      component: make(() => import('sentry/views/profiling/profileSummary')),
-    },
-    {
-      path: 'profile/:projectId/differential-flamegraph/',
-      component: make(() => import('sentry/views/profiling/differentialFlamegraph')),
+      component: make(() => import('sentry/views/profiling/profileSummaryRedirect')),
     },
     traceView,
     {
@@ -2323,6 +2332,11 @@ function buildRoutes(): RouteObject[] {
         transactionSummaryRoute,
         traceView,
       ],
+    },
+    {
+      path: 'errors/',
+      component: make(() => import('sentry/views/explore/errors')),
+      children: errorsChildren,
     },
     {
       path: 'saved-queries/',
@@ -2527,10 +2541,6 @@ function buildRoutes(): RouteObject[] {
     {
       path: 'autofix/recent/',
       component: make(() => import('sentry/views/issueList/pages/autofix/recentlyRun')),
-    },
-    {
-      path: 'supergroups/',
-      component: make(() => import('sentry/views/issueList/pages/supergroups')),
     },
     {
       path: 'views/:viewId/',
@@ -2786,6 +2796,7 @@ function buildRoutes(): RouteObject[] {
       releasesRoutes,
       statsRoutes,
       discoverRoutes,
+      errorsRoutes,
       performanceRoutes,
       domainViewRoutes,
       tracesRoutes,

@@ -32,6 +32,7 @@ from sentry.integrations.utils.metrics import (
     IntegrationPipelineViewEvent,
     IntegrationPipelineViewType,
 )
+from sentry.pipeline.base import Pipeline
 from sentry.pipeline.types import PipelineStepResult
 from sentry.pipeline.views.base import PipelineView
 from sentry.shared_integrations.exceptions import ApiError, ApiInvalidRequestError, ApiUnauthorized
@@ -146,22 +147,24 @@ class OAuth2Provider(Provider):
             ),
         ]
 
-    def get_pipeline_api_steps(self) -> list[OAuth2ApiStep]:
+    def make_oauth_api_step(self, **kwargs: Any) -> OAuth2ApiStep:
         redirect_url = self.config.get(
             "redirect_url",
             reverse("sentry-extension-setup", kwargs={"provider_id": "default"}),
         )
-        return [
-            OAuth2ApiStep(
-                authorize_url=self.get_oauth_authorize_url(),
-                client_id=self.get_oauth_client_id(),
-                client_secret=self.get_oauth_client_secret(),
-                access_token_url=self.get_oauth_access_token_url(),
-                scope=" ".join(self.get_oauth_scopes()),
-                redirect_url=redirect_url,
-                verify_ssl=self.config.get("verify_ssl", True),
-            ),
-        ]
+        return OAuth2ApiStep(
+            authorize_url=self.get_oauth_authorize_url(),
+            client_id=self.get_oauth_client_id(),
+            client_secret=self.get_oauth_client_secret(),
+            access_token_url=self.get_oauth_access_token_url(),
+            scope=" ".join(self.get_oauth_scopes()),
+            redirect_url=redirect_url,
+            verify_ssl=self.config.get("verify_ssl", True),
+            **kwargs,
+        )
+
+    def get_pipeline_api_steps(self) -> list[OAuth2ApiStep]:
+        return [self.make_oauth_api_step()]
 
     def get_refresh_token_params(
         self, refresh_token: str, identity: Identity | RpcIdentity, **kwargs: Any
@@ -282,7 +285,7 @@ class OAuth2ApiStep:
         self.bind_key = bind_key
         self.extra_authorize_params = extra_authorize_params or {}
 
-    def get_step_data(self, pipeline: Any, request: HttpRequest) -> dict[str, str]:
+    def get_step_data(self, pipeline: Pipeline[Any, Any], request: HttpRequest) -> dict[str, str]:
         params = urlencode(
             {
                 "client_id": self.client_id,
@@ -301,7 +304,7 @@ class OAuth2ApiStep:
     def handle_post(
         self,
         validated_data: dict[str, str],
-        pipeline: Any,
+        pipeline: Pipeline[Any, Any],
         request: HttpRequest,
     ) -> PipelineStepResult:
         code = validated_data["code"]

@@ -753,7 +753,7 @@ class AssignmentTestMixin(BasePostProcessGroupMixin):
             (o.user_id, o.team_id) for o in owners
         }
 
-    def test_owner_assignment_existing_assignee_preserved(self):
+    def test_owner_assignment_existing_assignee_preserved(self) -> None:
         """
         Tests that if a group already has an assignee, post-processing won't reassign it
         even if ownership rules change in the interim.
@@ -3070,6 +3070,59 @@ class KickOffSeerAutomationTestMixin(BasePostProcessGroupMixin):
         mock_generate_summary_and_run_automation.assert_not_called()
 
 
+class KickOffLightweightRCAClusterTestMixin(BasePostProcessGroupMixin):
+    @patch("sentry.tasks.seer.lightweight_rca_cluster.trigger_lightweight_rca_cluster_task.delay")
+    def test_kick_off_lightweight_rca_cluster_when_enabled(self, mock_task):
+        event = self.create_event(
+            data={"message": "testing"},
+            project_id=self.project.id,
+        )
+
+        with self.options({"supergroups.lightweight-enabled-orgs": [self.project.organization.id]}):
+            self.call_post_process_group(
+                is_new=True,
+                is_regression=False,
+                is_new_group_environment=True,
+                event=event,
+            )
+
+        mock_task.assert_called_once_with(event.group.id)
+
+    @patch("sentry.tasks.seer.lightweight_rca_cluster.trigger_lightweight_rca_cluster_task.delay")
+    def test_kick_off_lightweight_rca_cluster_skips_when_not_enabled(self, mock_task):
+        event = self.create_event(
+            data={"message": "testing"},
+            project_id=self.project.id,
+        )
+
+        with self.options({"supergroups.lightweight-enabled-orgs": []}):
+            self.call_post_process_group(
+                is_new=True,
+                is_regression=False,
+                is_new_group_environment=True,
+                event=event,
+            )
+
+        mock_task.assert_not_called()
+
+    @patch("sentry.tasks.seer.lightweight_rca_cluster.trigger_lightweight_rca_cluster_task.delay")
+    def test_kick_off_lightweight_rca_cluster_skips_when_not_new(self, mock_task):
+        event = self.create_event(
+            data={"message": "testing"},
+            project_id=self.project.id,
+        )
+
+        with self.options({"supergroups.lightweight-enabled-orgs": [self.project.organization.id]}):
+            self.call_post_process_group(
+                is_new=False,
+                is_regression=False,
+                is_new_group_environment=False,
+                event=event,
+            )
+
+        mock_task.assert_not_called()
+
+
 @patch("sentry.seer.autofix.utils.is_seer_seat_based_tier_enabled", return_value=True)
 class TriageSignalsV0TestMixin(BasePostProcessGroupMixin):
     """Tests for the triage signals V0 flow."""
@@ -3497,6 +3550,7 @@ class PostProcessGroupErrorTest(
     InboxTestMixin,
     ResourceChangeBoundsTestMixin,
     KickOffSeerAutomationTestMixin,
+    KickOffLightweightRCAClusterTestMixin,
     TriageSignalsV0TestMixin,
     SeerAutomationHelperFunctionsTestMixin,
     WorkflowEngineTestMixin,
@@ -4150,7 +4204,7 @@ class ProcessDataForwardingTest(BasePostProcessGroupMixin, SnubaTestCase):
 
         return data_forwarder, data_forwarder_project
 
-    def test_process_data_forwarding_no_forwarders(self):
+    def test_process_data_forwarding_no_forwarders(self) -> None:
         event = self.create_event(
             data={"message": "test message", "level": "error"},
             project_id=self.project.id,

@@ -154,6 +154,100 @@ def validate_workflows_exist(
     return workflows
 
 
+def connect_workflows_to_detectors(
+    request: Request,
+    organization: Organization,
+    workflow_id: int,
+    detector_ids: list[int] | None,
+    update: bool = False,
+) -> None:
+    if detector_ids is not None:
+        validate_detectors_exist_and_have_permissions(detector_ids, organization, request)
+
+        def get_detector_workflows_to_add(
+            workflow_id: int, detector_ids: set[int]
+        ) -> list[dict[Literal["detector_id", "workflow_id"], int]]:
+            detector_workflows_to_add: list[dict[Literal["detector_id", "workflow_id"], int]] = [
+                {"detector_id": detector_id, "workflow_id": workflow_id}
+                for detector_id in detector_ids
+            ]
+            return detector_workflows_to_add
+
+        if update:
+            existing_detector_workflows = list(
+                DetectorWorkflow.objects.filter(
+                    workflow_id=workflow_id,
+                )
+            )
+            new_detector_ids = set(detector_ids) - {
+                dw.detector_id for dw in existing_detector_workflows
+            }
+
+            detector_workflows_to_add = get_detector_workflows_to_add(workflow_id, new_detector_ids)
+            detector_workflows_to_remove = [
+                dw for dw in existing_detector_workflows if dw.detector_id not in detector_ids
+            ]
+        else:
+            detector_workflows_to_add = get_detector_workflows_to_add(
+                workflow_id, set(detector_ids)
+            )
+            detector_workflows_to_remove = []
+
+        perform_bulk_detector_workflow_operations(
+            detector_workflows_to_add=detector_workflows_to_add,
+            detector_workflows_to_remove=detector_workflows_to_remove,
+            request=request,
+            organization=organization,
+        )
+
+
+def connect_detectors_to_workflows(
+    request: Request,
+    organization: Organization,
+    detector_id: int,
+    workflow_ids: list[int] | None,
+    update: bool = False,
+) -> None:
+    if workflow_ids is not None:
+        validate_workflows_exist(workflow_ids, organization)
+
+        def get_detector_workflows_to_add(
+            detector_id: int, workflow_ids: set[int]
+        ) -> list[dict[Literal["detector_id", "workflow_id"], int]]:
+            detector_workflows_to_add: list[dict[Literal["detector_id", "workflow_id"], int]] = [
+                {"detector_id": detector_id, "workflow_id": workflow_id}
+                for workflow_id in workflow_ids
+            ]
+            return detector_workflows_to_add
+
+        if update:
+            existing_detector_workflows = list(
+                DetectorWorkflow.objects.filter(
+                    detector_id=detector_id,
+                )
+            )
+            new_workflow_ids = set(workflow_ids) - {
+                dw.workflow_id for dw in existing_detector_workflows
+            }
+
+            detector_workflows_to_add = get_detector_workflows_to_add(detector_id, new_workflow_ids)
+            detector_workflows_to_remove = [
+                dw for dw in existing_detector_workflows if dw.workflow_id not in workflow_ids
+            ]
+        else:
+            detector_workflows_to_add = get_detector_workflows_to_add(
+                detector_id, set(workflow_ids)
+            )
+            detector_workflows_to_remove = []
+
+        perform_bulk_detector_workflow_operations(
+            detector_workflows_to_add=detector_workflows_to_add,
+            detector_workflows_to_remove=detector_workflows_to_remove,
+            request=request,
+            organization=organization,
+        )
+
+
 def perform_bulk_detector_workflow_operations(
     detector_workflows_to_add: list[dict[Literal["detector_id", "workflow_id"], int]],
     detector_workflows_to_remove: Sequence[DetectorWorkflow],
