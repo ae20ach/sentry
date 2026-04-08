@@ -3,12 +3,13 @@ import logging
 from typing import Any
 
 import sentry_sdk
+from django.contrib.auth.models import AnonymousUser
 
 from sentry import features, options
 from sentry.issues.grouptype import GroupCategory
 from sentry.models.group import Group
 from sentry.seer.autofix.constants import SeerAutomationSource
-from sentry.seer.autofix.issue_summary import get_issue_summary
+from sentry.seer.autofix.issue_summary import get_issue_summary, run_automation
 from sentry.seer.autofix.utils import is_seer_scanner_rate_limited
 from sentry.utils.concurrent import ContextPropagatingThreadPoolExecutor
 
@@ -52,9 +53,19 @@ def fetch_issue_summary(group: Group) -> dict[str, Any] | None:
                 future = executor.submit(
                     get_issue_summary, group, source=SeerAutomationSource.ALERT
                 )
-                summary_result, status_code, _ = future.result(timeout=timeout)
+                summary_result, status_code, event = future.result(timeout=timeout)
 
                 if status_code == 200:
+                    if event is not None:
+                        try:
+                            run_automation(
+                                group, AnonymousUser(), event, SeerAutomationSource.ALERT
+                            )
+                        except Exception:
+                            logger.exception(
+                                "seer.automation.run_automation_failed",
+                                extra={"group_id": group.id},
+                            )
                     return summary_result
                 return None
     except concurrent.futures.TimeoutError:
