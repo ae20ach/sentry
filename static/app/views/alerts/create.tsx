@@ -78,7 +78,7 @@ export default function Create() {
       !(aggregate && dataset && eventTypes) &&
       !createFromDuplicate
     ) {
-      router.replace(
+      navigate(
         normalizeUrl({
           ...location,
           pathname: makeAlertsPathname({
@@ -90,7 +90,8 @@ export default function Create() {
             ...DEFAULT_WIZARD_TEMPLATE,
             project: project.slug,
           },
-        })
+        }),
+        {replace: true}
       );
     }
   }, [
@@ -99,7 +100,7 @@ export default function Create() {
     dataset,
     eventTypes,
     createFromDuplicate,
-    router,
+    navigate,
     location,
     organization.slug,
     project.slug,

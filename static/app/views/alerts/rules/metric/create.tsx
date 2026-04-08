@@ -7,6 +7,7 @@ import {metric} from 'sentry/utils/analytics';
 import type {EventView} from 'sentry/utils/discover/eventView';
 import {decodeScalar} from 'sentry/utils/queryString';
 import {normalizeUrl} from 'sentry/utils/url/normalizeUrl';
+import {useNavigate} from 'sentry/utils/useNavigate';
 import {makeAlertsPathname} from 'sentry/views/alerts/pathnames';
 import {
   createDefaultRule,
@@ -37,8 +38,9 @@ type Props = {
  */
 export function MetricRulesCreate(props: Props) {
   const theme = useTheme();
+  const navigate = useNavigate();
   function handleSubmitSuccess(data: any) {
-    const {organization, project, router} = props;
+    const {organization, project} = props;
     const alertRuleId = data ? (data.id as string | undefined) : undefined;
 
     metric.endSpan({name: 'saveAlertRule'});
@@ -56,7 +58,7 @@ export function MetricRulesCreate(props: Props) {
           }),
           query: {project: project.id},
         };
-    router.push(normalizeUrl(target));
+    navigate(normalizeUrl(target));
   }
 
   const {

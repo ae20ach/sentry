@@ -9,6 +9,7 @@ import type {Project} from 'sentry/types/project';
 import type {EventView} from 'sentry/utils/discover/eventView';
 import {uniqueId} from 'sentry/utils/guid';
 import {normalizeUrl} from 'sentry/utils/url/normalizeUrl';
+import {useNavigate} from 'sentry/utils/useNavigate';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {makeAlertsPathname} from 'sentry/views/alerts/pathnames';
 import {
@@ -40,6 +41,7 @@ export function MetricRuleDuplicate({
   ...otherProps
 }: MetricRuleDuplicateProps) {
   const theme = useTheme();
+  const navigate = useNavigate();
   const organization = useOrganization();
   const duplicateRuleId: string = otherProps.location.query.duplicateRuleId;
   const {
@@ -68,7 +70,7 @@ export function MetricRuleDuplicate({
           }),
           query: {project: project.id},
         };
-    otherProps.router.push(normalizeUrl(target));
+    navigate(normalizeUrl(target));
   };
 
   if (isPending) {

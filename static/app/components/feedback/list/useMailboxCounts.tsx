@@ -5,9 +5,12 @@ import type {Organization} from 'sentry/types/organization';
 import {getApiUrl} from 'sentry/utils/api/getApiUrl';
 import {coaleseIssueStatsPeriodQuery} from 'sentry/utils/feedback/coaleseIssueStatsPeriodQuery';
 import {useApiQuery, type UseApiQueryResult} from 'sentry/utils/queryClient';
-import {decodeList, decodeScalar} from 'sentry/utils/queryString';
+import {decodeScalar} from 'sentry/utils/queryString';
 import type {RequestError} from 'sentry/utils/requestError/requestError';
-import {useLocationQuery} from 'sentry/utils/url/useLocationQuery';
+import {
+  useListQueryState,
+  useSearchQueryState,
+} from 'sentry/utils/url/useSentryQueryState';
 import {useLocation} from 'sentry/utils/useLocation';
 
 interface Props {
@@ -40,29 +43,22 @@ export function useMailboxCounts({
 
   const mailboxQuery = Object.values(MAILBOX);
 
-  const queryView = useLocationQuery({
-    fields: {
-      end: decodeScalar,
-      environment: decodeList,
-      field: decodeList,
-      project: decodeList,
-      query: mailboxQuery,
-      queryReferrer: 'feedback_mailbox_count',
-      start: decodeScalar,
-      statsPeriod: decodeScalar,
-      utc: decodeScalar,
-    },
-  });
+  const listQueryState = useListQueryState();
+  const searchQueryState = useSearchQueryState();
 
   const queryViewWithStatsPeriod = useMemo(
-    () =>
-      coaleseIssueStatsPeriodQuery({
-        defaultStatsPeriod: '0d',
+    () => ({
+      ...listQueryState,
+      ...searchQueryState,
+      queryReferrer: 'feedback_mailbox_count',
+      query: mailboxQuery,
+      ...coaleseIssueStatsPeriodQuery({
         listHeadTime,
         prefetch: false,
-        queryView,
+        statsPeriod: listQueryState.statsPeriod,
       }),
-    [listHeadTime, queryView]
+    }),
+    [listHeadTime, listQueryState, searchQueryState, mailboxQuery]
   );
 
   const result = useApiQuery<ApiReturnType>(
