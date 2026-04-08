@@ -277,6 +277,16 @@ function TransactionEventDetails({
           })
         : null;
 
+    const isOldTransaction = isPartialSpanOrTraceData(transaction.endTimestamp);
+    let transactionValue: React.ReactNode = transaction.title;
+    if (transactionTarget && !isOldTransaction) {
+      transactionValue = <Link to={transactionTarget}>{transaction.title}</Link>;
+    } else if (isOldTransaction) {
+      transactionValue = (
+        <DisabledTraceLink type="trace">{transaction.title}</DisabledTraceLink>
+      );
+    }
+
     const details: Array<{
       key: string;
       label: string;
@@ -285,18 +295,7 @@ function TransactionEventDetails({
       {
         key: 'transaction',
         label: t('Transaction'),
-        value: (() => {
-          const isOld = isPartialSpanOrTraceData(transaction.endTimestamp);
-          if (transactionTarget && !isOld) {
-            return <Link to={transactionTarget}>{transaction.title}</Link>;
-          }
-          if (isOld) {
-            return (
-              <DisabledTraceLink type="trace">{transaction.title}</DisabledTraceLink>
-            );
-          }
-          return transaction.title;
-        })(),
+        value: transactionValue,
       },
       {
         key: 'timestamp',

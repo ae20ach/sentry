@@ -32,5 +32,5 @@ export function isPartialSpanOrTraceData(
   if (!timestampDate.isValid()) {
     return false;
   }
-  return now.diff(timestampDate, 'days') > TRACE_DATA_RETENTION_DAYS;
+  return now.diff(timestampDate, 'days') >= TRACE_DATA_RETENTION_DAYS;
 }
