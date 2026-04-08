@@ -26,7 +26,7 @@ describe('NoOrganizationDropdown', () => {
     await userEvent.click(screen.getByRole('button', {name: 'Organization menu'}));
 
     expect(
-      await screen.findByRole('menuitem', {name: 'Create a new organization'})
+      await screen.findByRole('menuitemradio', {name: 'Create a new organization'})
     ).toBeInTheDocument();
   });
 
@@ -42,7 +42,7 @@ describe('NoOrganizationDropdown', () => {
     await userEvent.click(screen.getByRole('button', {name: 'Organization menu'}));
 
     expect(
-      screen.queryByRole('menuitem', {name: 'Create a new organization'})
+      screen.queryByRole('menuitemradio', {name: 'Create a new organization'})
     ).not.toBeInTheDocument();
   });
 
@@ -62,7 +62,9 @@ describe('NoOrganizationDropdown', () => {
 
     await userEvent.click(screen.getByRole('button', {name: 'Organization menu'}));
 
-    const link = await screen.findByRole('menuitem', {name: 'Create a new organization'});
+    const link = await screen.findByRole('menuitemradio', {
+      name: 'Create a new organization',
+    });
     expect(link).toHaveAttribute('href', 'https://sentry.io/organizations/new/');
   });
 
@@ -77,7 +79,9 @@ describe('NoOrganizationDropdown', () => {
 
     await userEvent.click(screen.getByRole('button', {name: 'Organization menu'}));
 
-    const link = await screen.findByRole('menuitem', {name: 'Create a new organization'});
+    const link = await screen.findByRole('menuitemradio', {
+      name: 'Create a new organization',
+    });
     expect(link).toHaveAttribute('href', '/organizations/new/');
   });
 });
