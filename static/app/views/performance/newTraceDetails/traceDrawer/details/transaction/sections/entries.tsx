@@ -8,6 +8,7 @@ import {Message} from 'sentry/components/events/interfaces/message';
 import {StackTrace} from 'sentry/components/events/interfaces/stackTrace';
 import {Template} from 'sentry/components/events/interfaces/template';
 import {Threads} from 'sentry/components/events/interfaces/threads';
+import {IssueStackTrace} from 'sentry/components/stackTrace/issueStackTrace';
 import {t} from 'sentry/locale';
 import {
   EntryType,
@@ -16,6 +17,8 @@ import {
   type EventTransaction,
 } from 'sentry/types/event';
 import type {Project} from 'sentry/types/project';
+import {isNativePlatform} from 'sentry/utils/platform';
+import {useOrganization} from 'sentry/utils/useOrganization';
 import {InterimSection} from 'sentry/views/issueDetails/streamline/interimSection';
 
 type EventEntryContentProps = {
@@ -25,9 +28,20 @@ type EventEntryContentProps = {
 };
 
 function EventEntryContent({entry, projectSlug, event}: EventEntryContentProps) {
+  const organization = useOrganization();
+  const shouldUseNewStackTrace =
+    organization.features.includes('issue-details-new-stack-trace') &&
+    !isNativePlatform(event.platform);
+
   switch (entry.type) {
     case EntryType.EXCEPTION:
-      return (
+      return shouldUseNewStackTrace ? (
+        <IssueStackTrace
+          event={event}
+          values={entry.data.values ?? []}
+          projectSlug={projectSlug}
+        />
+      ) : (
         <Exception
           event={event}
           group={undefined}
@@ -41,7 +55,13 @@ function EventEntryContent({entry, projectSlug, event}: EventEntryContentProps) 
       return <Message event={event} data={entry.data} />;
 
     case EntryType.STACKTRACE:
-      return (
+      return shouldUseNewStackTrace ? (
+        <IssueStackTrace
+          event={event}
+          stacktrace={entry.data}
+          projectSlug={projectSlug}
+        />
+      ) : (
         <StackTrace
           event={event}
           data={entry.data}
