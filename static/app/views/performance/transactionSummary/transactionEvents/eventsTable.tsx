@@ -252,6 +252,8 @@ export function EventsTable({
             source: TraceViewSources.PERFORMANCE_TRANSACTION_SUMMARY,
             view: domainViewFilters?.view,
           });
+        } else if (field === 'trace' && isOld) {
+          target = null;
         } else if (dataRow.trace) {
           target = generateTraceLink(transactionName, domainViewFilters?.view)(
             organization,
