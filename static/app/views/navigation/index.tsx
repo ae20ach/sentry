@@ -2,8 +2,9 @@ import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
 
 import {useHotkeys} from '@sentry/scraps/hotkey';
-import {Container, Flex} from '@sentry/scraps/layout';
+import {Container, Flex, Stack} from '@sentry/scraps/layout';
 import {ExternalLink} from '@sentry/scraps/link';
+import {SizeProvider} from '@sentry/scraps/sizeContext';
 
 import {CommandPaletteHotkeys} from 'sentry/components/commandPalette/ui/commandPaletteStateContext';
 import {useGlobalCommandPaletteActions} from 'sentry/components/commandPalette/useGlobalCommandPaletteActions';
@@ -20,6 +21,7 @@ import {
   useNavigationTour,
 } from 'sentry/views/navigation/navigationTour';
 import {PrimaryNavigation} from 'sentry/views/navigation/primary/components';
+import {NoOrganizationDropdown} from 'sentry/views/navigation/primary/noOrganizationDropdown';
 import {UserDropdown} from 'sentry/views/navigation/primary/userDropdown';
 import {usePrimaryNavigation} from 'sentry/views/navigation/primaryNavigationContext';
 import {
@@ -63,9 +65,20 @@ function UserAndOrganizationNavigation() {
 }
 
 function UserOnlyNavigation() {
+  const hasPageFrame = useHasPageFrameFeature();
+
   return (
     <PrimaryNavigation.Sidebar data-test-id="no-organization-sidebar">
-      <UserDropdown />
+      <PrimaryNavigation.SidebarHeader>
+        <NoOrganizationDropdown />
+      </PrimaryNavigation.SidebarHeader>
+      <SizeProvider size={hasPageFrame ? 'sm' : 'md'}>
+        <Stack gap="md" marginTop="auto" paddingBottom="md">
+          <PrimaryNavigation.FooterItems>
+            <UserDropdown />
+          </PrimaryNavigation.FooterItems>
+        </Stack>
+      </SizeProvider>
     </PrimaryNavigation.Sidebar>
   );
 }
