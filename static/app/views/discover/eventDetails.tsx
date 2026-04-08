@@ -50,11 +50,12 @@ export default function EventDetails() {
 
   const traceTimestamp = event ? getEventTimestampInSeconds(event) : undefined;
   const isOldTrace = traceTimestamp ? isPartialSpanOrTraceData(traceTimestamp) : false;
+  const willRedirectToIssueEvent = !!event?.groupID && !!event?.eventID;
 
   useEffect(() => {
     if (!event) return;
 
-    if (event.groupID && event.eventID) {
+    if (willRedirectToIssueEvent) {
       navigate({
         pathname: `/organizations/${organization.slug}/issues/${event.groupID}/events/${event.eventID}`,
       });
@@ -83,6 +84,7 @@ export default function EventDetails() {
     location,
     navigate,
     traceTimestamp,
+    willRedirectToIssueEvent,
   ]);
 
   if (error) {
@@ -106,7 +108,7 @@ export default function EventDetails() {
     );
   }
 
-  if (event && isOldTrace) {
+  if (event && isOldTrace && !willRedirectToIssueEvent) {
     return (
       <LoadingError message={t('Trace data is only available for the last 30 days')} />
     );
