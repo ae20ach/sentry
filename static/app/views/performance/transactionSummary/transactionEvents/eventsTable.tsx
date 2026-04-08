@@ -239,8 +239,8 @@ export function EventsTable({
           target = {
             pathname: `/organizations/${organization.slug}/issues/${issueId}/events/${dataRow.id}/`,
           };
-        } else if (isOld) {
-          // Trace data older than 30 days is no longer available
+        } else if (field === 'id' && isOld) {
+          // Trace waterfall data older than 30 days is no longer available
           target = null;
         } else if (field === 'id') {
           target = generateLinkToEventInTraceView({
