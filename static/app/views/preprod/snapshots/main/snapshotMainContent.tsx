@@ -115,7 +115,7 @@ export function SnapshotMainContent({
     }
     const displayName = getImageName(currentImage);
     const totalVariants = selectedItem.images.length;
-    const imageUrl = `${imageBaseUrl}${currentImage.key}/`;
+    const imageUrl = `${imageBaseUrl}${currentImage.key}`;
 
     return (
       <Flex direction="column" gap="0" padding="0" height="100%" width="100%">
@@ -150,7 +150,7 @@ export function SnapshotMainContent({
       return null;
     }
     const totalVariants = selectedItem.pairs.length;
-    const imageUrl = `${imageBaseUrl}${currentPair.head_image.key}/`;
+    const imageUrl = `${imageBaseUrl}${currentPair.head_image.key}`;
     const displayName = getImageName(currentPair.head_image);
 
     return (
@@ -199,7 +199,7 @@ export function SnapshotMainContent({
     return null;
   }
   const displayName = getImageName(currentImage);
-  const imageUrl = `${imageBaseUrl}${currentImage.key}/`;
+  const imageUrl = `${imageBaseUrl}${currentImage.key}`;
   const totalVariants = selectedItem.images.length;
   const STATUS_LABELS: Record<string, string> = {
     added: t('Added'),

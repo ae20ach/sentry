@@ -309,10 +309,11 @@ export default function SnapshotsPage() {
       comparisonRunInfo.state
     );
 
-  const imageBaseUrl = `/api/0/projects/${organization.slug}/${data?.project_id ?? ''}/files/images/`;
-  const diffImageBaseUrl = data
+  const objectstoreBaseUrl = data
     ? `/api/0/organizations/${organization.slug}/objectstore/v1/objects/preprod/org=${organization.id};project=${data.project_id}/${organization.id}/${data.project_id}/`
     : '';
+  const imageBaseUrl = objectstoreBaseUrl;
+  const diffImageBaseUrl = objectstoreBaseUrl;
 
   const processingContent = (
     <Flex width="100%" justify="center" align="center">

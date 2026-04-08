@@ -46,8 +46,8 @@ export function DiffImageDisplay({
   const [onionOpacity, setOnionOpacity] = useState(50);
   const blobUrlRef = useRef<string | null>(null);
 
-  const baseImageUrl = `${imageBaseUrl}${pair.base_image.key}/`;
-  const headImageUrl = `${imageBaseUrl}${pair.head_image.key}/`;
+  const baseImageUrl = `${imageBaseUrl}${pair.base_image.key}`;
+  const headImageUrl = `${imageBaseUrl}${pair.head_image.key}`;
   const diffImageUrl = pair.diff_image_key
     ? `${diffImageBaseUrl}${pair.diff_image_key}`
     : null;

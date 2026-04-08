@@ -42,19 +42,16 @@ const mockBuildDetailsData: BuildDetailsApiResponse = {
 
 function TestComponent({
   artifactId,
-  projectId,
   buildDetailsData,
   isBuildDetailsPending,
 }: {
   artifactId: string;
-  projectId: string;
   buildDetailsData?: BuildDetailsApiResponse | null;
   isBuildDetailsPending?: boolean;
 }) {
   return (
     <BuildDetailsSidebarContent
       artifactId={artifactId}
-      projectId={projectId}
       buildDetailsData={buildDetailsData}
       isBuildDetailsPending={isBuildDetailsPending}
     />
@@ -68,7 +65,6 @@ describe('BuildDetailsSidebarContent', () => {
 
   const defaultProps = {
     artifactId: '123',
-    projectId: 'test-project',
   };
 
   beforeEach(() => {
@@ -264,16 +260,9 @@ describe('BuildDetailsSidebarContent', () => {
         },
       };
 
-      render(
-        <TestComponent
-          {...defaultProps}
-          projectId={null as unknown as string}
-          buildDetailsData={buildDetailsData}
-        />,
-        {
-          organization,
-        }
-      );
+      render(<TestComponent {...defaultProps} buildDetailsData={buildDetailsData} />, {
+        organization,
+      });
 
       await waitFor(() => {
         expect(screen.getByText('Build Metadata')).toBeInTheDocument();

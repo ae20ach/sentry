@@ -12,13 +12,12 @@ import {BuildDetailsState} from 'sentry/views/preprod/types/buildDetailsTypes';
 
 interface BuildDetailsSidebarContentProps {
   artifactId: string;
-  projectId: string | null;
   buildDetailsData?: BuildDetailsApiResponse | null;
   isBuildDetailsPending?: boolean;
 }
 
 export function BuildDetailsSidebarContent(props: BuildDetailsSidebarContentProps) {
-  const {buildDetailsData, isBuildDetailsPending = false, artifactId, projectId} = props;
+  const {buildDetailsData, isBuildDetailsPending = false, artifactId} = props;
 
   if (isBuildDetailsPending || !buildDetailsData) {
     return <SidebarLoadingSkeleton data-testid="sidebar-loading-skeleton" />;
@@ -33,7 +32,8 @@ export function BuildDetailsSidebarContent(props: BuildDetailsSidebarContentProp
     <Flex direction="column" gap="2xl">
       <BuildDetailsSidebarAppInfo
         appInfo={buildDetailsData.app_info}
-        projectId={projectId}
+        projectId={buildDetailsData.project_id}
+        projectSlug={buildDetailsData.project_slug}
         artifactId={artifactId}
       />
 

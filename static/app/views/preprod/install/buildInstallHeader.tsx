@@ -26,11 +26,10 @@ import {
 
 interface BuildInstallHeaderProps {
   buildDetailsQuery: UseApiQueryResult<BuildDetailsApiResponse, RequestError>;
-  projectId?: string;
 }
 
 export function BuildInstallHeader(props: BuildInstallHeaderProps) {
-  const {buildDetailsQuery, projectId} = props;
+  const {buildDetailsQuery} = props;
   const {
     data: buildDetailsData,
     isPending: isBuildDetailsPending,
@@ -84,7 +83,7 @@ export function BuildInstallHeader(props: BuildInstallHeaderProps) {
               <AppIcon
                 appName={appInfo.name}
                 appIconId={appInfo.app_icon_id}
-                projectId={projectId}
+                projectId={buildDetailsData.project_id}
               />
             ) : null}
             {appInfo.name ? <span>{appInfo.name}</span> : null}

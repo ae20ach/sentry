@@ -39,10 +39,7 @@ export default function InstallPage() {
     <SentryDocumentTitle title="Install">
       <Stack flex={1}>
         <Layout.Header>
-          <BuildInstallHeader
-            buildDetailsQuery={buildDetailsQuery}
-            projectId={buildDetailsQuery.data?.project_slug}
-          />
+          <BuildInstallHeader buildDetailsQuery={buildDetailsQuery} />
         </Layout.Header>
 
         <Layout.Body>

@@ -6,7 +6,7 @@ import {useOrganization} from 'sentry/utils/useOrganization';
 interface AppIconProps {
   appName: string;
   appIconId?: string | null;
-  projectId?: string | null;
+  projectId?: number | null;
 }
 
 export function AppIcon({appName, appIconId, projectId}: AppIconProps) {
@@ -15,7 +15,7 @@ export function AppIcon({appName, appIconId, projectId}: AppIconProps) {
 
   let iconUrl = undefined;
   if (appIconId && projectId) {
-    iconUrl = `/api/0/projects/${organization.slug}/${projectId}/files/images/${appIconId}/`;
+    iconUrl = `/api/0/organizations/${organization.slug}/objectstore/v1/objects/preprod/org=${organization.id};project=${projectId}/${organization.id}/${projectId}/${appIconId}`;
   }
 
   return (

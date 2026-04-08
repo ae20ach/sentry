@@ -23,7 +23,8 @@ import {
 interface BuildDetailsSidebarAppInfoProps {
   appInfo: BuildDetailsAppInfo;
   artifactId: string;
-  projectId: string | null;
+  projectId: number | null;
+  projectSlug: string | null;
 }
 
 export function BuildDetailsSidebarAppInfo(props: BuildDetailsSidebarAppInfoProps) {
@@ -107,9 +108,9 @@ export function BuildDetailsSidebarAppInfo(props: BuildDetailsSidebarAppInfoProp
             <IconLink />
           </InfoIcon>
           <Text>
-            {props.projectId ? (
+            {props.projectSlug ? (
               <InstallAppButton
-                projectId={props.projectId}
+                projectId={props.projectSlug}
                 artifactId={props.artifactId}
                 platform={props.appInfo.platform ?? null}
                 source="build_details_sidebar"
