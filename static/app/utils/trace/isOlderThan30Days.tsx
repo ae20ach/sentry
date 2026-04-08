@@ -20,5 +20,8 @@ export function isPartialSpanOrTraceData(
   const normalizedTimestamp =
     typeof timestamp === 'number' && timestamp < 1e12 ? timestamp * 1000 : timestamp;
   const timestampDate = moment(normalizedTimestamp);
+  if (!timestampDate.isValid()) {
+    return false;
+  }
   return now.diff(timestampDate, 'days') > TRACE_DATA_RETENTION_DAYS;
 }

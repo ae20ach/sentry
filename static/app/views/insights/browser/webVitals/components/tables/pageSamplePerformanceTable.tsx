@@ -496,9 +496,7 @@ export function PageSamplePerformanceTable({transaction, search, limit = 9}: Pro
       if (key === 'id' && 'id' in row) {
         if (isOld) {
           return (
-            <DisabledTraceLink type="trace">
-              {getShortEventId(row.trace)}
-            </DisabledTraceLink>
+            <DisabledTraceLink type="trace">{getShortEventId(row.id)}</DisabledTraceLink>
           );
         }
         return (

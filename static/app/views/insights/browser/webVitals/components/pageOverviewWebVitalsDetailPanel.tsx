@@ -299,7 +299,7 @@ export function PageOverviewWebVitalsDetailPanel({
         });
       if (isOld) {
         return (
-          <DisabledTraceLink type="trace">{getShortEventId(row.trace)}</DisabledTraceLink>
+          <DisabledTraceLink type="trace">{getShortEventId(row.id)}</DisabledTraceLink>
         );
       }
       return (

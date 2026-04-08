@@ -285,14 +285,18 @@ function TransactionEventDetails({
       {
         key: 'transaction',
         label: t('Transaction'),
-        value:
-          transactionTarget && !isPartialSpanOrTraceData(transaction.endTimestamp) ? (
-            <Link to={transactionTarget}>{transaction.title}</Link>
-          ) : isPartialSpanOrTraceData(transaction.endTimestamp) ? (
-            <DisabledTraceLink type="trace">{transaction.title}</DisabledTraceLink>
-          ) : (
-            transaction.title
-          ),
+        value: (() => {
+          const isOld = isPartialSpanOrTraceData(transaction.endTimestamp);
+          if (transactionTarget && !isOld) {
+            return <Link to={transactionTarget}>{transaction.title}</Link>;
+          }
+          if (isOld) {
+            return (
+              <DisabledTraceLink type="trace">{transaction.title}</DisabledTraceLink>
+            );
+          }
+          return transaction.title;
+        })(),
       },
       {
         key: 'timestamp',
