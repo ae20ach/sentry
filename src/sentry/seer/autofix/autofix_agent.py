@@ -5,9 +5,26 @@ from collections.abc import Callable
 from enum import StrEnum
 from typing import TYPE_CHECKING, Literal
 
-from django.utils import timezone
 from pydantic import BaseModel
+from rest_framework.exceptions import PermissionDenied
 
+from sentry import analytics
+from sentry.analytics.events.autofix_events import (
+    AiAutofixAgentHandoffEvent,
+    AiAutofixCodeChangesCompletedEvent,
+    AiAutofixCodeChangesStartedEvent,
+    AiAutofixImpactAssessmentCompletedEvent,
+    AiAutofixImpactAssessmentStartedEvent,
+    AiAutofixPhaseEvent,
+    AiAutofixPrCreatedStartedEvent,
+    AiAutofixRootCauseCompletedEvent,
+    AiAutofixRootCauseStartedEvent,
+    AiAutofixSolutionCompletedEvent,
+    AiAutofixSolutionStartedEvent,
+    AiAutofixTriageCompletedEvent,
+    AiAutofixTriageStartedEvent,
+)
+from sentry.constants import ENABLE_SEER_CODING_DEFAULT
 from sentry.seer.autofix.artifact_schemas import (
     ImpactAssessmentArtifact,
     RootCauseArtifact,
@@ -31,9 +48,11 @@ from sentry.seer.entrypoints.operator import SeerAutofixOperator, process_autofi
 from sentry.seer.explorer.client import SeerExplorerClient
 from sentry.seer.explorer.client_models import SeerRunState
 from sentry.seer.models import SeerRepoDefinition
+from sentry.seer.models.seer_api_models import SeerPermissionError
 from sentry.sentry_apps.metrics import SentryAppEventType
 from sentry.sentry_apps.tasks.sentry_apps import broadcast_webhooks_for_organization
 from sentry.sentry_apps.utils.webhooks import SeerActionType
+from sentry.utils import metrics
 
 if TYPE_CHECKING:
     from sentry.models.group import Group
@@ -79,10 +98,14 @@ class StepConfig:
         artifact_schema: type[BaseModel] | None,
         prompt_fn: Callable[..., str],
         enable_coding: bool = False,
+        started_event: type[AiAutofixPhaseEvent] | None = None,
+        completed_event: type[AiAutofixPhaseEvent] | None = None,
     ):
         self.artifact_schema = artifact_schema
         self.prompt_fn = prompt_fn
         self.enable_coding = enable_coding
+        self.started_event = started_event
+        self.completed_event = completed_event
 
 
 # Step configurations mapping step to its artifact schema and prompt
@@ -90,23 +113,33 @@ STEP_CONFIGS: dict[AutofixStep, StepConfig] = {
     AutofixStep.ROOT_CAUSE: StepConfig(
         artifact_schema=RootCauseArtifact,
         prompt_fn=root_cause_prompt,
+        started_event=AiAutofixRootCauseStartedEvent,
+        completed_event=AiAutofixRootCauseCompletedEvent,
     ),
     AutofixStep.SOLUTION: StepConfig(
         artifact_schema=SolutionArtifact,
         prompt_fn=solution_prompt,
+        started_event=AiAutofixSolutionStartedEvent,
+        completed_event=AiAutofixSolutionCompletedEvent,
     ),
     AutofixStep.CODE_CHANGES: StepConfig(
         artifact_schema=None,  # Code changes read from file_patches
         prompt_fn=code_changes_prompt,
         enable_coding=True,
+        started_event=AiAutofixCodeChangesStartedEvent,
+        completed_event=AiAutofixCodeChangesCompletedEvent,
     ),
     AutofixStep.IMPACT_ASSESSMENT: StepConfig(
         artifact_schema=ImpactAssessmentArtifact,
         prompt_fn=impact_assessment_prompt,
+        started_event=AiAutofixImpactAssessmentStartedEvent,
+        completed_event=AiAutofixImpactAssessmentCompletedEvent,
     ),
     AutofixStep.TRIAGE: StepConfig(
         artifact_schema=TriageArtifact,
         prompt_fn=triage_prompt,
+        started_event=AiAutofixTriageStartedEvent,
+        completed_event=AiAutofixTriageCompletedEvent,
     ),
 }
 
@@ -197,6 +230,7 @@ def trigger_autofix_explorer(
     stopping_point: AutofixStoppingPoint | None = None,
     intelligence_level: Literal["low", "medium", "high"] = "low",
     user_context: str | None = None,
+    insert_index: int | None = None,
 ) -> int:
     """
     Start or continue an Explorer-based autofix run.
@@ -212,6 +246,16 @@ def trigger_autofix_explorer(
     """
 
     config = STEP_CONFIGS[step]
+
+    if config.started_event is not None:
+        analytics.record(
+            config.started_event(
+                organization_id=group.organization.id,
+                project_id=group.project_id,
+                group_id=group.id,
+                referrer=referrer.value,
+            )
+        )
     client = get_autofix_explorer_client(
         group,
         intelligence_level=intelligence_level,
@@ -244,9 +288,8 @@ def trigger_autofix_explorer(
             prompt_metadata=prompt_metadata,
             artifact_key=artifact_key,
             artifact_schema=artifact_schema,
+            insert_index=insert_index,
         )
-
-    group.update(seer_explorer_autofix_last_triggered=timezone.now())
 
     payload = {
         "run_id": run_id,
@@ -292,6 +335,8 @@ def trigger_autofix_explorer(
                 "group_id": group.id,
             },
         )
+
+    metrics.incr("autofix.explorer.trigger", tags={"step": step.value, "referrer": referrer.value})
 
     return run_id
 
@@ -406,6 +451,7 @@ def _get_relevant_repo(
 def trigger_coding_agent_handoff(
     group: Group,
     run_id: int,
+    referrer: AutofixReferrer,
     integration_id: int | None = None,
     provider: str | None = None,
     user_id: int | None = None,
@@ -426,7 +472,11 @@ def trigger_coding_agent_handoff(
     Returns:
         Dictionary with 'successes' and 'failures' lists
     """
-    # Fetch project preferences for repos and auto_create_pr setting
+    if not group.organization.get_option(
+        "sentry:enable_seer_coding", default=ENABLE_SEER_CODING_DEFAULT
+    ):
+        raise PermissionDenied("Code generation is disabled for this organization")
+
     auto_create_pr = False
     repo_definitions: list[SeerRepoDefinition] = []
     try:
@@ -451,12 +501,7 @@ def trigger_coding_agent_handoff(
             "failures": [{"error_message": "No repositories configured in project preferences"}],
         }
 
-    client = SeerExplorerClient(
-        organization=group.organization,
-        user=None,
-        category_key="autofix",
-        category_value=str(group.id),
-    )
+    client = get_autofix_explorer_client(group)
     state = client.get_run(run_id)
 
     repo = _get_relevant_repo(state, repo_definitions, run_id, group)
@@ -486,7 +531,7 @@ def trigger_coding_agent_handoff(
 
     prompt = generate_autofix_handoff_prompt(state, short_id=short_id)
 
-    return client.launch_coding_agents(
+    coding_agents = client.launch_coding_agents(
         run_id=run_id,
         integration_id=integration_id,
         provider=provider,
@@ -495,4 +540,68 @@ def trigger_coding_agent_handoff(
         repos=[repo],
         branch_name_base=group.title or "seer",
         auto_create_pr=auto_create_pr,
+    )
+
+    analytics.record(
+        AiAutofixAgentHandoffEvent(
+            organization_id=group.organization.id,
+            project_id=group.project_id,
+            group_id=group.id,
+            referrer=referrer.value,
+        )
+    )
+
+    metrics.incr(
+        "autofix.explorer.trigger",
+        tags={"step": "coding_agent_handoff", "referrer": referrer.value},
+    )
+
+    return coding_agents
+
+
+def trigger_push_changes(
+    group: Group,
+    run_id: int,
+    referrer: AutofixReferrer,
+    state: SeerRunState | None = None,
+    repo_name: str | None = None,
+):
+    if not group.organization.get_option(
+        "sentry:enable_seer_coding", default=ENABLE_SEER_CODING_DEFAULT
+    ):
+        raise PermissionDenied("Code generation is disabled for this organization")
+
+    client = get_autofix_explorer_client(group)
+
+    if state is None:
+        try:
+            state = client.get_run(run_id)
+        except ValueError:
+            raise SeerPermissionError("Unknown run id for group")
+
+    group_id = state.metadata.get("group_id") if state.metadata else None
+    if group_id != group.id:
+        raise SeerPermissionError("Unknown run id for group")
+
+    analytics.record(
+        AiAutofixPrCreatedStartedEvent(
+            organization_id=group.organization.id,
+            project_id=group.project_id,
+            group_id=group.id,
+            referrer=referrer.value,
+        )
+    )
+
+    client.push_changes(
+        run_id,
+        repo_name=repo_name,
+        pr_description_suffix=(
+            f"Fixes {group.qualified_short_id}" if group.qualified_short_id else None
+        ),
+        blocking=False,
+    )
+
+    metrics.incr(
+        "autofix.explorer.trigger",
+        tags={"step": "open_pr", "referrer": referrer.value},
     )

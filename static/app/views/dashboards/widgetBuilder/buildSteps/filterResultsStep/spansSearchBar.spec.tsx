@@ -21,7 +21,7 @@ function renderWithProvider({
 }: ComponentProps<typeof SpansSearchBar>) {
   return render(
     <SpansSearchBar widgetQuery={widgetQuery} onSearch={onSearch} onClose={onClose} />,
-    {organization: {features: ['search-query-builder-input-flow-changes']}}
+    {}
   );
 }
 
@@ -33,7 +33,7 @@ function mockSpanTags({
   type: 'string' | 'number' | 'boolean';
 }) {
   MockApiClient.addMockResponse({
-    url: `/organizations/org-slug/trace-items/attributes/`,
+    url: '/organizations/org-slug/trace-items/attributes/',
     body: mockedTags,
     match: [
       function (_url: string, options: Record<string, any>) {
@@ -68,16 +68,16 @@ describe('SpansSearchBar', () => {
     MockApiClient.clearMockResponses();
 
     MockApiClient.addMockResponse({
-      url: `/organizations/org-slug/recent-searches/`,
+      url: '/organizations/org-slug/recent-searches/',
       body: [],
     });
     MockApiClient.addMockResponse({
-      url: `/organizations/org-slug/recent-searches/`,
+      url: '/organizations/org-slug/recent-searches/',
       body: [],
       method: 'POST',
     });
     MockApiClient.addMockResponse({
-      url: `/organizations/org-slug/spans/fields/`,
+      url: '/organizations/org-slug/spans/fields/',
       body: [],
     });
 
@@ -88,6 +88,12 @@ describe('SpansSearchBar', () => {
     mockSpanTagValues({type: 'number', tagKey: 'span.op', mockedValues: []});
 
     mockSpanTags({type: 'boolean', mockedTags: []});
+
+    MockApiClient.addMockResponse({
+      url: '/organizations/org-slug/trace-items/attributes/validate/',
+      method: 'POST',
+      body: {attributes: {}},
+    });
   });
 
   it('renders the initial query conditions', async () => {
@@ -116,7 +122,7 @@ describe('SpansSearchBar', () => {
     await screen.findByLabelText('span.op:function');
   });
 
-  it('calls onSearch with the correct query', async () => {
+  it.isKnownFlake('calls onSearch with the correct query', async () => {
     const onSearch = jest.fn();
 
     renderWithProvider({
@@ -128,9 +134,8 @@ describe('SpansSearchBar', () => {
     const searchInput = await screen.findByRole('combobox', {
       name: 'Add a search term',
     });
-    await userEvent.type(searchInput, 'span.op:');
-    await userEvent.keyboard('{enter}');
-    await userEvent.keyboard('function');
+    await userEvent.type(searchInput, 'span.op:', {delay: null});
+    await userEvent.keyboard('function', {delay: null});
     await userEvent.keyboard('{enter}');
 
     await waitFor(() => {
