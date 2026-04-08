@@ -299,7 +299,9 @@ export function PageOverviewWebVitalsDetailPanel({
         });
       if (isOld) {
         return (
-          <DisabledTraceLink type="trace">{getShortEventId(row.id)}</DisabledTraceLink>
+          <NoOverflow>
+            <DisabledTraceLink type="trace">{getShortEventId(row.id)}</DisabledTraceLink>
+          </NoOverflow>
         );
       }
       return (
