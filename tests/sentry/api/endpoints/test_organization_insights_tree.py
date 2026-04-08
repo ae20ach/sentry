@@ -30,6 +30,7 @@ class OrganizationInsightsTreeEndpointTest(
         self._store_unrelated_spans()
 
     def _store_nextjs_function_spans(self) -> None:
+        # Old SDK format (<10.32.0): '{ComponentType} Server Component ({route})'
         descriptions = [
             "Page Server Component (/app/dashboard/)",
             "Loading Server Component (/app/dashboard/)",
@@ -50,6 +51,13 @@ class OrganizationInsightsTreeEndpointTest(
             "Page Server Component (/app/[id]/)",
             "Page Server Component (/app/[...slug]/)",
             "Page Server Component (/app/[[...optional]]/)",
+            # New SDK format (>=10.32.0): 'resolve {type} server component "{route_or_segment}"'
+            'resolve page server component "/dashboard"',
+            'resolve page server component "/nested-layout/[dynamic]"',
+            'resolve layout server component "nested-layout"',
+            'resolve layout server component "(route-group)"',
+            'resolve layout server component "[dynamic]"',
+            "resolve root layout server component",
             "unrelated description",
         ]
         spans = []
@@ -124,5 +132,35 @@ class OrganizationInsightsTreeEndpointTest(
         element = response.data["data"][catchall_route_idx]
         assert element["function.nextjs.component_type"] == "Page Server Component"
         assert element["function.nextjs.path"] == ["app", "[...slug]"]
+
+        # New SDK format: resolve page server component with full route
+        resolve_page_idx = span_descriptions.index(
+            'resolve page server component "/nested-layout/[dynamic]"'
+        )
+        element = response.data["data"][resolve_page_idx]
+        assert element["function.nextjs.component_type"] == "Page Server Component"
+        assert element["function.nextjs.path"] == ["nested-layout", "[dynamic]"]
+
+        # New SDK format: resolve layout server component with segment
+        resolve_layout_idx = span_descriptions.index(
+            'resolve layout server component "nested-layout"'
+        )
+        element = response.data["data"][resolve_layout_idx]
+        assert element["function.nextjs.component_type"] == "Layout Server Component"
+        assert element["function.nextjs.path"] == ["nested-layout"]
+
+        # New SDK format: resolve root layout server component (no path)
+        resolve_root_idx = span_descriptions.index("resolve root layout server component")
+        element = response.data["data"][resolve_root_idx]
+        assert element["function.nextjs.component_type"] == "Layout Server Component"
+        assert element["function.nextjs.path"] == []
+
+        # New SDK format: route group segment
+        resolve_group_idx = span_descriptions.index(
+            'resolve layout server component "(route-group)"'
+        )
+        element = response.data["data"][resolve_group_idx]
+        assert element["function.nextjs.component_type"] == "Layout Server Component"
+        assert element["function.nextjs.path"] == ["(route-group)"]
 
         assert "INSERT value INTO table" not in span_descriptions

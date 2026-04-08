@@ -41,22 +41,51 @@ class OrganizationInsightsTreeEndpoint(OrganizationEventsEndpoint):
         response = super().get(request, organization)
         return self._separate_span_description_info(response)
 
-    def _separate_span_description_info(self, response):
-        # Regex to split string into '{component_type}{space}({path})'
-        pattern = re.compile(r"^(.*?)\s+\((.*?)\)$")
+    # SDK <10.32.0: '{component_type} ({path})'
+    # e.g. 'Page Server Component (/dashboard)'
+    _pattern_parens = re.compile(r"^(.*?)\s+\((.*?)\)$")
 
+    # SDK >=10.32.0: 'resolve {page|root layout|layout} server component "{route_or_segment}"'
+    # e.g. 'resolve page server component "/dashboard"'
+    _pattern_resolve = re.compile(
+        r'^resolve (page|root layout|layout) server component(?:\s+"(.*)")?$'
+    )
+
+    _RESOLVE_KIND_TO_COMPONENT_TYPE = {
+        "page": "Page Server Component",
+        "layout": "Layout Server Component",
+        "root layout": "Layout Server Component",
+    }
+
+    def _separate_span_description_info(self, response):
         for line in response.data["data"]:
-            match = pattern.match(line["span.description"])
+            desc = line["span.description"]
+
+            match = self._pattern_parens.match(desc)
             if match:
                 component_type = match.group(1)
                 path = match.group(2)
                 path_components = path.strip("/").split("/")
                 if not path_components or (len(path_components) == 1 and path_components[0] == ""):
-                    path_components = []  # Handle root path case
-
+                    path_components = []
             else:
-                component_type = None
-                path_components = []
+                match = self._pattern_resolve.match(desc)
+                if match:
+                    kind = match.group(1)
+                    value = match.group(2)
+                    component_type = self._RESOLVE_KIND_TO_COMPONENT_TYPE[kind]
+                    if value:
+                        path_components = value.strip("/").split("/")
+                        if not path_components or (
+                            len(path_components) == 1 and path_components[0] == ""
+                        ):
+                            path_components = []
+                    else:
+                        path_components = []
+                else:
+                    component_type = None
+                    path_components = []
+
             line["function.nextjs.component_type"] = component_type
             line["function.nextjs.path"] = path_components
 
