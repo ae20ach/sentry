@@ -335,6 +335,19 @@ describe('SentryAppExternalInstallation', () => {
         body: [org1Lite],
       });
 
+      // These endpoints are fetched concurrently with the sentry app request.
+      // Mock them so the test framework does not complain about unmocked requests,
+      // even though the error state renders before their responses are used.
+      MockApiClient.addMockResponse({
+        url: `/organizations/${org1.slug}/`,
+        body: org1,
+      });
+
+      MockApiClient.addMockResponse({
+        url: `/organizations/${org1.slug}/sentry-app-installations/`,
+        body: [],
+      });
+
       window.__initialData = ConfigFixture({
         customerDomain: {
           subdomain: 'org1',
