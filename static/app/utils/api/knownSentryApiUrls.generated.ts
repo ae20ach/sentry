@@ -475,6 +475,7 @@ export type KnownSentryApiUrls =
   | '/organizations/$organizationIdOrSlug/pr-comments/$repoName/$prNumber/'
   | '/organizations/$organizationIdOrSlug/preprod-artifact/rerun-analysis/$headArtifactId/'
   | '/organizations/$organizationIdOrSlug/preprod-artifact/rerun-status-checks/$headArtifactId/'
+  | '/organizations/$organizationIdOrSlug/preprod/has-data/'
   | '/organizations/$organizationIdOrSlug/preprod/quota/'
   | '/organizations/$organizationIdOrSlug/preprod/retention/'
   | '/organizations/$organizationIdOrSlug/preprodartifacts/$artifactId/approve/'
