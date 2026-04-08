@@ -46,6 +46,8 @@ import {InterimSection} from 'sentry/views/issueDetails/streamline/interimSectio
 
 import {IssueFrameActions} from './issueFrameActions';
 import {IssueStackTraceFrameContext} from './issueStackTraceFrameContext';
+import type {IndexedExceptionValue} from './utils';
+import {resolveExceptionFields} from './utils';
 
 interface IssueStackTraceBaseProps {
   event: Event;
@@ -66,20 +68,6 @@ interface StandaloneStackTraceProps extends IssueStackTraceBaseProps {
 }
 
 type IssueStackTraceProps = ExceptionStackTraceProps | StandaloneStackTraceProps;
-
-interface IndexedExceptionValue extends ExceptionValue {
-  exceptionIndex: number;
-  stacktrace: StacktraceType;
-}
-
-/** Resolves symbolicated vs raw (minified) exception fields. */
-function resolveExceptionFields(exc: IndexedExceptionValue, isMinified: boolean) {
-  return {
-    type: isMinified ? (exc.rawType ?? exc.type) : exc.type,
-    module: isMinified ? (exc.rawModule ?? exc.module) : exc.module,
-    value: isMinified ? (exc.rawValue ?? exc.value) : exc.value,
-  };
-}
 
 function IssueStackTraceLineCoverageLegend() {
   const {hasCoverageData} = useLineCoverageContext();

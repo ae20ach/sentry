@@ -34,6 +34,9 @@ import {defined} from 'sentry/utils';
 import {SectionKey} from 'sentry/views/issueDetails/streamline/context';
 import {InterimSection} from 'sentry/views/issueDetails/streamline/interimSection';
 
+import type {IndexedExceptionValue} from './utils';
+import {resolveExceptionFields} from './utils';
+
 interface SharedIssueStackTraceBaseProps {
   event: Event;
 }
@@ -51,19 +54,6 @@ interface SharedStandaloneStackTraceProps extends SharedIssueStackTraceBaseProps
 type SharedIssueStackTraceProps =
   | SharedExceptionStackTraceProps
   | SharedStandaloneStackTraceProps;
-
-interface IndexedExceptionValue extends ExceptionValue {
-  exceptionIndex: number;
-  stacktrace: StacktraceType;
-}
-
-function resolveExceptionFields(exc: IndexedExceptionValue, isMinified: boolean) {
-  return {
-    type: isMinified ? (exc.rawType ?? exc.type) : exc.type,
-    module: isMinified ? (exc.rawModule ?? exc.module) : exc.module,
-    value: isMinified ? (exc.rawValue ?? exc.value) : exc.value,
-  };
-}
 
 /**
  * Stack trace component for the shared issue page.
@@ -169,6 +159,8 @@ function SharedIssueStackTraceContent({
           rawStacktraceContent({
             data: isMinified ? (exc.rawStacktrace ?? exc.stacktrace) : exc.stacktrace,
             platform: event.platform,
+            exception: isStandalone ? undefined : exc,
+            isMinified,
           })
         )
         .join('\n\n'),
@@ -197,7 +189,7 @@ function SharedIssueStackTraceContent({
                     ? (exc.rawStacktrace ?? exc.stacktrace)
                     : exc.stacktrace,
                   platform: event.platform,
-                  exception: exc,
+                  exception: isStandalone ? undefined : exc,
                   isMinified,
                 })
               )
@@ -216,27 +208,29 @@ function SharedIssueStackTraceContent({
 
     return (
       <InterimSection type={sectionKey} title="Stack Trace" actions={sectionActions}>
-        {hasExceptionInfo && (
-          <Flex direction="column" gap="sm">
-            <div>
-              <ExceptionHeader type={type} module={module} />
-            </div>
-            <ExceptionDescription
-              value={value}
-              mechanism={exc.mechanism}
-              meta={excMeta}
-            />
-          </Flex>
-        )}
-        <StackTraceProvider
-          exceptionIndex={isStandalone ? undefined : exc.exceptionIndex}
-          event={event}
-          stacktrace={exc.stacktrace}
-          minifiedStacktrace={exc.rawStacktrace ?? undefined}
-          meta={isStandalone ? rawEntryMeta : excMeta?.stacktrace}
-        >
-          <StackTraceFrames frameContextComponent={FrameContent} />
-        </StackTraceProvider>
+        <Flex direction="column" gap="lg">
+          {hasExceptionInfo && (
+            <Flex direction="column" gap="sm">
+              <div>
+                <ExceptionHeader type={type} module={module} />
+              </div>
+              <ExceptionDescription
+                value={value}
+                mechanism={exc.mechanism}
+                meta={excMeta}
+              />
+            </Flex>
+          )}
+          <StackTraceProvider
+            exceptionIndex={isStandalone ? undefined : exc.exceptionIndex}
+            event={event}
+            stacktrace={exc.stacktrace}
+            minifiedStacktrace={exc.rawStacktrace ?? undefined}
+            meta={isStandalone ? rawEntryMeta : excMeta?.stacktrace}
+          >
+            <StackTraceFrames frameContextComponent={FrameContent} />
+          </StackTraceProvider>
+        </Flex>
       </InterimSection>
     );
   }
