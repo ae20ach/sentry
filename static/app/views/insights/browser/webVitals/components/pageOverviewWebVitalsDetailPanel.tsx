@@ -300,7 +300,9 @@ export function PageOverviewWebVitalsDetailPanel({
       if (isOld) {
         return (
           <NoOverflow>
-            <DisabledTraceLink type="trace">{getShortEventId(row.id)}</DisabledTraceLink>
+            <DisabledTraceLink type="trace">
+              {getShortEventId(row.trace)}
+            </DisabledTraceLink>
           </NoOverflow>
         );
       }
