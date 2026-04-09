@@ -135,6 +135,7 @@ class OrganizationIntegrationReposEndpoint(CellOrganizationIntegrationBaseEndpoi
                 {"repos": serialized_repositories, "searchable": install.repo_search}
             )
 
+            # per_page and offset are guaranteed set when paginated is not None
             if paginated is not None and (has_next or offset > 0):
                 # CursorResult only used for Link header generation
                 cursor_result: CursorResult[IntegrationRepository] = CursorResult(
@@ -148,7 +149,8 @@ class OrganizationIntegrationReposEndpoint(CellOrganizationIntegrationBaseEndpoi
 
         return self.respond({"detail": "Repositories not supported"}, status=400)
 
-    def _parse_cursor(self, request: Request) -> Cursor:
+    @staticmethod
+    def _parse_cursor(request: Request) -> Cursor:
         cursor_param = request.GET.get("cursor", "")
         if not cursor_param:
             return Cursor(0, 0, False)
