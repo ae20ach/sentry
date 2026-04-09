@@ -471,7 +471,6 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
 
     @patch(
         "sentry.integrations.github.integration.GitHubIntegration.get_repositories",
-        return_value=[],
     )
     def test_without_per_page_uses_full_list(self, get_repositories: MagicMock) -> None:
         """Without per_page, existing behavior: full list, no pagination."""
@@ -486,10 +485,9 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
 
     @patch(
         "sentry.integrations.github.integration.GitHubIntegration.get_repositories",
-        return_value=[],
     )
     def test_search_with_per_page_uses_full_list(self, get_repositories: MagicMock) -> None:
-        """When search is present, per_page is ignored — full list returned."""
+        """When search is present, per_page is ignored -- full list returned."""
         get_repositories.return_value = [
             {"name": "repo-1", "identifier": "Example/repo-1", "default_branch": "main"},
         ]
@@ -500,3 +498,69 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
         assert response.status_code == 200, response.content
         get_repositories.assert_called_once_with("repo", accessible_only=False)
         assert "Link" not in response
+
+    @patch(
+        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+    )
+    def test_per_page_zero_clamped_to_one(self, mock_cache: MagicMock) -> None:
+        mock_cache.return_value = CACHED_REPOS
+        response = self.client.get(self.path, data={"per_page": "0"}, format="json")
+
+        assert response.status_code == 200, response.content
+        assert len(response.data["repos"]) == 1
+
+    @patch(
+        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+    )
+    def test_per_page_negative_clamped_to_one(self, mock_cache: MagicMock) -> None:
+        mock_cache.return_value = CACHED_REPOS
+        response = self.client.get(self.path, data={"per_page": "-1"}, format="json")
+
+        assert response.status_code == 200, response.content
+        assert len(response.data["repos"]) == 1
+
+    @patch(
+        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+    )
+    def test_per_page_non_numeric_defaults_to_100(self, mock_cache: MagicMock) -> None:
+        mock_cache.return_value = CACHED_REPOS
+        response = self.client.get(self.path, data={"per_page": "abc"}, format="json")
+
+        assert response.status_code == 200, response.content
+        assert len(response.data["repos"]) == 5
+
+    @patch(
+        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+    )
+    def test_per_page_over_max_clamped_to_100(self, mock_cache: MagicMock) -> None:
+        mock_cache.return_value = CACHED_REPOS
+        response = self.client.get(self.path, data={"per_page": "200"}, format="json")
+
+        assert response.status_code == 200, response.content
+        assert len(response.data["repos"]) == 5
+
+    @patch(
+        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+    )
+    def test_negative_cursor_offset_clamped_to_zero(self, mock_cache: MagicMock) -> None:
+        mock_cache.return_value = CACHED_REPOS
+        response = self.client.get(
+            self.path, data={"per_page": "2", "cursor": "0:-5:0"}, format="json"
+        )
+
+        assert response.status_code == 200, response.content
+        repos = response.data["repos"]
+        assert len(repos) == 2
+        assert repos[0]["identifier"] == "Example/repo-1"
+
+    @patch(
+        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+    )
+    def test_integration_error_returns_400(self, mock_cache: MagicMock) -> None:
+        from sentry.shared_integrations.exceptions import IntegrationError
+
+        mock_cache.side_effect = IntegrationError("token revoked")
+        response = self.client.get(self.path, data={"per_page": "2"}, format="json")
+
+        assert response.status_code == 400
+        assert response.data["detail"] == "token revoked"

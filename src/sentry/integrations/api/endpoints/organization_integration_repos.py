@@ -59,6 +59,8 @@ class OrganizationIntegrationReposEndpoint(CellOrganizationIntegrationBaseEndpoi
                               pagination. Providers that support paginated browsing return
                               one page of results with ``Link`` headers. Providers that
                               don't support it fall back to returning the full list.
+                              The paginated path always returns installation-accessible
+                              repos (``accessibleOnly`` is ignored).
         :qparam string cursor: Pagination cursor (only used when ``per_page`` is set).
         """
         integration = self.get_integration(organization.id, integration_id)
@@ -134,6 +136,7 @@ class OrganizationIntegrationReposEndpoint(CellOrganizationIntegrationBaseEndpoi
             )
 
             if paginated is not None and (has_next or offset > 0):
+                # CursorResult only used for Link header generation
                 cursor_result: CursorResult[IntegrationRepository] = CursorResult(
                     results=[],
                     prev=Cursor(0, max(0, offset - per_page), True, offset > 0),
