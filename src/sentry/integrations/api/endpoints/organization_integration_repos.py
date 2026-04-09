@@ -134,7 +134,7 @@ class OrganizationIntegrationReposEndpoint(CellOrganizationIntegrationBaseEndpoi
             )
 
             if paginated is not None and (has_next or offset > 0):
-                cursor_result = CursorResult(
+                cursor_result: CursorResult[IntegrationRepository] = CursorResult(
                     results=[],
                     prev=Cursor(0, max(0, offset - per_page), True, offset > 0),
                     next=Cursor(0, offset + per_page, False, has_next),
