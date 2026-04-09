@@ -4,7 +4,7 @@ import moment from 'moment-timezone';
 
 import {Alert} from '@sentry/scraps/alert';
 import {Button, LinkButton} from '@sentry/scraps/button';
-import {Grid} from '@sentry/scraps/layout';
+import {Grid, Stack} from '@sentry/scraps/layout';
 import {ExternalLink, Link} from '@sentry/scraps/link';
 
 import {addErrorMessage, addSuccessMessage} from 'sentry/actionCreators/indicator';
@@ -279,7 +279,7 @@ export default function AlertRuleDetails() {
 
   const duplicateLink = {
     pathname: makeAlertsPathname({
-      path: `/new/issue/`,
+      path: '/new/issue/',
       organization,
     }),
     query: {
@@ -383,7 +383,7 @@ export default function AlertRuleDetails() {
   const {period, start, end, utc} = getDataDatetime();
   const cursor = decodeScalar(location.query.cursor);
   return (
-    <Layout.Page>
+    <Stack flex={1}>
       <PageFiltersContainer
         skipInitializeUrlParams
         skipLoadLastUsed
@@ -403,7 +403,7 @@ export default function AlertRuleDetails() {
                 {
                   label: t('Alerts'),
                   to: makeAlertsPathname({
-                    path: `/rules/`,
+                    path: '/rules/',
                     organization,
                   }),
                 },
@@ -473,12 +473,14 @@ export default function AlertRuleDetails() {
               <Alert.Container>
                 {rule.snoozeForEveryone ? (
                   <Alert variant="info">
-                    {tct(
-                      "[creator] muted this alert for everyone so you won't get these notifications in the future.",
-                      {
-                        creator: rule.snoozeCreatedBy,
-                      }
-                    )}
+                    {rule.snoozeCreatedBy
+                      ? tct(
+                          "[creator] muted this alert for everyone so you won't get these notifications in the future.",
+                          {creator: rule.snoozeCreatedBy}
+                        )
+                      : t(
+                          "This alert has been muted for everyone so you won't get these notifications in the future."
+                        )}
                   </Alert>
                 ) : (
                   <UserSnoozeDeprecationBanner projectId={project.id} />
@@ -517,7 +519,7 @@ export default function AlertRuleDetails() {
           </Layout.Side>
         </Layout.Body>
       </PageFiltersContainer>
-    </Layout.Page>
+    </Stack>
   );
 }
 

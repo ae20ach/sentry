@@ -9,7 +9,7 @@ import {Alert} from '@sentry/scraps/alert';
 import {FeatureBadge} from '@sentry/scraps/badge';
 import {Button} from '@sentry/scraps/button';
 import {CompactSelect} from '@sentry/scraps/compactSelect';
-import {Flex, Grid} from '@sentry/scraps/layout';
+import {Flex, Grid, Stack} from '@sentry/scraps/layout';
 import {OverlayTrigger} from '@sentry/scraps/overlayTrigger';
 import {SegmentedControl} from '@sentry/scraps/segmentedControl';
 import {Switch} from '@sentry/scraps/switch';
@@ -59,6 +59,8 @@ import type {DashboardsLayout} from 'sentry/views/dashboards/manage/types';
 import {DashboardFilter, PREBUILT_DASHBOARD_LABEL} from 'sentry/views/dashboards/types';
 import type {DashboardDetails, DashboardListItem} from 'sentry/views/dashboards/types';
 import {PREBUILT_DASHBOARDS} from 'sentry/views/dashboards/utils/prebuiltConfigs';
+import {TopBar} from 'sentry/views/navigation/topBar';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 import RouteError from 'sentry/views/routeError';
 
 import DashboardGrid from './dashboardGrid';
@@ -162,6 +164,7 @@ function ManageDashboards() {
   const navigate = useNavigate();
   const location = useLocation();
   const api = useApi();
+  const hasPageFrameFeature = useHasPageFrameFeature();
   const dashboardGridRef = useRef<HTMLDivElement>(null);
   const hasPrebuiltDashboards = organization.features.includes(
     'dashboards-prebuilt-insights-dashboards'
@@ -478,13 +481,13 @@ function ManageDashboards() {
 
   function renderNoAccess() {
     return (
-      <Layout.Page>
+      <Stack flex={1}>
         <Alert.Container>
           <Alert variant="warning" showIcon={false}>
             {t("You don't have access to this feature")}
           </Alert>
         </Alert.Container>
-      </Layout.Page>
+      </Stack>
     );
   }
 
@@ -494,7 +497,6 @@ function ManageDashboards() {
         api={api}
         dashboards={dashboards}
         organization={organization}
-        location={location}
         onDashboardsChange={() => refetchDashboards()}
         isLoading={isLoading}
         rowCount={rowCount}
@@ -543,19 +545,12 @@ function ManageDashboards() {
     );
   }
 
-  const {query: _query, ...queryWithoutSearch} = location.query;
-
   function onCreate() {
     trackAnalytics('dashboards_manage.create.start', {
       organization,
     });
 
-    navigate(
-      normalizeUrl({
-        pathname: `/organizations/${organization.slug}/dashboards/new/`,
-        query: queryWithoutSearch,
-      })
-    );
+    navigate(normalizeUrl(`/organizations/${organization.slug}/dashboards/new/`));
   }
 
   async function onAdd(dashboard: DashboardDetails) {
@@ -578,10 +573,7 @@ function ManageDashboards() {
 
   function loadDashboard(dashboardId: string) {
     navigate(
-      normalizeUrl({
-        pathname: `/organizations/${organization.slug}/dashboards/${dashboardId}/`,
-        query: queryWithoutSearch,
-      })
+      normalizeUrl(`/organizations/${organization.slug}/dashboards/${dashboardId}/`)
     );
   }
 
@@ -592,10 +584,7 @@ function ManageDashboards() {
     });
 
     navigate(
-      normalizeUrl({
-        pathname: `/organizations/${organization.slug}/dashboards/new/${dashboardId}/`,
-        query: queryWithoutSearch,
-      })
+      normalizeUrl(`/organizations/${organization.slug}/dashboards/new/${dashboardId}/`)
     );
   }
 
@@ -622,11 +611,11 @@ function ManageDashboards() {
       >
         <ErrorBoundary>
           {isError ? (
-            <Layout.Page withPadding>
+            <Stack flex={1} padding="2xl 3xl">
               <RouteError error={error} />
-            </Layout.Page>
+            </Stack>
           ) : (
-            <Layout.Page>
+            <Stack flex={1}>
               <NoProjectMessage organization={organization}>
                 <Layout.Header unified>
                   <Layout.HeaderContent unified>
@@ -659,7 +648,13 @@ function ManageDashboards() {
                         </TemplateSwitch>
                       )}
 
-                      <FeedbackButton />
+                      {hasPageFrameFeature ? (
+                        <TopBar.Slot name="feedback">
+                          <FeedbackButton>{null}</FeedbackButton>
+                        </TopBar.Slot>
+                      ) : (
+                        <FeedbackButton />
+                      )}
                       <Feature features={['dashboards-ai-generate']}>
                         {({hasFeature: hasAiGenerate}) =>
                           hasAiGenerate && areAiFeaturesAllowed ? (
@@ -682,6 +677,7 @@ function ManageDashboards() {
                                     },
                                     {
                                       key: 'create-dashboard-agent',
+                                      textValue: t('Generate dashboard'),
                                       label: (
                                         <Flex gap="sm" align="center" as="span">
                                           {t('Generate dashboard')}
@@ -769,7 +765,7 @@ function ManageDashboards() {
                   </Layout.Main>
                 </Layout.Body>
               </NoProjectMessage>
-            </Layout.Page>
+            </Stack>
           )}
         </ErrorBoundary>
       </SentryDocumentTitle>

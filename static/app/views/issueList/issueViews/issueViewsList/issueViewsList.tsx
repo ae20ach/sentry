@@ -3,7 +3,7 @@ import styled from '@emotion/styled';
 
 import {Button} from '@sentry/scraps/button';
 import {CompactSelect} from '@sentry/scraps/compactSelect';
-import {Grid} from '@sentry/scraps/layout';
+import {Grid, Stack} from '@sentry/scraps/layout';
 import {OverlayTrigger} from '@sentry/scraps/overlayTrigger';
 
 import Feature from 'sentry/components/acl/feature';
@@ -44,6 +44,8 @@ import {
   type GroupSearchView,
 } from 'sentry/views/issueList/types';
 import {IssueSortOptions} from 'sentry/views/issueList/utils';
+import {TopBar} from 'sentry/views/navigation/topBar';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 type IssueViewSectionProps = {
   createdBy: GroupSearchViewCreatedBy;
@@ -321,10 +323,20 @@ function SortDropdown() {
   );
 }
 
+const issueViewsFeedbackOptions = {
+  formTitle: t('Give Feedback'),
+  messagePlaceholder: t('How can we make issue views better for you?'),
+  tags: {
+    ['feedback.source']: 'custom_views',
+    ['feedback.owner']: 'issues',
+  },
+};
+
 export default function IssueViewsList() {
   const organization = useOrganization();
   const navigate = useNavigate();
   const location = useLocation();
+  const hasPageFrameFeature = useHasPageFrameFeature();
   const query = typeof location.query.query === 'string' ? location.query.query : '';
   const {mutate: createGroupSearchView, isPending: isCreatingView} =
     useCreateGroupSearchView();
@@ -358,24 +370,22 @@ export default function IssueViewsList() {
 
   return (
     <SentryDocumentTitle title={t('All Views')} orgSlug={organization.slug}>
-      <Layout.Page>
+      <Stack flex={1}>
         <Layout.Header unified>
           <Layout.HeaderContent>
             <Layout.Title>{t('All Views')}</Layout.Title>
           </Layout.HeaderContent>
           <Layout.HeaderActions>
             <Grid flow="column" align="center" gap="md">
-              <FeedbackButton
-                size="sm"
-                feedbackOptions={{
-                  formTitle: t('Give Feedback'),
-                  messagePlaceholder: t('How can we make issue views better for you?'),
-                  tags: {
-                    ['feedback.source']: 'custom_views',
-                    ['feedback.owner']: 'issues',
-                  },
-                }}
-              />
+              {hasPageFrameFeature ? (
+                <TopBar.Slot name="feedback">
+                  <FeedbackButton feedbackOptions={issueViewsFeedbackOptions}>
+                    {null}
+                  </FeedbackButton>
+                </TopBar.Slot>
+              ) : (
+                <FeedbackButton size="sm" feedbackOptions={issueViewsFeedbackOptions} />
+              )}
               <Feature
                 features="organizations:issue-views"
                 hookName="feature-disabled:issue-views"
@@ -460,7 +470,7 @@ export default function IssueViewsList() {
             />
           </MainTableLayout>
         </Layout.Body>
-      </Layout.Page>
+      </Stack>
     </SentryDocumentTitle>
   );
 }

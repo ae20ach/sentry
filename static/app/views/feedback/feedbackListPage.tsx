@@ -13,10 +13,9 @@ import {FeedbackSearch} from 'sentry/components/feedback/feedbackSearch';
 import {FeedbackSetupPanel} from 'sentry/components/feedback/feedbackSetupPanel';
 import {FeedbackList} from 'sentry/components/feedback/list/feedbackList';
 import {FeedbackSummaryCategories} from 'sentry/components/feedback/summaryCategories/feedbackSummaryCategories';
-import {useCurrentFeedbackId} from 'sentry/components/feedback/useCurrentFeedbackId';
-import {useCurrentFeedbackProject} from 'sentry/components/feedback/useCurrentFeedbackProject';
 import {useHaveSelectedProjectsSetupFeedback} from 'sentry/components/feedback/useFeedbackOnboarding';
 import {FeedbackQueryKeys} from 'sentry/components/feedback/useFeedbackQueryKeys';
+import {useFeedbackSlug} from 'sentry/components/feedback/useFeedbackSlug';
 import {useRedirectToFeedbackFromEvent} from 'sentry/components/feedback/useRedirectToFeedbackFromEvent';
 import {FeedbackButton} from 'sentry/components/feedbackButton/feedbackButton';
 import {FullViewport} from 'sentry/components/layouts/fullViewport';
@@ -31,14 +30,25 @@ import {useLocation} from 'sentry/utils/useLocation';
 import {useMedia} from 'sentry/utils/useMedia';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {makeAlertsPathname} from 'sentry/views/alerts/pathnames';
+import {TopBar} from 'sentry/views/navigation/topBar';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
+
+const userFeedbackFeedbackOptions = {
+  messagePlaceholder: t('How can we improve the User Feedback experience?'),
+  tags: {
+    ['feedback.source']: 'feedback-list',
+  },
+};
 
 export default function FeedbackListPage() {
   const organization = useOrganization();
+  const hasPageFrameFeature = useHasPageFrameFeature();
   const {hasSetupOneFeedback} = useHaveSelectedProjectsSetupFeedback();
   const pageFilters = usePageFilters();
 
-  const feedbackId = useCurrentFeedbackId();
-  const feedbackProjectSlug = useCurrentFeedbackProject();
+  const [feedbackSlug] = useFeedbackSlug();
+  const feedbackId = feedbackSlug?.feedbackId ?? '';
+  const feedbackProjectSlug = feedbackSlug?.projectSlug ?? '';
   const hasSlug = Boolean(feedbackId);
 
   const {query: locationQuery} = useLocation();
@@ -153,17 +163,18 @@ export default function FeedbackListPage() {
             </Layout.HeaderContent>
             <Layout.HeaderActions>
               <Flex gap="lg">
-                <FeedbackButton
-                  size="sm"
-                  feedbackOptions={{
-                    messagePlaceholder: t(
-                      'How can we improve the User Feedback experience?'
-                    ),
-                    tags: {
-                      ['feedback.source']: 'feedback-list',
-                    },
-                  }}
-                />
+                {hasPageFrameFeature ? (
+                  <TopBar.Slot name="feedback">
+                    <FeedbackButton feedbackOptions={userFeedbackFeedbackOptions}>
+                      {null}
+                    </FeedbackButton>
+                  </TopBar.Slot>
+                ) : (
+                  <FeedbackButton
+                    size="sm"
+                    feedbackOptions={userFeedbackFeedbackOptions}
+                  />
+                )}
                 <LinkButton
                   size="sm"
                   icon={<IconSiren />}
@@ -175,6 +186,7 @@ export default function FeedbackListPage() {
                     query: {
                       alert_option: 'issues',
                       referrer: 'feedback-list-page',
+                      detectorType: 'metric_issue',
                       ...(feedbackProjectSlug ? {project: feedbackProjectSlug} : {}),
                     },
                   }}

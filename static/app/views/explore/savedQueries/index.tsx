@@ -1,7 +1,7 @@
 import {useNavigate} from 'react-router-dom';
 
 import {Button, LinkButton} from '@sentry/scraps/button';
-import {Grid} from '@sentry/scraps/layout';
+import {Grid, Stack} from '@sentry/scraps/layout';
 
 import {DropdownMenu} from 'sentry/components/dropdownMenu';
 import {FeedbackButton} from 'sentry/components/feedbackButton/feedbackButton';
@@ -14,11 +14,14 @@ import {isLogsEnabled} from 'sentry/views/explore/logs/isLogsEnabled';
 import {getLogsUrl} from 'sentry/views/explore/logs/utils';
 import {SavedQueriesLandingContent} from 'sentry/views/explore/savedQueries/savedQueriesLandingContent';
 import {getExploreUrl} from 'sentry/views/explore/utils';
+import {TopBar} from 'sentry/views/navigation/topBar';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 export default function SavedQueriesView() {
   const organization = useOrganization();
   const hasLogsFeature = isLogsEnabled(organization);
   const navigate = useNavigate();
+  const hasPageFrameFeature = useHasPageFrameFeature();
 
   const items = [
     {
@@ -41,14 +44,20 @@ export default function SavedQueriesView() {
 
   return (
     <SentryDocumentTitle title={t('All Queries')} orgSlug={organization?.slug}>
-      <Layout.Page>
+      <Stack flex={1}>
         <Layout.Header unified>
           <Layout.HeaderContent>
             <Layout.Title>{t('All Queries')}</Layout.Title>
           </Layout.HeaderContent>
           <Layout.HeaderActions>
             <Grid flow="column" align="center" gap="md">
-              <FeedbackButton />
+              {hasPageFrameFeature ? (
+                <TopBar.Slot name="feedback">
+                  <FeedbackButton>{null}</FeedbackButton>
+                </TopBar.Slot>
+              ) : (
+                <FeedbackButton />
+              )}
               {hasLogsFeature ? (
                 <DropdownMenu
                   items={items}
@@ -88,7 +97,7 @@ export default function SavedQueriesView() {
             <SavedQueriesLandingContent />
           </Layout.Main>
         </Layout.Body>
-      </Layout.Page>
+      </Stack>
     </SentryDocumentTitle>
   );
 }

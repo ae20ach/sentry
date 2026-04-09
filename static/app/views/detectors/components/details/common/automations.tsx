@@ -15,7 +15,7 @@ import {Placeholder} from 'sentry/components/placeholder';
 import {SimpleTable} from 'sentry/components/tables/simpleTable';
 import {ActionCell} from 'sentry/components/workflowEngine/gridCell/actionCell';
 import {AutomationTitleCell} from 'sentry/components/workflowEngine/gridCell/automationTitleCell';
-import {Section} from 'sentry/components/workflowEngine/ui/section';
+import {DetailSection} from 'sentry/components/workflowEngine/ui/detailSection';
 import {IconAdd} from 'sentry/icons';
 import {t, tct} from 'sentry/locale';
 import type {Detector} from 'sentry/types/workflowEngine/detectors';
@@ -30,6 +30,7 @@ import {useAutomationsQuery} from 'sentry/views/automations/hooks';
 import {getAutomationActions} from 'sentry/views/automations/hooks/utils';
 import {makeAutomationCreatePathname} from 'sentry/views/automations/pathnames';
 import {ConnectAutomationsDrawer} from 'sentry/views/detectors/components/connectAutomationsDrawer';
+import {ConnectedAlertsEmptyState} from 'sentry/views/detectors/components/connectedAutomationsEmptyState';
 import {useUpdateDetector} from 'sentry/views/detectors/hooks';
 import {useCanEditDetectorWorkflowConnections} from 'sentry/views/detectors/utils/useCanEditDetector';
 import {useIssueStreamDetectorsForProject} from 'sentry/views/detectors/utils/useIssueStreamDetectorsForProject';
@@ -222,6 +223,7 @@ export function DetectorDetailsAutomations({detector}: Props) {
   const queryClient = useQueryClient();
   const {openDrawer, closeDrawer, isDrawerOpen} = useDrawer();
   const {mutate: updateDetector} = useUpdateDetector();
+  const project = useProjectFromId({project_id: detector.projectId});
   const canEditWorkflowConnections = useCanEditDetectorWorkflowConnections({
     projectId: detector.projectId,
   });
@@ -286,7 +288,7 @@ export function DetectorDetailsAutomations({detector}: Props) {
       );
 
   return (
-    <Section
+    <DetailSection
       title={t('Connected Alerts')}
       trailingItems={
         <Button
@@ -304,8 +306,8 @@ export function DetectorDetailsAutomations({detector}: Props) {
           detectorId={detector.id}
           projectId={detector.projectId}
           emptyMessage={
-            <Stack gap="xl" align="center">
-              <Stack gap="sm" align="center">
+            project ? (
+              <ConnectedAlertsEmptyState project={project}>
                 <Button
                   size="sm"
                   onClick={toggleDrawer}
@@ -326,12 +328,14 @@ export function DetectorDetailsAutomations({detector}: Props) {
                 >
                   {t('Create a New Alert')}
                 </LinkButton>
-              </Stack>
-            </Stack>
+              </ConnectedAlertsEmptyState>
+            ) : (
+              t('No alerts connected')
+            )
           }
         />
       </ErrorBoundary>
-    </Section>
+    </DetailSection>
   );
 }
 
