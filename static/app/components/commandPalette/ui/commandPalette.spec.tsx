@@ -577,6 +577,21 @@ describe('CommandPalette', () => {
       expect(screen.getAllByRole('option', {name: 'Action B'})).toHaveLength(1);
     });
 
+    it('a group with no children is omitted from the list', async () => {
+      render(
+        <CommandPaletteProvider>
+          <CMDKGroup display={{label: 'Empty Group'}} />
+          <CMDKAction display={{label: 'Real Action'}} onAction={jest.fn()} />
+          <CommandPalette onAction={jest.fn()} />
+        </CommandPaletteProvider>
+      );
+
+      expect(
+        await screen.findByRole('option', {name: 'Real Action'})
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('option', {name: 'Empty Group'})).not.toBeInTheDocument();
+    });
+
     it('direct CMDKAction registrations outside slots are not duplicated', async () => {
       render(
         <CommandPaletteProvider>

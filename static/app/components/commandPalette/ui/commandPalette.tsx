@@ -1,4 +1,4 @@
-import {Fragment, useCallback, useLayoutEffect, useMemo} from 'react';
+import {Fragment, useCallback, useLayoutEffect, useMemo, useRef} from 'react';
 import {preload} from 'react-dom';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -223,6 +223,8 @@ export function CommandPalette(props: CommandPaletteProps) {
     [actions, analytics, dispatch, props]
   );
 
+  const resultsListRef = useRef<HTMLDivElement>(null);
+
   const debouncedQuery = useDebouncedValue(state.query, 300);
 
   const isLoading = state.query.length > 0 && debouncedQuery !== state.query;
@@ -287,6 +289,9 @@ export function CommandPalette(props: CommandPaletteProps) {
                     onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
                       dispatch({type: 'set query', query: e.target.value});
                       treeState.selectionManager.setFocusedKey(null);
+                      if (resultsListRef.current) {
+                        resultsListRef.current.scrollTop = 0;
+                      }
                     },
                     onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
                       if (e.key === 'Backspace' && state.query.length === 0) {
@@ -364,6 +369,7 @@ export function CommandPalette(props: CommandPaletteProps) {
           overflow="auto"
         >
           <ListBox
+            scrollContainerRef={resultsListRef}
             listState={treeState}
             keyDownHandler={() => true}
             overlayIsOpen
@@ -448,6 +454,11 @@ function flattenActions(
     const results: CMDKFlatItem[] = [];
     for (const node of nodes) {
       const isGroup = node.children.length > 0;
+      // Skip groups that have no children and no executable action — they are
+      // empty section headers (e.g. a CMDKGroup whose children didn't render).
+      if (!isGroup && !('to' in node) && !('onAction' in node)) {
+        continue;
+      }
       results.push({...node, listItemType: isGroup ? 'section' : 'action'});
       if (isGroup) {
         for (const child of node.children) {
