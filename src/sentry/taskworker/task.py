@@ -95,7 +95,19 @@ class Task(Generic[P, R]):
         The provided parameters will be JSON encoded and stored within
         a `TaskActivation` protobuf that is appended to kafka
         """
-        self.apply_async(args=args, kwargs=kwargs)
+        task_kwargs = dict(kwargs)
+        _pdd = task_kwargs.pop("processing_deadline_duration", None)
+        processing_deadline_duration: int | None
+        if type(_pdd) is int:
+            processing_deadline_duration = _pdd
+        else:
+            processing_deadline_duration = None
+
+        self.apply_async(
+            args=args,
+            kwargs=task_kwargs,
+            processing_deadline_duration=processing_deadline_duration,
+        )
 
     def apply_async(
         self,
@@ -104,6 +116,7 @@ class Task(Generic[P, R]):
         headers: MutableMapping[str, Any] | None = None,
         expires: int | datetime.timedelta | None = None,
         countdown: int | datetime.timedelta | None = None,
+        processing_deadline_duration: int | None = None,
         **options: Any,
     ) -> None:
         """
@@ -122,7 +135,12 @@ class Task(Generic[P, R]):
         # Generate an activation even if we're in immediate mode to
         # catch serialization errors in tests.
         activation = self.create_activation(
-            args=args, kwargs=kwargs, headers=headers, expires=expires, countdown=countdown
+            args=args,
+            kwargs=kwargs,
+            headers=headers,
+            expires=expires,
+            countdown=countdown,
+            processing_deadline_duration=processing_deadline_duration,
         )
         if settings.TASKWORKER_ALWAYS_EAGER:
             self._func(*args, **kwargs)
@@ -147,11 +165,16 @@ class Task(Generic[P, R]):
         headers: MutableMapping[str, Any] | None = None,
         expires: int | datetime.timedelta | None = None,
         countdown: int | datetime.timedelta | None = None,
+        processing_deadline_duration: int | None = None,
     ) -> TaskActivation:
         received_at = Timestamp()
         received_at.FromDatetime(timezone.now())
 
-        processing_deadline = self._processing_deadline_duration
+        processing_deadline = (
+            processing_deadline_duration
+            if processing_deadline_duration is not None
+            else self._processing_deadline_duration
+        )
         if isinstance(processing_deadline, datetime.timedelta):
             processing_deadline = int(processing_deadline.total_seconds())
 

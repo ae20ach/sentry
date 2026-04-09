@@ -50,9 +50,6 @@ def will_retry(failure: str) -> None:
     logger.debug("got %s", failure)
 
 
-ONE_YEAR = 86400 * 365
-
-
 @exampletasks.register(name="examples.simple_task")
 def simple_task(*args: list[Any], **kwargs: dict[str, Any]) -> None:
     logger.info("Starting simple task...")
@@ -91,7 +88,7 @@ def at_most_once_task() -> None:
     pass
 
 
-@exampletasks.register(name="examples.timed_task", processing_deadline_duration=ONE_YEAR)
+@exampletasks.register(name="examples.timed_task", processing_deadline_duration=60)
 def timed_task(seconds: float | str, *args: list[Any], **kwargs: dict[str, Any]) -> None:
     logger.info(f"Starting timed task ({seconds} seconds)...")
     sleep(float(seconds))

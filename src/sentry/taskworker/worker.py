@@ -14,8 +14,12 @@ from pathlib import Path
 from typing import Any
 
 import grpc
-from sentry_protos.taskbroker.v1.taskbroker_pb2 import FetchNextTask
-from sentry_protos.taskworker.v1 import taskworker_pb2, taskworker_pb2_grpc
+from sentry_protos.taskbroker.v1 import taskbroker_pb2_grpc
+from sentry_protos.taskbroker.v1.taskbroker_pb2 import (
+    FetchNextTask,
+    PushTaskRequest,
+    PushTaskResponse,
+)
 
 from sentry import options
 from sentry.taskworker.app import import_app
@@ -34,7 +38,7 @@ from sentry.utils import metrics
 logger = logging.getLogger("sentry.taskworker.worker")
 
 
-class WorkerServicer(taskworker_pb2_grpc.WorkerServiceServicer):
+class WorkerServicer(taskbroker_pb2_grpc.WorkerServiceServicer):
     """
     gRPC servicer that receives task activations pushed from the broker
     """
@@ -44,9 +48,9 @@ class WorkerServicer(taskworker_pb2_grpc.WorkerServiceServicer):
 
     def PushTask(
         self,
-        request: taskworker_pb2.PushTaskRequest,
+        request: PushTaskRequest,
         context: grpc.ServicerContext,
-    ) -> taskworker_pb2.PushTaskResponse:
+    ) -> PushTaskResponse:
         """Handle incoming task activation."""
         # Create `InflightTaskActivation` from the pushed task
         inflight = InflightTaskActivation(
@@ -59,7 +63,7 @@ class WorkerServicer(taskworker_pb2_grpc.WorkerServiceServicer):
         if not self.worker._push_task(inflight, timeout=5):
             context.abort(grpc.StatusCode.RESOURCE_EXHAUSTED, "worker busy")
 
-        return taskworker_pb2.PushTaskResponse()
+        return PushTaskResponse()
 
 
 def get_host() -> str:
@@ -161,7 +165,7 @@ class TaskWorker:
         try:
             # Start gRPC server
             server = grpc.server(ThreadPoolExecutor(max_workers=self._concurrency))
-            taskworker_pb2_grpc.add_WorkerServiceServicer_to_server(WorkerServicer(self), server)
+            taskbroker_pb2_grpc.add_WorkerServiceServicer_to_server(WorkerServicer(self), server)
             server.add_insecure_port(f"[::]:{self._grpc_port}")
             server.start()
             logger.info("taskworker.grpc_server.started", extra={"port": self._grpc_port})

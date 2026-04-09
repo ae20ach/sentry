@@ -471,6 +471,7 @@ def taskbroker_send_timed_tasks(
     if not choices:
         raise click.ClickException("At least one choice must be provided via --choices")
 
+    import math
     import random
 
     from sentry.conf.server import KAFKA_CLUSTERS
@@ -482,7 +483,9 @@ def taskbroker_send_timed_tasks(
 
     checkmarks = {int(count * (i / 10)) for i in range(1, 10)}
     for i in range(count):
-        timed_task.delay(seconds=random.choice(choices))
+        seconds = random.choice(choices)
+        processing_deadline_duration = max(5, math.ceil(seconds) + 5)
+        timed_task.delay(seconds=seconds, processing_deadline_duration=processing_deadline_duration)
         if i in checkmarks:
             click.echo(message=f"{int((i / count) * 100)}% complete")
 
