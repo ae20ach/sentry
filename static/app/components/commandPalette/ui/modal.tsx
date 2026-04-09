@@ -25,13 +25,18 @@ export default function CommandPaletteModal({Body, closeModal}: ModalRenderProps
   const handleSelect = useCallback(
     (action: CollectionTreeNode<CMDKActionData>, modifierKeys: CMDKModifierKeys) => {
       if ('to' in action) {
-        if (modifierKeys.shift) {
+        const href = locationToString(action.to);
+        const isExternal = href.startsWith('http://') || href.startsWith('https://');
+        if (isExternal) {
+          window.open(href, '_blank', 'noreferrer');
+        } else if (modifierKeys.shift) {
           // Open in a new tab and leave the palette open so the user can
           // continue selecting more items.
           window.open(locationToString(normalizeUrl(action.to)), '_blank');
           return;
+        } else {
+          navigate(normalizeUrl(action.to));
         }
-        navigate(normalizeUrl(action.to));
       } else if ('onAction' in action) {
         action.onAction();
         // When the action has children, the palette will push into them so the

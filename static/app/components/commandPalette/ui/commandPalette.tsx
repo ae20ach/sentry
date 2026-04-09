@@ -30,7 +30,7 @@ import {
 import {useCommandPaletteAnalytics} from 'sentry/components/commandPalette/useCommandPaletteAnalytics';
 import {FeedbackButton} from 'sentry/components/feedbackButton/feedbackButton';
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
-import {IconArrow, IconClose, IconLink, IconSearch} from 'sentry/icons';
+import {IconArrow, IconClose, IconLink, IconOpen, IconSearch} from 'sentry/icons';
 import {IconDefaultsProvider} from 'sentry/icons/useIconDefaults';
 import {t} from 'sentry/locale';
 import {fzf} from 'sentry/utils/search/fzf';
@@ -249,6 +249,12 @@ export function CommandPalette(props: CommandPaletteProps) {
 
   const resultsListRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (resultsListRef.current) {
+      resultsListRef.current.scrollTop = 0;
+    }
+  }, [state.action, state.query]);
+
   // Track whether Shift is held so that actions with `to` can be opened in a
   // new tab. Using a ref (instead of state) avoids re-renders on every keypress.
   const shiftHeldRef = useRef(false);
@@ -331,9 +337,6 @@ export function CommandPalette(props: CommandPaletteProps) {
                     onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
                       dispatch({type: 'set query', query: e.target.value});
                       treeState.selectionManager.setFocusedKey(null);
-                      if (resultsListRef.current) {
-                        resultsListRef.current.scrollTop = 0;
-                      }
                     },
                     onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
                       if (e.key === 'Backspace' && state.query.length === 0) {
@@ -622,7 +625,15 @@ function makeMenuItemFromAction(action: CMDKFlatItem): CommandPaletteActionMenuI
         <IconDefaultsProvider size="sm">{action.display.icon}</IconDefaultsProvider>
       </Flex>
     ),
-    trailingItems: 'to' in action ? <IconLink size="xs" variant="muted" /> : undefined,
+    trailingItems:
+      'to' in action ? (
+        typeof action.to === 'string' &&
+        (action.to.startsWith('http://') || action.to.startsWith('https://')) ? (
+          <IconOpen size="xs" variant="muted" />
+        ) : (
+          <IconLink size="xs" variant="muted" />
+        )
+      ) : undefined,
     children: [],
     hideCheck: true,
   };

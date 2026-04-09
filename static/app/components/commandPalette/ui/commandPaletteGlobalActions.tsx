@@ -4,7 +4,6 @@ import DOMPurify from 'dompurify';
 import {ProjectAvatar} from '@sentry/scraps/avatar';
 
 import {addLoadingMessage, addSuccessMessage} from 'sentry/actionCreators/indicator';
-import {openInviteMembersModal} from 'sentry/actionCreators/modal';
 import {openSudo} from 'sentry/actionCreators/sudoModal';
 import type {
   CMDKQueryOptions,
@@ -30,7 +29,6 @@ import {
   IconSearch,
   IconSettings,
   IconStar,
-  IconUser,
 } from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {apiOptions} from 'sentry/utils/api/apiOptions';
@@ -276,11 +274,6 @@ export function GlobalCommandPaletteActions() {
           keywords={[t('add project')]}
           to={`${prefix}/projects/new/`}
         />
-        <CMDKAction
-          display={{label: t('Invite Members'), icon: <IconUser />}}
-          keywords={[t('team invite')]}
-          onAction={openInviteMembersModal}
-        />
       </CMDKAction>
 
       <CMDKAction display={{label: t('DSN')}} keywords={[t('client keys')]}>
@@ -343,25 +336,19 @@ export function GlobalCommandPaletteActions() {
       <CMDKAction display={{label: t('Help')}}>
         <CMDKAction
           display={{label: t('Open Documentation'), icon: <IconDocs />}}
-          onAction={() => window.open('https://docs.sentry.io', '_blank', 'noreferrer')}
+          to="https://docs.sentry.io"
         />
         <CMDKAction
           display={{label: t('Join Discord'), icon: <IconDiscord />}}
-          onAction={() =>
-            window.open('https://discord.gg/sentry', '_blank', 'noreferrer')
-          }
+          to="https://discord.gg/sentry"
         />
         <CMDKAction
           display={{label: t('Open GitHub Repository'), icon: <IconGithub />}}
-          onAction={() =>
-            window.open('https://github.com/getsentry/sentry', '_blank', 'noreferrer')
-          }
+          to="https://github.com/getsentry/sentry"
         />
         <CMDKAction
-          display={{label: t('View Changelog'), icon: <IconOpen />}}
-          onAction={() =>
-            window.open('https://sentry.io/changelog/', '_blank', 'noreferrer')
-          }
+          display={{label: t('View Changelog')}}
+          to="https://sentry.io/changelog/"
         />
         <CMDKAction
           display={{label: t('Search Results')}}
@@ -406,7 +393,7 @@ export function GlobalCommandPaletteActions() {
       </CMDKAction>
 
       <CMDKAction display={{label: t('Interface')}}>
-        <CMDKAction display={{label: t('Change Color Theme'), icon: <IconSettings />}}>
+        <CMDKAction display={{label: t('Change Color Theme')}}>
           <CMDKAction
             display={{label: t('System')}}
             onAction={async () => {

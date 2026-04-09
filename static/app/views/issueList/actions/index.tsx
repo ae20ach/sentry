@@ -27,6 +27,7 @@ import {
   IconMerge,
   IconMute,
   IconSliders,
+  IconSort,
   IconStack,
 } from 'sentry/icons';
 import {t, tct, tn} from 'sentry/locale';
@@ -39,8 +40,11 @@ import {defined} from 'sentry/utils';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {uniq} from 'sentry/utils/array/uniq';
 import {useQueryClient} from 'sentry/utils/queryClient';
+import {decodeScalar} from 'sentry/utils/queryString';
 import {useApi} from 'sentry/utils/useApi';
+import {useLocation} from 'sentry/utils/useLocation';
 import {useMedia} from 'sentry/utils/useMedia';
+import {useNavigate} from 'sentry/utils/useNavigate';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {useSyncedLocalStorageState} from 'sentry/utils/useSyncedLocalStorageState';
 import {
@@ -48,7 +52,13 @@ import {
   useIssueSelectionSummary,
 } from 'sentry/views/issueList/issueSelectionContext';
 import type {IssueUpdateData} from 'sentry/views/issueList/types';
-import {SAVED_SEARCHES_SIDEBAR_OPEN_LOCALSTORAGE_KEY} from 'sentry/views/issueList/utils';
+import {
+  DEFAULT_ISSUE_STREAM_SORT,
+  FOR_REVIEW_QUERIES,
+  getSortLabel,
+  IssueSortOptions,
+  SAVED_SEARCHES_SIDEBAR_OPEN_LOCALSTORAGE_KEY,
+} from 'sentry/views/issueList/utils';
 
 import {ActionSet} from './actionSet';
 import {Headers} from './headers';
@@ -182,6 +192,12 @@ export function IssueListActions({
   const api = useApi();
   const queryClient = useQueryClient();
   const organization = useOrganization();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const sort = decodeScalar(
+    location.query.sort,
+    DEFAULT_ISSUE_STREAM_SORT
+  ) as IssueSortOptions;
   const {setAllInQuerySelected, deselectAll, toggleSelectAllVisible} =
     useIssueSelectionActions();
   const {pageSelected, multiSelected, anySelected, allInQuerySelected, selectedIdsSet} =
@@ -472,6 +488,33 @@ export function IssueListActions({
                 onAction={handleMerge}
               />
             )}
+          </CMDKAction>
+          <CMDKAction display={{label: t('Sort by'), icon: <IconSort />}}>
+            {[
+              ...(FOR_REVIEW_QUERIES.includes(query || '')
+                ? [IssueSortOptions.INBOX]
+                : []),
+              IssueSortOptions.DATE,
+              IssueSortOptions.NEW,
+              IssueSortOptions.TRENDS,
+              IssueSortOptions.FREQ,
+              IssueSortOptions.USER,
+            ].map(sortOption => (
+              <CMDKAction
+                key={sortOption}
+                display={{
+                  label: getSortLabel(sortOption),
+                  icon: sortOption === sort ? <IconCheckmark /> : undefined,
+                }}
+                onAction={() => {
+                  trackAnalytics('issues_stream.sort_changed', {
+                    organization,
+                    sort: sortOption,
+                  });
+                  navigate({...location, query: {...location.query, sort: sortOption}});
+                }}
+              />
+            ))}
           </CMDKAction>
           {groupIds.map(id => {
             const group = GroupStore.get(id);
