@@ -148,7 +148,6 @@ export function SnoozeAlert({
       message: t('Are you sure you want to mute this alert for everyone?'),
       confirmText: t('Mute'),
       onConfirm: () => handleMute(primaryMuteAction, true),
-      onCancel: stripMuteParam,
       onClose: stripMuteParam,
     });
   }, [
