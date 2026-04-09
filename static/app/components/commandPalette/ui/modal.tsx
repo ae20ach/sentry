@@ -2,7 +2,6 @@ import {useCallback} from 'react';
 import {css} from '@emotion/react';
 
 import type {ModalRenderProps} from 'sentry/actionCreators/modal';
-import {closeModal} from 'sentry/actionCreators/modal';
 import type {CMDKActionData} from 'sentry/components/commandPalette/ui/cmdk';
 import type {CollectionTreeNode} from 'sentry/components/commandPalette/ui/collection';
 import {CommandPalette} from 'sentry/components/commandPalette/ui/commandPalette';
@@ -11,7 +10,7 @@ import type {Theme} from 'sentry/utils/theme';
 import {normalizeUrl} from 'sentry/utils/url/normalizeUrl';
 import {useNavigate} from 'sentry/utils/useNavigate';
 
-export default function CommandPaletteModal({Body}: ModalRenderProps) {
+export default function CommandPaletteModal({Body, closeModal}: ModalRenderProps) {
   const navigate = useNavigate();
 
   const handleSelect = useCallback(
@@ -28,7 +27,7 @@ export default function CommandPaletteModal({Body}: ModalRenderProps) {
       }
       closeModal();
     },
-    [navigate]
+    [navigate, closeModal]
   );
 
   return (
