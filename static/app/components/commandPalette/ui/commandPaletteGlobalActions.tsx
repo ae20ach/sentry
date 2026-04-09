@@ -4,7 +4,6 @@ import DOMPurify from 'dompurify';
 import {ProjectAvatar} from '@sentry/scraps/avatar';
 
 import {addLoadingMessage, addSuccessMessage} from 'sentry/actionCreators/indicator';
-import {openInviteMembersModal} from 'sentry/actionCreators/modal';
 import {openSudo} from 'sentry/actionCreators/sudoModal';
 import type {
   CMDKQueryOptions,
@@ -30,7 +29,6 @@ import {
   IconSearch,
   IconSettings,
   IconStar,
-  IconUser,
 } from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {apiOptions} from 'sentry/utils/api/apiOptions';
@@ -108,13 +106,15 @@ export function GlobalCommandPaletteActions() {
             to={`${prefix}/issues/feedback/`}
           />
           <CMDKAction display={{label: t('All Views')}} to={`${prefix}/issues/views/`} />
-          {starredViews.map(starredView => (
-            <CMDKAction
-              key={starredView.id}
-              display={{label: starredView.label, icon: <IconStar />}}
-              to={`${prefix}/issues/views/${starredView.id}/`}
-            />
-          ))}
+          <CMDKAction display={{label: t('Starred Views'), icon: <IconStar />}}>
+            {starredViews.map(starredView => (
+              <CMDKAction
+                key={starredView.id}
+                display={{label: starredView.label}}
+                to={`${prefix}/issues/views/${starredView.id}/`}
+              />
+            ))}
+          </CMDKAction>
         </CMDKAction>
 
         <CMDKAction display={{label: t('Explore'), icon: <IconCompass />}}>
@@ -208,7 +208,10 @@ export function GlobalCommandPaletteActions() {
           )}
         </CMDKAction>
 
-        <CMDKAction display={{label: t('Project Settings'), icon: <IconSettings />}}>
+        <CMDKAction
+          display={{label: t('Project Settings'), icon: <IconSettings />}}
+          limit={10}
+        >
           {projects.map(project => (
             <CMDKAction
               key={project.id}
@@ -221,6 +224,38 @@ export function GlobalCommandPaletteActions() {
           ))}
         </CMDKAction>
       </CMDKAction>
+
+      {user.isStaff && (
+        <CMDKAction display={{label: t('Admin')}}>
+          <CMDKAction
+            display={{label: t('Open _admin'), icon: <IconOpen />}}
+            keywords={[t('superuser')]}
+            to="/_admin/"
+          />
+          <CMDKAction
+            display={{
+              label: t('Open %s in _admin', organization.name),
+              icon: <IconOpen />,
+            }}
+            keywords={[t('superuser')]}
+            to={`/_admin/customers/${organization.slug}/`}
+          />
+          {!isActiveSuperuser() && (
+            <CMDKAction
+              display={{label: t('Open Superuser Modal'), icon: <IconLock locked />}}
+              keywords={[t('superuser')]}
+              onAction={() => openSudo({isSuperuser: true, needsReload: true})}
+            />
+          )}
+          {isActiveSuperuser() && (
+            <CMDKAction
+              display={{label: t('Exit Superuser'), icon: <IconLock locked={false} />}}
+              keywords={[t('superuser')]}
+              onAction={() => exitSuperuser()}
+            />
+          )}
+        </CMDKAction>
+      )}
 
       <CMDKAction display={{label: t('Add')}}>
         <CMDKAction
@@ -238,17 +273,13 @@ export function GlobalCommandPaletteActions() {
           keywords={[t('add project')]}
           to={`${prefix}/projects/new/`}
         />
-        <CMDKAction
-          display={{label: t('Invite Members'), icon: <IconUser />}}
-          keywords={[t('team invite')]}
-          onAction={openInviteMembersModal}
-        />
       </CMDKAction>
 
       <CMDKAction display={{label: t('DSN')}} keywords={[t('client keys')]}>
         <CMDKAction
           display={{label: t('Project DSN Keys'), icon: <IconLock locked />}}
           keywords={[t('client keys'), t('dsn keys')]}
+          limit={10}
         >
           {projects.map(project => (
             <CMDKAction
@@ -305,25 +336,19 @@ export function GlobalCommandPaletteActions() {
       <CMDKAction display={{label: t('Help')}}>
         <CMDKAction
           display={{label: t('Open Documentation'), icon: <IconDocs />}}
-          onAction={() => window.open('https://docs.sentry.io', '_blank', 'noreferrer')}
+          to="https://docs.sentry.io"
         />
         <CMDKAction
           display={{label: t('Join Discord'), icon: <IconDiscord />}}
-          onAction={() =>
-            window.open('https://discord.gg/sentry', '_blank', 'noreferrer')
-          }
+          to="https://discord.gg/sentry"
         />
         <CMDKAction
           display={{label: t('Open GitHub Repository'), icon: <IconGithub />}}
-          onAction={() =>
-            window.open('https://github.com/getsentry/sentry', '_blank', 'noreferrer')
-          }
+          to="https://github.com/getsentry/sentry"
         />
         <CMDKAction
-          display={{label: t('View Changelog'), icon: <IconOpen />}}
-          onAction={() =>
-            window.open('https://sentry.io/changelog/', '_blank', 'noreferrer')
-          }
+          display={{label: t('View Changelog')}}
+          to="https://sentry.io/changelog/"
         />
         <CMDKAction
           display={{label: t('Search Results')}}
@@ -367,8 +392,8 @@ export function GlobalCommandPaletteActions() {
         </CMDKAction>
       </CMDKAction>
 
-      <CMDKAction display={{label: t('Interface')}}>
-        <CMDKAction display={{label: t('Change Color Theme'), icon: <IconSettings />}}>
+      <CMDKAction display={{label: t('UI')}}>
+        <CMDKAction display={{label: t('Change Color Theme')}}>
           <CMDKAction
             display={{label: t('System')}}
             onAction={async () => {
@@ -395,44 +420,6 @@ export function GlobalCommandPaletteActions() {
           />
         </CMDKAction>
       </CMDKAction>
-
-      {user.isStaff && (
-        <CMDKAction display={{label: t('Admin')}}>
-          <CMDKAction
-            display={{label: t('Open _admin'), icon: <IconOpen />}}
-            keywords={[t('superuser')]}
-            onAction={() => window.open('/_admin/', '_blank', 'noreferrer')}
-          />
-          <CMDKAction
-            display={{
-              label: t('Open %s in _admin', organization.name),
-              icon: <IconOpen />,
-            }}
-            keywords={[t('superuser')]}
-            onAction={() =>
-              window.open(
-                `/_admin/customers/${organization.slug}/`,
-                '_blank',
-                'noreferrer'
-              )
-            }
-          />
-          {!isActiveSuperuser() && (
-            <CMDKAction
-              display={{label: t('Open Superuser Modal'), icon: <IconLock locked />}}
-              keywords={[t('superuser')]}
-              onAction={() => openSudo({isSuperuser: true, needsReload: true})}
-            />
-          )}
-          {isActiveSuperuser() && (
-            <CMDKAction
-              display={{label: t('Exit Superuser'), icon: <IconLock locked={false} />}}
-              keywords={[t('superuser')]}
-              onAction={() => exitSuperuser()}
-            />
-          )}
-        </CMDKAction>
-      )}
     </CommandPaletteSlot>
   );
 }

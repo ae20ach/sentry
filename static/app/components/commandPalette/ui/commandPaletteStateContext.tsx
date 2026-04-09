@@ -46,11 +46,20 @@ function commandPaletteReducer(
 ): CommandPaletteState {
   const type = action.type;
   switch (type) {
-    case 'toggle modal':
+    case 'toggle modal': {
+      const nextOpen = !state.open;
       return {
         ...state,
-        open: !state.open,
+        open: nextOpen,
+        // Reset navigation and query when opening. The slot system portals
+        // CMDKAction children into the outlet's DOM element, so switching
+        // between portal and in-place rendering causes React to remount those
+        // components with fresh useId() keys. Any nav-stack key stored from a
+        // prior session is therefore stale — resetting here ensures the palette
+        // always opens at the root.
+        ...(nextOpen ? {action: null, query: ''} : {}),
       };
+    }
     case 'reset':
       return {
         ...state,

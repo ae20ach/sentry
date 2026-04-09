@@ -4,8 +4,10 @@ import styled from '@emotion/styled';
 import {AnimatePresence, motion, type MotionNodeAnimationOptions} from 'framer-motion';
 
 import {Alert} from '@sentry/scraps/alert';
+import {ProjectAvatar} from '@sentry/scraps/avatar';
 import {Checkbox} from '@sentry/scraps/checkbox';
-import {Flex} from '@sentry/scraps/layout';
+import {Container, Flex} from '@sentry/scraps/layout';
+import {Text} from '@sentry/scraps/text';
 
 import {bulkDelete, bulkUpdate, mergeGroups} from 'sentry/actionCreators/group';
 import {
@@ -13,19 +15,37 @@ import {
   addLoadingMessage,
   clearIndicators,
 } from 'sentry/actionCreators/indicator';
+import {IconCellSignal} from 'sentry/components/badge/iconCellSignal';
+import {CMDKAction} from 'sentry/components/commandPalette/ui/cmdk';
+import {CommandPaletteSlot} from 'sentry/components/commandPalette/ui/commandPaletteSlot';
+import {ErrorLevel} from 'sentry/components/events/errorLevel';
 import {IssueStreamHeaderLabel} from 'sentry/components/IssueStreamHeaderLabel';
 import {Sticky} from 'sentry/components/sticky';
+import {TimeSince} from 'sentry/components/timeSince';
+import {
+  IconCheckmark,
+  IconIssues,
+  IconMerge,
+  IconMute,
+  IconSliders,
+  IconSort,
+  IconStack,
+} from 'sentry/icons';
 import {t, tct, tn} from 'sentry/locale';
 import {GroupStore} from 'sentry/stores/groupStore';
 import {ProjectsStore} from 'sentry/stores/projectsStore';
 import type {PageFilters} from 'sentry/types/core';
 import type {Group} from 'sentry/types/group';
+import {GroupStatus, GroupSubstatus, PriorityLevel} from 'sentry/types/group';
 import {defined} from 'sentry/utils';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {uniq} from 'sentry/utils/array/uniq';
 import {useQueryClient} from 'sentry/utils/queryClient';
+import {decodeScalar} from 'sentry/utils/queryString';
 import {useApi} from 'sentry/utils/useApi';
+import {useLocation} from 'sentry/utils/useLocation';
 import {useMedia} from 'sentry/utils/useMedia';
+import {useNavigate} from 'sentry/utils/useNavigate';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {useSyncedLocalStorageState} from 'sentry/utils/useSyncedLocalStorageState';
 import {
@@ -33,7 +53,13 @@ import {
   useIssueSelectionSummary,
 } from 'sentry/views/issueList/issueSelectionContext';
 import type {IssueUpdateData} from 'sentry/views/issueList/types';
-import {SAVED_SEARCHES_SIDEBAR_OPEN_LOCALSTORAGE_KEY} from 'sentry/views/issueList/utils';
+import {
+  DEFAULT_ISSUE_STREAM_SORT,
+  FOR_REVIEW_QUERIES,
+  getSortLabel,
+  IssueSortOptions,
+  SAVED_SEARCHES_SIDEBAR_OPEN_LOCALSTORAGE_KEY,
+} from 'sentry/views/issueList/utils';
 
 import {ActionSet} from './actionSet';
 import {Headers} from './headers';
@@ -167,6 +193,12 @@ export function IssueListActions({
   const api = useApi();
   const queryClient = useQueryClient();
   const organization = useOrganization();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const sort = decodeScalar(
+    location.query.sort,
+    DEFAULT_ISSUE_STREAM_SORT
+  ) as IssueSortOptions;
   const {setAllInQuerySelected, deselectAll, toggleSelectAllVisible} =
     useIssueSelectionActions();
   const {pageSelected, multiSelected, anySelected, allInQuerySelected, selectedIdsSet} =
@@ -272,6 +304,60 @@ export function IssueListActions({
     return selection.projects;
   }
 
+  function handleUpdateForItems(itemIds: string[], data: IssueUpdateData) {
+    if ('status' in data && data.status === 'ignored') {
+      const statusDetails =
+        'ignoreCount' in data.statusDetails
+          ? 'ignoreCount'
+          : 'ignoreDuration' in data.statusDetails
+            ? 'ignoreDuration'
+            : 'ignoreUserCount' in data.statusDetails
+              ? 'ignoreUserCount'
+              : undefined;
+      trackAnalytics('issues_stream.archived', {
+        action_status_details: statusDetails,
+        action_substatus: data.substatus,
+        organization,
+      });
+    }
+    if ('priority' in data) {
+      trackAnalytics('issues_stream.updated_priority', {
+        organization,
+        priority: data.priority,
+      });
+    }
+    addLoadingMessage(t('Saving changes\u2026'));
+    bulkUpdate(
+      api,
+      {
+        orgId: organization.slug,
+        itemIds,
+        data,
+        query,
+        environment: selection.environments,
+        failSilently: true,
+        project: getSelectedProjectIds(itemIds),
+        ...selection.datetime,
+      },
+      {
+        success: () => {
+          clearIndicators();
+          onActionTaken?.(itemIds, data);
+          for (const itemId of itemIds) {
+            queryClient.invalidateQueries({
+              queryKey: [`/organizations/${organization.slug}/issues/${itemId}/`],
+              exact: false,
+            });
+          }
+        },
+        error: () => {
+          clearIndicators();
+          addErrorMessage(t('Unable to update issues'));
+        },
+      }
+    );
+  }
+
   function handleUpdate(data: IssueUpdateData) {
     if ('status' in data && data.status === 'ignored') {
       const statusDetails =
@@ -355,69 +441,257 @@ export function IssueListActions({
   }
 
   return (
-    <StickyActions>
-      <ActionsBarPriority
-        query={query}
-        queryCount={queryCount}
-        selection={selection}
-        statsPeriod={statsPeriod}
-        allInQuerySelected={allInQuerySelected}
-        pageSelected={pageSelected}
-        selectedIdsSet={selectedIdsSet}
-        displayReprocessingActions={displayReprocessingActions}
-        handleDelete={handleDelete}
-        handleMerge={handleMerge}
-        handleUpdate={handleUpdate}
-        toggleSelectAllVisible={toggleSelectAllVisible}
-        multiSelected={multiSelected}
-        narrowViewport={disableActions}
-        selectedProjectSlug={selectedProjectSlug}
-        isSavedSearchesOpen={isSavedSearchesOpen}
-        anySelected={anySelected}
-        onSelectStatsPeriod={onSelectStatsPeriod}
-      />
-      {!allResultsVisible && pageSelected && (
-        <Alert system variant="warning" showIcon={false}>
-          <Flex justify="center" wrap="wrap" gap="md">
-            {allInQuerySelected ? (
-              queryCount >= BULK_LIMIT ? (
-                tct(
-                  'Selected up to the first [count] issues that match this search query.',
-                  {
-                    count: BULK_LIMIT_STR,
+    <Fragment>
+      <CommandPaletteSlot name="task">
+        <CMDKAction display={{label: t('Issue Feed'), icon: <IconIssues />}} limit={6}>
+          <CMDKAction
+            display={{label: t('Select all'), icon: <IconStack />}}
+            onAction={() => {
+              if (!allInQuerySelected) {
+                toggleSelectAllVisible();
+                setAllInQuerySelected(true);
+              }
+            }}
+          >
+            <CMDKAction
+              display={{label: t('Resolve'), icon: <IconCheckmark />}}
+              onAction={() =>
+                handleUpdate({status: GroupStatus.RESOLVED, statusDetails: {}})
+              }
+            />
+            <CMDKAction
+              display={{label: t('Archive'), icon: <IconMute />}}
+              onAction={() =>
+                handleUpdate({
+                  status: GroupStatus.IGNORED,
+                  statusDetails: {},
+                  substatus: GroupSubstatus.ARCHIVED_UNTIL_ESCALATING,
+                })
+              }
+            />
+            <CMDKAction display={{label: t('Set Priority'), icon: <IconSliders />}}>
+              <CMDKAction
+                display={{label: t('High'), icon: <IconCellSignal bars={3} />}}
+                onAction={() => handleUpdate({priority: PriorityLevel.HIGH})}
+              />
+              <CMDKAction
+                display={{label: t('Medium'), icon: <IconCellSignal bars={2} />}}
+                onAction={() => handleUpdate({priority: PriorityLevel.MEDIUM})}
+              />
+              <CMDKAction
+                display={{label: t('Low'), icon: <IconCellSignal bars={1} />}}
+                onAction={() => handleUpdate({priority: PriorityLevel.LOW})}
+              />
+            </CMDKAction>
+            {groupIds.length > 1 && (
+              <CMDKAction
+                display={{label: t('Merge'), icon: <IconMerge />}}
+                onAction={handleMerge}
+              />
+            )}
+          </CMDKAction>
+          <CMDKAction display={{label: t('Sort by'), icon: <IconSort />}}>
+            {[
+              ...(FOR_REVIEW_QUERIES.includes(query || '')
+                ? [IssueSortOptions.INBOX]
+                : []),
+              IssueSortOptions.DATE,
+              IssueSortOptions.NEW,
+              IssueSortOptions.TRENDS,
+              IssueSortOptions.FREQ,
+              IssueSortOptions.USER,
+            ].map(sortOption => (
+              <CMDKAction
+                key={sortOption}
+                display={{
+                  label: getSortLabel(sortOption),
+                  icon: sortOption === sort ? <IconCheckmark /> : undefined,
+                }}
+                onAction={() => {
+                  trackAnalytics('issues_stream.sort_changed', {
+                    organization,
+                    sort: sortOption,
+                  });
+                  navigate({...location, query: {...location.query, sort: sortOption}});
+                }}
+              />
+            ))}
+          </CMDKAction>
+        </CMDKAction>
+        <CMDKAction display={{label: t('Issues'), icon: <IconIssues />}} limit={6}>
+          {groupIds.map(id => {
+            const group = GroupStore.get(id);
+            if (!group) return null;
+
+            const errorType = group.metadata.type;
+            const errorValue = group.metadata.value;
+            const labelText = errorType
+              ? `${errorType}: ${errorValue ?? ''}`
+              : group.title;
+            const detailsText = [
+              group.project.slug,
+              group.assignedTo ? `assigned to ${group.assignedTo.name}` : 'unassigned',
+              group.substatus,
+            ]
+              .filter(Boolean)
+              .join(' ');
+
+            return (
+              <CMDKAction
+                key={id}
+                display={{
+                  label: (
+                    <Container paddingBottom="xs">
+                      <Flex align="center" gap="xs">
+                        <ErrorLevel level={group.level} />
+                        <Text as="span" size="sm" ellipsis>
+                          {errorType ? (
+                            <Fragment>
+                              <Text as="span" size="sm" bold>
+                                {errorType}
+                              </Text>
+                              {errorValue ? `: ${errorValue}` : null}
+                            </Fragment>
+                          ) : (
+                            group.title
+                          )}
+                        </Text>
+                      </Flex>
+                    </Container>
+                  ),
+                  searchableLabel: labelText,
+                  details: (
+                    <Flex align="center" gap="xs">
+                      <ProjectAvatar project={group.project} size={12} />
+                      <Text as="span" size="xs" variant="muted" ellipsis>
+                        {group.project.slug},{' '}
+                        {group.assignedTo
+                          ? tct('assigned to: [name]', {name: group.assignedTo.name})
+                          : t('Unassigned')}
+                        {', '}
+                        <TimeSince
+                          date={group.lastSeen}
+                          disabledAbsoluteTooltip
+                          unitStyle="extraShort"
+                        />
+                        {(group.substatus === GroupSubstatus.ESCALATING ||
+                          group.substatus === GroupSubstatus.ONGOING ||
+                          group.substatus === GroupSubstatus.REGRESSED) &&
+                          `, ${group.substatus}`}
+                      </Text>
+                    </Flex>
+                  ),
+                  searchableDetails: detailsText,
+                }}
+              >
+                <CMDKAction
+                  display={{label: t('Resolve'), icon: <IconCheckmark />}}
+                  onAction={() =>
+                    handleUpdateForItems([id], {
+                      status: GroupStatus.RESOLVED,
+                      statusDetails: {},
+                    })
                   }
+                />
+                <CMDKAction
+                  display={{label: t('Archive'), icon: <IconMute />}}
+                  onAction={() =>
+                    handleUpdateForItems([id], {
+                      status: GroupStatus.IGNORED,
+                      statusDetails: {},
+                      substatus: GroupSubstatus.ARCHIVED_UNTIL_ESCALATING,
+                    })
+                  }
+                />
+                <CMDKAction display={{label: t('Set Priority'), icon: <IconSliders />}}>
+                  <CMDKAction
+                    display={{label: t('High'), icon: <IconCellSignal bars={3} />}}
+                    onAction={() =>
+                      handleUpdateForItems([id], {priority: PriorityLevel.HIGH})
+                    }
+                  />
+                  <CMDKAction
+                    display={{label: t('Medium'), icon: <IconCellSignal bars={2} />}}
+                    onAction={() =>
+                      handleUpdateForItems([id], {priority: PriorityLevel.MEDIUM})
+                    }
+                  />
+                  <CMDKAction
+                    display={{label: t('Low'), icon: <IconCellSignal bars={1} />}}
+                    onAction={() =>
+                      handleUpdateForItems([id], {priority: PriorityLevel.LOW})
+                    }
+                  />
+                </CMDKAction>
+              </CMDKAction>
+            );
+          })}
+        </CMDKAction>
+      </CommandPaletteSlot>
+      <StickyActions>
+        <ActionsBarPriority
+          query={query}
+          queryCount={queryCount}
+          selection={selection}
+          statsPeriod={statsPeriod}
+          allInQuerySelected={allInQuerySelected}
+          pageSelected={pageSelected}
+          selectedIdsSet={selectedIdsSet}
+          displayReprocessingActions={displayReprocessingActions}
+          handleDelete={handleDelete}
+          handleMerge={handleMerge}
+          handleUpdate={handleUpdate}
+          toggleSelectAllVisible={toggleSelectAllVisible}
+          multiSelected={multiSelected}
+          narrowViewport={disableActions}
+          selectedProjectSlug={selectedProjectSlug}
+          isSavedSearchesOpen={isSavedSearchesOpen}
+          anySelected={anySelected}
+          onSelectStatsPeriod={onSelectStatsPeriod}
+        />
+        {!allResultsVisible && pageSelected && (
+          <Alert system variant="warning" showIcon={false}>
+            <Flex justify="center" wrap="wrap" gap="md">
+              {allInQuerySelected ? (
+                queryCount >= BULK_LIMIT ? (
+                  tct(
+                    'Selected up to the first [count] issues that match this search query.',
+                    {
+                      count: BULK_LIMIT_STR,
+                    }
+                  )
+                ) : (
+                  tct('Selected all [count] issues that match this search query.', {
+                    count: queryCount,
+                  })
                 )
               ) : (
-                tct('Selected all [count] issues that match this search query.', {
-                  count: queryCount,
-                })
-              )
-            ) : (
-              <Fragment>
-                {tn(
-                  '%s issue on this page selected.',
-                  '%s issues on this page selected.',
-                  numIssues
-                )}
+                <Fragment>
+                  {tn(
+                    '%s issue on this page selected.',
+                    '%s issues on this page selected.',
+                    numIssues
+                  )}
 
-                <a onClick={() => setAllInQuerySelected(true)}>
-                  {queryCount >= BULK_LIMIT
-                    ? tct(
-                        'Select the first [count] issues that match this search query.',
-                        {
-                          count: BULK_LIMIT_STR,
-                        }
-                      )
-                    : tct('Select all [count] issues that match this search query.', {
-                        count: queryCount,
-                      })}
-                </a>
-              </Fragment>
-            )}
-          </Flex>
-        </Alert>
-      )}
-    </StickyActions>
+                  <a onClick={() => setAllInQuerySelected(true)}>
+                    {queryCount >= BULK_LIMIT
+                      ? tct(
+                          'Select the first [count] issues that match this search query.',
+                          {
+                            count: BULK_LIMIT_STR,
+                          }
+                        )
+                      : tct('Select all [count] issues that match this search query.', {
+                          count: queryCount,
+                        })}
+                  </a>
+                </Fragment>
+              )}
+            </Flex>
+          </Alert>
+        )}
+      </StickyActions>
+    </Fragment>
   );
 }
 

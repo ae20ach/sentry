@@ -13,15 +13,28 @@ import {
   useCommandPaletteState,
 } from './commandPaletteStateContext';
 
-interface DisplayProps {
-  label: string;
-  details?: string;
+type DisplayProps = {
   icon?: React.ReactNode;
-}
+} & (
+  | {
+      label: string;
+      details?: string;
+      searchableDetails?: never;
+      searchableLabel?: never;
+    }
+  | {
+      label: Exclude<React.ReactNode, string>;
+      searchableLabel: string;
+      details?: React.ReactNode;
+      searchableDetails?: string;
+    }
+);
 
 interface CMDKActionDataBase {
   display: DisplayProps;
   keywords?: string[];
+  /** Maximum number of children to show in browse and search mode. */
+  limit?: number;
   ref?: React.RefObject<HTMLElement | null>;
 }
 
@@ -66,6 +79,8 @@ interface CMDKActionProps {
   display: DisplayProps;
   children?: React.ReactNode | ((data: CommandPaletteAsyncResult[]) => React.ReactNode);
   keywords?: string[];
+  /** Maximum number of children to show in browse and search mode. */
+  limit?: number;
   onAction?: () => void;
   resource?: (query: string) => CMDKQueryOptions;
   to?: LocationDescriptor;
@@ -80,6 +95,7 @@ interface CMDKActionProps {
 export function CMDKAction({
   display,
   keywords,
+  limit,
   children,
   to,
   onAction,
@@ -90,11 +106,12 @@ export function CMDKAction({
   const nodeData: CMDKActionData =
     to === undefined
       ? onAction === undefined
-        ? {display, keywords, ref, resource}
-        : {display, keywords, ref, onAction}
-      : {display, keywords, ref, to};
+        ? {display, keywords, limit, ref, resource}
+        : {display, keywords, limit, ref, onAction}
+      : {display, keywords, limit, ref, to};
 
   const key = CMDKCollection.useRegisterNode(nodeData);
+
   const {query} = useCommandPaletteState();
 
   const resourceOptions = resource

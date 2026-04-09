@@ -1,4 +1,4 @@
-import {Fragment, useCallback, useLayoutEffect, useMemo, useRef} from 'react';
+import {Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef} from 'react';
 import {preload} from 'react-dom';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -30,7 +30,7 @@ import {
 import {useCommandPaletteAnalytics} from 'sentry/components/commandPalette/useCommandPaletteAnalytics';
 import {FeedbackButton} from 'sentry/components/feedbackButton/feedbackButton';
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
-import {IconArrow, IconClose, IconSearch} from 'sentry/icons';
+import {IconArrow, IconClose, IconLink, IconOpen, IconSearch} from 'sentry/icons';
 import {IconDefaultsProvider} from 'sentry/icons/useIconDefaults';
 import {t} from 'sentry/locale';
 import {fzf} from 'sentry/utils/search/fzf';
@@ -64,8 +64,15 @@ type CMDKFlatItem = CollectionTreeNode<CMDKActionData> & {
   listItemType: 'action' | 'section';
 };
 
+export interface CMDKModifierKeys {
+  shift: boolean;
+}
+
 interface CommandPaletteProps {
-  onAction: (action: CollectionTreeNode<CMDKActionData>) => void;
+  onAction: (
+    action: CollectionTreeNode<CMDKActionData>,
+    modifierKeys: CMDKModifierKeys
+  ) => void;
   children?: React.ReactNode;
 }
 
@@ -90,7 +97,7 @@ export function CommandPalette(props: CommandPaletteProps) {
 
   const actions = useMemo<CMDKFlatItem[]>(() => {
     if (!state.query) {
-      return flattenActions(currentNodes, null);
+      return flattenActions(currentNodes, null, !state.action);
     }
 
     const scores = new Map<
@@ -99,7 +106,7 @@ export function CommandPalette(props: CommandPaletteProps) {
     >();
     scoreTree(currentNodes, scores, state.query.toLowerCase());
     return flattenActions(currentNodes, scores);
-  }, [currentNodes, state.query]);
+  }, [currentNodes, state.query, state.action]);
 
   const analytics = useCommandPaletteAnalytics(actions.length);
 
@@ -116,12 +123,14 @@ export function CommandPalette(props: CommandPaletteProps) {
     children: actions.map(action => {
       const menuItem = makeMenuItemFromAction(action);
 
+      const textValue = getTextValue(action.display);
+
       if (action.listItemType === 'section') {
         return (
           <Item<CommandPaletteActionMenuItem & {hideCheck: boolean; label: string}>
             {...menuItem}
             key={action.key}
-            textValue={action.display.label}
+            textValue={textValue}
             {...{
               leadingItems: null,
               label: (
@@ -152,7 +161,7 @@ export function CommandPalette(props: CommandPaletteProps) {
         <Item<CommandPaletteActionMenuItem>
           {...menuItem}
           key={action.key}
-          textValue={action.display.label}
+          textValue={textValue}
         >
           {menuItem.label}
         </Item>
@@ -211,24 +220,71 @@ export function CommandPalette(props: CommandPaletteProps) {
       const resultIndex = actions.indexOf(action);
 
       if (action.children.length > 0) {
-        analytics.recordGroupAction(action, resultIndex);
+        analytics.recordGroupAction(
+          {
+            display: {label: getTextValue(action.display)},
+            ...('to' in action ? {to: action.to} : {}),
+          },
+          resultIndex
+        );
         if ('onAction' in action) {
           // Invoke the callback but keep the modal open so users can select
           // secondary actions from the children that follow.
-          props.onAction(action);
+          props.onAction(action, {shift: false});
         }
-        dispatch({type: 'push action', key: action.key, label: action.display.label});
+        dispatch({
+          type: 'push action',
+          key: action.key,
+          label: getTextValue(action.display),
+        });
         return;
       }
 
-      analytics.recordAction(action, resultIndex, '');
-      dispatch({type: 'trigger action'});
-      props.onAction(action);
+      const modifierKeys: CMDKModifierKeys = {shift: shiftHeldRef.current};
+
+      analytics.recordAction(
+        {
+          display: {label: getTextValue(action.display)},
+          ...('to' in action ? {to: action.to} : {}),
+        },
+        resultIndex,
+        ''
+      );
+      // When Shift is held and the action is a navigation link, keep the palette
+      // open (no trigger action dispatch) so the user can continue selecting.
+      if (!modifierKeys.shift || !('to' in action)) {
+        dispatch({type: 'trigger action'});
+      }
+      props.onAction(action, modifierKeys);
     },
     [actions, analytics, dispatch, props]
   );
 
   const resultsListRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (resultsListRef.current) {
+      resultsListRef.current.scrollTop = 0;
+    }
+  }, [state.action, state.query]);
+
+  // Track whether Shift is held so that actions with `to` can be opened in a
+  // new tab. Using a ref (instead of state) avoids re-renders on every keypress.
+  const shiftHeldRef = useRef(false);
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') shiftHeldRef.current = true;
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') shiftHeldRef.current = false;
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('keyup', onKeyUp);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('keyup', onKeyUp);
+    };
+  }, []);
 
   const debouncedQuery = useDebouncedValue(state.query, 300);
 
@@ -294,9 +350,6 @@ export function CommandPalette(props: CommandPaletteProps) {
                     onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
                       dispatch({type: 'set query', query: e.target.value});
                       treeState.selectionManager.setFocusedKey(null);
-                      if (resultsListRef.current) {
-                        resultsListRef.current.scrollTop = 0;
-                      }
                     },
                     onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
                       if (e.key === 'Backspace' && state.query.length === 0) {
@@ -417,8 +470,13 @@ function scoreNode(
   query: string,
   node: CollectionTreeNode<CMDKActionData>
 ): {matched: boolean; score: number} {
-  const label = node.display.label;
-  const details = node.display.details ?? '';
+  const display = node.display;
+  const label =
+    typeof display.label === 'string' ? display.label : display.searchableLabel;
+  const details =
+    typeof display.details === 'string'
+      ? display.details
+      : (display.searchableDetails ?? '');
   const keywords = node.keywords ?? [];
 
   // Score each field independently and take the best result. This lets
@@ -464,7 +522,11 @@ function flattenActions(
   scores: Map<
     string,
     {node: CollectionTreeNode<CMDKActionData>; score: {matched: boolean; score: number}}
-  > | null
+  > | null,
+  // Only expand groups inline at the true root level. When the user has
+  // navigated into a group, nested groups should appear as navigable actions
+  // rather than being pre-expanded as section headers with their children.
+  expandGroups = true
 ): CMDKFlatItem[] {
   // Browse mode: show each top-level node and its direct children.
   if (!scores) {
@@ -476,11 +538,21 @@ function flattenActions(
       if (!isGroup && !('to' in node) && !('onAction' in node)) {
         continue;
       }
-      results.push({...node, listItemType: isGroup ? 'section' : 'action'});
-      if (isGroup) {
-        for (const child of node.children) {
+      if (isGroup && expandGroups) {
+        // Expand the group inline: render it as a section header followed by
+        // its direct children. This only happens at the true root level so
+        // that nested groups (e.g. "Set Priority" inside "Select All") are
+        // shown as navigable actions rather than pre-expanded sections.
+        results.push({...node, listItemType: 'section'});
+        for (const child of node.limit === undefined
+          ? node.children
+          : node.children.slice(0, node.limit)) {
           results.push({...child, listItemType: 'action'});
         }
+      } else {
+        // Leaf action or a group that should not be expanded inline — treat
+        // as a single navigable item regardless.
+        results.push({...node, listItemType: 'action'});
       }
     }
     return results;
@@ -526,6 +598,7 @@ function flattenActions(
               (scores.get(b.key)?.score.score ?? 0) -
               (scores.get(a.key)?.score.score ?? 0)
           )
+          .slice(0, item.limit)
           .map(c => ({...c, listItemType: 'action' as const})),
       ];
     }
@@ -538,6 +611,12 @@ function flattenActions(
     seen.add(item.key);
     return true;
   });
+}
+
+function getTextValue(display: CMDKActionData['display']): string {
+  return typeof display.label === 'string'
+    ? display.label
+    : (display.searchableLabel ?? '');
 }
 
 function makeMenuItemFromAction(action: CMDKFlatItem): CommandPaletteActionMenuItem {
@@ -558,6 +637,15 @@ function makeMenuItemFromAction(action: CMDKFlatItem): CommandPaletteActionMenuI
         <IconDefaultsProvider size="sm">{action.display.icon}</IconDefaultsProvider>
       </Flex>
     ),
+    trailingItems:
+      'to' in action ? (
+        typeof action.to === 'string' &&
+        (action.to.startsWith('http://') || action.to.startsWith('https://')) ? (
+          <IconOpen size="xs" variant="muted" />
+        ) : (
+          <IconLink size="xs" variant="muted" />
+        )
+      ) : undefined,
     children: [],
     hideCheck: true,
   };

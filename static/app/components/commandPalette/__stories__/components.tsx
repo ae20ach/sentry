@@ -1,4 +1,5 @@
 import {useCallback} from 'react';
+import type {LocationDescriptorObject} from 'history';
 
 import {addSuccessMessage} from 'sentry/actionCreators/indicator';
 import {CommandPaletteProvider} from 'sentry/components/commandPalette/ui/cmdk';
@@ -6,15 +7,27 @@ import {CMDKAction} from 'sentry/components/commandPalette/ui/cmdk';
 import type {CMDKActionData} from 'sentry/components/commandPalette/ui/cmdk';
 import type {CollectionTreeNode} from 'sentry/components/commandPalette/ui/collection';
 import {CommandPalette} from 'sentry/components/commandPalette/ui/commandPalette';
+import type {CMDKModifierKeys} from 'sentry/components/commandPalette/ui/commandPalette';
 import {normalizeUrl} from 'sentry/utils/url/normalizeUrl';
 import {useNavigate} from 'sentry/utils/useNavigate';
+
+function locationToString(to: string | LocationDescriptorObject) {
+  if (typeof to === 'string') {
+    return to;
+  }
+  return [to.pathname, to.search, to.hash].filter(Boolean).join('');
+}
 
 export function CommandPaletteDemo() {
   const navigate = useNavigate();
 
   const handleAction = useCallback(
-    (action: CollectionTreeNode<CMDKActionData>) => {
+    (action: CollectionTreeNode<CMDKActionData>, modifierKeys: CMDKModifierKeys) => {
       if ('to' in action) {
+        if (modifierKeys.shift) {
+          window.open(locationToString(normalizeUrl(action.to)), '_blank');
+          return;
+        }
         navigate(normalizeUrl(action.to));
       } else if ('onAction' in action) {
         action.onAction();
