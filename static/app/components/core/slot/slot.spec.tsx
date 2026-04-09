@@ -11,12 +11,7 @@ describe('slot', () => {
     expect(SlotModule.Fallback).toBeDefined();
   });
 
-  it('hides children in a detached container when no Outlet is registered', () => {
-    // Children are always portaled — to a stable hidden div before the outlet
-    // mounts, to the real outlet element once it registers. This prevents the
-    // in-place → portal type switch that would remount the subtree and lose
-    // component state (e.g. useId() keys). Content is intentionally invisible
-    // until an outlet is available.
+  it('renders nothing when no Outlet is registered', () => {
     const SlotModule = slot(['header'] as const);
 
     render(
@@ -49,7 +44,7 @@ describe('slot', () => {
     );
   });
 
-  it('multiple slot consumers hide their children independently when no Outlet is registered', () => {
+  it('multiple slot consumers render nothing independently when no Outlet is registered', () => {
     const SlotModule = slot(['a', 'b'] as const);
 
     render(

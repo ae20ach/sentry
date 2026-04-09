@@ -149,27 +149,13 @@ function makeSlotConsumer<T extends Slot>(
       </outletNameContext.Provider>
     );
 
-    // A stable hidden container used as the portal target before an outlet
-    // mounts. Keeping children always inside a portal (rather than switching
-    // between portal and in-place rendering) means React never sees a
-    // different element type across renders, so component instances — and
-    // the ids they hold (e.g. useId()) — are preserved when the outlet mounts
-    // or unmounts. This also prevents a flash of content at the wrong DOM
-    // position that would occur with in-place rendering followed by a teleport.
-    const hiddenContainer = useRef<HTMLElement | null>(null);
-    if (!hiddenContainer.current && typeof document !== 'undefined') {
-      hiddenContainer.current = document.createElement('div');
-    }
-
     const element = state[name]?.element;
-    const target = element ?? hiddenContainer.current;
 
-    if (!target) {
-      // SSR: document is not available, render nothing.
+    if (!element) {
       return null;
     }
 
-    return createPortal(wrappedChildren, target);
+    return createPortal(wrappedChildren, element);
   }
 
   SlotConsumer.displayName = 'Slot.Consumer';
