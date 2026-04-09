@@ -1,4 +1,3 @@
-import {Fragment} from 'react';
 import {useTheme} from '@emotion/react';
 
 import {Alert} from '@sentry/scraps/alert';
@@ -7,8 +6,7 @@ import {Stack} from '@sentry/scraps/layout';
 import {t} from 'sentry/locale';
 import type {CronDetector} from 'sentry/types/workflowEngine/detectors';
 import {AutomateSection} from 'sentry/views/detectors/components/forms/automateSection';
-import {AssignSection} from 'sentry/views/detectors/components/forms/common/assignSection';
-import {DescribeSection} from 'sentry/views/detectors/components/forms/common/describeSection';
+import {IssueOwnershipSection} from 'sentry/views/detectors/components/forms/common/issueOwnershipSection';
 import {ProjectSection} from 'sentry/views/detectors/components/forms/common/projectSection';
 import {CronDetectorFormDetectSection} from 'sentry/views/detectors/components/forms/cron/detect';
 import {
@@ -22,6 +20,7 @@ import {EditDetectorLayout} from 'sentry/views/detectors/components/forms/editDe
 import {NewDetectorLayout} from 'sentry/views/detectors/components/forms/newDetectorLayout';
 import {useCronsUpsertGuideState} from 'sentry/views/insights/crons/components/useCronsUpsertGuideState';
 
+import {CronIssuePreview} from './cronIssuePreview';
 import {PreviewSection} from './previewSection';
 
 function useIsShowingPlatformGuide() {
@@ -33,8 +32,8 @@ const FORM_SECTIONS = [
   ProjectSection,
   CronDetectorFormDetectSection,
   CronDetectorFormResolveSection,
-  AssignSection,
-  DescribeSection,
+  IssueOwnershipSection,
+  CronIssuePreview,
   AutomateSection,
 ];
 
@@ -43,26 +42,26 @@ function CronDetectorForm({detector}: {detector?: CronDetector}) {
   const theme = useTheme();
   const showingPlatformGuide = useIsShowingPlatformGuide();
 
-  const formSections = (
-    <Fragment>
-      {dataSource?.queryObj.isUpserting && (
-        <Alert variant="warning">
-          {t(
-            'This monitor is managed in code and updates automatically with each check-in. Changes made here may be overwritten!'
-          )}
-        </Alert>
-      )}
-      <PreviewSection />
-      {FORM_SECTIONS.map((FormSection, index) => (
-        <FormSection key={index} step={index + 1} />
-      ))}
-    </Fragment>
-  );
-
   return (
     <Stack gap="2xl" maxWidth={theme.breakpoints.xl}>
       {!detector && <InstrumentationGuide />}
-      {!showingPlatformGuide && formSections}
+      <Stack
+        data-test-id="form-sections"
+        style={showingPlatformGuide ? {display: 'none'} : undefined}
+        gap="2xl"
+      >
+        {dataSource?.queryObj.isUpserting && (
+          <Alert variant="warning">
+            {t(
+              'This monitor is managed in code and updates automatically with each check-in. Changes made here may be overwritten!'
+            )}
+          </Alert>
+        )}
+        <PreviewSection />
+        {FORM_SECTIONS.map((FormSection, index) => (
+          <FormSection key={index} step={index + 1} />
+        ))}
+      </Stack>
     </Stack>
   );
 }
