@@ -1,4 +1,5 @@
 import logging
+from dataclasses import asdict
 
 from sentry.incidents.grouptype import MetricIssue
 from sentry.models.activity import Activity
@@ -13,10 +14,19 @@ from sentry.notifications.platform.templates.issue import (
     IssueNotificationData,
     SerializableRuleProxy,
 )
+from sentry.notifications.platform.types import NotificationProviderKey
 from sentry.utils.registry import NoRegistrationExistsError
+from sentry.workflow_engine.models import Action
 from sentry.workflow_engine.types import ActionInvocation
 
 logger = logging.getLogger(__name__)
+
+# Action types that should dispatch through the notification platform when
+# NotificationService.has_access() returns True.  Maps Action.Type → (provider key, referrer).
+NOTIFICATION_PLATFORM_PROVIDERS: dict[int, tuple[NotificationProviderKey, str]] = {
+    Action.Type.SLACK: (NotificationProviderKey.SLACK, "metric_alert_slack"),
+    Action.Type.DISCORD: (NotificationProviderKey.DISCORD, "metric_alert_discord"),
+}
 
 
 def should_fire_workflow_actions(org: Organization, type_id: int) -> bool:
@@ -92,9 +102,48 @@ def execute_via_issue_alert_handler(invocation: ActionInvocation) -> None:
 
 def execute_via_metric_alert_handler(invocation: ActionInvocation) -> None:
     """
-    This exists so that all metric alert resolution actions can use the same handler as metric alerts
+    This exists so that all metric alert resolution actions can use the same handler as metric alerts.
+
+    When the action type is in NOTIFICATION_PLATFORM_PROVIDERS and the notification
+    platform has access for the organization, dispatches directly through the
+    notification platform.  Otherwise falls through to the legacy handler registry.
     """
     try:
+        np_config = NOTIFICATION_PLATFORM_PROVIDERS.get(invocation.action.type)
+        if np_config is not None:
+            from sentry.notifications.platform.service import NotificationService
+            from sentry.notifications.platform.types import NotificationSource
+            from sentry.notifications.utils.metric_alert_dispatcher import (
+                MetricAlertNotificationContextBuilder,
+                MetricAlertNotificationDispatcher,
+            )
+
+            context_builder = MetricAlertNotificationContextBuilder(invocation)
+            if NotificationService.has_access(
+                context_builder.organization, NotificationSource.METRIC_ALERT
+            ):
+                provider_key, referrer = np_config
+
+                logger.info(
+                    "notification_action.execute_via_metric_alert_handler",
+                    extra={
+                        "action_id": invocation.action.id,
+                        "detector_id": invocation.detector.id,
+                        "notification_context": asdict(context_builder.notification_context),
+                        "alert_context": asdict(context_builder.alert_context),
+                        "metric_issue_context": asdict(context_builder.metric_issue_context),
+                        "open_period_context": context_builder.open_period_context.dict(),
+                        "trigger_status": context_builder.trigger_status,
+                    },
+                )
+
+                dispatcher = MetricAlertNotificationDispatcher(context_builder)
+                dispatcher.send_via_notification_platform(
+                    provider_key=provider_key,
+                    referrer=referrer,
+                )
+                return
+
         handler = metric_alert_handler_registry.get(invocation.action.type)
         handler.invoke_legacy_registry(invocation)
     except NoRegistrationExistsError:

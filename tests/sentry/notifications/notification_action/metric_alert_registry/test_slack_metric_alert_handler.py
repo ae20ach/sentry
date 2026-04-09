@@ -25,6 +25,7 @@ from sentry.notifications.notification_action.metric_alert_registry.handlers.uti
     get_detailed_incident_serializer,
     get_detector_serializer,
 )
+from sentry.notifications.notification_action.utils import execute_via_metric_alert_handler
 from sentry.testutils.helpers.datetime import freeze_time
 from sentry.testutils.helpers.features import with_feature
 from sentry.testutils.helpers.options import override_options
@@ -59,12 +60,53 @@ class TestSlackMetricAlertHandlerSendAlert(MetricAlertHandlerBase):
         )
         self.handler = SlackMetricAlertHandler()
 
-    def _make_send_alert_kwargs(self) -> dict[str, Any]:
+    def _make_invocation(self) -> ActionInvocation:
+        return ActionInvocation(
+            event_data=self.event_data,
+            action=self.action,
+            detector=self.detector,
+            notification_uuid=str(uuid.uuid4()),
+        )
+
+    @override_options({"notifications.platform-rollout.internal-testing": {"metric-alert": 1.0}})
+    @with_feature("organizations:notification-platform.internal-testing")
+    @patch("sentry.integrations.slack.integration.SlackSdkClient")
+    @freeze_time("2021-01-01 00:00:00")
+    def test_execute_via_metric_alert_handler_np_sends_to_slack_channel(
+        self, mock_slack_client: mock.MagicMock
+    ) -> None:
+        mock_client_instance = mock_slack_client.return_value
+        mock_client_instance.chat_postMessage.return_value = SlackResponse(
+            client=mock_client_instance,
+            http_verb="POST",
+            api_url="https://slack.com/api/chat.postMessage",
+            req_args={},
+            data={"ok": True, "ts": "123.456"},
+            headers={},
+            status_code=200,
+        )
+
+        execute_via_metric_alert_handler(self._make_invocation())
+
+        mock_client_instance.chat_postMessage.assert_called_once()
+        call_kwargs = mock_client_instance.chat_postMessage.call_args.kwargs
+        assert call_kwargs["channel"] == "channel123"
+        assert call_kwargs["attachments"] is not None
+        attachments: list[Any] = call_kwargs["attachments"]
+        assert len(attachments) == 1
+        blocks: list[Any] = attachments[0]["blocks"]
+        assert len(blocks) >= 1
+        assert blocks[0]["type"] == "section"
+        assert blocks[0]["text"]["type"] == "mrkdwn"
+
+    @patch(f"{_HANDLER_PATH}.send_incident_alert_notification")
+    @freeze_time("2021-01-01 00:00:00")
+    def test_send_alert_calls_legacy(self, mock_send_incident: mock.MagicMock) -> None:
         notification_context = NotificationContext.from_action_model(self.action)
         assert self.group_event.occurrence is not None
         assert self.group_event.occurrence.priority is not None
         priority = DetectorPriorityLevel(self.group_event.occurrence.priority)
-        return dict(
+        kwargs = dict(
             notification_context=notification_context,
             alert_context=AlertContext.from_workflow_engine_models(
                 self.detector,
@@ -81,45 +123,6 @@ class TestSlackMetricAlertHandlerSendAlert(MetricAlertHandlerBase):
             organization=self.detector.project.organization,
             notification_uuid=str(uuid.uuid4()),
         )
-
-    @override_options({"notifications.platform-rollout.internal-testing": {"metric-alert": 1.0}})
-    @with_feature("organizations:notification-platform.internal-testing")
-    @patch("sentry.integrations.slack.integration.SlackSdkClient")
-    @freeze_time("2021-01-01 00:00:00")
-    def test_send_alert_via_np_sends_to_slack_channel(
-        self, mock_slack_client: mock.MagicMock
-    ) -> None:
-        mock_client_instance = mock_slack_client.return_value
-        mock_client_instance.chat_postMessage.return_value = SlackResponse(
-            client=mock_client_instance,
-            http_verb="POST",
-            api_url="https://slack.com/api/chat.postMessage",
-            req_args={},
-            data={"ok": True, "ts": "123.456"},
-            headers={},
-            status_code=200,
-        )
-
-        self.handler.send_alert(**self._make_send_alert_kwargs())
-
-        mock_client_instance.chat_postMessage.assert_called_once()
-        call_kwargs = mock_client_instance.chat_postMessage.call_args.kwargs
-        assert call_kwargs["channel"] == "channel123"
-        assert call_kwargs["attachments"] is not None
-        attachments: list[Any] = call_kwargs["attachments"]
-        assert len(attachments) == 1
-        blocks: list[Any] = attachments[0]["blocks"]
-        assert len(blocks) >= 1
-        assert blocks[0]["type"] == "section"
-        assert blocks[0]["text"]["type"] == "mrkdwn"
-
-    @patch(f"{_HANDLER_PATH}.send_incident_alert_notification")
-    @freeze_time("2021-01-01 00:00:00")
-    def test_send_alert_falls_back_to_legacy_when_no_access(
-        self, mock_send_incident: mock.MagicMock
-    ) -> None:
-        # No feature flag enabled → has_access returns False → legacy path
-        kwargs = self._make_send_alert_kwargs()
         self.handler.send_alert(**kwargs)
 
         mock_send_incident.assert_called_once_with(
