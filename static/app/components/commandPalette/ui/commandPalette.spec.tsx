@@ -366,6 +366,64 @@ describe('CommandPalette', () => {
     });
   });
 
+  describe('action with onAction and children', () => {
+    it('invokes callback, keeps modal open, and then shows children for secondary selection', async () => {
+      const primaryCallback = jest.fn();
+      const secondaryCallback = jest.fn();
+      const closeSpy = jest.spyOn(modalActions, 'closeModal');
+
+      // Mirror the updated modal.tsx handleSelect: invoke callback, skip close when
+      // action has children so the palette can push into the secondary actions.
+      const handleAction = (action: CollectionTreeNode<CMDKActionData>) => {
+        if ('onAction' in action) {
+          action.onAction();
+          if (action.children.length > 0) {
+            return;
+          }
+        }
+        closeModal();
+      };
+
+      // Top-level groups become section headers (disabled), so the action-with-callback
+      // must be a child item — matching how "Parent Group Action" works in allActions.
+      render(
+        <CommandPaletteProvider>
+          <CMDKAction display={{label: 'Outer Group'}}>
+            <CMDKAction display={{label: 'Primary Action'}} onAction={primaryCallback}>
+              <CMDKAction
+                display={{label: 'Secondary Action'}}
+                onAction={secondaryCallback}
+              />
+            </CMDKAction>
+          </CMDKAction>
+          <CommandPalette onAction={handleAction} />
+        </CommandPaletteProvider>
+      );
+
+      // Select the primary action (has both onAction and children)
+      await userEvent.click(await screen.findByRole('option', {name: 'Primary Action'}));
+
+      // Callback should have been invoked
+      expect(primaryCallback).toHaveBeenCalledTimes(1);
+
+      // Modal must remain open — no close call yet
+      expect(closeSpy).not.toHaveBeenCalled();
+
+      // The palette should have pushed into the children
+      expect(
+        await screen.findByRole('option', {name: 'Secondary Action'})
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('option', {name: 'Primary Action'})
+      ).not.toBeInTheDocument();
+
+      // Selecting the secondary action should invoke its callback and close the modal
+      await userEvent.click(screen.getByRole('option', {name: 'Secondary Action'}));
+      expect(secondaryCallback).toHaveBeenCalledTimes(1);
+      expect(closeSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('query restoration', () => {
     it('drilling into a group clears the active query', async () => {
       render(<GlobalActionsComponent actions={allActions} />);
@@ -580,7 +638,7 @@ describe('CommandPalette', () => {
     it('a group with no children is omitted from the list', async () => {
       render(
         <CommandPaletteProvider>
-          <CMDKGroup display={{label: 'Empty Group'}} />
+          <CMDKAction display={{label: 'Empty Group'}} />
           <CMDKAction display={{label: 'Real Action'}} onAction={jest.fn()} />
           <CommandPalette onAction={jest.fn()} />
         </CommandPaletteProvider>

@@ -212,6 +212,11 @@ export function CommandPalette(props: CommandPaletteProps) {
 
       if (action.children.length > 0) {
         analytics.recordGroupAction(action, resultIndex);
+        if ('onAction' in action) {
+          // Invoke the callback but keep the modal open so users can select
+          // secondary actions from the children that follow.
+          props.onAction(action);
+        }
         dispatch({type: 'push action', key: action.key, label: action.display.label});
         return;
       }

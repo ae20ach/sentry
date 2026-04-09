@@ -20,6 +20,11 @@ export default function CommandPaletteModal({Body}: ModalRenderProps) {
         navigate(normalizeUrl(String(action.to)));
       } else if ('onAction' in action) {
         action.onAction();
+        // When the action has children, the palette will push into them so the
+        // user can select a secondary action — keep the modal open.
+        if (action.children.length > 0) {
+          return;
+        }
       }
       closeModal();
     },
