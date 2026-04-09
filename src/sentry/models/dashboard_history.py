@@ -4,7 +4,7 @@ from django.db import models
 from django.utils import timezone
 
 from sentry.backup.scopes import RelocationScope
-from sentry.db.models import FlexibleForeignKey, Model, region_silo_model
+from sentry.db.models import FlexibleForeignKey, Model, cell_silo_model
 from sentry.db.models.fields.hybrid_cloud_foreign_key import HybridCloudForeignKey
 from sentry.db.models.fields.jsonfield import JSONField
 
@@ -14,7 +14,7 @@ class DashboardHistorySource:
     RESTORE = "restore"
 
 
-@region_silo_model
+@cell_silo_model
 class DashboardHistory(Model):
     """
     Stores a snapshot of a dashboard's full state (title, widgets, queries,

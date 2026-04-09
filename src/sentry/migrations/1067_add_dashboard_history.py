@@ -27,7 +27,7 @@ class Migration(CheckedMigration):
     is_post_deployment = False
 
     dependencies = [
-        ("sentry", "1030_add_commitcomparison_extras"),
+        ("sentry", "1066_add_export_format_in_data_export_obj"),
     ]
 
     operations = [
