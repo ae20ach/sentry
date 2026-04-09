@@ -286,9 +286,7 @@ async function keyboardNavigationTestSetup() {
 
   // Awaits for the placeholder rendering rows to be removed
   try {
-    await within(virtualizedContainer).findAllByText(/transaction-op-/i, undefined, {
-      timeout: 5000,
-    });
+    await within(virtualizedContainer).findAllByText(/transaction-op-/i, undefined);
   } catch (e) {
     printVirtualizedList(virtualizedContainer);
     throw e;
@@ -348,9 +346,7 @@ async function pageloadTestSetup() {
 
   // Awaits for the placeholder rendering rows to be removed
   try {
-    await within(virtualizedContainer).findAllByText(/transaction-op-/i, undefined, {
-      timeout: 5000,
-    });
+    await within(virtualizedContainer).findAllByText(/transaction-op-/i);
   } catch (e) {
     printVirtualizedList(virtualizedContainer);
     throw e;
@@ -409,9 +405,7 @@ async function nestedTransactionsTestSetup() {
 
   // Awaits for the placeholder rendering rows to be removed
   try {
-    await within(virtualizedContainer).findAllByText(/transaction-op-/i, undefined, {
-      timeout: 5000,
-    });
+    await within(virtualizedContainer).findAllByText(/transaction-op-/i);
   } catch (e) {
     printVirtualizedList(virtualizedContainer);
     throw e;
@@ -470,9 +464,7 @@ async function searchTestSetup() {
 
   // Awaits for the placeholder rendering rows to be removed
   try {
-    await within(virtualizedContainer).findAllByText(/transaction-op-/i, undefined, {
-      timeout: 5000,
-    });
+    await within(virtualizedContainer).findAllByText(/transaction-op-/i);
   } catch (e) {
     printVirtualizedList(virtualizedContainer);
     throw e;
@@ -535,9 +527,7 @@ async function simpleTestSetup() {
 
   // Awaits for the placeholder rendering rows to be removed
   try {
-    await within(virtualizedContainer).findAllByText(/transaction-op-/i, undefined, {
-      timeout: 5000,
-    });
+    await within(virtualizedContainer).findAllByText(/transaction-op-/i);
   } catch (e) {
     printVirtualizedList(virtualizedContainer);
     throw e;
@@ -752,9 +742,7 @@ async function completeTestSetup() {
 
   // Awaits for the placeholder rendering rows to be removed
   try {
-    await within(virtualizedContainer).findAllByText(/transaction-op-/i, undefined, {
-      timeout: 5000,
-    });
+    await within(virtualizedContainer).findAllByText(/transaction-op-/i);
   } catch (e) {
     printVirtualizedList(virtualizedContainer);
     throw e;
@@ -767,8 +755,14 @@ const DRAWER_TABS_PIN_BUTTON_TEST_ID = 'trace-drawer-tab-pin-button';
 const VISIBLE_TRACE_ROW_SELECTOR = '.TraceRow:not(.Hidden)';
 const ACTIVE_SEARCH_HIGHLIGHT_ROW = '.TraceRow.SearchResult.Highlight:not(.Hidden)';
 
-const searchToResolve = async (): Promise<void> => {
-  await screen.findByTestId('trace-search-success', undefined, {timeout: 10_000});
+const searchToHaveResult = async (matcher: RegExp) => {
+  await waitFor(() => {
+    expect(screen.getByTestId('trace-search-result-iterator')).toHaveTextContent(matcher);
+  });
+};
+
+const searchToSucceed = async (): Promise<void> => {
+  await screen.findByTestId('trace-search-success');
 };
 
 function printVirtualizedList(container: HTMLElement) {
@@ -1451,8 +1445,7 @@ describe('trace view', () => {
       });
     });
 
-    // eslint-disable-next-line jest/no-disabled-tests
-    it.skip('arrowup+shift scrolls to the start of the list', async () => {
+    it.isKnownFlake('arrowup+shift scrolls to the start of the list', async () => {
       const {virtualizedContainer} = await keyboardNavigationTestSetup();
 
       let rows = getVirtualizedRows(virtualizedContainer);
@@ -1531,19 +1524,19 @@ describe('trace view', () => {
       await userEvent.paste('transaction-op');
 
       await waitFor(() => expect(searchInput).toHaveValue('transaction-op'));
-      await searchToResolve();
+      await searchToSucceed();
 
       await assertHighlightedRowAtIndex(container, 1);
     });
 
-    it.knownFlake('supports roving with arrowup and arrowdown', async () => {
+    it.isKnownFlake('supports roving with arrowup and arrowdown', async () => {
       const {container} = await searchTestSetup();
 
       const searchInput = await screen.findByPlaceholderText('Search in trace');
       await userEvent.click(searchInput);
       await userEvent.paste('transaction-op');
       await waitFor(() => expect(searchInput).toHaveValue('transaction-op'));
-      await searchToResolve();
+      await searchToSucceed();
 
       await assertHighlightedRowAtIndex(container, 1);
 
@@ -1572,7 +1565,7 @@ describe('trace view', () => {
       await waitFor(() => expect(searchInput).toHaveValue('transaction-op'));
 
       // Wait for the search results to resolve
-      await searchToResolve();
+      await searchToSucceed();
 
       expect(await screen.findByTestId('trace-drawer-title')).toHaveTextContent(
         'TransactionID: 0'
@@ -1596,7 +1589,7 @@ describe('trace view', () => {
       await userEvent.click(searchInput);
       await userEvent.paste('transaction-op-1');
       await waitFor(() => expect(searchInput).toHaveValue('transaction-op-1'));
-      await searchToResolve();
+      await searchToSucceed();
 
       await assertHighlightedRowAtIndex(container, 2);
 
@@ -1605,76 +1598,48 @@ describe('trace view', () => {
       await userEvent.click(searchInput);
       await userEvent.paste('transaction-op-5');
       await waitFor(() => expect(searchInput).toHaveValue('transaction-op-5'));
-      await searchToResolve();
+      await searchToSucceed();
 
       await assertHighlightedRowAtIndex(container, 6);
     });
 
-    it('highlighted is persisted on node while it is part of the search results', async () => {
-      const {container} = await searchTestSetup();
-      const searchInput = await screen.findByPlaceholderText('Search in trace');
-      await userEvent.click(searchInput);
-      await userEvent.paste('trans');
-      await waitFor(() => expect(searchInput).toHaveValue('trans'));
+    it.isKnownFlake(
+      'highlighted is persisted on node while it is part of the search results',
+      async () => {
+        const {container} = await searchTestSetup();
+        const searchInput = await screen.findByPlaceholderText('Search in trace');
+        await userEvent.click(searchInput);
+        await userEvent.paste('trans');
+        await waitFor(() => expect(searchInput).toHaveValue('trans'));
 
-      // Wait for search results to actually resolve by checking the iterator.
-      // searchToResolve() is unreliable here because trace-search-success is
-      // the default DOM state, so it can resolve before the RAF-batched
-      // useDispatchingReducer has committed the search results.
-      await waitFor(
-        () => {
-          expect(screen.getByTestId('trace-search-result-iterator')).toHaveTextContent(
-            /^\d+\/11$/
-          );
-        },
-        {timeout: 10_000}
-      );
+        await searchToHaveResult(/^\d+\/11$/);
+        await assertHighlightedRowAtIndex(container, 1);
 
-      await assertHighlightedRowAtIndex(container, 1);
+        await userEvent.keyboard('{arrowdown}');
+        await searchToHaveResult(/^2\//);
+        await assertHighlightedRowAtIndex(container, 2);
 
-      await userEvent.keyboard('{arrowdown}');
-      // Wait for the RAF-batched dispatch to commit
-      await waitFor(() => {
-        expect(screen.getByTestId('trace-search-result-iterator')).toHaveTextContent(
-          /^2\//
-        );
-      });
-      await assertHighlightedRowAtIndex(container, 2);
+        await userEvent.clear(searchInput);
+        await userEvent.click(searchInput);
+        await userEvent.paste('transact');
+        await waitFor(() => expect(searchInput).toHaveValue('transact'));
+        await searchToHaveResult(/^\d+\/11$/);
 
-      await userEvent.clear(searchInput);
-      await userEvent.click(searchInput);
-      await userEvent.paste('transact');
-      await waitFor(() => expect(searchInput).toHaveValue('transact'));
-      await waitFor(
-        () => {
-          expect(screen.getByTestId('trace-search-result-iterator')).toHaveTextContent(
-            /^\d+\/11$/
-          );
-        },
-        {timeout: 10_000}
-      );
+        // Highlighting is persisted on the row
+        await assertHighlightedRowAtIndex(container, 2);
 
-      // Highlighting is persisted on the row
-      await assertHighlightedRowAtIndex(container, 2);
+        await userEvent.clear(searchInput);
+        await userEvent.click(searchInput);
+        await userEvent.paste('this wont match anything');
+        await waitFor(() => expect(searchInput).toHaveValue('this wont match anything'));
+        await searchToHaveResult(/no results/);
 
-      await userEvent.clear(searchInput);
-      await userEvent.click(searchInput);
-      await userEvent.paste('this wont match anything');
-      await waitFor(() => expect(searchInput).toHaveValue('this wont match anything'));
-      await waitFor(
-        () => {
-          expect(screen.getByTestId('trace-search-result-iterator')).toHaveTextContent(
-            'no results'
-          );
-        },
-        {timeout: 10_000}
-      );
-
-      // When there is no match, the highlighting is removed
-      await waitFor(() => {
-        expect(container.querySelectorAll('.TraceRow.Highlight')).toHaveLength(0);
-      });
-    });
+        // When there is no match, the highlighting is removed
+        await waitFor(() => {
+          expect(container.querySelectorAll('.TraceRow.Highlight')).toHaveLength(0);
+        });
+      }
+    );
 
     it('auto highlights the first result when search begins', async () => {
       const {container} = await searchTestSetup();
@@ -1686,12 +1651,12 @@ describe('trace view', () => {
       await waitFor(() => expect(searchInput).toHaveValue('t'));
 
       // Wait for the search results to resolve
-      await searchToResolve();
+      await searchToSucceed();
 
       await assertHighlightedRowAtIndex(container, 1);
     });
 
-    it.knownFlake(
+    it.isKnownFlake(
       'clicking a row that is also a search result updates the result index',
       async () => {
         const {container, virtualizedContainer} = await searchTestSetup();
@@ -1701,7 +1666,7 @@ describe('trace view', () => {
         await userEvent.paste('transaction-op-1');
         await waitFor(() => expect(searchInput).toHaveValue('transaction-op-1'));
 
-        await searchToResolve();
+        await searchToSucceed();
 
         await assertHighlightedRowAtIndex(container, 2);
         const rows = getVirtualizedRows(virtualizedContainer);
@@ -1712,23 +1677,15 @@ describe('trace view', () => {
 
         // Click on a random row in the list that is not a search result
         await userEvent.click(rows[5]!);
-        await waitFor(() => {
-          expect(screen.queryByTestId('trace-search-result-iterator')).toHaveTextContent(
-            '-/2'
-          );
-        });
+        await searchToHaveResult(/-\/2/);
 
         // Click on a the row in the list that is a search result
         await userEvent.click(rows[2]!);
-        await waitFor(() => {
-          expect(screen.queryByTestId('trace-search-result-iterator')).toHaveTextContent(
-            '1/2'
-          );
-        });
+        await searchToHaveResult(/1\/2/);
       }
     );
 
-    it.knownFlake('during search, expanding a row retriggers search', async () => {
+    it.isKnownFlake('during search, expanding a row retriggers search', async () => {
       mockPerformanceSubscriptionDetailsResponse();
       mockProjectDetailsResponse();
 
@@ -1834,7 +1791,7 @@ describe('trace view', () => {
       await userEvent.paste('op-0');
       await waitFor(() => expect(searchInput).toHaveValue('op-0'));
 
-      await searchToResolve();
+      await searchToSucceed();
 
       await waitFor(() => {
         expect(screen.queryByTestId('trace-search-result-iterator')).toHaveTextContent(
@@ -1867,7 +1824,7 @@ describe('trace view', () => {
       await userEvent.click(searchInput);
       await userEvent.paste('transaction-op');
       await waitFor(() => expect(searchInput).toHaveValue('transaction-op'));
-      await searchToResolve();
+      await searchToSucceed();
 
       await assertHighlightedRowAtIndex(container, 1);
 
@@ -1892,14 +1849,14 @@ describe('trace view', () => {
       await userEvent.paste('transaction-op-5');
       await waitFor(() => expect(searchInput).toHaveValue('transaction-op-5'));
 
-      await searchToResolve();
+      await searchToSucceed();
       await assertHighlightedRowAtIndex(container, 6);
 
       await userEvent.clear(searchInput);
       await waitFor(() => expect(searchInput).toHaveValue(''));
       await userEvent.click(searchInput);
       await userEvent.paste('transaction-op-none');
-      await searchToResolve();
+      await searchToSucceed();
       await waitFor(() => {
         // eslint-disable-next-line testing-library/no-container
         expect(container.querySelectorAll('.TraceRow.Highlight')).toHaveLength(0);
@@ -2002,7 +1959,7 @@ describe('trace view', () => {
       });
     });
 
-    it.knownFlake(
+    it.isKnownFlake(
       'clicking a node that is already open in a tab switches to that tab and persists the previous node',
       async () => {
         const {virtualizedContainer} = await simpleTestSetup();
