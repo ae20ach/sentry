@@ -9,6 +9,7 @@ import type {EChartsOption} from 'echarts';
  */
 export enum ChartType {
   SLACK_DISCOVER_TOTAL_PERIOD = 'slack:discover.totalPeriod',
+  SLACK_DISCOVER_TOTAL_PERIOD_LINE = 'slack:discover.totalPeriodLine',
   SLACK_DISCOVER_TOTAL_DAILY = 'slack:discover.totalDaily',
   SLACK_DISCOVER_TOP5_PERIOD = 'slack:discover.top5Period',
   SLACK_DISCOVER_TOP5_PERIOD_LINE = 'slack:discover.top5PeriodLine',

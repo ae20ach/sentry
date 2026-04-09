@@ -85,6 +85,65 @@ export const makeDiscoverCharts = (theme: Theme): Array<RenderDescriptor<ChartTy
   });
 
   discoverCharts.push({
+    key: ChartType.SLACK_DISCOVER_TOTAL_PERIOD_LINE,
+    getOption: (
+      data:
+        | {seriesName: string; stats: EventsStats}
+        | {stats: Record<string, EventsStats>; seriesName?: string}
+    ) => {
+      if (Array.isArray(data.stats.data)) {
+        const color = theme.chart.getColorPalette(data.stats.data.length - 1);
+        const lineSeries = LineSeries({
+          name: data.seriesName,
+          data: data.stats.data.map(([timestamp, countsForTimestamp]) => [
+            timestamp * 1000,
+            countsForTimestamp.reduce((acc, {count}) => acc + count, 0),
+          ]),
+          lineStyle: {color: color?.[0], opacity: 1},
+          itemStyle: {color: color?.[0]},
+        });
+
+        return {
+          ...slackChartDefaults,
+          useUTC: true,
+          color,
+          series: [lineSeries],
+        };
+      }
+
+      const stats = Object.keys(data.stats).map(key =>
+        Object.assign({}, {key}, (data.stats as any)[key])
+      );
+      const color = theme.chart.getColorPalette(stats.length - 1);
+
+      const series = stats
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .map((s, i) =>
+          LineSeries({
+            name: s.key,
+            data: s.data.map(
+              ([timestamp, countsForTimestamp]: [number, Array<{count: number}>]) => [
+                timestamp * 1000,
+                countsForTimestamp.reduce((acc, {count}) => acc + count, 0),
+              ]
+            ),
+            lineStyle: {color: color?.[i], opacity: 1},
+            itemStyle: {color: color?.[i]},
+          })
+        );
+
+      return {
+        ...slackChartDefaults,
+        xAxis: discoverxAxis,
+        useUTC: true,
+        color,
+        series,
+      };
+    },
+    ...slackChartSize,
+  });
+
+  discoverCharts.push({
     key: ChartType.SLACK_DISCOVER_TOTAL_DAILY,
     getOption: (
       data:
