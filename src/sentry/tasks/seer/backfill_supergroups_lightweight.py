@@ -7,7 +7,7 @@ from snuba_sdk import Column, Condition, Direction, Entity, Limit, Op, OrderBy, 
 from sentry import features, options
 from sentry.api.serializers import EventSerializer, serialize
 from sentry.eventstore import backend as eventstore
-from sentry.models.group import DEFAULT_TYPE_ID, Group
+from sentry.models.group import DEFAULT_TYPE_ID, Group, GroupStatus
 from sentry.models.organization import Organization
 from sentry.models.project import Project
 from sentry.seer.signed_seer_api import (
@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 BACKFILL_LAST_SEEN_DAYS = 90
 BATCH_SIZE = 50
 INTER_BATCH_DELAY_S = 1
+MAX_FAILURES_PER_BATCH = 20
 
 
 @instrumented_task(
@@ -56,48 +57,52 @@ def backfill_supergroups_lightweight_for_org(
         )
         return
 
-    project_ids = list(
+    # Get the next project to process, starting from where we left off
+    project = (
         Project.objects.filter(
             organization_id=organization_id,
-            id__gte=last_project_id,
+            id__gte=last_project_id or 0,
         )
         .order_by("id")
-        .values_list("id", flat=True)
+        .first()
     )
 
-    if not project_ids:
+    if not project:
         logger.info(
             "supergroups_backfill_lightweight.org_completed",
             extra={"organization_id": organization_id},
         )
         return
 
+    # If we moved to a new project, reset the group cursor
+    if project.id != last_project_id:
+        last_group_id = 0
+
     cutoff = datetime.now(UTC) - timedelta(days=BACKFILL_LAST_SEEN_DAYS)
 
-    group_filter = Group.objects.filter(
-        project_id__in=project_ids,
-        type=DEFAULT_TYPE_ID,
-        last_seen__gte=cutoff,
-        substatus__in=UNRESOLVED_SUBSTATUS_CHOICES,
-    )
-
-    if last_group_id > 0:
-        group_filter = group_filter.filter(
-            project_id=last_project_id, id__gt=last_group_id
-        ) | group_filter.filter(project_id__gt=last_project_id)
-    else:
-        group_filter = group_filter.filter(project_id__gte=last_project_id)
-
     groups = list(
-        group_filter.select_related("project", "project__organization").order_by(
-            "project_id", "id"
-        )[:BATCH_SIZE]
+        Group.objects.filter(
+            project_id=project.id,
+            type=DEFAULT_TYPE_ID,
+            id__gt=last_group_id,
+            last_seen__gte=cutoff,
+            status=GroupStatus.UNRESOLVED,
+            substatus__in=UNRESOLVED_SUBSTATUS_CHOICES,
+        )
+        .select_related("project", "project__organization")
+        .order_by("id")[:BATCH_SIZE]
     )
 
     if not groups:
-        logger.info(
-            "supergroups_backfill_lightweight.org_completed",
-            extra={"organization_id": organization_id},
+        # Current project exhausted, move to the next one
+        backfill_supergroups_lightweight_for_org.apply_async(
+            args=[organization_id],
+            kwargs={
+                "last_project_id": project.id + 1,
+                "last_group_id": 0,
+            },
+            countdown=INTER_BATCH_DELAY_S,
+            headers={"sentry-propagate-traces": False},
         )
         return
 
@@ -145,6 +150,16 @@ def backfill_supergroups_lightweight_for_org(
             )
             failure_count += 1
 
+        if failure_count >= MAX_FAILURES_PER_BATCH:
+            logger.error(
+                "supergroups_backfill_lightweight.max_failures_reached",
+                extra={
+                    "organization_id": organization_id,
+                    "failure_count": failure_count,
+                },
+            )
+            break
+
     metrics.incr(
         "seer.supergroups_backfill_lightweight.groups_processed",
         amount=success_count,
@@ -154,23 +169,23 @@ def backfill_supergroups_lightweight_for_org(
         amount=failure_count,
     )
 
-    # Self-chain if there are more groups to process
+    # Self-chain: more groups in this project, or move to next project
     if len(groups) == BATCH_SIZE:
-        last_group = groups[-1]
-        backfill_supergroups_lightweight_for_org.apply_async(
-            args=[organization_id],
-            kwargs={
-                "last_project_id": last_group.project_id,
-                "last_group_id": last_group.id,
-            },
-            countdown=INTER_BATCH_DELAY_S,
-            headers={"sentry-propagate-traces": False},
-        )
+        next_project_id = project.id
+        next_group_id = groups[-1].id
     else:
-        logger.info(
-            "supergroups_backfill_lightweight.org_completed",
-            extra={"organization_id": organization_id},
-        )
+        next_project_id = project.id + 1
+        next_group_id = 0
+
+    backfill_supergroups_lightweight_for_org.apply_async(
+        args=[organization_id],
+        kwargs={
+            "last_project_id": next_project_id,
+            "last_group_id": next_group_id,
+        },
+        countdown=INTER_BATCH_DELAY_S,
+        headers={"sentry-propagate-traces": False},
+    )
 
 
 def _batch_fetch_events(groups: Sequence[Group], organization_id: int) -> list[tuple[Group, dict]]:
@@ -179,14 +194,12 @@ def _batch_fetch_events(groups: Sequence[Group], organization_id: int) -> list[t
     then serialize each event for sending to Seer.
     """
     now = datetime.now(UTC)
-    timestamp_start = now - timedelta(days=BACKFILL_LAST_SEEN_DAYS)
 
     # Build one Snuba request per group to find the latest event_id
     snuba_requests = []
     for group in groups:
-        # Use a tight window around the group's last_seen to minimize scan range,
-        # falling back to the full backfill window if last_seen is unavailable
-        group_start = group.last_seen - timedelta(hours=1) if group.last_seen else timestamp_start
+        # Use a tight window around the group's last_seen to minimize Snuba scan range
+        group_start = group.last_seen - timedelta(hours=1)
         snuba_requests.append(
             Request(
                 dataset=Dataset.Events.value,

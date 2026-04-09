@@ -43,7 +43,8 @@ class BackfillSupergroupsLightweightForOrgTest(TestCase):
     @patch(
         "sentry.tasks.seer.backfill_supergroups_lightweight.make_lightweight_rca_cluster_request"
     )
-    def test_processes_groups_across_projects(self, mock_request):
+    def test_moves_to_next_project_after_current_exhausted(self, mock_request):
+        """After finishing one project's groups, chains to the next project."""
         mock_request.return_value = MagicMock(status=200)
 
         project2 = self.create_project(organization=self.organization)
@@ -55,11 +56,22 @@ class BackfillSupergroupsLightweightForOrgTest(TestCase):
         event2.group.substatus = GroupSubStatus.NEW
         event2.group.save(update_fields=["substatus"])
 
-        backfill_supergroups_lightweight_for_org(self.organization.id)
+        # First call processes first project's groups
+        with patch(
+            "sentry.tasks.seer.backfill_supergroups_lightweight.backfill_supergroups_lightweight_for_org.apply_async"
+        ) as mock_chain:
+            backfill_supergroups_lightweight_for_org(self.organization.id)
 
-        assert mock_request.call_count == 2
-        project_ids = {call.args[0]["project_id"] for call in mock_request.call_args_list}
-        assert project_ids == {self.project.id, project2.id}
+            # Should chain to next project
+            mock_chain.assert_called_once()
+            next_kwargs = mock_chain.call_args.kwargs["kwargs"]
+            assert next_kwargs["last_group_id"] == 0
+
+        # Second call processes second project's groups
+        mock_request.reset_mock()
+        backfill_supergroups_lightweight_for_org(self.organization.id, **next_kwargs)
+        mock_request.assert_called_once()
+        assert mock_request.call_args.args[0]["project_id"] == project2.id
 
     @with_feature("organizations:supergroups-lightweight-rca-clustering-write")
     @patch(
@@ -89,6 +101,7 @@ class BackfillSupergroupsLightweightForOrgTest(TestCase):
 
             mock_chain.assert_called_once()
             call_kwargs = mock_chain.call_args.kwargs["kwargs"]
+            # Should stay on the same project with a group cursor
             assert call_kwargs["last_project_id"] == self.project.id
             assert call_kwargs["last_group_id"] > 0
 
@@ -96,14 +109,20 @@ class BackfillSupergroupsLightweightForOrgTest(TestCase):
     @patch(
         "sentry.tasks.seer.backfill_supergroups_lightweight.make_lightweight_rca_cluster_request"
     )
-    def test_does_not_chain_when_batch_incomplete(self, mock_request):
+    def test_completes_when_no_more_projects(self, mock_request):
+        """When all projects are exhausted, the task completes without chaining."""
         mock_request.return_value = MagicMock(status=200)
 
         with patch(
             "sentry.tasks.seer.backfill_supergroups_lightweight.backfill_supergroups_lightweight_for_org.apply_async"
         ) as mock_chain:
-            backfill_supergroups_lightweight_for_org(self.organization.id)
+            # Pass a project ID higher than any real project
+            backfill_supergroups_lightweight_for_org(
+                self.organization.id,
+                last_project_id=self.project.id + 9999,
+            )
 
+            mock_request.assert_not_called()
             mock_chain.assert_not_called()
 
     @patch(
@@ -215,19 +234,32 @@ class BackfillSupergroupsLightweightForOrgTest(TestCase):
             evt.group.substatus = GroupSubStatus.NEW
             evt.group.save(update_fields=["substatus"])
 
-        # First call: full batch, should self-chain
+        # First call: full batch, chains with same project and group cursor
         with patch(
             "sentry.tasks.seer.backfill_supergroups_lightweight.backfill_supergroups_lightweight_for_org.apply_async"
         ) as mock_chain:
             backfill_supergroups_lightweight_for_org(self.organization.id)
             mock_chain.assert_called_once()
             next_kwargs = mock_chain.call_args.kwargs["kwargs"]
+            assert next_kwargs["last_project_id"] == self.project.id
+            assert next_kwargs["last_group_id"] > 0
 
-        # Second call with the cursor: no groups left, should not chain
+        # Second call: no groups left in project, chains to next project
         mock_request.reset_mock()
         with patch(
             "sentry.tasks.seer.backfill_supergroups_lightweight.backfill_supergroups_lightweight_for_org.apply_async"
         ) as mock_chain:
             backfill_supergroups_lightweight_for_org(self.organization.id, **next_kwargs)
+            mock_request.assert_not_called()
+            mock_chain.assert_called_once()
+            final_kwargs = mock_chain.call_args.kwargs["kwargs"]
+            assert final_kwargs["last_group_id"] == 0
+
+        # Third call: no more projects, completes
+        mock_request.reset_mock()
+        with patch(
+            "sentry.tasks.seer.backfill_supergroups_lightweight.backfill_supergroups_lightweight_for_org.apply_async"
+        ) as mock_chain:
+            backfill_supergroups_lightweight_for_org(self.organization.id, **final_kwargs)
             mock_request.assert_not_called()
             mock_chain.assert_not_called()
