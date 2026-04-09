@@ -13,13 +13,25 @@ import {
   addLoadingMessage,
   clearIndicators,
 } from 'sentry/actionCreators/indicator';
+import {IconCellSignal} from 'sentry/components/badge/iconCellSignal';
+import {CMDKAction} from 'sentry/components/commandPalette/ui/cmdk';
+import {CommandPaletteSlot} from 'sentry/components/commandPalette/ui/commandPaletteSlot';
 import {IssueStreamHeaderLabel} from 'sentry/components/IssueStreamHeaderLabel';
 import {Sticky} from 'sentry/components/sticky';
+import {
+  IconCheckmark,
+  IconIssues,
+  IconMerge,
+  IconMute,
+  IconSliders,
+  IconStack,
+} from 'sentry/icons';
 import {t, tct, tn} from 'sentry/locale';
 import {GroupStore} from 'sentry/stores/groupStore';
 import {ProjectsStore} from 'sentry/stores/projectsStore';
 import type {PageFilters} from 'sentry/types/core';
 import type {Group} from 'sentry/types/group';
+import {GroupStatus, GroupSubstatus, PriorityLevel} from 'sentry/types/group';
 import {defined} from 'sentry/utils';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {uniq} from 'sentry/utils/array/uniq';
@@ -355,69 +367,117 @@ export function IssueListActions({
   }
 
   return (
-    <StickyActions>
-      <ActionsBarPriority
-        query={query}
-        queryCount={queryCount}
-        selection={selection}
-        statsPeriod={statsPeriod}
-        allInQuerySelected={allInQuerySelected}
-        pageSelected={pageSelected}
-        selectedIdsSet={selectedIdsSet}
-        displayReprocessingActions={displayReprocessingActions}
-        handleDelete={handleDelete}
-        handleMerge={handleMerge}
-        handleUpdate={handleUpdate}
-        toggleSelectAllVisible={toggleSelectAllVisible}
-        multiSelected={multiSelected}
-        narrowViewport={disableActions}
-        selectedProjectSlug={selectedProjectSlug}
-        isSavedSearchesOpen={isSavedSearchesOpen}
-        anySelected={anySelected}
-        onSelectStatsPeriod={onSelectStatsPeriod}
-      />
-      {!allResultsVisible && pageSelected && (
-        <Alert system variant="warning" showIcon={false}>
-          <Flex justify="center" wrap="wrap" gap="md">
-            {allInQuerySelected ? (
-              queryCount >= BULK_LIMIT ? (
-                tct(
-                  'Selected up to the first [count] issues that match this search query.',
-                  {
-                    count: BULK_LIMIT_STR,
-                  }
+    <Fragment>
+      <CommandPaletteSlot name="page">
+        <CMDKAction display={{label: t('Issue Feed'), icon: <IconIssues />}}>
+          <CMDKAction
+            display={{label: t('Select all'), icon: <IconStack />}}
+            onAction={() => {
+              toggleSelectAllVisible();
+              setAllInQuerySelected(true);
+            }}
+          >
+            <CMDKAction
+              display={{label: t('Resolve'), icon: <IconCheckmark />}}
+              onAction={() =>
+                handleUpdate({status: GroupStatus.RESOLVED, statusDetails: {}})
+              }
+            />
+            <CMDKAction
+              display={{label: t('Archive'), icon: <IconMute />}}
+              onAction={() =>
+                handleUpdate({
+                  status: GroupStatus.IGNORED,
+                  statusDetails: {},
+                  substatus: GroupSubstatus.ARCHIVED_UNTIL_ESCALATING,
+                })
+              }
+            />
+            <CMDKAction display={{label: t('Set Priority'), icon: <IconSliders />}}>
+              <CMDKAction
+                display={{label: t('High'), icon: <IconCellSignal bars={3} />}}
+                onAction={() => handleUpdate({priority: PriorityLevel.HIGH})}
+              />
+              <CMDKAction
+                display={{label: t('Medium'), icon: <IconCellSignal bars={2} />}}
+                onAction={() => handleUpdate({priority: PriorityLevel.MEDIUM})}
+              />
+              <CMDKAction
+                display={{label: t('Low'), icon: <IconCellSignal bars={1} />}}
+                onAction={() => handleUpdate({priority: PriorityLevel.LOW})}
+              />
+            </CMDKAction>
+            <CMDKAction
+              display={{label: t('Merge'), icon: <IconMerge />}}
+              onAction={handleMerge}
+            />
+          </CMDKAction>
+        </CMDKAction>
+      </CommandPaletteSlot>
+      <StickyActions>
+        <ActionsBarPriority
+          query={query}
+          queryCount={queryCount}
+          selection={selection}
+          statsPeriod={statsPeriod}
+          allInQuerySelected={allInQuerySelected}
+          pageSelected={pageSelected}
+          selectedIdsSet={selectedIdsSet}
+          displayReprocessingActions={displayReprocessingActions}
+          handleDelete={handleDelete}
+          handleMerge={handleMerge}
+          handleUpdate={handleUpdate}
+          toggleSelectAllVisible={toggleSelectAllVisible}
+          multiSelected={multiSelected}
+          narrowViewport={disableActions}
+          selectedProjectSlug={selectedProjectSlug}
+          isSavedSearchesOpen={isSavedSearchesOpen}
+          anySelected={anySelected}
+          onSelectStatsPeriod={onSelectStatsPeriod}
+        />
+        {!allResultsVisible && pageSelected && (
+          <Alert system variant="warning" showIcon={false}>
+            <Flex justify="center" wrap="wrap" gap="md">
+              {allInQuerySelected ? (
+                queryCount >= BULK_LIMIT ? (
+                  tct(
+                    'Selected up to the first [count] issues that match this search query.',
+                    {
+                      count: BULK_LIMIT_STR,
+                    }
+                  )
+                ) : (
+                  tct('Selected all [count] issues that match this search query.', {
+                    count: queryCount,
+                  })
                 )
               ) : (
-                tct('Selected all [count] issues that match this search query.', {
-                  count: queryCount,
-                })
-              )
-            ) : (
-              <Fragment>
-                {tn(
-                  '%s issue on this page selected.',
-                  '%s issues on this page selected.',
-                  numIssues
-                )}
+                <Fragment>
+                  {tn(
+                    '%s issue on this page selected.',
+                    '%s issues on this page selected.',
+                    numIssues
+                  )}
 
-                <a onClick={() => setAllInQuerySelected(true)}>
-                  {queryCount >= BULK_LIMIT
-                    ? tct(
-                        'Select the first [count] issues that match this search query.',
-                        {
-                          count: BULK_LIMIT_STR,
-                        }
-                      )
-                    : tct('Select all [count] issues that match this search query.', {
-                        count: queryCount,
-                      })}
-                </a>
-              </Fragment>
-            )}
-          </Flex>
-        </Alert>
-      )}
-    </StickyActions>
+                  <a onClick={() => setAllInQuerySelected(true)}>
+                    {queryCount >= BULK_LIMIT
+                      ? tct(
+                          'Select the first [count] issues that match this search query.',
+                          {
+                            count: BULK_LIMIT_STR,
+                          }
+                        )
+                      : tct('Select all [count] issues that match this search query.', {
+                          count: queryCount,
+                        })}
+                  </a>
+                </Fragment>
+              )}
+            </Flex>
+          </Alert>
+        )}
+      </StickyActions>
+    </Fragment>
   );
 }
 

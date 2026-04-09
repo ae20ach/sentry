@@ -11,7 +11,12 @@ describe('slot', () => {
     expect(SlotModule.Fallback).toBeDefined();
   });
 
-  it('renders children in place when no Outlet is registered', () => {
+  it('hides children in a detached container when no Outlet is registered', () => {
+    // Children are always portaled — to a stable hidden div before the outlet
+    // mounts, to the real outlet element once it registers. This prevents the
+    // in-place → portal type switch that would remount the subtree and lose
+    // component state (e.g. useId() keys). Content is intentionally invisible
+    // until an outlet is available.
     const SlotModule = slot(['header'] as const);
 
     render(
@@ -22,7 +27,7 @@ describe('slot', () => {
       </SlotModule.Provider>
     );
 
-    expect(screen.getByText('inline content')).toBeInTheDocument();
+    expect(screen.queryByText('inline content')).not.toBeInTheDocument();
   });
 
   it('portals children to the Outlet element', () => {
@@ -44,7 +49,7 @@ describe('slot', () => {
     );
   });
 
-  it('multiple slot consumers render their children independently', () => {
+  it('multiple slot consumers hide their children independently when no Outlet is registered', () => {
     const SlotModule = slot(['a', 'b'] as const);
 
     render(
@@ -58,8 +63,8 @@ describe('slot', () => {
       </SlotModule.Provider>
     );
 
-    expect(screen.getByText('slot a content')).toBeInTheDocument();
-    expect(screen.getByText('slot b content')).toBeInTheDocument();
+    expect(screen.queryByText('slot a content')).not.toBeInTheDocument();
+    expect(screen.queryByText('slot b content')).not.toBeInTheDocument();
   });
 
   it('consumer throws when rendered outside provider', () => {

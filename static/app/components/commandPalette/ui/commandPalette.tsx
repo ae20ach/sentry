@@ -90,7 +90,7 @@ export function CommandPalette(props: CommandPaletteProps) {
 
   const actions = useMemo<CMDKFlatItem[]>(() => {
     if (!state.query) {
-      return flattenActions(currentNodes, null);
+      return flattenActions(currentNodes, null, !state.action);
     }
 
     const scores = new Map<
@@ -99,7 +99,7 @@ export function CommandPalette(props: CommandPaletteProps) {
     >();
     scoreTree(currentNodes, scores, state.query.toLowerCase());
     return flattenActions(currentNodes, scores);
-  }, [currentNodes, state.query]);
+  }, [currentNodes, state.query, state.action]);
 
   const analytics = useCommandPaletteAnalytics(actions.length);
 
@@ -459,12 +459,21 @@ function scoreTree(
   }
 }
 
+// Maximum number of children to show per group, in both browse and search mode.
+// Prevents groups with many items (e.g. per-project settings on large orgs)
+// from flooding the results list.
+const MAX_GROUP_CHILDREN = 4;
+
 function flattenActions(
   nodes: Array<CollectionTreeNode<CMDKActionData>>,
   scores: Map<
     string,
     {node: CollectionTreeNode<CMDKActionData>; score: {matched: boolean; score: number}}
-  > | null
+  > | null,
+  // Only expand groups inline at the true root level. When the user has
+  // navigated into a group, nested groups should appear as navigable actions
+  // rather than being pre-expanded as section headers with their children.
+  expandGroups = true
 ): CMDKFlatItem[] {
   // Browse mode: show each top-level node and its direct children.
   if (!scores) {
@@ -476,11 +485,19 @@ function flattenActions(
       if (!isGroup && !('to' in node) && !('onAction' in node)) {
         continue;
       }
-      results.push({...node, listItemType: isGroup ? 'section' : 'action'});
-      if (isGroup) {
-        for (const child of node.children) {
+      if (isGroup && expandGroups) {
+        // Expand the group inline: render it as a section header followed by
+        // its direct children. This only happens at the true root level so
+        // that nested groups (e.g. "Set Priority" inside "Select All") are
+        // shown as navigable actions rather than pre-expanded sections.
+        results.push({...node, listItemType: 'section'});
+        for (const child of node.children.slice(0, MAX_GROUP_CHILDREN)) {
           results.push({...child, listItemType: 'action'});
         }
+      } else {
+        // Leaf action or a group that should not be expanded inline — treat
+        // as a single navigable item regardless.
+        results.push({...node, listItemType: 'action'});
       }
     }
     return results;
@@ -526,6 +543,7 @@ function flattenActions(
               (scores.get(b.key)?.score.score ?? 0) -
               (scores.get(a.key)?.score.score ?? 0)
           )
+          .slice(0, MAX_GROUP_CHILDREN)
           .map(c => ({...c, listItemType: 'action' as const})),
       ];
     }
