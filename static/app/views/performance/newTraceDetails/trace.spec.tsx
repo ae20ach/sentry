@@ -1593,11 +1593,11 @@ describe('trace view', () => {
         await searchToHaveResult(/^2\//);
         await assertHighlightedRowAtIndex(container, 2);
 
-        await userEvent.clear(searchInput);
         await userEvent.click(searchInput);
+        await userEvent.keyboard('{Control>}a{/Control}');
         await userEvent.paste('transact');
         await waitFor(() => expect(searchInput).toHaveValue('transact'));
-        await searchToHaveResult(/^\d+\/11$/);
+        await searchToHaveResult(/^2\/11$/);
 
         // Highlighting is persisted on the row
         await assertHighlightedRowAtIndex(container, 2);
