@@ -627,13 +627,15 @@ def make_result[T](
 
 
 def map_repository(raw: dict[str, Any]) -> GitRepository:
+    statistics = raw.get("statistics")
+    repo_size = statistics.get("repository_size", 0) if statistics else 0
     return GitRepository(
         full_name=raw["path_with_namespace"],
         default_branch=raw["default_branch"],
         clone_url=raw["http_url_to_repo"],
         private=raw["visibility"] != "public",
         # GitLab returns size in bytes. We convert to kB to match GitHub
-        size=raw["statistics"]["repository_size"] // 1000,
+        size=repo_size // 1000,
     )
 
 
