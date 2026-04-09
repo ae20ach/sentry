@@ -382,14 +382,14 @@ class GitHubIntegration(
     ) -> tuple[list[RepositoryInfo], bool]:
         """Paginate over the cached accessible-repos list.
 
-        Always serves from ``get_accessible_repos_cached()`` so every
-        page is fast after the initial cache warm-up. If the cache
-        expires between page fetches the underlying list can change,
+        Always serves from ``get_repos_cached()`` so every page is
+        fast after the initial cache warm-up. If the cache expires
+        between page fetches the underlying list can change,
         which may cause duplicates or skipped repos across pages.
         This is acceptable for infinite-scroll consumers.
         """
         client = self.get_client()
-        all_repos = client.get_accessible_repos_cached()
+        all_repos = client.get_repos_cached()
         repos = [r for r in all_repos if not r.get("archived")]
 
         page = repos[offset : offset + per_page]

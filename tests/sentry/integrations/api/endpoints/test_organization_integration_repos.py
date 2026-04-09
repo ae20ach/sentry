@@ -373,7 +373,7 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
         )
 
     @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
     )
     def test_first_page(self, mock_cache: MagicMock) -> None:
         mock_cache.return_value = CACHED_REPOS
@@ -389,7 +389,7 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
         assert 'results="true"' in response["Link"].split("next")[1]
 
     @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
     )
     def test_second_page(self, mock_cache: MagicMock) -> None:
         mock_cache.return_value = CACHED_REPOS
@@ -404,7 +404,7 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
         assert repos[1]["identifier"] == "Example/repo-4"
 
     @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
     )
     def test_last_page(self, mock_cache: MagicMock) -> None:
         mock_cache.return_value = CACHED_REPOS
@@ -421,7 +421,7 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
         assert 'results="false"' in next_part
 
     @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
     )
     def test_excludes_archived(self, mock_cache: MagicMock) -> None:
         mock_cache.return_value = [
@@ -436,7 +436,7 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
         assert repos[0]["identifier"] == "Example/active"
 
     @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
     )
     def test_installable_only(self, mock_cache: MagicMock) -> None:
         mock_cache.return_value = [
@@ -459,7 +459,7 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
         assert repos[0]["isInstalled"] is False
 
     @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
     )
     def test_no_cursor_on_single_page(self, mock_cache: MagicMock) -> None:
         """When all repos fit in one page, no Link header is added."""
@@ -480,7 +480,7 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
         response = self.client.get(self.path, format="json")
 
         assert response.status_code == 200, response.content
-        get_repositories.assert_called_once_with(None, accessible_only=False)
+        get_repositories.assert_called_once_with(None, accessible_only=False, use_cache=False)
         assert "Link" not in response
 
     @patch(
@@ -496,11 +496,11 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
         )
 
         assert response.status_code == 200, response.content
-        get_repositories.assert_called_once_with("repo", accessible_only=False)
+        get_repositories.assert_called_once_with("repo", accessible_only=False, use_cache=False)
         assert "Link" not in response
 
     @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
     )
     def test_per_page_zero_clamped_to_one(self, mock_cache: MagicMock) -> None:
         mock_cache.return_value = CACHED_REPOS
@@ -510,7 +510,7 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
         assert len(response.data["repos"]) == 1
 
     @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
     )
     def test_per_page_negative_clamped_to_one(self, mock_cache: MagicMock) -> None:
         mock_cache.return_value = CACHED_REPOS
@@ -520,7 +520,7 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
         assert len(response.data["repos"]) == 1
 
     @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
     )
     def test_per_page_non_numeric_defaults_to_100(self, mock_cache: MagicMock) -> None:
         mock_cache.return_value = CACHED_REPOS
@@ -530,7 +530,7 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
         assert len(response.data["repos"]) == 5
 
     @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
     )
     def test_per_page_over_max_clamped_to_100(self, mock_cache: MagicMock) -> None:
         mock_cache.return_value = CACHED_REPOS
@@ -540,7 +540,7 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
         assert len(response.data["repos"]) == 5
 
     @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
     )
     def test_negative_cursor_offset_clamped_to_zero(self, mock_cache: MagicMock) -> None:
         mock_cache.return_value = CACHED_REPOS
@@ -554,7 +554,7 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
         assert repos[0]["identifier"] == "Example/repo-1"
 
     @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
     )
     def test_integration_error_returns_400(self, mock_cache: MagicMock) -> None:
         from sentry.shared_integrations.exceptions import IntegrationError
