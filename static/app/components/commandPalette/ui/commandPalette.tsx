@@ -420,9 +420,21 @@ function scoreNode(
   const label = node.display.label;
   const details = node.display.details ?? '';
   const keywords = node.keywords ?? [];
-  const candidates = [label, details, ...keywords].join(' ');
-  const result = fzf(candidates, query, false);
-  return {matched: result.end !== -1, score: result.score};
+
+  // Score each field independently and take the best result. This lets
+  // fzf's built-in exact-match bonus fire naturally (e.g. query === label)
+  // and avoids false cross-field subsequence matches from string concatenation.
+  let best = -Infinity;
+  let matched = false;
+  for (const candidate of [label, details, ...keywords]) {
+    if (!candidate) continue;
+    const result = fzf(candidate, query, false);
+    if (result.end !== -1 && result.score > best) {
+      best = result.score;
+      matched = true;
+    }
+  }
+  return {matched, score: matched ? best : 0};
 }
 
 function scoreTree(
