@@ -1,9 +1,9 @@
 declare namespace jest {
   interface It {
     /**
-     * Marks a test as a known flake. When the RERUN_KNOWN_FLAKY_TESTS env var
-     * is set (via the "Frontend: Rerun Flaky Tests" PR label), the test runs
-     * 50x to validate that a fix is stable. Otherwise it runs once, normally.
+     * When RERUN_KNOWN_FLAKY_TESTS is "true" (set by the "Frontend: Rerun Flaky
+     * Tests" PR label), the test runs several times under each stress profile.
+     * Otherwise it runs once, behaving identically to a normal `it()`.
      *
      * Available globally — no import needed.
      */

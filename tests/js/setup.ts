@@ -16,6 +16,7 @@ import {MotionGlobalConfig} from 'framer-motion';
 import {enableFetchMocks} from 'jest-fetch-mock';
 import {ConfigFixture} from 'sentry-fixture/config';
 
+import {isKnownFlake} from 'sentry-test/isKnownFlake/index';
 import {resetMockDate} from 'sentry-test/utils';
 
 // eslint-disable-next-line jest/no-mocks-import
@@ -396,30 +397,4 @@ if (typeof globalThis.setImmediate === 'undefined') {
   globalThis.clearImmediate = clearTimeout;
 }
 
-/**
- * it.isKnownFlake — wraps a known-flaky test for stress-testing in CI.
- *
- * When RERUN_KNOWN_FLAKY_TESTS is "true" (set by the "Frontend: Rerun Flaky
- * Tests" PR label), the test runs 50x inside a describe block. Otherwise it
- * runs once, behaving identically to a normal `it()`.
- */
-const FLAKY_RERUN_COUNT = 50;
-
-/* eslint-disable jest/valid-title */
-it.isKnownFlake = function isKnownFlake(
-  name: string,
-  fn: jest.ProvidesCallback,
-  timeout?: number
-) {
-  if (process.env.RERUN_KNOWN_FLAKY_TESTS !== 'true') {
-    it(name, fn, timeout);
-    return;
-  }
-
-  describe(`[flaky rerun x${FLAKY_RERUN_COUNT}] ${name}`, () => {
-    for (let i = 1; i <= FLAKY_RERUN_COUNT; i++) {
-      it(`run ${i}/${FLAKY_RERUN_COUNT}`, fn, timeout);
-    }
-  });
-};
-/* eslint-enable jest/valid-title */
+it.isKnownFlake = isKnownFlake;

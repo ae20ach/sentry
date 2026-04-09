@@ -31,6 +31,7 @@ const testingEntryPoints = [
   'static/**/*.spec.{js,ts,tsx}',
   'static/**/*.snapshots.tsx',
   'tests/js/**/*.spec.{js,ts,tsx}',
+  'tests/js/sentry-test/isKnownFlake/index.ts',
   // jest uses this
   'tests/js/test-balancer/index.js',
 ];
