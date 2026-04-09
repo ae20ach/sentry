@@ -87,6 +87,21 @@ class BaseRepositoryIntegration(ABC):
         """
         raise NotImplementedError
 
+    def get_repositories_paginated(
+        self,
+        offset: int = 0,
+        per_page: int = 100,
+    ) -> tuple[list[RepositoryInfo], bool] | None:
+        """
+        Return a page of repositories and whether more pages exist.
+
+        Returns ``(repos, has_next)`` for providers that support
+        paginated browsing, or ``None`` if the provider does not
+        implement pagination (callers should fall back to
+        ``get_repositories()``).
+        """
+        return None
+
 
 ClientT = TypeVar("ClientT", bound="RepositoryClient", default="RepositoryClient")
 

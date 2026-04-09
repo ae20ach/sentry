@@ -1,6 +1,23 @@
 from unittest.mock import MagicMock, patch
 
+from sentry.integrations.github.client import CachedRepo
 from sentry.testutils.cases import APITestCase
+
+
+def _make_cached_repo(
+    id: int,
+    name: str,
+    full_name: str,
+    default_branch: str | None = "main",
+    archived: bool = False,
+) -> CachedRepo:
+    return {
+        "id": id,
+        "name": name,
+        "full_name": full_name,
+        "default_branch": default_branch,
+        "archived": archived,
+    }
 
 
 class OrganizationIntegrationReposTest(APITestCase):
@@ -335,3 +352,151 @@ class OrganizationIntegrationReposTest(APITestCase):
         response = self.client.get(path, format="json")
 
         assert response.status_code == 400
+
+
+CACHED_REPOS = [_make_cached_repo(i, f"repo-{i}", f"Example/repo-{i}") for i in range(1, 6)]
+
+
+class OrganizationIntegrationReposPaginatedTest(APITestCase):
+    """Tests for cursor-based pagination triggered by sending per_page."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.login_as(user=self.user)
+        self.org = self.create_organization(owner=self.user, name="baz")
+        self.project = self.create_project(organization=self.org)
+        self.integration = self.create_integration(
+            organization=self.org, provider="github", name="Example", external_id="github:1"
+        )
+        self.path = (
+            f"/api/0/organizations/{self.org.slug}/integrations/{self.integration.id}/repos/"
+        )
+
+    @patch(
+        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+    )
+    def test_first_page(self, mock_cache: MagicMock) -> None:
+        mock_cache.return_value = CACHED_REPOS
+        response = self.client.get(self.path, data={"per_page": "2"}, format="json")
+
+        assert response.status_code == 200, response.content
+        repos = response.data["repos"]
+        assert len(repos) == 2
+        assert repos[0]["identifier"] == "Example/repo-1"
+        assert repos[1]["identifier"] == "Example/repo-2"
+        assert response.data["searchable"] is True
+        assert 'rel="next"' in response["Link"]
+        assert 'results="true"' in response["Link"].split("next")[1]
+
+    @patch(
+        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+    )
+    def test_second_page(self, mock_cache: MagicMock) -> None:
+        mock_cache.return_value = CACHED_REPOS
+        response = self.client.get(
+            self.path, data={"per_page": "2", "cursor": "0:2:0"}, format="json"
+        )
+
+        assert response.status_code == 200, response.content
+        repos = response.data["repos"]
+        assert len(repos) == 2
+        assert repos[0]["identifier"] == "Example/repo-3"
+        assert repos[1]["identifier"] == "Example/repo-4"
+
+    @patch(
+        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+    )
+    def test_last_page(self, mock_cache: MagicMock) -> None:
+        mock_cache.return_value = CACHED_REPOS
+        response = self.client.get(
+            self.path, data={"per_page": "2", "cursor": "0:4:0"}, format="json"
+        )
+
+        assert response.status_code == 200, response.content
+        repos = response.data["repos"]
+        assert len(repos) == 1
+        assert repos[0]["identifier"] == "Example/repo-5"
+        link = response["Link"]
+        next_part = link.split("next")[1]
+        assert 'results="false"' in next_part
+
+    @patch(
+        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+    )
+    def test_excludes_archived(self, mock_cache: MagicMock) -> None:
+        mock_cache.return_value = [
+            _make_cached_repo(1, "active", "Example/active"),
+            _make_cached_repo(2, "archived", "Example/archived", archived=True),
+        ]
+        response = self.client.get(self.path, data={"per_page": "100"}, format="json")
+
+        assert response.status_code == 200, response.content
+        repos = response.data["repos"]
+        assert len(repos) == 1
+        assert repos[0]["identifier"] == "Example/active"
+
+    @patch(
+        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+    )
+    def test_installable_only(self, mock_cache: MagicMock) -> None:
+        mock_cache.return_value = [
+            _make_cached_repo(1, "installed-repo", "Example/installed-repo"),
+            _make_cached_repo(2, "available-repo", "Example/available-repo"),
+        ]
+        self.create_repo(
+            project=self.project,
+            integration_id=self.integration.id,
+            name="Example/installed-repo",
+        )
+        response = self.client.get(
+            self.path, data={"per_page": "100", "installableOnly": "true"}, format="json"
+        )
+
+        assert response.status_code == 200, response.content
+        repos = response.data["repos"]
+        assert len(repos) == 1
+        assert repos[0]["identifier"] == "Example/available-repo"
+        assert repos[0]["isInstalled"] is False
+
+    @patch(
+        "sentry.integrations.github.client.GitHubBaseClient.get_accessible_repos_cached",
+    )
+    def test_no_cursor_on_single_page(self, mock_cache: MagicMock) -> None:
+        """When all repos fit in one page, no Link header is added."""
+        mock_cache.return_value = [_make_cached_repo(1, "repo-1", "Example/repo-1")]
+        response = self.client.get(self.path, data={"per_page": "100"}, format="json")
+
+        assert response.status_code == 200, response.content
+        assert "Link" not in response
+
+    @patch(
+        "sentry.integrations.github.integration.GitHubIntegration.get_repositories",
+        return_value=[],
+    )
+    def test_without_per_page_uses_full_list(self, get_repositories: MagicMock) -> None:
+        """Without per_page, existing behavior: full list, no pagination."""
+        get_repositories.return_value = [
+            {"name": "repo-1", "identifier": "Example/repo-1", "default_branch": "main"},
+        ]
+        response = self.client.get(self.path, format="json")
+
+        assert response.status_code == 200, response.content
+        get_repositories.assert_called_once_with(None, accessible_only=False)
+        assert "Link" not in response
+
+    @patch(
+        "sentry.integrations.github.integration.GitHubIntegration.get_repositories",
+        return_value=[],
+    )
+    def test_search_with_per_page_uses_full_list(self, get_repositories: MagicMock) -> None:
+        """When search is present, per_page is ignored — full list returned."""
+        get_repositories.return_value = [
+            {"name": "repo-1", "identifier": "Example/repo-1", "default_branch": "main"},
+        ]
+        response = self.client.get(
+            self.path, data={"search": "repo", "per_page": "2"}, format="json"
+        )
+
+        assert response.status_code == 200, response.content
+        get_repositories.assert_called_once_with("repo", accessible_only=False)
+        assert "Link" not in response
