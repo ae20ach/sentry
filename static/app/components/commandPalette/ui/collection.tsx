@@ -164,6 +164,7 @@ export function makeCollection<T>(): CollectionInstance<T> {
       return () => {
         store.unregister(key);
       };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [key, parentKey, store]);
 
     return key;

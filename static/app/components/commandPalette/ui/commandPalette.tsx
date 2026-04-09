@@ -504,11 +504,6 @@ function scoreTree(
   }
 }
 
-// Maximum number of children to show per group, in both browse and search mode.
-// Prevents groups with many items (e.g. per-project settings on large orgs)
-// from flooding the results list.
-const MAX_GROUP_CHILDREN = 4;
-
 function flattenActions(
   nodes: Array<CollectionTreeNode<CMDKActionData>>,
   scores: Map<
@@ -536,7 +531,9 @@ function flattenActions(
         // that nested groups (e.g. "Set Priority" inside "Select All") are
         // shown as navigable actions rather than pre-expanded sections.
         results.push({...node, listItemType: 'section'});
-        for (const child of node.children.slice(0, MAX_GROUP_CHILDREN)) {
+        for (const child of node.limit === undefined
+          ? node.children
+          : node.children.slice(0, node.limit)) {
           results.push({...child, listItemType: 'action'});
         }
       } else {
@@ -588,7 +585,7 @@ function flattenActions(
               (scores.get(b.key)?.score.score ?? 0) -
               (scores.get(a.key)?.score.score ?? 0)
           )
-          .slice(0, MAX_GROUP_CHILDREN)
+          .slice(0, item.limit)
           .map(c => ({...c, listItemType: 'action' as const})),
       ];
     }

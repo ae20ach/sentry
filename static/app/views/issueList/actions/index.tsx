@@ -21,6 +21,7 @@ import {CommandPaletteSlot} from 'sentry/components/commandPalette/ui/commandPal
 import {ErrorLevel} from 'sentry/components/events/errorLevel';
 import {IssueStreamHeaderLabel} from 'sentry/components/IssueStreamHeaderLabel';
 import {Sticky} from 'sentry/components/sticky';
+import {TimeSince} from 'sentry/components/timeSince';
 import {
   IconCheckmark,
   IconIssues,
@@ -441,8 +442,8 @@ export function IssueListActions({
 
   return (
     <Fragment>
-      <CommandPaletteSlot name="page">
-        <CMDKAction display={{label: t('Issue Feed'), icon: <IconIssues />}}>
+      <CommandPaletteSlot name="task">
+        <CMDKAction display={{label: t('Issue Feed'), icon: <IconIssues />}} limit={6}>
           <CMDKAction
             display={{label: t('Select all'), icon: <IconStack />}}
             onAction={() => {
@@ -516,6 +517,8 @@ export function IssueListActions({
               />
             ))}
           </CMDKAction>
+        </CMDKAction>
+        <CMDKAction display={{label: t('Issues'), icon: <IconIssues />}} limit={6}>
           {groupIds.map(id => {
             const group = GroupStore.get(id);
             if (!group) return null;
@@ -525,7 +528,11 @@ export function IssueListActions({
             const labelText = errorType
               ? `${errorType}: ${errorValue ?? ''}`
               : group.title;
-            const detailsText = [group.project.slug, group.level, group.assignedTo?.name]
+            const detailsText = [
+              group.project.slug,
+              group.assignedTo ? `assigned to ${group.assignedTo.name}` : 'unassigned',
+              group.substatus,
+            ]
               .filter(Boolean)
               .join(' ');
 
@@ -556,14 +563,22 @@ export function IssueListActions({
                   details: (
                     <Flex align="center" gap="xs">
                       <ProjectAvatar project={group.project} size={12} />
-                      <Text as="span" size="xs" ellipsis>
-                        {group.project.slug}
+                      <Text as="span" size="xs" variant="muted" ellipsis>
+                        {group.project.slug},{' '}
+                        {group.assignedTo
+                          ? tct('assigned to: [name]', {name: group.assignedTo.name})
+                          : t('Unassigned')}
+                        {', '}
+                        <TimeSince
+                          date={group.lastSeen}
+                          disabledAbsoluteTooltip
+                          unitStyle="extraShort"
+                        />
+                        {(group.substatus === GroupSubstatus.ESCALATING ||
+                          group.substatus === GroupSubstatus.ONGOING ||
+                          group.substatus === GroupSubstatus.REGRESSED) &&
+                          `, ${group.substatus}`}
                       </Text>
-                      {group.assignedTo && (
-                        <Text as="span" size="xs" variant="muted" ellipsis>
-                          {group.assignedTo.name}
-                        </Text>
-                      )}
                     </Flex>
                   ),
                   searchableDetails: detailsText,

@@ -106,13 +106,15 @@ export function GlobalCommandPaletteActions() {
             to={`${prefix}/issues/feedback/`}
           />
           <CMDKAction display={{label: t('All Views')}} to={`${prefix}/issues/views/`} />
-          {starredViews.map(starredView => (
-            <CMDKAction
-              key={starredView.id}
-              display={{label: starredView.label, icon: <IconStar />}}
-              to={`${prefix}/issues/views/${starredView.id}/`}
-            />
-          ))}
+          <CMDKAction display={{label: t('Starred Views'), icon: <IconStar />}}>
+            {starredViews.map(starredView => (
+              <CMDKAction
+                key={starredView.id}
+                display={{label: starredView.label}}
+                to={`${prefix}/issues/views/${starredView.id}/`}
+              />
+            ))}
+          </CMDKAction>
         </CMDKAction>
 
         <CMDKAction display={{label: t('Explore'), icon: <IconCompass />}}>
@@ -206,7 +208,10 @@ export function GlobalCommandPaletteActions() {
           )}
         </CMDKAction>
 
-        <CMDKAction display={{label: t('Project Settings'), icon: <IconSettings />}}>
+        <CMDKAction
+          display={{label: t('Project Settings'), icon: <IconSettings />}}
+          limit={10}
+        >
           {projects.map(project => (
             <CMDKAction
               key={project.id}
@@ -218,45 +223,39 @@ export function GlobalCommandPaletteActions() {
             />
           ))}
         </CMDKAction>
-
-        {user.isStaff && (
-          <CMDKAction display={{label: t('Admin')}}>
-            <CMDKAction
-              display={{label: t('Open _admin'), icon: <IconOpen />}}
-              keywords={[t('superuser')]}
-              onAction={() => window.open('/_admin/', '_blank', 'noreferrer')}
-            />
-            <CMDKAction
-              display={{
-                label: t('Open %s in _admin', organization.name),
-                icon: <IconOpen />,
-              }}
-              keywords={[t('superuser')]}
-              onAction={() =>
-                window.open(
-                  `/_admin/customers/${organization.slug}/`,
-                  '_blank',
-                  'noreferrer'
-                )
-              }
-            />
-            {!isActiveSuperuser() && (
-              <CMDKAction
-                display={{label: t('Open Superuser Modal'), icon: <IconLock locked />}}
-                keywords={[t('superuser')]}
-                onAction={() => openSudo({isSuperuser: true, needsReload: true})}
-              />
-            )}
-            {isActiveSuperuser() && (
-              <CMDKAction
-                display={{label: t('Exit Superuser'), icon: <IconLock locked={false} />}}
-                keywords={[t('superuser')]}
-                onAction={() => exitSuperuser()}
-              />
-            )}
-          </CMDKAction>
-        )}
       </CMDKAction>
+
+      {user.isStaff && (
+        <CMDKAction display={{label: t('Admin')}}>
+          <CMDKAction
+            display={{label: t('Open _admin'), icon: <IconOpen />}}
+            keywords={[t('superuser')]}
+            to="/_admin/"
+          />
+          <CMDKAction
+            display={{
+              label: t('Open %s in _admin', organization.name),
+              icon: <IconOpen />,
+            }}
+            keywords={[t('superuser')]}
+            to={`/_admin/customers/${organization.slug}/`}
+          />
+          {!isActiveSuperuser() && (
+            <CMDKAction
+              display={{label: t('Open Superuser Modal'), icon: <IconLock locked />}}
+              keywords={[t('superuser')]}
+              onAction={() => openSudo({isSuperuser: true, needsReload: true})}
+            />
+          )}
+          {isActiveSuperuser() && (
+            <CMDKAction
+              display={{label: t('Exit Superuser'), icon: <IconLock locked={false} />}}
+              keywords={[t('superuser')]}
+              onAction={() => exitSuperuser()}
+            />
+          )}
+        </CMDKAction>
+      )}
 
       <CMDKAction display={{label: t('Add')}}>
         <CMDKAction
@@ -280,6 +279,7 @@ export function GlobalCommandPaletteActions() {
         <CMDKAction
           display={{label: t('Project DSN Keys'), icon: <IconLock locked />}}
           keywords={[t('client keys'), t('dsn keys')]}
+          limit={10}
         >
           {projects.map(project => (
             <CMDKAction
@@ -392,7 +392,7 @@ export function GlobalCommandPaletteActions() {
         </CMDKAction>
       </CMDKAction>
 
-      <CMDKAction display={{label: t('Interface')}}>
+      <CMDKAction display={{label: t('UI')}}>
         <CMDKAction display={{label: t('Change Color Theme')}}>
           <CMDKAction
             display={{label: t('System')}}
