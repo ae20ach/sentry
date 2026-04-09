@@ -237,6 +237,16 @@ function getVirtualizedRows(container: HTMLElement) {
   return Array.from(container.querySelectorAll(VISIBLE_TRACE_ROW_SELECTOR));
 }
 
+/** Waits until placeholder rows are gone; on failure prints the list for debugging. */
+async function traceVirtualizedRowsToLoad(virtualizedContainer: HTMLElement) {
+  try {
+    await within(virtualizedContainer).findAllByText(/transaction-op-/i);
+  } catch (e) {
+    printVirtualizedList(virtualizedContainer);
+    throw e;
+  }
+}
+
 async function keyboardNavigationTestSetup() {
   mockPerformanceSubscriptionDetailsResponse();
   mockProjectDetailsResponse();
@@ -284,13 +294,7 @@ async function keyboardNavigationTestSetup() {
   const virtualizedContainer = getVirtualizedContainer();
   const virtualizedScrollContainer = getVirtualizedScrollContainer();
 
-  // Awaits for the placeholder rendering rows to be removed
-  try {
-    await within(virtualizedContainer).findAllByText(/transaction-op-/i);
-  } catch (e) {
-    printVirtualizedList(virtualizedContainer);
-    throw e;
-  }
+  await traceVirtualizedRowsToLoad(virtualizedContainer);
   return {...value, virtualizedContainer, virtualizedScrollContainer};
 }
 
@@ -344,13 +348,7 @@ async function pageloadTestSetup() {
   const virtualizedContainer = getVirtualizedContainer();
   const virtualizedScrollContainer = getVirtualizedScrollContainer();
 
-  // Awaits for the placeholder rendering rows to be removed
-  try {
-    await within(virtualizedContainer).findAllByText(/transaction-op-/i);
-  } catch (e) {
-    printVirtualizedList(virtualizedContainer);
-    throw e;
-  }
+  await traceVirtualizedRowsToLoad(virtualizedContainer);
   return {...value, virtualizedContainer, virtualizedScrollContainer};
 }
 
@@ -403,13 +401,7 @@ async function nestedTransactionsTestSetup() {
   const virtualizedContainer = getVirtualizedContainer();
   const virtualizedScrollContainer = getVirtualizedScrollContainer();
 
-  // Awaits for the placeholder rendering rows to be removed
-  try {
-    await within(virtualizedContainer).findAllByText(/transaction-op-/i);
-  } catch (e) {
-    printVirtualizedList(virtualizedContainer);
-    throw e;
-  }
+  await traceVirtualizedRowsToLoad(virtualizedContainer);
   return {...value, virtualizedContainer, virtualizedScrollContainer};
 }
 
@@ -462,13 +454,7 @@ async function searchTestSetup() {
   const virtualizedContainer = getVirtualizedContainer();
   const virtualizedScrollContainer = getVirtualizedScrollContainer();
 
-  // Awaits for the placeholder rendering rows to be removed
-  try {
-    await within(virtualizedContainer).findAllByText(/transaction-op-/i);
-  } catch (e) {
-    printVirtualizedList(virtualizedContainer);
-    throw e;
-  }
+  await traceVirtualizedRowsToLoad(virtualizedContainer);
   return {...value, virtualizedContainer, virtualizedScrollContainer};
 }
 
@@ -525,13 +511,7 @@ async function simpleTestSetup() {
   const virtualizedContainer = getVirtualizedContainer();
   const virtualizedScrollContainer = getVirtualizedScrollContainer();
 
-  // Awaits for the placeholder rendering rows to be removed
-  try {
-    await within(virtualizedContainer).findAllByText(/transaction-op-/i);
-  } catch (e) {
-    printVirtualizedList(virtualizedContainer);
-    throw e;
-  }
+  await traceVirtualizedRowsToLoad(virtualizedContainer);
   return {...value, virtualizedContainer, virtualizedScrollContainer};
 }
 
@@ -740,13 +720,7 @@ async function completeTestSetup() {
   const virtualizedContainer = getVirtualizedContainer();
   const virtualizedScrollContainer = getVirtualizedScrollContainer();
 
-  // Awaits for the placeholder rendering rows to be removed
-  try {
-    await within(virtualizedContainer).findAllByText(/transaction-op-/i);
-  } catch (e) {
-    printVirtualizedList(virtualizedContainer);
-    throw e;
-  }
+  await traceVirtualizedRowsToLoad(virtualizedContainer);
   return {...value, virtualizedContainer, virtualizedScrollContainer};
 }
 
