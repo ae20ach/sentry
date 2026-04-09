@@ -373,8 +373,10 @@ export function IssueListActions({
           <CMDKAction
             display={{label: t('Select all'), icon: <IconStack />}}
             onAction={() => {
-              toggleSelectAllVisible();
-              setAllInQuerySelected(true);
+              if (!allInQuerySelected) {
+                toggleSelectAllVisible();
+                setAllInQuerySelected(true);
+              }
             }}
           >
             <CMDKAction
