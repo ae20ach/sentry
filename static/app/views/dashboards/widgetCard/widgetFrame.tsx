@@ -154,7 +154,7 @@ export function WidgetFrame(props: WidgetFrameProps) {
       Visualization={
         props.error ? (
           <Container position="absolute" inset={0}>
-            <Widget.WidgetError error={error} />
+            <Widget.WidgetError />
           </Container>
         ) : (
           props.children

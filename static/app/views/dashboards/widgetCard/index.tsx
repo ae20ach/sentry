@@ -351,11 +351,7 @@ function WidgetCard(props: Props) {
     return (
       <Widget
         Title={<Widget.WidgetTitle title={widget.title} />}
-        Visualization={
-          <Widget.WidgetError
-            error={t("Something went wrong with this widget, we're looking into it!")}
-          />
-        }
+        Visualization={<Widget.WidgetError />}
         noVisualizationPadding
       />
     );

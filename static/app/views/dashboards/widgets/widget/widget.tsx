@@ -85,9 +85,9 @@ function WidgetLayout(props: Widget) {
       {props.Visualization && (
         <VisualizationWrapper noPadding={props.noVisualizationPadding}>
           <ErrorBoundary
-            customComponent={({error}) => (
+            customComponent={() => (
               <Container position="absolute" inset={0}>
-                <WidgetError error={error ?? undefined} />
+                <WidgetError />
               </Container>
             )}
           >
@@ -98,9 +98,7 @@ function WidgetLayout(props: Widget) {
 
       {props.Footer && (
         <FooterWrapper noPadding={props.noFooterPadding}>
-          <ErrorBoundary
-            customComponent={({error}) => <WidgetError error={error ?? undefined} />}
-          >
+          <ErrorBoundary customComponent={() => <WidgetError />}>
             {props.Footer}
           </ErrorBoundary>
         </FooterWrapper>

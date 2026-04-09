@@ -163,7 +163,7 @@ export function WidgetCardChartContainer({
             onWidgetError(widget, errorOrEmptyMessage);
           }
 
-          return <Widget.WidgetError error={errorOrEmptyMessage} />;
+          return <Widget.WidgetError />;
         }
 
         return (

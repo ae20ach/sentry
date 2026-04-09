@@ -3,26 +3,12 @@ import styled from '@emotion/styled';
 import {IconWarning} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {DEEMPHASIS_VARIANT} from 'sentry/views/dashboards/widgets/bigNumberWidget/settings';
-import type {
-  ErrorPropWithResponseJSON,
-  StateProps,
-} from 'sentry/views/dashboards/widgets/common/types';
 
-interface WidgetErrorProps {
-  error: StateProps['error'];
-}
-
-export function WidgetError({error}: WidgetErrorProps) {
+export function WidgetError() {
   return (
     <Panel>
       <NonShrinkingWarningIcon variant={DEEMPHASIS_VARIANT} size="md" />
-      <ErrorText>
-        {typeof error === 'string'
-          ? error
-          : ((error as ErrorPropWithResponseJSON)?.responseJSON?.detail.toString() ??
-            error?.message ??
-            t('Error loading data.'))}
-      </ErrorText>
+      <ErrorText>{t('There was an error loading this widget.')}</ErrorText>
     </Panel>
   );
 }
