@@ -286,7 +286,7 @@ async function keyboardNavigationTestSetup() {
 
   // Awaits for the placeholder rendering rows to be removed
   try {
-    await within(virtualizedContainer).findAllByText(/transaction-op-/i, undefined);
+    await within(virtualizedContainer).findAllByText(/transaction-op-/i);
   } catch (e) {
     printVirtualizedList(virtualizedContainer);
     throw e;
