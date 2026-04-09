@@ -5,13 +5,11 @@ import type {Organization} from 'sentry/types/organization';
 import {getApiUrl} from 'sentry/utils/api/getApiUrl';
 import {coaleseIssueStatsPeriodQuery} from 'sentry/utils/feedback/coaleseIssueStatsPeriodQuery';
 import {useApiQuery, type UseApiQueryResult} from 'sentry/utils/queryClient';
-import {decodeScalar} from 'sentry/utils/queryString';
 import type {RequestError} from 'sentry/utils/requestError/requestError';
 import {
   useListQueryState,
   useSearchQueryState,
 } from 'sentry/utils/url/useSentryQueryState';
-import {useLocation} from 'sentry/utils/useLocation';
 
 interface Props {
   organization: Organization;
@@ -30,24 +28,28 @@ type HookReturnType = {
 export function useMailboxCounts({
   organization,
 }: Props): UseApiQueryResult<HookReturnType, RequestError> {
-  const location = useLocation();
-  const locationQuery = decodeScalar(location.query.query, '');
   const {listHeadTime} = useFeedbackQueryKeys();
-
-  // We should fetch the counts while taking the query into account
-  const MAILBOX: Record<keyof HookReturnType, keyof ApiReturnType> = {
-    unresolved: 'issue.category:feedback is:unassigned is:unresolved ' + locationQuery,
-    resolved: 'issue.category:feedback is:unassigned is:resolved ' + locationQuery,
-    ignored: 'issue.category:feedback is:unassigned is:ignored ' + locationQuery,
-  };
-
-  const mailboxQuery = Object.values(MAILBOX);
 
   const listQueryState = useListQueryState();
   const searchQueryState = useSearchQueryState();
 
-  const queryViewWithStatsPeriod = useMemo(
+  const MAILBOX = useMemo(
     () => ({
+      unresolved:
+        'issue.category:feedback is:unassigned is:unresolved ' + searchQueryState.query,
+      resolved:
+        'issue.category:feedback is:unassigned is:resolved ' + searchQueryState.query,
+      ignored:
+        'issue.category:feedback is:unassigned is:ignored ' + searchQueryState.query,
+    }),
+    [searchQueryState.query]
+  );
+
+  const queryViewWithStatsPeriod = useMemo(() => {
+    // We should fetch the counts while taking the query into account
+    const mailboxQuery = Object.values(MAILBOX);
+
+    return {
       ...listQueryState,
       ...searchQueryState,
       queryReferrer: 'feedback_mailbox_count',
@@ -57,9 +59,8 @@ export function useMailboxCounts({
         prefetch: false,
         statsPeriod: listQueryState.statsPeriod,
       }),
-    }),
-    [listHeadTime, listQueryState, searchQueryState, mailboxQuery]
-  );
+    };
+  }, [listHeadTime, listQueryState, searchQueryState, MAILBOX]);
 
   const result = useApiQuery<ApiReturnType>(
     [

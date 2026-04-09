@@ -1,6 +1,7 @@
 import {useEffect, useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
 
+import {parseQueryKey} from 'sentry/utils/api/apiQueryKey';
 import {useOrganization} from 'sentry/utils/useOrganization';
 
 import {usePrefetchFeedbackListQueryOptions} from './useFeedbackListQueryOptions';
@@ -20,10 +21,12 @@ export function useFeedbackHasNewItems({listHeadTime}: Props) {
 
   const [foundData, setFoundData] = useState(false);
 
+  const {statsPeriod} =
+    parseQueryKey(listPrefetchQueryOptions.queryKey).options?.query ?? {};
   const {data} = useQuery({
     ...listPrefetchQueryOptions,
     refetchInterval: POLLING_INTERVAL_MS,
-    enabled: !foundData,
+    enabled: statsPeriod && !foundData,
   });
 
   useEffect(() => {
