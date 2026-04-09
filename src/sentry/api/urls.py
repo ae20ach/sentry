@@ -282,6 +282,9 @@ from sentry.integrations.api.endpoints.organization_integration_migrate_opsgenie
 from sentry.integrations.api.endpoints.organization_integration_repos import (
     OrganizationIntegrationReposEndpoint,
 )
+from sentry.integrations.api.endpoints.organization_integration_repos_paginated import (
+    OrganizationIntegrationReposPaginatedEndpoint,
+)
 from sentry.integrations.api.endpoints.organization_integration_request import (
     OrganizationIntegrationRequestEndpoint,
 )
@@ -1989,6 +1992,11 @@ ORGANIZATION_URLS: list[URLPattern | URLResolver] = [
         r"^(?P<organization_id_or_slug>[^/]+)/integrations/(?P<integration_id>[^/]+)/repos/$",
         OrganizationIntegrationReposEndpoint.as_view(),
         name="sentry-api-0-organization-integration-repos",
+    ),
+    re_path(
+        r"^(?P<organization_id_or_slug>[^/]+)/integrations/(?P<integration_id>[^/]+)/repos-paginated/$",
+        OrganizationIntegrationReposPaginatedEndpoint.as_view(),
+        name="sentry-api-0-organization-integration-repos-paginated",
     ),
     re_path(
         r"^(?P<organization_id_or_slug>[^/]+)/integrations/(?P<integration_id>[^/]+)/channels/$",

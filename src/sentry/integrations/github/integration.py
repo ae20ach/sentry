@@ -375,6 +375,27 @@ class GitHubIntegration(
         response = client.search_repositories(full_query)
         return to_repo_info(response.get("items", []))
 
+    def get_repositories_paginated(
+        self,
+        offset: int = 0,
+        per_page: int = 100,
+    ) -> tuple[list[RepositoryInfo], bool]:
+        client = self.get_client()
+        all_repos = client.get_accessible_repos_cached()
+        repos = [r for r in all_repos if not r.get("archived")]
+
+        page = repos[offset : offset + per_page]
+        has_next = len(repos) > offset + per_page
+        return [
+            {
+                "name": r["name"],
+                "identifier": r["full_name"],
+                "external_id": self.get_repo_external_id(r),
+                "default_branch": r.get("default_branch"),
+            }
+            for r in page
+        ], has_next
+
     def get_unmigratable_repositories(self) -> list[RpcRepository]:
         accessible_repos = self.get_repositories()
         accessible_repo_names = [r["identifier"] for r in accessible_repos]
