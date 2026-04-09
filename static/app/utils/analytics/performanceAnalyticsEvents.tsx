@@ -11,7 +11,6 @@ type SampleTransactionParam = {
 };
 
 type PerformanceTourParams = {
-  duration: number;
   step: number;
 };
 

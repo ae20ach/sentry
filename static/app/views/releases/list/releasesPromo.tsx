@@ -1,10 +1,5 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 
-import commitImage from 'sentry-images/spot/releases-tour-commits.svg';
-import emailImage from 'sentry-images/spot/releases-tour-email.svg';
-import resolutionImage from 'sentry-images/spot/releases-tour-resolution.svg';
-import statsImage from 'sentry-images/spot/releases-tour-stats.svg';
-
 import {SentryAppAvatar} from '@sentry/scraps/avatar';
 import {LinkButton} from '@sentry/scraps/button';
 import {CodeBlock} from '@sentry/scraps/code';
@@ -19,8 +14,6 @@ import {Heading, Text} from '@sentry/scraps/text';
 
 import {openCreateReleaseIntegration} from 'sentry/actionCreators/modal';
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
-import type {TourStep} from 'sentry/components/modals/featureTourModal';
-import {TourImage, TourText} from 'sentry/components/modals/featureTourModal';
 import {
   CopyMarkdownButton,
   CopySetupInstructionsGate,
@@ -38,62 +31,6 @@ import {useApiQuery} from 'sentry/utils/queryClient';
 import {useApi} from 'sentry/utils/useApi';
 
 const releasesSetupUrl = 'https://docs.sentry.io/product/releases/';
-
-const docsLink = (
-  <LinkButton external href={releasesSetupUrl}>
-    {t('Setup')}
-  </LinkButton>
-);
-
-export const RELEASES_TOUR_STEPS: TourStep[] = [
-  {
-    title: t('Suspect Commits'),
-    image: <TourImage src={commitImage} />,
-    body: (
-      <TourText>
-        {t(
-          'Sentry suggests which commit caused an issue and who is likely responsible so you can triage.'
-        )}
-      </TourText>
-    ),
-    actions: docsLink,
-  },
-  {
-    title: t('Release Stats'),
-    image: <TourImage src={statsImage} />,
-    body: (
-      <TourText>
-        {t(
-          'Get an overview of the commits in each release, and which issues were introduced or fixed.'
-        )}
-      </TourText>
-    ),
-    actions: docsLink,
-  },
-  {
-    title: t('Easily Resolve'),
-    image: <TourImage src={resolutionImage} />,
-    body: (
-      <TourText>
-        {t(
-          'Automatically resolve issues by including the issue number in your commit message.'
-        )}
-      </TourText>
-    ),
-    actions: docsLink,
-  },
-  {
-    title: t('Deploy Emails'),
-    image: <TourImage src={emailImage} />,
-    body: (
-      <TourText>
-        {t(
-          'Receive email notifications about when your code gets deployed. This can be customized in settings.'
-        )}
-      </TourText>
-    ),
-  },
-];
 
 type Props = {
   organization: Organization;

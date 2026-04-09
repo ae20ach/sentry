@@ -1,9 +1,9 @@
 import {Button} from '@sentry/scraps/button';
 import {Grid} from '@sentry/scraps/layout';
 
+import {openModal} from 'sentry/actionCreators/modal';
 import {navigateTo} from 'sentry/actionCreators/navigation';
 import Feature from 'sentry/components/acl/feature';
-import {FeatureTourModal} from 'sentry/components/modals/featureTourModal';
 import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
 import {t} from 'sentry/locale';
 import type {Organization} from 'sentry/types/organization';
@@ -11,13 +11,11 @@ import {trackAnalytics} from 'sentry/utils/analytics';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useNavigate} from 'sentry/utils/useNavigate';
 import {useProjects} from 'sentry/utils/useProjects';
-import {PERFORMANCE_TOUR_STEPS} from 'sentry/views/performance/onboarding';
+import {PerformanceFeatureShowcase} from 'sentry/views/performance/performanceFeatureShowcase';
 import {
   getPerformanceBaseUrl,
   platformToDomainView,
 } from 'sentry/views/performance/utils';
-
-const DOCS_URL = 'https://docs.sentry.io/performance-monitoring/getting-started/';
 
 type Props = {
   organization: Organization;
@@ -31,21 +29,6 @@ export function MissingPerformanceButtons({organization}: Props) {
     selection: {projects: selectedProjects},
   } = usePageFilters();
 
-  function handleTourAdvance(step: number, duration: number) {
-    trackAnalytics('project_detail.performance_tour.advance', {
-      organization,
-      step,
-      duration,
-    });
-  }
-
-  function handleClose(step: number, duration: number) {
-    trackAnalytics('project_detail.performance_tour.close', {
-      organization,
-      step,
-      duration,
-    });
-  }
   const domainView = platformToDomainView(projects, selectedProjects);
 
   return (
@@ -72,24 +55,32 @@ export function MissingPerformanceButtons({organization}: Props) {
           {t('Start Setup')}
         </Button>
 
-        <FeatureTourModal
-          steps={PERFORMANCE_TOUR_STEPS}
-          onAdvance={handleTourAdvance}
-          onCloseModal={handleClose}
-          doneText={t('Start Setup')}
-          doneUrl={DOCS_URL}
+        <Button
+          size="sm"
+          analyticsEventKey="project_detail.performance_tour_clicked"
+          analyticsEventName="Project Detail: Performance Get Tour Clicked"
+          onClick={() => {
+            openModal(deps => (
+              <PerformanceFeatureShowcase
+                {...deps}
+                onStepChange={step => {
+                  trackAnalytics('project_detail.performance_tour.advance', {
+                    organization,
+                    step,
+                  });
+                }}
+                onClose={step => {
+                  trackAnalytics('project_detail.performance_tour.close', {
+                    organization,
+                    step,
+                  });
+                }}
+              />
+            ));
+          }}
         >
-          {({showModal}) => (
-            <Button
-              size="sm"
-              onClick={showModal}
-              analyticsEventKey="project_detail.performance_tour_clicked"
-              analyticsEventName="Project Detail: Performance Get Tour Clicked"
-            >
-              {t('Get Tour')}
-            </Button>
-          )}
-        </FeatureTourModal>
+          {t('Get Tour')}
+        </Button>
       </Grid>
     </Feature>
   );

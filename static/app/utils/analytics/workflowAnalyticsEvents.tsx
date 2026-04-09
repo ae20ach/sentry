@@ -58,7 +58,6 @@ export type BaseEventAnalyticsParams = {
 };
 
 type BaseTour = {
-  duration: number;
   step: number;
 };
 

@@ -5,10 +5,6 @@ import * as Sentry from '@sentry/react';
 
 import emptyStateImg from 'sentry-images/spot/performance-empty-state.svg';
 import emptyTraceImg from 'sentry-images/spot/performance-empty-trace.svg';
-import tourAlert from 'sentry-images/spot/performance-tour-alert.svg';
-import tourCorrelate from 'sentry-images/spot/performance-tour-correlate.svg';
-import tourMetrics from 'sentry-images/spot/performance-tour-metrics.svg';
-import tourTrace from 'sentry-images/spot/performance-tour-trace.svg';
 
 import {Button, LinkButton} from '@sentry/scraps/button';
 import {Grid, type GridProps} from '@sentry/scraps/layout';
@@ -18,16 +14,11 @@ import {
   addLoadingMessage,
   clearIndicators,
 } from 'sentry/actionCreators/indicator';
+import {openModal} from 'sentry/actionCreators/modal';
 import type {Client} from 'sentry/api';
 import {UnsupportedAlert} from 'sentry/components/alerts/unsupportedAlert';
 import {GuidedSteps} from 'sentry/components/guidedSteps/guidedSteps';
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
-import type {TourStep} from 'sentry/components/modals/featureTourModal';
-import {
-  FeatureTourModal,
-  TourImage,
-  TourText,
-} from 'sentry/components/modals/featureTourModal';
 import {AuthTokenGeneratorProvider} from 'sentry/components/onboarding/gettingStartedDoc/authTokenGenerator';
 import {ContentBlocksRenderer} from 'sentry/components/onboarding/gettingStartedDoc/contentBlocks/renderer';
 import {
@@ -78,65 +69,10 @@ import {Tab} from 'sentry/views/explore/hooks/useTab';
 import {useTraces} from 'sentry/views/explore/hooks/useTraces';
 
 import {traceAnalytics} from './newTraceDetails/traceAnalytics';
-
-const performanceSetupUrl =
-  'https://docs.sentry.io/performance-monitoring/getting-started/';
-
-const docsLink = (
-  <LinkButton external href={performanceSetupUrl}>
-    {t('Setup')}
-  </LinkButton>
-);
-
-export const PERFORMANCE_TOUR_STEPS: TourStep[] = [
-  {
-    title: t('Track Application Metrics'),
-    image: <TourImage src={tourMetrics} />,
-    body: (
-      <TourText>
-        {t(
-          'Monitor your slowest pageloads and APIs to see which users are having the worst time.'
-        )}
-      </TourText>
-    ),
-    actions: docsLink,
-  },
-  {
-    title: t('Correlate Errors and Traces'),
-    image: <TourImage src={tourCorrelate} />,
-    body: (
-      <TourText>
-        {t(
-          'See what errors occurred within a transaction and the impact of those errors.'
-        )}
-      </TourText>
-    ),
-    actions: docsLink,
-  },
-  {
-    title: t('Watch and Alert'),
-    image: <TourImage src={tourAlert} />,
-    body: (
-      <TourText>
-        {t(
-          'Highlight mission-critical pages and APIs and set latency alerts to notify you before things go wrong.'
-        )}
-      </TourText>
-    ),
-    actions: docsLink,
-  },
-  {
-    title: t('Trace Across Systems'),
-    image: <TourImage src={tourTrace} />,
-    body: (
-      <TourText>
-        {t(
-          "Follow a trace from a user's session and drill down to identify any bottlenecks that occur."
-        )}
-      </TourText>
-    ),
-  },
-];
+import {
+  PERFORMANCE_SETUP_DOCS_URL,
+  PerformanceFeatureShowcase,
+} from './performanceFeatureShowcase';
 
 type SampleButtonProps = {
   api: Client;
@@ -221,22 +157,6 @@ export function LegacyOnboarding({organization, project}: OnboardingProps) {
     }
   }, [location.hash, projectsForOnboarding, project.id]);
 
-  function handleAdvance(step: number, duration: number) {
-    trackAnalytics('performance_views.tour.advance', {
-      step,
-      duration,
-      organization,
-    });
-  }
-
-  function handleClose(step: number, duration: number) {
-    trackAnalytics('performance_views.tour.close', {
-      step,
-      duration,
-      organization,
-    });
-  }
-
   const currentPlatform = project.platform;
   const hasPerformanceOnboarding = currentPlatform
     ? withPerformanceOnboarding.has(currentPlatform)
@@ -245,11 +165,7 @@ export function LegacyOnboarding({organization, project}: OnboardingProps) {
     currentPlatform && withoutPerformanceSupport.has(currentPlatform);
 
   let setupButton = (
-    <LinkButton
-      priority="primary"
-      href="https://docs.sentry.io/performance-monitoring/getting-started/"
-      external
-    >
+    <LinkButton priority="primary" href={PERFORMANCE_SETUP_DOCS_URL} external>
       {t('Start Setup')}
     </LinkButton>
   );
@@ -292,25 +208,31 @@ export function LegacyOnboarding({organization, project}: OnboardingProps) {
             api={api}
           />
         </ButtonList>
-        <FeatureTourModal
-          steps={PERFORMANCE_TOUR_STEPS}
-          onAdvance={handleAdvance}
-          onCloseModal={handleClose}
-          doneUrl={performanceSetupUrl}
-          doneText={t('Start Setup')}
+        <Button
+          priority="link"
+          onClick={() => {
+            trackAnalytics('performance_views.tour.start', {organization});
+            openModal(deps => (
+              <PerformanceFeatureShowcase
+                {...deps}
+                onStepChange={step => {
+                  trackAnalytics('performance_views.tour.advance', {
+                    step,
+                    organization,
+                  });
+                }}
+                onClose={step => {
+                  trackAnalytics('performance_views.tour.close', {
+                    step,
+                    organization,
+                  });
+                }}
+              />
+            ));
+          }}
         >
-          {({showModal}) => (
-            <Button
-              priority="link"
-              onClick={() => {
-                trackAnalytics('performance_views.tour.start', {organization});
-                showModal();
-              }}
-            >
-              {t('Take a Tour')}
-            </Button>
-          )}
-        </FeatureTourModal>
+          {t('Take a Tour')}
+        </Button>
       </LegacyOnboardingPanel>
     </PerformanceOnboardingContainer>
   );

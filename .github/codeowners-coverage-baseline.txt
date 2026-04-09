@@ -447,8 +447,6 @@ static/app/components/checkInTimeline/utils/getAggregateStatus.tsx
 static/app/components/checkInTimeline/utils/getConfigFromTimeRange.spec.tsx
 static/app/components/checkInTimeline/utils/getConfigFromTimeRange.tsx
 static/app/components/checkInTimeline/utils/getTickStyle.tsx
-static/app/components/checkInTimeline/utils/getTimeRangeFromEvent.spec.tsx
-static/app/components/checkInTimeline/utils/getTimeRangeFromEvent.tsx
 static/app/components/checkInTimeline/utils/isStatsBucketEmpty.spec.tsx
 static/app/components/checkInTimeline/utils/isStatsBucketEmpty.tsx
 static/app/components/checkInTimeline/utils/mergeBuckets.spec.tsx
@@ -805,8 +803,6 @@ static/app/components/modals/emailVerificationModal.spec.tsx
 static/app/components/modals/emailVerificationModal.tsx
 static/app/components/modals/explore/saveQueryModal.spec.tsx
 static/app/components/modals/explore/saveQueryModal.tsx
-static/app/components/modals/featureTourModal.spec.tsx
-static/app/components/modals/featureTourModal.tsx
 static/app/components/modals/helpSearchModal.spec.tsx
 static/app/components/modals/helpSearchModal.tsx
 static/app/components/modals/importDashboardFromFileModal.tsx
@@ -1803,7 +1799,6 @@ tests/js/fixtures/repositoryProjectPathConfig.ts
 tests/js/fixtures/roleList.ts
 tests/js/fixtures/routeComponentPropsFixture.ts
 tests/js/fixtures/routerFixture.ts
-tests/js/fixtures/routerPropsFixture.ts
 tests/js/fixtures/search.ts
 tests/js/fixtures/secret.ts
 tests/js/fixtures/sentryApp.ts
