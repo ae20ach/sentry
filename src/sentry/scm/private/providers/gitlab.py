@@ -116,6 +116,7 @@ class GitLabProvider:
     def is_rate_limited(self, referrer: Referrer) -> bool:
         return False  # Rate-limits temporarily disabled.
 
+    @catch_provider_exception
     def get_repository(self) -> ActionResult[GitRepository]:
         raw = self.client.get_project(self._repo_id, statistics=True)
         return make_result(map_repository, raw)
