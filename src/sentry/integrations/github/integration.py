@@ -380,6 +380,11 @@ class GitHubIntegration(
         offset: int = 0,
         per_page: int = 100,
     ) -> tuple[list[RepositoryInfo], bool]:
+        """Paginate over the cached accessible-repos list.
+
+        Always serves from ``get_accessible_repos_cached()`` so every
+        page is fast after the initial cache warm-up.
+        """
         client = self.get_client()
         all_repos = client.get_accessible_repos_cached()
         repos = [r for r in all_repos if not r.get("archived")]

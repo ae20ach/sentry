@@ -84,7 +84,7 @@ class OrganizationIntegrationReposEndpoint(CellOrganizationIntegrationBaseEndpoi
             # continue to receive the full list.
             paginate = "per_page" in request.GET and not search
             if paginate:
-                per_page = min(int(request.GET.get("per_page", 100)), 100)
+                per_page = max(1, min(int(request.GET.get("per_page", 100)), 100))
                 cursor = self._parse_cursor(request)
                 paginated = install.get_repositories_paginated(
                     offset=cursor.offset, per_page=per_page
