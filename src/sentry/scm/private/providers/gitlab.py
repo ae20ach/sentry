@@ -41,6 +41,7 @@ from sentry.scm.types import (
     GitCommitObject,
     GitCommitTree,
     GitRef,
+    GitRepository,
     GitTree,
     PaginatedActionResult,
     PaginatedResponseMeta,
@@ -114,6 +115,10 @@ class GitLabProvider:
 
     def is_rate_limited(self, referrer: Referrer) -> bool:
         return False  # Rate-limits temporarily disabled.
+
+    def get_repository(self) -> ActionResult[GitRepository]:
+        raw = self.client.get_project(self._repo_id, statistics=True)
+        return make_result(map_repository, raw)
 
     @catch_provider_exception
     def get_issue_comments(
@@ -617,6 +622,17 @@ def make_result[T](
         type="gitlab",
         raw={"data": raw, "headers": None},
         meta={},
+    )
+
+
+def map_repository(raw: dict[str, Any]) -> GitRepository:
+    return GitRepository(
+        full_name=raw["path_with_namespace"],
+        default_branch=raw["default_branch"],
+        clone_url=raw["http_url_to_repo"],
+        private=raw["visibility"] != "public",
+        # GitLab returns size in bytes. We convert to kB to match GitHub
+        size=raw["statistics"]["repository_size"] // 1000,
     )
 
 

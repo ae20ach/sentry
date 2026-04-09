@@ -70,10 +70,12 @@ from sentry.scm.types import (
     GetPullRequestProtocol,
     GetPullRequestReactionsProtocol,
     GetPullRequestsProtocol,
+    GetRepositoryProtocol,
     GetTreeProtocol,
     GitBlob,
     GitCommitObject,
     GitRef,
+    GitRepository,
     GitTree,
     InputTreeEntry,
     MinimizeCommentProtocol,
@@ -163,6 +165,11 @@ def get_capabilities(scm: SourceCodeManager) -> Iterable[str]:
     for protocol in ALL_PROTOCOLS:
         if isinstance(scm, protocol):
             yield protocol.__name__
+
+
+def get_repository(scm: GetRepositoryProtocol) -> ActionResult[GitRepository]:
+    """Get the repository associated with this SourceCodeManager."""
+    return scm.get_repository()
 
 
 def get_issue_comments(

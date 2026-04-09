@@ -49,6 +49,45 @@ class ForwardToClientTest(NamedTuple):
 @pytest.mark.parametrize(
     "param",
     [
+        ForwardToClientTest(
+            provider_method=GitLabProvider.get_repository,
+            provider_args={},
+            client_calls=[
+                ClientForwardedCall(
+                    client_method="get_project",
+                    client_args=("79787061",),
+                    client_kwds={"statistics": True},
+                    client_return_value={
+                        "path_with_namespace": "test-org/test-repo",
+                        "default_branch": "main",
+                        "http_url_to_repo": "https://gitlab.com/test-org/test-repo.git",
+                        "visibility": "public",
+                        "statistics": {"repository_size": 123456},
+                    },
+                ),
+            ],
+            provider_return_value={
+                "data": {
+                    "full_name": "test-org/test-repo",
+                    "default_branch": "main",
+                    "clone_url": "https://gitlab.com/test-org/test-repo.git",
+                    "private": False,
+                    "size": 123,  # Size converted from bytes to kB
+                },
+                "type": "gitlab",
+                "raw": {
+                    "data": {
+                        "path_with_namespace": "test-org/test-repo",
+                        "default_branch": "main",
+                        "http_url_to_repo": "https://gitlab.com/test-org/test-repo.git",
+                        "visibility": "public",
+                        "statistics": {"repository_size": 123456},
+                    },
+                    "headers": None,
+                },
+                "meta": {},
+            },
+        ),
         # Actual calls made with an actual GitLab integration, captured for this file.
         ForwardToClientTest(
             provider_method=GitLabProvider.get_pull_requests,

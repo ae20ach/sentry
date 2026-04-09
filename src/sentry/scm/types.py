@@ -263,6 +263,16 @@ class Repository(TypedDict):
     external_id: str | None
 
 
+class GitRepository(TypedDict):
+    """Information about a git repository at an SCM provider."""
+
+    full_name: str
+    default_branch: str
+    clone_url: str
+    private: bool
+    size: int
+
+
 class GitRef(TypedDict):
     """A git reference (branch pointer)."""
 
@@ -589,6 +599,14 @@ class PullRequestEvent:
     the listener. In some cases, Sentry will query the database for information. This information
     is stored in the "sentry_meta" field and is accessible without performing redundant queries.
     """
+
+
+# Basic protocols
+
+
+@runtime_checkable
+class GetRepositoryProtocol(Protocol):
+    def get_repository(self) -> ActionResult[GitRepository]: ...
 
 
 # Issue Comment Protocols
@@ -1130,6 +1148,7 @@ ALL_PROTOCOLS = (
     GetPullRequestProtocol,
     GetPullRequestReactionsProtocol,
     GetPullRequestsProtocol,
+    GetRepositoryProtocol,
     GetTreeProtocol,
     MinimizeCommentProtocol,
     RequestReviewProtocol,

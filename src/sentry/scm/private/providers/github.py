@@ -33,6 +33,7 @@ from sentry.scm.types import (
     GitCommitObject,
     GitCommitTree,
     GitRef,
+    GitRepository,
     GitTree,
     InputTreeEntry,
     PaginatedActionResult,
@@ -341,6 +342,10 @@ class GitHubProvider:
 
     def is_rate_limited(self, referrer: Referrer) -> bool:
         return self.client.is_rate_limited(referrer)
+
+    def get_repository(self) -> ActionResult[GitRepository]:
+        response = self.client.get(f"/repos/{self.repository['name']}")
+        return map_action(response, map_repository)
 
     def get_issue_comments(
         self,
@@ -944,6 +949,16 @@ class GitHubProvider:
         )
 
     # resolve_review_thread: not supported
+
+
+def map_repository(raw: dict[str, Any]) -> GitRepository:
+    return GitRepository(
+        full_name=raw["full_name"],
+        default_branch=raw["default_branch"],
+        clone_url=raw["clone_url"],
+        private=raw["private"],
+        size=raw["size"],
+    )
 
 
 def map_author(raw_user: dict[str, Any] | None) -> Author | None:

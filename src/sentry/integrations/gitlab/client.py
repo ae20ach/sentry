@@ -216,12 +216,13 @@ class GitLabApiClient(IntegrationProxyClient, RepositoryClient, CommitContextCli
 
         return self.get_with_pagination(path, gen_params, get_results)
 
-    def get_project(self, project_id):
+    def get_project(self, project_id, statistics=False):
         """Get project
 
         See https://docs.gitlab.com/ee/api/projects.html#get-single-project
         """
-        return self.get(GitLabApiClientPath.project.format(project=project_id))
+        params = {"statistics": statistics} if statistics else {}
+        return self.get(GitLabApiClientPath.project.format(project=project_id), params=params)
 
     def get_issue(self, project_id, issue_id):
         """Get an issue
