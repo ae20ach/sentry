@@ -84,11 +84,16 @@ class OrganizationIntegrationReposEndpoint(CellOrganizationIntegrationBaseEndpoi
             # continue to receive the full list.
             paginate = "per_page" in request.GET and not search
             if paginate:
-                per_page = max(1, min(int(request.GET.get("per_page", 100)), 100))
+                try:
+                    per_page = max(1, min(int(request.GET["per_page"]), 100))
+                except (ValueError, TypeError):
+                    per_page = 100
                 cursor = self._parse_cursor(request)
-                paginated = install.get_repositories_paginated(
-                    offset=cursor.offset, per_page=per_page
-                )
+                offset = max(0, cursor.offset)
+                try:
+                    paginated = install.get_repositories_paginated(offset=offset, per_page=per_page)
+                except (IntegrationError, IdentityNotValid) as e:
+                    return self.respond({"detail": str(e)}, status=400)
             else:
                 paginated = None
 
@@ -128,11 +133,11 @@ class OrganizationIntegrationReposEndpoint(CellOrganizationIntegrationBaseEndpoi
                 {"repos": serialized_repositories, "searchable": install.repo_search}
             )
 
-            if paginated is not None and (has_next or cursor.offset > 0):
+            if paginated is not None and (has_next or offset > 0):
                 cursor_result = CursorResult(
                     results=[],
-                    prev=Cursor(0, max(0, cursor.offset - per_page), True, cursor.offset > 0),
-                    next=Cursor(0, cursor.offset + per_page, False, has_next),
+                    prev=Cursor(0, max(0, offset - per_page), True, offset > 0),
+                    next=Cursor(0, offset + per_page, False, has_next),
                 )
                 self.add_cursor_headers(request, response, cursor_result)
 
