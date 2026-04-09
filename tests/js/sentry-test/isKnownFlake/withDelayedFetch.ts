@@ -1,13 +1,12 @@
 import {delay, invokeProvidesCallback} from './flakeStressUtils';
 
 const fetchDelayMs = 5;
+const originalFetch = globalThis.fetch;
 
 /**
  * Simulates a slow network by adding delays to global fetch calls.
  */
 export function withDelayedFetch(fn: jest.ProvidesCallback): jest.ProvidesCallback {
-  const originalFetch = globalThis.fetch;
-
   return function wrapped(this: unknown) {
     return (async () => {
       if (typeof originalFetch !== 'function') {
