@@ -3,8 +3,6 @@ import {
   createContext,
   isValidElement,
   useContext,
-  useEffect,
-  useRef,
   useState,
   type ReactElement,
   type ReactNode,
@@ -129,28 +127,20 @@ type FeatureShowcaseProps = ModalRenderProps & {
  * ));
  * ```
  */
-function FeatureShowcase({
-  closeModal,
-  children,
-  onStepChange,
-  onClose,
-}: FeatureShowcaseProps) {
+function FeatureShowcase({closeModal, children, onStepChange}: FeatureShowcaseProps) {
   const [current, setCurrent] = useState(0);
-  const stateRef = useRef({current: 0, onClose});
-  stateRef.current = {current, onClose};
-
-  useEffect(() => {
-    return () => {
-      stateRef.current.onClose?.(stateRef.current.current);
-    };
-  }, []);
 
   const steps = Children.toArray(children).filter(
     (child): child is ReactElement => isValidElement(child) && child.type === Step
   );
 
+  const stepCount = steps.length;
+  const hasNext = current < stepCount - 1;
+  const hasPrevious = current > 0;
+  const activeStep = steps[current] ?? steps[stepCount - 1];
+
   const handleAdvance = () => {
-    const nextStep = current + 1;
+    const nextStep = Math.min(current + 1, stepCount - 1);
     if (nextStep !== current) {
       setCurrent(nextStep);
       onStepChange?.(nextStep);
@@ -158,17 +148,14 @@ function FeatureShowcase({
   };
 
   const handleBack = () => {
-    if (current > 0) {
-      setCurrent(current - 1);
+    const prevStep = Math.max(current - 1, 0);
+    if (prevStep !== current) {
+      setCurrent(prevStep);
+      onStepChange?.(prevStep);
     }
   };
 
-  const stepCount = steps.length;
-  const hasNext = current < stepCount - 1;
-  const hasPrevious = current > 0;
-  const activeStep = steps[current] ?? steps[stepCount - 1];
-
-  const ctx: ShowcaseContextValue = {
+  const contextValue: ShowcaseContextValue = {
     current,
     stepCount,
     hasNext,
@@ -185,7 +172,9 @@ function FeatureShowcase({
           <IconClose size="xs" />
         </Button>
       </Flex>
-      <ShowcaseContext.Provider value={ctx}>{activeStep}</ShowcaseContext.Provider>
+      <ShowcaseContext.Provider value={contextValue}>
+        {activeStep}
+      </ShowcaseContext.Provider>
     </Container>
   );
 }
