@@ -341,17 +341,6 @@ class GitHubIntegration(
         """
         client = self.get_client()
 
-        def to_repo_info(raw_repos: Iterable[Mapping[str, Any]]) -> list[RepositoryInfo]:
-            return [
-                {
-                    "name": i["name"],
-                    "identifier": i["full_name"],
-                    "external_id": self.get_repo_external_id(i),
-                    "default_branch": i.get("default_branch"),
-                }
-                for i in raw_repos
-            ]
-
         def _get_all_repos():
             if use_cache:
                 return client.get_repos_cached()
@@ -359,12 +348,12 @@ class GitHubIntegration(
 
         if not query:
             all_repos = _get_all_repos()
-            return to_repo_info(r for r in all_repos if not r.get("archived"))
+            return self._to_repo_info(r for r in all_repos if not r.get("archived"))
 
         if accessible_only:
             all_repos = _get_all_repos()
             query_lower = query.lower()
-            return to_repo_info(
+            return self._to_repo_info(
                 r
                 for r in all_repos
                 if not r.get("archived") and query_lower in r["full_name"].lower()
@@ -373,7 +362,18 @@ class GitHubIntegration(
         assert not use_cache, "use_cache is not supported with the Search API path"
         full_query = build_repository_query(self.model.metadata, self.model.name, query)
         response = client.search_repositories(full_query)
-        return to_repo_info(response.get("items", []))
+        return self._to_repo_info(response.get("items", []))
+
+    def _to_repo_info(self, raw_repos: Iterable[Mapping[str, Any]]) -> list[RepositoryInfo]:
+        return [
+            {
+                "name": i["name"],
+                "identifier": i["full_name"],
+                "external_id": self.get_repo_external_id(i),
+                "default_branch": i.get("default_branch"),
+            }
+            for i in raw_repos
+        ]
 
     def get_repositories_paginated(
         self,
@@ -386,15 +386,7 @@ class GitHubIntegration(
 
         page = repos[offset : offset + per_page]
         has_next = len(repos) > offset + per_page
-        return [
-            {
-                "name": r["name"],
-                "identifier": r["full_name"],
-                "external_id": self.get_repo_external_id(r),
-                "default_branch": r.get("default_branch"),
-            }
-            for r in page
-        ], has_next
+        return self._to_repo_info(page), has_next
 
     def get_unmigratable_repositories(self) -> list[RpcRepository]:
         accessible_repos = self.get_repositories()
