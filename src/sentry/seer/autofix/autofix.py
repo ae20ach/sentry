@@ -15,15 +15,12 @@ from sentry import features, quotas, tagstore
 from sentry.api.endpoints.organization_trace import OrganizationTraceEndpoint
 from sentry.api.serializers import EventSerializer, serialize
 from sentry.constants import ENABLE_SEER_CODING_DEFAULT, DataCategory, ObjectStatus
-from sentry.integrations.models.external_actor import ExternalActor
 from sentry.integrations.models.repository_project_path_config import RepositoryProjectPathConfig
-from sentry.integrations.types import ExternalProviders
 from sentry.issues.auto_source_code_config.code_mapping import (
     convert_stacktrace_frame_path_to_source_path,
     get_sorted_code_mapping_configs,
 )
 from sentry.issues.grouptype import WebVitalsGroup
-from sentry.models.commitauthor import CommitAuthor
 from sentry.models.group import Group
 from sentry.models.organization import Organization
 from sentry.models.project import Project
@@ -458,64 +455,8 @@ def _respond_with_error(reason: str, status: int):
     )
 
 
-def _get_github_username_for_user(user: User | RpcUser, organization_id: int) -> str | None:
-    """
-    Get GitHub username for a user by checking multiple sources.
-
-    This function attempts to resolve a Sentry user to their GitHub username by:
-    1. Checking ExternalActor for explicit user→GitHub mappings
-    2. Falling back to CommitAuthor records matched by email (like suspect commits)
-    3. Extracting the GitHub username from the CommitAuthor external_id
-    """
-    # Method 1: Check ExternalActor for direct user→GitHub mapping
-    external_actor: ExternalActor | None = (
-        ExternalActor.objects.filter(
-            user_id=user.id,
-            organization_id=organization_id,
-            provider__in=[
-                ExternalProviders.GITHUB.value,
-                ExternalProviders.GITHUB_ENTERPRISE.value,
-            ],
-        )
-        .order_by("-date_added")
-        .first()
-    )
-
-    if external_actor and external_actor.external_name:
-        username = external_actor.external_name
-        return username[1:] if username.startswith("@") else username
-
-    # Method 2: Check CommitAuthor by email matching (like suspect commits does)
-    # Get all verified emails for this user
-    user_emails: list[str] = []
-    try:
-        # Both User and RpcUser models have a get_verified_emails method
-        if hasattr(user, "get_verified_emails"):
-            verified_emails = user.get_verified_emails()
-            user_emails.extend([e.email for e in verified_emails])
-    except Exception:
-        # If we can't get verified emails, don't use any
-        pass
-
-    if user_emails:
-        # Find CommitAuthors with matching emails that have GitHub external_id
-        commit_author = (
-            CommitAuthor.objects.filter(
-                organization_id=organization_id,
-                email__in=[email.lower() for email in user_emails],
-                external_id__isnull=False,
-            )
-            .exclude(external_id="")
-            .order_by("-id")
-            .first()
-        )
-
-        if commit_author:
-            commit_username = commit_author.get_username_from_external_id()
-            if commit_username:
-                return commit_username
-
-    return None
+# Imported from sentry.seer.utils — kept as a module-level alias for backwards compatibility
+from sentry.seer.utils import get_github_username_for_user  # noqa: F401
 
 
 def _call_autofix(
@@ -573,6 +514,9 @@ def _call_autofix(
                     "sentry:enable_seer_coding", default=ENABLE_SEER_CODING_DEFAULT
                 ),
                 "stopping_point": stopping_point.value if stopping_point else None,
+                "assign_pr_to_user": features.has(
+                    "organizations:seer-assign-prs-to-user", group.organization
+                ),
             },
             "preference": preference.dict() if preference else None,
         },
@@ -836,7 +780,7 @@ def trigger_autofix(
     # get github username for user
     github_username = None
     if not isinstance(user, AnonymousUser):
-        github_username = _get_github_username_for_user(user, group.organization.id)
+        github_username = get_github_username_for_user(user, group.organization.id)
 
     try:
         run_id = _call_autofix(
