@@ -6,6 +6,7 @@ import {CMDKAction} from 'sentry/components/commandPalette/ui/cmdk';
 import type {CMDKActionData} from 'sentry/components/commandPalette/ui/cmdk';
 import type {CollectionTreeNode} from 'sentry/components/commandPalette/ui/collection';
 import {CommandPalette} from 'sentry/components/commandPalette/ui/commandPalette';
+import type {CMDKModifierKeys} from 'sentry/components/commandPalette/ui/commandPalette';
 import {normalizeUrl} from 'sentry/utils/url/normalizeUrl';
 import {useNavigate} from 'sentry/utils/useNavigate';
 
@@ -13,8 +14,12 @@ export function CommandPaletteDemo() {
   const navigate = useNavigate();
 
   const handleAction = useCallback(
-    (action: CollectionTreeNode<CMDKActionData>) => {
+    (action: CollectionTreeNode<CMDKActionData>, modifierKeys: CMDKModifierKeys) => {
       if ('to' in action) {
+        if (modifierKeys.shift) {
+          window.open(String(normalizeUrl(action.to)), '_blank', 'noopener,noreferrer');
+          return;
+        }
         navigate(normalizeUrl(action.to));
       } else if ('onAction' in action) {
         action.onAction();

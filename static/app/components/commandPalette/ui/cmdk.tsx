@@ -13,11 +13,22 @@ import {
   useCommandPaletteState,
 } from './commandPaletteStateContext';
 
-interface DisplayProps {
-  label: string;
-  details?: string;
+type DisplayProps = {
   icon?: React.ReactNode;
-}
+} & (
+  | {
+      label: string;
+      details?: string;
+      searchableDetails?: never;
+      searchableLabel?: never;
+    }
+  | {
+      label: Exclude<React.ReactNode, string>;
+      searchableLabel: string;
+      details?: React.ReactNode;
+      searchableDetails?: string;
+    }
+);
 
 interface CMDKActionDataBase {
   display: DisplayProps;

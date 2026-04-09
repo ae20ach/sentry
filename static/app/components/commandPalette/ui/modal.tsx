@@ -1,21 +1,40 @@
 import {useCallback} from 'react';
 import {css} from '@emotion/react';
+import type {LocationDescriptorObject} from 'history';
 
 import type {ModalRenderProps} from 'sentry/actionCreators/modal';
 import type {CMDKActionData} from 'sentry/components/commandPalette/ui/cmdk';
 import type {CollectionTreeNode} from 'sentry/components/commandPalette/ui/collection';
 import {CommandPalette} from 'sentry/components/commandPalette/ui/commandPalette';
+import type {CMDKModifierKeys} from 'sentry/components/commandPalette/ui/commandPalette';
 import {GlobalCommandPaletteActions} from 'sentry/components/commandPalette/ui/commandPaletteGlobalActions';
 import type {Theme} from 'sentry/utils/theme';
 import {normalizeUrl} from 'sentry/utils/url/normalizeUrl';
 import {useNavigate} from 'sentry/utils/useNavigate';
 
+function locationToString(to: string | LocationDescriptorObject): string {
+  if (typeof to === 'string') {
+    return to;
+  }
+  return [to.pathname, to.search, to.hash].filter(Boolean).join('');
+}
+
 export default function CommandPaletteModal({Body, closeModal}: ModalRenderProps) {
   const navigate = useNavigate();
 
   const handleSelect = useCallback(
-    (action: CollectionTreeNode<CMDKActionData>) => {
+    (action: CollectionTreeNode<CMDKActionData>, modifierKeys: CMDKModifierKeys) => {
       if ('to' in action) {
+        if (modifierKeys.shift) {
+          // Open in a new tab and leave the palette open so the user can
+          // continue selecting more items.
+          window.open(
+            locationToString(normalizeUrl(action.to)),
+            '_blank',
+            'noopener,noreferrer'
+          );
+          return;
+        }
         navigate(normalizeUrl(action.to));
       } else if ('onAction' in action) {
         action.onAction();

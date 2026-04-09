@@ -1,4 +1,4 @@
-import {Fragment, useCallback, useLayoutEffect, useMemo, useRef} from 'react';
+import {Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef} from 'react';
 import {preload} from 'react-dom';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -64,8 +64,15 @@ type CMDKFlatItem = CollectionTreeNode<CMDKActionData> & {
   listItemType: 'action' | 'section';
 };
 
+export interface CMDKModifierKeys {
+  shift: boolean;
+}
+
 interface CommandPaletteProps {
-  onAction: (action: CollectionTreeNode<CMDKActionData>) => void;
+  onAction: (
+    action: CollectionTreeNode<CMDKActionData>,
+    modifierKeys: CMDKModifierKeys
+  ) => void;
   children?: React.ReactNode;
 }
 
@@ -116,12 +123,14 @@ export function CommandPalette(props: CommandPaletteProps) {
     children: actions.map(action => {
       const menuItem = makeMenuItemFromAction(action);
 
+      const textValue = getTextValue(action.display);
+
       if (action.listItemType === 'section') {
         return (
           <Item<CommandPaletteActionMenuItem & {hideCheck: boolean; label: string}>
             {...menuItem}
             key={action.key}
-            textValue={action.display.label}
+            textValue={textValue}
             {...{
               leadingItems: null,
               label: (
@@ -152,7 +161,7 @@ export function CommandPalette(props: CommandPaletteProps) {
         <Item<CommandPaletteActionMenuItem>
           {...menuItem}
           key={action.key}
-          textValue={action.display.label}
+          textValue={textValue}
         >
           {menuItem.label}
         </Item>
@@ -215,20 +224,44 @@ export function CommandPalette(props: CommandPaletteProps) {
         if ('onAction' in action) {
           // Invoke the callback but keep the modal open so users can select
           // secondary actions from the children that follow.
-          props.onAction(action);
+          props.onAction(action, {shift: false});
         }
         dispatch({type: 'push action', key: action.key, label: action.display.label});
         return;
       }
 
+      const modifierKeys: CMDKModifierKeys = {shift: shiftHeldRef.current};
+
       analytics.recordAction(action, resultIndex, '');
-      dispatch({type: 'trigger action'});
-      props.onAction(action);
+      // When Shift is held and the action is a navigation link, keep the palette
+      // open (no trigger action dispatch) so the user can continue selecting.
+      if (!modifierKeys.shift || !('to' in action)) {
+        dispatch({type: 'trigger action'});
+      }
+      props.onAction(action, modifierKeys);
     },
     [actions, analytics, dispatch, props]
   );
 
   const resultsListRef = useRef<HTMLDivElement>(null);
+
+  // Track whether Shift is held so that actions with `to` can be opened in a
+  // new tab. Using a ref (instead of state) avoids re-renders on every keypress.
+  const shiftHeldRef = useRef(false);
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') shiftHeldRef.current = true;
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') shiftHeldRef.current = false;
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('keyup', onKeyUp);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('keyup', onKeyUp);
+    };
+  }, []);
 
   const debouncedQuery = useDebouncedValue(state.query, 300);
 
@@ -417,8 +450,13 @@ function scoreNode(
   query: string,
   node: CollectionTreeNode<CMDKActionData>
 ): {matched: boolean; score: number} {
-  const label = node.display.label;
-  const details = node.display.details ?? '';
+  const display = node.display;
+  const label =
+    typeof display.label === 'string' ? display.label : display.searchableLabel;
+  const details =
+    typeof display.details === 'string'
+      ? display.details
+      : (display.searchableDetails ?? '');
   const keywords = node.keywords ?? [];
 
   // Score each field independently and take the best result. This lets
@@ -556,6 +594,10 @@ function flattenActions(
     seen.add(item.key);
     return true;
   });
+}
+
+function getTextValue(display: CMDKActionData['display']): string {
+  return typeof display.label === 'string' ? display.label : display.searchableLabel;
 }
 
 function makeMenuItemFromAction(action: CMDKFlatItem): CommandPaletteActionMenuItem {

@@ -30,6 +30,7 @@ import {CMDKAction} from 'sentry/components/commandPalette/ui/cmdk';
 import type {CMDKActionData} from 'sentry/components/commandPalette/ui/cmdk';
 import type {CollectionTreeNode} from 'sentry/components/commandPalette/ui/collection';
 import {CommandPalette} from 'sentry/components/commandPalette/ui/commandPalette';
+import type {CMDKModifierKeys} from 'sentry/components/commandPalette/ui/commandPalette';
 import {CommandPaletteSlot} from 'sentry/components/commandPalette/ui/commandPaletteSlot';
 import {useNavigate} from 'sentry/utils/useNavigate';
 
@@ -84,7 +85,7 @@ function GlobalActionsComponent({
   const navigate = useNavigate();
 
   const handleAction = useCallback(
-    (action: CollectionTreeNode<CMDKActionData>) => {
+    (action: CollectionTreeNode<CMDKActionData>, _modifierKeys: CMDKModifierKeys) => {
       if ('to' in action) {
         navigate(action.to);
       } else if ('onAction' in action) {
@@ -372,7 +373,10 @@ describe('CommandPalette', () => {
 
       // Mirror the updated modal.tsx handleSelect: invoke callback, skip close when
       // action has children so the palette can push into the secondary actions.
-      const handleAction = (action: CollectionTreeNode<CMDKActionData>) => {
+      const handleAction = (
+        action: CollectionTreeNode<CMDKActionData>,
+        _modifierKeys: CMDKModifierKeys
+      ) => {
         if ('onAction' in action) {
           action.onAction();
           if (action.children.length > 0) {
