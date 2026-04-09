@@ -86,7 +86,7 @@ function GlobalActionsComponent({
   const handleAction = useCallback(
     (action: CollectionTreeNode<CMDKActionData>) => {
       if ('to' in action) {
-        navigate(String(action.to));
+        navigate(action.to);
       } else if ('onAction' in action) {
         action.onAction();
       }
@@ -97,10 +97,8 @@ function GlobalActionsComponent({
 
   return (
     <CommandPaletteProvider>
-      <CommandPaletteSlot.Provider>
-        <ActionsToJSX actions={actions} />
-        <CommandPalette onAction={handleAction}>{children}</CommandPalette>
-      </CommandPaletteSlot.Provider>
+      <ActionsToJSX actions={actions} />
+      <CommandPalette onAction={handleAction}>{children}</CommandPalette>
     </CommandPaletteProvider>
   );
 }

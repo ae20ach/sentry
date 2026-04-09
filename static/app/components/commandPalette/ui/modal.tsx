@@ -16,7 +16,7 @@ export default function CommandPaletteModal({Body, closeModal}: ModalRenderProps
   const handleSelect = useCallback(
     (action: CollectionTreeNode<CMDKActionData>) => {
       if ('to' in action) {
-        navigate(normalizeUrl(String(action.to)));
+        navigate(normalizeUrl(action.to));
       } else if ('onAction' in action) {
         action.onAction();
         // When the action has children, the palette will push into them so the

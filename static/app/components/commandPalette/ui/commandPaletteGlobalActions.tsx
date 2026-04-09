@@ -5,6 +5,7 @@ import {ProjectAvatar} from '@sentry/scraps/avatar';
 
 import {addLoadingMessage, addSuccessMessage} from 'sentry/actionCreators/indicator';
 import {openInviteMembersModal} from 'sentry/actionCreators/modal';
+import {openSudo} from 'sentry/actionCreators/sudoModal';
 import type {
   CMDKQueryOptions,
   CommandPaletteAsyncResult,
@@ -23,6 +24,7 @@ import {
   IconGithub,
   IconGraph,
   IconIssues,
+  IconList,
   IconLock,
   IconOpen,
   IconSearch,
@@ -32,10 +34,12 @@ import {
 } from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {apiOptions} from 'sentry/utils/api/apiOptions';
-import {queryOptions} from 'sentry/utils/queryClient';
+import {isActiveSuperuser} from 'sentry/utils/isActiveSuperuser';
+import {QUERY_API_CLIENT, queryOptions, useMutation} from 'sentry/utils/queryClient';
 import {useMutateUserOptions} from 'sentry/utils/useMutateUserOptions';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {useProjects} from 'sentry/utils/useProjects';
+import {useUser} from 'sentry/utils/useUser';
 import {useGetStarredDashboards} from 'sentry/views/dashboards/hooks/useGetStarredDashboards';
 import {AGENTS_LANDING_SUB_PATH} from 'sentry/views/insights/pages/agents/settings';
 import {BACKEND_LANDING_SUB_PATH} from 'sentry/views/insights/pages/backend/settings';
@@ -52,6 +56,7 @@ import {CommandPaletteSlot} from './commandPaletteSlot';
 const DSN_ICONS: React.ReactElement[] = [
   <IconIssues key="issues" />,
   <IconSettings key="settings" />,
+  <IconList key="list" />,
 ];
 
 const helpSearch = new SentryGlobalSearch(['docs', 'develop']);
@@ -72,11 +77,17 @@ function renderAsyncResult(item: CommandPaletteAsyncResult, index: number) {
  */
 export function GlobalCommandPaletteActions() {
   const organization = useOrganization();
+  const user = useUser();
   const hasDsnLookup = organization.features.includes('cmd-k-dsn-lookup');
   const {projects} = useProjects();
   const {mutateAsync: mutateUserOptions} = useMutateUserOptions();
   const {starredViews} = useStarredIssueViews();
   const {data: starredDashboards = []} = useGetStarredDashboards();
+  const {mutate: exitSuperuser} = useMutation({
+    mutationFn: () =>
+      QUERY_API_CLIENT.requestPromise('/auth/superuser/', {method: 'DELETE'}),
+    onSuccess: () => window.location.reload(),
+  });
 
   const prefix = `/organizations/${organization.slug}`;
 
@@ -384,6 +395,44 @@ export function GlobalCommandPaletteActions() {
           />
         </CMDKAction>
       </CMDKAction>
+
+      {user.isStaff && (
+        <CMDKAction display={{label: t('Admin')}}>
+          <CMDKAction
+            display={{label: t('Open _admin'), icon: <IconOpen />}}
+            keywords={[t('superuser')]}
+            onAction={() => window.open('/_admin/', '_blank', 'noreferrer')}
+          />
+          <CMDKAction
+            display={{
+              label: t('Open %s in _admin', organization.name),
+              icon: <IconOpen />,
+            }}
+            keywords={[t('superuser')]}
+            onAction={() =>
+              window.open(
+                `/_admin/customers/${organization.slug}/`,
+                '_blank',
+                'noreferrer'
+              )
+            }
+          />
+          {!isActiveSuperuser() && (
+            <CMDKAction
+              display={{label: t('Open Superuser Modal'), icon: <IconLock locked />}}
+              keywords={[t('superuser')]}
+              onAction={() => openSudo({isSuperuser: true, needsReload: true})}
+            />
+          )}
+          {isActiveSuperuser() && (
+            <CMDKAction
+              display={{label: t('Exit Superuser'), icon: <IconLock locked={false} />}}
+              keywords={[t('superuser')]}
+              onAction={() => exitSuperuser()}
+            />
+          )}
+        </CMDKAction>
+      )}
     </CommandPaletteSlot>
   );
 }
