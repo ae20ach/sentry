@@ -52,6 +52,10 @@ LINE_PLOT_FIELDS = {
 
 TOP_N = 5
 
+# Frontend ChartType enum values from static/app/views/insights/common/components/chart.tsx
+FRONTEND_CHART_TYPE_BAR = 0
+FRONTEND_CHART_TYPE_LINE = 1
+
 
 def _serialize_single_series(series: dict[str, Any]) -> dict[str, Any]:
     """Convert a single TimeSeries into events-stats format."""
@@ -157,17 +161,27 @@ def _unfurl_explore(
             params.setlist("yAxis", y_axes)
 
         group_bys = params.getlist("groupBy")
+        chart_type_str = params.get("chartType")
+        is_bar = chart_type_str == str(FRONTEND_CHART_TYPE_BAR)
+        is_line = chart_type_str == str(FRONTEND_CHART_TYPE_LINE)
 
         # Only one yAxis is charted; multiple charts per unfurl not yet supported.
         if group_bys:
             aggregate_fn = y_axes[-1].split("(")[0]
-            if aggregate_fn in LINE_PLOT_FIELDS:
+            if is_bar:
+                style = ChartType.SLACK_DISCOVER_TOP5_DAILY
+            elif is_line or aggregate_fn in LINE_PLOT_FIELDS:
                 style = ChartType.SLACK_DISCOVER_TOP5_PERIOD_LINE
             else:
                 style = ChartType.SLACK_DISCOVER_TOP5_PERIOD
             params.setlist("topEvents", [str(TOP_N)])
         else:
-            style = ChartType.SLACK_DISCOVER_TOTAL_PERIOD
+            if is_bar:
+                style = ChartType.SLACK_DISCOVER_TOTAL_DAILY
+            elif is_line:
+                style = ChartType.SLACK_DISCOVER_TOTAL_PERIOD_LINE
+            else:
+                style = ChartType.SLACK_DISCOVER_TOTAL_PERIOD
 
         if not params.get("statsPeriod") and not params.get("start"):
             params["statsPeriod"] = DEFAULT_PERIOD
@@ -230,11 +244,14 @@ def map_explore_query_args(url: str, args: Mapping[str, str | None]) -> Mapping[
     aggregate_fields = raw_query.getlist("aggregateField")
     y_axes: list[str] = []
     group_bys: list[str] = []
+    chart_type: int | None = None
     for field_json in aggregate_fields:
         try:
             parsed = json.loads(field_json)
             if "yAxes" in parsed and isinstance(parsed["yAxes"], list):
                 y_axes.extend(parsed["yAxes"])
+                if "chartType" in parsed and isinstance(parsed["chartType"], int):
+                    chart_type = parsed["chartType"]
             if "groupBy" in parsed and parsed["groupBy"]:
                 group_bys.append(parsed["groupBy"])
         except (json.JSONDecodeError, TypeError):
@@ -246,6 +263,9 @@ def map_explore_query_args(url: str, args: Mapping[str, str | None]) -> Mapping[
     # Build query params
     query = QueryDict(mutable=True)
     query.setlist("yAxis", y_axes)
+
+    if chart_type is not None:
+        query["chartType"] = str(chart_type)
 
     if group_bys:
         query.setlist("groupBy", group_bys)
