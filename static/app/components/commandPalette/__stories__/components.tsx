@@ -17,7 +17,7 @@ export function CommandPaletteDemo() {
     (action: CollectionTreeNode<CMDKActionData>, modifierKeys: CMDKModifierKeys) => {
       if ('to' in action) {
         if (modifierKeys.shift) {
-          window.open(String(normalizeUrl(action.to)), '_blank', 'noopener,noreferrer');
+          window.open(String(normalizeUrl(action.to)), '_blank');
           return;
         }
         navigate(normalizeUrl(action.to));

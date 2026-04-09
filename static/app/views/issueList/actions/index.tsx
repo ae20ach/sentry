@@ -6,7 +6,7 @@ import {AnimatePresence, motion, type MotionNodeAnimationOptions} from 'framer-m
 import {Alert} from '@sentry/scraps/alert';
 import {ProjectAvatar} from '@sentry/scraps/avatar';
 import {Checkbox} from '@sentry/scraps/checkbox';
-import {Flex} from '@sentry/scraps/layout';
+import {Container, Flex} from '@sentry/scraps/layout';
 import {Text} from '@sentry/scraps/text';
 
 import {bulkDelete, bulkUpdate, mergeGroups} from 'sentry/actionCreators/group';
@@ -39,7 +39,6 @@ import {defined} from 'sentry/utils';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {uniq} from 'sentry/utils/array/uniq';
 import {useQueryClient} from 'sentry/utils/queryClient';
-import {capitalize} from 'sentry/utils/string/capitalize';
 import {useApi} from 'sentry/utils/useApi';
 import {useMedia} from 'sentry/utils/useMedia';
 import {useOrganization} from 'sentry/utils/useOrganization';
@@ -491,29 +490,34 @@ export function IssueListActions({
               <CMDKAction
                 key={id}
                 display={{
-                  icon: <ErrorLevel level={group.level} />,
-                  label: errorType ? (
-                    <Fragment>
-                      <Text as="span" bold>
-                        {errorType}
-                      </Text>
-                      {errorValue ? `: ${errorValue}` : null}
-                    </Fragment>
-                  ) : (
-                    <Fragment>{group.title}</Fragment>
+                  label: (
+                    <Container paddingBottom="xs">
+                      <Flex align="center" gap="xs">
+                        <ErrorLevel level={group.level} />
+                        <Text as="span" size="sm" ellipsis>
+                          {errorType ? (
+                            <Fragment>
+                              <Text as="span" size="sm" bold>
+                                {errorType}
+                              </Text>
+                              {errorValue ? `: ${errorValue}` : null}
+                            </Fragment>
+                          ) : (
+                            group.title
+                          )}
+                        </Text>
+                      </Flex>
+                    </Container>
                   ),
                   searchableLabel: labelText,
                   details: (
                     <Flex align="center" gap="xs">
                       <ProjectAvatar project={group.project} size={12} />
-                      <Text as="span" size="sm">
+                      <Text as="span" size="xs" ellipsis>
                         {group.project.slug}
                       </Text>
-                      <Text as="span" size="sm" variant="muted">
-                        {capitalize(group.level)}
-                      </Text>
                       {group.assignedTo && (
-                        <Text as="span" size="sm" variant="muted">
+                        <Text as="span" size="xs" variant="muted" ellipsis>
                           {group.assignedTo.name}
                         </Text>
                       )}

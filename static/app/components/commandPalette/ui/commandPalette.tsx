@@ -30,7 +30,7 @@ import {
 import {useCommandPaletteAnalytics} from 'sentry/components/commandPalette/useCommandPaletteAnalytics';
 import {FeedbackButton} from 'sentry/components/feedbackButton/feedbackButton';
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
-import {IconArrow, IconClose, IconSearch} from 'sentry/icons';
+import {IconArrow, IconClose, IconLink, IconSearch} from 'sentry/icons';
 import {IconDefaultsProvider} from 'sentry/icons/useIconDefaults';
 import {t} from 'sentry/locale';
 import {fzf} from 'sentry/utils/search/fzf';
@@ -226,7 +226,11 @@ export function CommandPalette(props: CommandPaletteProps) {
           // secondary actions from the children that follow.
           props.onAction(action, {shift: false});
         }
-        dispatch({type: 'push action', key: action.key, label: action.display.label});
+        dispatch({
+          type: 'push action',
+          key: action.key,
+          label: getTextValue(action.display),
+        });
         return;
       }
 
@@ -618,6 +622,7 @@ function makeMenuItemFromAction(action: CMDKFlatItem): CommandPaletteActionMenuI
         <IconDefaultsProvider size="sm">{action.display.icon}</IconDefaultsProvider>
       </Flex>
     ),
+    trailingItems: 'to' in action ? <IconLink size="xs" variant="muted" /> : undefined,
     children: [],
     hideCheck: true,
   };

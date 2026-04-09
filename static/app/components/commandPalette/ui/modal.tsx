@@ -28,11 +28,7 @@ export default function CommandPaletteModal({Body, closeModal}: ModalRenderProps
         if (modifierKeys.shift) {
           // Open in a new tab and leave the palette open so the user can
           // continue selecting more items.
-          window.open(
-            locationToString(normalizeUrl(action.to)),
-            '_blank',
-            'noopener,noreferrer'
-          );
+          window.open(locationToString(normalizeUrl(action.to)), '_blank');
           return;
         }
         navigate(normalizeUrl(action.to));
