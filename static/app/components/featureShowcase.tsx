@@ -94,10 +94,6 @@ function StepActions({children}: {children?: ReactNode}) {
 type FeatureShowcaseProps = ModalRenderProps & {
   children: ReactNode;
   /**
-   * Called when the showcase modal is closed (via dismiss or completion).
-   */
-  onClose?: (step: number) => void;
-  /**
    * Called when the showcase advances to a new step.
    */
   onStepChange?: (step: number) => void;

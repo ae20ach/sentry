@@ -28,11 +28,10 @@ function CustomFooter() {
 
 describe('FeatureShowcase', () => {
   let onStepChange!: jest.Mock;
-  let onClose!: jest.Mock;
 
   function openTestShowcase() {
     openModal(deps => (
-      <FeatureShowcase {...deps} onStepChange={onStepChange} onClose={onClose}>
+      <FeatureShowcase {...deps} onStepChange={onStepChange}>
         <FeatureShowcase.Step>
           <FeatureShowcase.Image
             src="step-image.svg"
@@ -58,7 +57,6 @@ describe('FeatureShowcase', () => {
 
   beforeEach(() => {
     onStepChange = jest.fn();
-    onClose = jest.fn();
   });
 
   it('shows the modal', async () => {
@@ -168,7 +166,6 @@ describe('FeatureShowcase', () => {
     await userEvent.click(screen.getByRole('button', {name: 'Complete tour'}));
 
     expect(onStepChange).toHaveBeenCalledTimes(1);
-    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('supports custom footer on last step', async () => {
@@ -179,7 +176,7 @@ describe('FeatureShowcase', () => {
           data-test-id="reveal"
           onClick={() => {
             openModal(deps => (
-              <FeatureShowcase {...deps} onStepChange={onStepChange} onClose={onClose}>
+              <FeatureShowcase {...deps} onStepChange={onStepChange}>
                 <FeatureShowcase.Step>
                   <FeatureShowcase.StepTitle>First</FeatureShowcase.StepTitle>
                   <FeatureShowcase.StepContent>First step</FeatureShowcase.StepContent>
@@ -208,7 +205,6 @@ describe('FeatureShowcase', () => {
     expect(button).toHaveAttribute('href', 'http://example.org');
 
     await userEvent.click(button);
-    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('close button dismisses modal', async () => {
@@ -224,7 +220,5 @@ describe('FeatureShowcase', () => {
     await userEvent.click(screen.getByTestId('reveal'));
 
     await userEvent.click(screen.getByRole('button', {name: 'Close tour'}));
-
-    expect(onClose).toHaveBeenCalled();
   });
 });
