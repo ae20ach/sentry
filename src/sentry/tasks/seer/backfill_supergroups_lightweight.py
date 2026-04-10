@@ -15,6 +15,7 @@ from sentry.seer.signed_seer_api import (
     SeerViewerContext,
     make_lightweight_rca_cluster_request,
 )
+from sentry.services.eventstore.models import Event
 from sentry.snuba.dataset import Dataset
 from sentry.tasks.base import instrumented_task
 from sentry.taskworker.namespaces import seer_tasks
@@ -228,21 +229,29 @@ def _batch_fetch_events(groups: Sequence[Group], organization_id: int) -> list[t
         snuba_requests, referrer="supergroups_backfill_lightweight.get_latest_events"
     )
 
-    # Fetch full events from nodestore and serialize
-    group_event_pairs: list[tuple[Group, dict]] = []
+    # Build unfetched Event objects from Snuba results, keeping groups aligned
+    matched_groups: list[Group] = []
+    events: list[Event] = []
     for group, result in zip(groups, results):
         rows = result.get("data", [])
         if not rows:
             continue
+        matched_groups.append(group)
+        events.append(
+            Event(project_id=group.project_id, event_id=rows[0]["event_id"], group_id=group.id)
+        )
 
-        event_id = rows[0]["event_id"]
-        ready_event = eventstore.get_event_by_id(group.project_id, event_id, group_id=group.id)
-        if not ready_event:
-            continue
+    if not events:
+        return []
 
-        serialized_event = serialize(ready_event, None, EventSerializer())
-        if not serialized_event:
-            continue
-        group_event_pairs.append((group, serialized_event))
+    # Batch fetch all event data from nodestore in one multi-get
+    eventstore.bind_nodes(events)
 
-    return group_event_pairs
+    # Bulk serialize all events
+    serialized_events = serialize(events, None, EventSerializer())
+
+    return [
+        (group, serialized_event)
+        for group, serialized_event in zip(matched_groups, serialized_events)
+        if serialized_event
+    ]
