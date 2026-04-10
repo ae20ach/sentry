@@ -37,7 +37,7 @@ class PluginRequestParser(BaseRequestParser):
             mapping: OrganizationMapping = OrganizationMapping.objects.get(
                 organization_id=organization_id
             )
-        except OrganizationMapping.DoesNotExist as e:
+        except (OrganizationMapping.DoesNotExist, ValueError) as e:
             logging_extra["error"] = str(e)
             logging_extra["organization_id"] = organization_id
             logger.info("%s.no_mapping", self.provider, extra=logging_extra)
