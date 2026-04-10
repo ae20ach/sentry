@@ -91,7 +91,6 @@ export function LogsExportButton(props: LogsExportButtonProps) {
             dataset: TraceItemDataset.LOGS,
           },
         }}
-        overrideFeatureFlags
         sessionExport={{
           canExportInSession: canExportLogsInBrowserSession(props.tableData),
           onSessionExport: () => {

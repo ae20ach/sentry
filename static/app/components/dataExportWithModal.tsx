@@ -120,7 +120,7 @@ function DataExportFormModal({
 
 type DataExportWithModalProps = {
   payload: DataExportPayload;
-  sessionExport?: DataExportSessionExportConfig;
+  sessionExport: DataExportSessionExportConfig;
 };
 
 export function DataExportWithModal({payload, sessionExport}: DataExportWithModalProps) {
