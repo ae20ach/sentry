@@ -123,7 +123,13 @@ def assert_ttls(client: StrictRedis[bytes] | RedisCluster[bytes]):
     """
 
     for k in client.keys("*"):
-        assert client.ttl(k) > -1, k
+        ttl = client.ttl(k)
+        # ttl == -2 means the key expired or was deleted between keys() and ttl()
+        # (TOCTOU race with concurrent tests sharing Redis). Skip it — if it was
+        # deleted it clearly had a TTL, and if it expired that's the TTL working.
+        if ttl == -2:
+            continue
+        assert ttl >= 0, k
 
 
 def assert_clean(client: StrictRedis[bytes] | RedisCluster[bytes]):

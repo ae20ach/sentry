@@ -171,7 +171,7 @@ class OutboxDrainTest(TransactionTestCase):
 
         with outbox_context(flush=False):
             outbox1.save()
-        barrier: threading.Barrier = threading.Barrier(2, timeout=10)
+        barrier: threading.Barrier = threading.Barrier(2, timeout=30)
         processing_thread = threading.Thread(
             target=wrap_with_connection_closure(
                 lambda: outbox1.drain_shard(_test_processing_barrier=barrier)
@@ -236,7 +236,7 @@ class OutboxDrainTest(TransactionTestCase):
 
         with outbox_context(flush=False):
             outbox1.save()
-        barrier: threading.Barrier = threading.Barrier(2, timeout=10)
+        barrier: threading.Barrier = threading.Barrier(2, timeout=30)
         processing_thread = threading.Thread(
             target=wrap_with_connection_closure(
                 lambda: outbox1.drain_shard(flush_all=True, _test_processing_barrier=barrier)

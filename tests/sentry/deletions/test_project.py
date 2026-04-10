@@ -1,3 +1,4 @@
+import time
 from unittest import mock
 
 from sentry.deletions.tasks.scheduled import run_scheduled_deletions
@@ -227,9 +228,15 @@ class DeleteProjectTest(BaseWorkflowTest, TransactionTestCase, HybridCloudTestMi
         assert not Group.objects.filter(id=group.id).exists()
 
         conditions = eventstore.Filter(project_ids=[project.id, keeper.id], group_ids=[group.id])
-        events = eventstore.backend.get_events(
-            conditions, tenant_ids={"organization_id": 123, "referrer": "r"}
-        )
+        # Snuba processes eventstream deletions asynchronously. Retry briefly to
+        # allow the deletion to propagate before asserting.
+        for _ in range(10):
+            events = eventstore.backend.get_events(
+                conditions, tenant_ids={"organization_id": 123, "referrer": "r"}
+            )
+            if not events:
+                break
+            time.sleep(0.5)
         assert len(events) == 0
 
     @mock.patch("sentry.quotas.backend.remove_seat")
