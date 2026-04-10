@@ -119,4 +119,5 @@ class SeerSlackHaltReason(StrEnum):
 
     NO_VALID_INTEGRATION = "no_valid_integration"
     NO_VALID_ORGANIZATION = "no_valid_organization"
+    IDENTITY_NOT_LINKED = "identity_not_linked"
     MISSING_EVENT_DATA = "missing_event_data"

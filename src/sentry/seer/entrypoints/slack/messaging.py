@@ -5,10 +5,12 @@ from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
+from slack_sdk.models.blocks import ActionsBlock, ButtonElement, LinkButtonElement, MarkdownBlock
 from slack_sdk.models.blocks.blocks import Block
 from taskbroker_client.retry import Retry
 
 from sentry.constants import ObjectStatus
+from sentry.integrations.services.integration.model import RpcIntegration
 from sentry.integrations.services.integration.service import integration_service
 from sentry.notifications.platform.registry import provider_registry, template_registry
 from sentry.notifications.platform.service import (
@@ -258,5 +260,46 @@ def update_existing_message(
             install.update_message(
                 channel_id=channel_id, message_ts=message_ts, renderable=renderable
             )
+
         except (IntegrationError, IntegrationConfigurationError) as e:
             lifecycle.record_halt(halt_reason=e)
+
+
+def send_identity_link_prompt(
+    *, integration: RpcIntegration, channel_id: str, thread_ts: str, slack_user_id: str
+) -> None:
+    from sentry.integrations.slack.integration import SlackIntegration
+    from sentry.integrations.slack.message_builder.types import SlackAction
+    from sentry.integrations.slack.views.link_identity import build_linking_url
+
+    associate_url = build_linking_url(
+        integration=integration,
+        slack_id=slack_user_id,
+        channel_id=channel_id,
+        response_url=None,
+    )
+    message = "Link your Slack account to Sentry — so bugs find you, not the other way around."
+    renderable = SlackRenderable(
+        blocks=[
+            MarkdownBlock(text=message),
+            ActionsBlock(
+                elements=[
+                    ButtonElement(text="Cancel", value="ignore"),
+                    LinkButtonElement(
+                        text="Link",
+                        url=associate_url,
+                        style="primary",
+                        action_id=SlackAction.LINK_IDENTITY.value,
+                    ),
+                ]
+            ),
+        ],
+        text=message,
+    )
+    SlackIntegration.send_threaded_ephemeral_message_static(
+        integration_id=integration.id,
+        channel_id=channel_id,
+        thread_ts=thread_ts,
+        renderable=renderable,
+        slack_user_id=slack_user_id,
+    )

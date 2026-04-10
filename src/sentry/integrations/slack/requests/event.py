@@ -6,6 +6,7 @@ from typing import Any
 from sentry.integrations.slack.requests.base import SlackDMRequest, SlackRequestError
 from sentry.integrations.slack.unfurl.handlers import match_link
 from sentry.integrations.slack.unfurl.types import LinkType
+from sentry.integrations.slack.utils.constants import SlackScope
 
 COMMANDS = ["link", "unlink", "link team", "unlink team"]
 
@@ -64,7 +65,14 @@ class SlackEventRequest(SlackDMRequest):
 
     @property
     def user_id(self) -> str:
+        # The location for the Slack User ID in `assistant_thread_started` events differs from the rest
+        if self.dm_data.get("type") == "assistant_thread_started":
+            return self.dm_data.get("assistant_thread", {}).get("user_id", "")
         return self.dm_data.get("user", "")
+
+    @property
+    def is_assistant(self):
+        return SlackScope.ASSISTANT_WRITE in self.integration.metadata.get("scopes", [])
 
     @property
     def links(self) -> list[str]:
