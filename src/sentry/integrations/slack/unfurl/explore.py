@@ -12,7 +12,7 @@ from django.http.request import QueryDict
 from sentry import analytics, features
 from sentry.api import client
 from sentry.charts import backend as charts
-from sentry.charts.types import ChartType
+from sentry.charts.types import ChartSize, ChartType
 from sentry.integrations.messaging.metrics import (
     MessagingInteractionEvent,
     MessagingInteractionType,
@@ -35,6 +35,8 @@ _logger = logging.getLogger(__name__)
 
 DEFAULT_PERIOD = "14d"
 TOP_N = 5
+
+EXPLORE_CHART_SIZE: ChartSize = {"width": 1600, "height": 1200}
 
 
 class ExploreDatasetDefaults(TypedDict):
@@ -152,7 +154,7 @@ def _unfurl_explore(
             chart_data["type"] = chart_type
 
         try:
-            url = charts.generate_chart(style, chart_data)
+            url = charts.generate_chart(style, chart_data, size=EXPLORE_CHART_SIZE)
         except RuntimeError:
             _logger.warning("Failed to generate chart for explore unfurl")
             continue
