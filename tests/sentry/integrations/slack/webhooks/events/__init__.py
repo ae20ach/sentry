@@ -2,8 +2,11 @@ from unittest.mock import patch
 
 import orjson
 
+from sentry.silo.base import SiloMode
 from sentry.testutils.cases import APITestCase
 from sentry.testutils.helpers import install_slack
+from sentry.testutils.silo import assume_test_silo_mode
+from sentry.users.models.identity import Identity, IdentityStatus
 
 UNSET = object()
 
@@ -57,6 +60,20 @@ class BaseEventTest(APITestCase):
     def setUp(self) -> None:
         super().setUp()
         self.integration = install_slack(self.organization)
+
+    def link_identity(self, user=None, slack_user_id="U1234567890"):
+        """Link a Slack identity for identity resolution in Seer handlers."""
+        with assume_test_silo_mode(SiloMode.CONTROL):
+            idp = self.create_identity_provider(
+                type="slack", external_id=self.integration.external_id
+            )
+            Identity.objects.create(
+                external_id=slack_user_id,
+                idp=idp,
+                user=user or self.user,
+                status=IdentityStatus.VALID,
+                scopes=[],
+            )
 
     @patch(
         "sentry.integrations.slack.requests.SlackRequest._check_signing_secret", return_value=True
