@@ -204,7 +204,11 @@ export function fetchDashboard(
 }
 
 export function makeDashboardHistoryQueryKey(orgSlug: string, dashboardId: string) {
-  return [`/organizations/${orgSlug}/dashboards/${dashboardId}/history/`] as const;
+  return [
+    getApiUrl('/organizations/$organizationIdOrSlug/dashboards/$dashboardId/history/', {
+      path: {organizationIdOrSlug: orgSlug, dashboardId},
+    }),
+  ] as const;
 }
 
 export function updateDashboard(

@@ -3,7 +3,7 @@ import {
   type DashboardHistoryEntry,
 } from 'sentry/actionCreators/dashboards';
 import {useApiQuery} from 'sentry/utils/queryClient';
-import useOrganization from 'sentry/utils/useOrganization';
+import {useOrganization} from 'sentry/utils/useOrganization';
 
 interface UseDashboardHistoryOptions {
   dashboardId: string;
