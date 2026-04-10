@@ -503,7 +503,7 @@ class SlackEventEndpoint(SlackDMEndpoint):
     def on_app_mention(self, slack_request: SlackEventRequest) -> Response:
         return self._handle_seer_prompt(slack_request, MessagingInteractionType.APP_MENTION)
 
-    def on_dm(self, slack_request: SlackEventRequest) -> Response:
+    def on_direct_message(self, slack_request: SlackEventRequest) -> Response:
         return self._handle_seer_prompt(slack_request, MessagingInteractionType.DIRECT_MESSAGE)
 
     def on_assistant_thread_started(self, slack_request: SlackEventRequest) -> Response:

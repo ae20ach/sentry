@@ -211,7 +211,7 @@ class SlackIntegration(NotifyBasicMixin, IntegrationInstallation, IntegrationNot
         with the message.
 
         In rare cases where we cannot infer an organization, but need to invoke a Slack API, use this.
-        For example, when linking an Slack identity to a Sentry user, there could be multiple organizations
+        For example, when linking a Slack identity to a Sentry user, there could be multiple organizations
         attached to the Slack Workspace. We cannot infer which the user may link to.
         """
         client = SlackSdkClient(integration_id=integration_id)
