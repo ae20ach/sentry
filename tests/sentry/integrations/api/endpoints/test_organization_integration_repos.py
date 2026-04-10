@@ -526,3 +526,24 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
 
         assert response.status_code == 400
         assert response.data["detail"] == "token revoked"
+
+    @patch(
+        "sentry.integrations.github.integration.GitHubIntegration.get_repositories_paginated",
+        side_effect=NotImplementedError,
+    )
+    @patch(
+        "sentry.integrations.github.integration.GitHubIntegration.get_repositories",
+    )
+    def test_not_implemented_falls_back_to_full_list(
+        self, get_repositories: MagicMock, _mock_paginated: MagicMock
+    ) -> None:
+        """When a provider raises NotImplementedError, per_page falls back to get_repositories."""
+        get_repositories.return_value = [
+            {"name": "repo-1", "identifier": "Example/repo-1", "default_branch": "main"},
+        ]
+        response = self.client.get(self.path, data={"per_page": "2"}, format="json")
+
+        assert response.status_code == 200, response.content
+        get_repositories.assert_called_once_with(None, accessible_only=False, use_cache=False)
+        assert len(response.data["repos"]) == 1
+        assert "Link" not in response

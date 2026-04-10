@@ -389,6 +389,9 @@ class GitHubIntegration(
         page_number = (offset // per_page) + 1
         repos, total_count = client.get_repos_page(page=page_number, per_page=per_page)
         active_repos = [r for r in repos if not r.get("archived")]
+        # total_count includes archived repos, so has_next may overestimate
+        # and pages may contain fewer than per_page items. Acceptable for
+        # infinite-scroll consumers (worst case: one extra empty fetch).
         has_next = (page_number * per_page) < total_count
         return self._to_repo_info(active_repos), has_next
 

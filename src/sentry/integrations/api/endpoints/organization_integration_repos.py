@@ -111,6 +111,9 @@ class OrganizationIntegrationReposEndpoint(CellOrganizationIntegrationBaseEndpoi
 
             installable_only = request.GET.get("installableOnly", "false").lower() == "true"
 
+            # installableOnly filtering happens after pagination, so pages
+            # may contain fewer items than per_page when installed repos are
+            # excluded. Acceptable for infinite-scroll consumers.
             serialized_repositories = [
                 IntegrationRepository(
                     name=repo["name"],
