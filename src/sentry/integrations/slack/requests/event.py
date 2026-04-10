@@ -72,10 +72,10 @@ class SlackEventRequest(SlackDMRequest):
         return self.dm_data.get("user", "")
 
     @property
-    def thread_ts(self) -> str:
+    def thread_ts(self) -> str | None:
         if self.is_assistant_thread_event:
             return self.dm_data.get("assistant_thread", {}).get("thread_ts", "")
-        return self.dm_data.get("thread_ts")
+        return self.dm_data.get("thread_ts", "")
 
     @property
     def has_assistant_scope(self) -> bool:
