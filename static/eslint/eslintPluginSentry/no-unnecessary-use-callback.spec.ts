@@ -115,6 +115,15 @@ ruleTester.run('no-unnecessary-use-callback', noUnnecessaryUseCallback, {
         <button onClick={() => fn()} />
       `,
     },
+    {
+      name: 'useCallback passed to scraps component justified by other usage',
+      code: `
+        import {Button} from '@sentry/scraps/button';
+        const fn = useCallback(() => {}, []);
+        console.log(fn);
+        <Button onClick={fn} />
+      `,
+    },
   ],
 
   invalid: [
@@ -348,6 +357,60 @@ ruleTester.run('no-unnecessary-use-callback', noUnnecessaryUseCallback, {
               output: `
         const fn = () => {};
         <><button onClick={() => fn()} /><div onMouseEnter={fn} /></>
+      `,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      name: 'useCallback passed to @sentry/scraps component',
+      code: `
+        import {Button} from '@sentry/scraps/button';
+        const fn = useCallback(() => {}, []);
+        <Button onClick={fn} />
+      `,
+      errors: [
+        {
+          messageId: 'unnecessaryUseCallback',
+          data: {
+            name: 'fn',
+            usages: 'passed to unmemoized component <Button> in line 4',
+          },
+          suggestions: [
+            {
+              messageId: 'removeUseCallback',
+              output: `
+        import {Button} from '@sentry/scraps/button';
+        const fn = () => {};
+        <Button onClick={fn} />
+      `,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      name: 'useCallback passed to @sentry/scraps namespaced component',
+      code: `
+        import {Flex} from '@sentry/scraps/layout';
+        const fn = useCallback(() => {}, []);
+        <Flex onClick={fn} />
+      `,
+      errors: [
+        {
+          messageId: 'unnecessaryUseCallback',
+          data: {
+            name: 'fn',
+            usages: 'passed to unmemoized component <Flex> in line 4',
+          },
+          suggestions: [
+            {
+              messageId: 'removeUseCallback',
+              output: `
+        import {Flex} from '@sentry/scraps/layout';
+        const fn = () => {};
+        <Flex onClick={fn} />
       `,
             },
           ],

@@ -2,7 +2,7 @@ import {AST_NODE_TYPES, ESLintUtils, type TSESTree} from '@typescript-eslint/uti
 
 interface UsageInfo {
   line: number;
-  reason: 'directlyInvoked' | 'intrinsicElement';
+  reason: 'directlyInvoked' | 'intrinsicElement' | 'unmemoizedComponent';
   element?: string;
 }
 
@@ -11,6 +11,9 @@ function formatUsages(usages: UsageInfo[]): string {
     .map(u => {
       if (u.reason === 'directlyInvoked') {
         return `directly invoked in line ${u.line}`;
+      }
+      if (u.reason === 'unmemoizedComponent') {
+        return `passed to unmemoized component <${u.element}> in line ${u.line}`;
       }
       return `passed to intrinsic element <${u.element}> in line ${u.line}`;
     })
@@ -45,6 +48,8 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs<
     const flaggedUsages = new Map<string, UsageInfo[]>();
     // Number of references we've accounted for (flagged) per binding
     const flaggedRefCount = new Map<string, number>();
+    // Local names imported from @sentry/scraps (these components are never memoized)
+    const scrapsImports = new Set<string>();
 
     function addFlaggedUsage(name: string, usage: UsageInfo, refCount: number) {
       let usages = flaggedUsages.get(name);
@@ -95,7 +100,29 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs<
       return null;
     }
 
+    function getJSXElementName(nameNode: TSESTree.JSXTagNameExpression): string | null {
+      if (nameNode.type === AST_NODE_TYPES.JSXIdentifier) {
+        return nameNode.name;
+      }
+      if (
+        nameNode.type === AST_NODE_TYPES.JSXMemberExpression &&
+        nameNode.object.type === AST_NODE_TYPES.JSXIdentifier
+      ) {
+        return nameNode.object.name;
+      }
+      return null;
+    }
+
     return {
+      ImportDeclaration(node) {
+        const source = node.source.value;
+        if (typeof source === 'string' && source.startsWith('@sentry/scraps')) {
+          for (const spec of node.specifiers) {
+            scrapsImports.add(spec.local.name);
+          }
+        }
+      },
+
       VariableDeclarator(node) {
         if (node.id.type !== AST_NODE_TYPES.Identifier) {
           return;
@@ -141,7 +168,8 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs<
           return;
         }
 
-        // Case 2: Direct reference on an intrinsic element — counts as 1 reference.
+        // Case 2: Direct reference on an unmemoized element — counts as 1 reference.
+        // This includes intrinsic elements and components from @sentry/scraps.
         if (
           expr.type === AST_NODE_TYPES.Identifier &&
           useCallbackBindings.has(expr.name)
@@ -151,6 +179,7 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs<
             return;
           }
           const tagName = openingElement.name;
+          const elementName = getJSXElementName(tagName);
 
           if (
             tagName.type === AST_NODE_TYPES.JSXIdentifier &&
@@ -161,6 +190,16 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs<
               {
                 reason: 'intrinsicElement',
                 element: tagName.name,
+                line: node.value.loc.start.line,
+              },
+              1
+            );
+          } else if (elementName && scrapsImports.has(elementName)) {
+            addFlaggedUsage(
+              expr.name,
+              {
+                reason: 'unmemoizedComponent',
+                element: elementName,
                 line: node.value.loc.start.line,
               },
               1
