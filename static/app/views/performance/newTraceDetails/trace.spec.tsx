@@ -28,6 +28,19 @@ import {DEFAULT_TRACE_VIEW_PREFERENCES} from 'sentry/views/performance/newTraceD
 
 import type {TraceFullDetailed} from './traceApi/types';
 
+let traceSearchRafSpy: jest.SpyInstance | undefined;
+let traceSearchRafId = 1;
+
+function installImmediateRafForTraceSearch() {
+  traceSearchRafSpy?.mockRestore();
+  traceSearchRafSpy = jest
+    .spyOn(window, 'requestAnimationFrame')
+    .mockImplementation((callback: FrameRequestCallback): number => {
+      queueMicrotask(() => callback(performance.now()));
+      return traceSearchRafId++;
+    });
+}
+
 class MockResizeObserver {
   callback: ResizeObserverCallback;
   constructor(callback: ResizeObserverCallback) {
@@ -455,6 +468,7 @@ async function searchTestSetup() {
   const virtualizedScrollContainer = getVirtualizedScrollContainer();
 
   await traceVirtualizedRowsToLoad(virtualizedContainer);
+  installImmediateRafForTraceSearch();
   return {...value, virtualizedContainer, virtualizedScrollContainer};
 }
 
@@ -735,8 +749,17 @@ const searchToHaveResult = async (matcher: RegExp) => {
   });
 };
 
+/**
+ * Search reducer has applied with at least one match (iterator text from reducer, not debounced success icon).
+ * Do not match `no results` here: while loading, `results` is null and the UI can show a false `no results`.
+ */
 const searchToSucceed = async (): Promise<void> => {
-  await screen.findByTestId('trace-search-success');
+  await waitFor(() => {
+    const text = (
+      screen.getByTestId('trace-search-result-iterator').textContent ?? ''
+    ).trim();
+    expect(/^\d+\/\d+$/.test(text) || /^-\/\d+$/.test(text)).toBe(true);
+  });
 };
 
 function printVirtualizedList(container: HTMLElement) {
@@ -1454,10 +1477,16 @@ describe('trace view', () => {
   });
 
   describe('search', () => {
+    afterEach(() => {
+      traceSearchRafSpy?.mockRestore();
+      traceSearchRafSpy = undefined;
+    });
+
     it('triggers search on load but does not steal focus from node param', async () => {
       mockQueryString('?search=transaction-op-99&node=txn-0');
 
       const {virtualizedContainer} = await pageloadTestSetup();
+      installImmediateRafForTraceSearch();
       const searchInput = await screen.findByPlaceholderText('Search in trace');
       expect(searchInput).toHaveValue('transaction-op-99');
 
@@ -1471,6 +1500,7 @@ describe('trace view', () => {
       mockQueryString('?search=dead&node=txn-5');
 
       const {container} = await pageloadTestSetup();
+      installImmediateRafForTraceSearch();
       const searchInput = await screen.findByPlaceholderText('Search in trace');
       expect(searchInput).toHaveValue('dead');
 
@@ -1750,6 +1780,8 @@ describe('trace view', () => {
       // Awaits for the placeholder rendering rows to be removed
       await within(container).findAllByText(/transaction-op-0/i);
 
+      installImmediateRafForTraceSearch();
+
       const searchInput = await screen.findByPlaceholderText('Search in trace');
       await userEvent.click(searchInput);
       await userEvent.paste('op-0');
@@ -1759,10 +1791,15 @@ describe('trace view', () => {
 
       await searchToHaveResult(/1\/1/);
 
-      const open = await screen.findAllByRole('button', {name: '+'});
-      await userEvent.click(open[0]!);
-
-      await searchToHaveResult(/1\/1/);
+      const txnOp0El = (await within(container).findAllByText(/transaction-op-0/i)).find(
+        el => el.closest('.TraceRow')
+      );
+      expect(txnOp0El).toBeTruthy();
+      const txn0Row = txnOp0El!.closest('.TraceRow');
+      expect(txn0Row).toBeTruthy();
+      await userEvent.click(
+        within(txn0Row as HTMLElement).getByRole('button', {name: '+'})
+      );
 
       expect(await screen.findByText('span-description')).toBeInTheDocument();
       expect(spansRequest).toHaveBeenCalled();
@@ -1804,7 +1841,6 @@ describe('trace view', () => {
       await userEvent.keyboard('{Control>}a{/Control}');
       await userEvent.paste('transaction-op-none');
       await waitFor(() => expect(searchInput).toHaveValue('transaction-op-none'));
-      await searchToSucceed();
       await searchToHaveResult(/no results/);
       await waitFor(() => {
         // eslint-disable-next-line testing-library/no-container
