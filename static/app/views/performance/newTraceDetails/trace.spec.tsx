@@ -1461,11 +1461,7 @@ describe('trace view', () => {
       const searchInput = await screen.findByPlaceholderText('Search in trace');
       expect(searchInput).toHaveValue('transaction-op-99');
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('trace-search-result-iterator')).toHaveTextContent(
-          '-/1'
-        );
-      });
+      await searchToHaveResult(/-\/1/);
 
       const rows = getVirtualizedRows(virtualizedContainer);
       expect(rows[1]).toHaveFocus();
@@ -1478,11 +1474,7 @@ describe('trace view', () => {
       const searchInput = await screen.findByPlaceholderText('Search in trace');
       expect(searchInput).toHaveValue('dead');
 
-      await waitFor(() => {
-        expect(screen.getByTestId('trace-search-result-iterator')).toHaveTextContent(
-          'no results'
-        );
-      });
+      await searchToHaveResult(/no results/);
 
       await waitFor(() => {
         const rows = container.querySelectorAll(VISIBLE_TRACE_ROW_SELECTOR);
@@ -1645,9 +1637,7 @@ describe('trace view', () => {
         await assertHighlightedRowAtIndex(container, 2);
         const rows = getVirtualizedRows(virtualizedContainer);
         // By default, we highlight the first result
-        expect(
-          await screen.findByTestId('trace-search-result-iterator')
-        ).toHaveTextContent('1/2');
+        await searchToHaveResult(/1\/2/);
 
         // Click on a random row in the list that is not a search result
         await userEvent.click(rows[5]!);
@@ -1767,29 +1757,17 @@ describe('trace view', () => {
 
       await searchToSucceed();
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('trace-search-result-iterator')).toHaveTextContent(
-          '1/1'
-        );
-      });
+      await searchToHaveResult(/1\/1/);
 
       const open = await screen.findAllByRole('button', {name: '+'});
       await userEvent.click(open[0]!);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('trace-search-result-iterator')).toHaveTextContent(
-          '1/1'
-        );
-      });
+      await searchToHaveResult(/1\/1/);
 
       expect(await screen.findByText('span-description')).toBeInTheDocument();
       expect(spansRequest).toHaveBeenCalled();
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('trace-search-result-iterator')).toHaveTextContent(
-          '1/2'
-        );
-      });
+      await searchToHaveResult(/1\/2/);
     });
 
     it('during search, highlighting is persisted on the row', async () => {
@@ -1809,28 +1787,25 @@ describe('trace view', () => {
       }
 
       // User clicks on an entry in the list, then proceeds to search
-      await waitFor(() => {
-        expect(screen.getByTestId('trace-search-result-iterator')).toHaveTextContent(
-          '6/11'
-        );
-      });
+      await searchToHaveResult(/6\/11/);
       // And then continues the query - the highlighting is preserved as long as the
       // row is part of the search results
       await assertHighlightedRowAtIndex(container, 6);
 
-      await userEvent.clear(searchInput);
       await userEvent.click(searchInput);
+      await userEvent.keyboard('{Control>}a{/Control}');
       await userEvent.paste('transaction-op-5');
       await waitFor(() => expect(searchInput).toHaveValue('transaction-op-5'));
 
       await searchToSucceed();
       await assertHighlightedRowAtIndex(container, 6);
 
-      await userEvent.clear(searchInput);
-      await waitFor(() => expect(searchInput).toHaveValue(''));
       await userEvent.click(searchInput);
+      await userEvent.keyboard('{Control>}a{/Control}');
       await userEvent.paste('transaction-op-none');
+      await waitFor(() => expect(searchInput).toHaveValue('transaction-op-none'));
       await searchToSucceed();
+      await searchToHaveResult(/no results/);
       await waitFor(() => {
         // eslint-disable-next-line testing-library/no-container
         expect(container.querySelectorAll('.TraceRow.Highlight')).toHaveLength(0);
