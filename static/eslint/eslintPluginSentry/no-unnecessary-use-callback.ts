@@ -1,5 +1,22 @@
 import {AST_NODE_TYPES, ESLintUtils, type TSESTree} from '@typescript-eslint/utils';
 
+interface UsageInfo {
+  line: number;
+  reason: 'directlyInvoked' | 'intrinsicElement';
+  element?: string;
+}
+
+function formatUsages(usages: UsageInfo[]): string {
+  return usages
+    .map(u => {
+      if (u.reason === 'directlyInvoked') {
+        return `directly invoked in line ${u.line}`;
+      }
+      return `passed to intrinsic element <${u.element}> in line ${u.line}`;
+    })
+    .join(' and ');
+}
+
 export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs({
   meta: {
     type: 'suggestion',
@@ -10,7 +27,7 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs({
     schema: [],
     messages: {
       unnecessaryUseCallback:
-        'Unnecessary useCallback. `{{name}}` is only used in contexts where memoization provides no benefit.',
+        'Unnecessary useCallback. `{{name}}` is only used in contexts where memoization provides no benefit. It is {{usages}}.',
     },
   },
   create(context) {
@@ -19,8 +36,17 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs({
     // Bindings that have at least one usage where memoization is justified
     // (e.g. passed directly to a custom component)
     const justifiedBindings = new Set<string>();
-    // Bindings with at least one flaggable usage, keyed by name
-    const flaggedBindings = new Set<string>();
+    // Collected flagged usages per binding
+    const flaggedUsages = new Map<string, UsageInfo[]>();
+
+    function addFlaggedUsage(name: string, usage: UsageInfo) {
+      let usages = flaggedUsages.get(name);
+      if (!usages) {
+        usages = [];
+        flaggedUsages.set(name, usages);
+      }
+      usages.push(usage);
+    }
 
     /**
      * Walks an AST node looking for a CallExpression whose callee is a
@@ -31,8 +57,7 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs({
       if (
         node.type === AST_NODE_TYPES.CallExpression &&
         node.callee.type === AST_NODE_TYPES.Identifier &&
-        useCallbackBindings.has(node.callee.name) &&
-        !justifiedBindings.has(node.callee.name)
+        useCallbackBindings.has(node.callee.name)
       ) {
         return node.callee.name;
       }
@@ -89,7 +114,10 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs({
         if (expr.type === AST_NODE_TYPES.ArrowFunctionExpression) {
           const calledBinding = findCallToBinding(expr.body);
           if (calledBinding) {
-            flaggedBindings.add(calledBinding);
+            addFlaggedUsage(calledBinding, {
+              reason: 'directlyInvoked',
+              line: node.value.loc.start.line,
+            });
             return;
           }
         }
@@ -116,7 +144,11 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs({
             tagName.name[0] === tagName.name[0]?.toLowerCase()
           ) {
             // Case 2: Direct reference on an intrinsic element
-            flaggedBindings.add(expr.name);
+            addFlaggedUsage(expr.name, {
+              reason: 'intrinsicElement',
+              element: tagName.name,
+              line: node.value.loc.start.line,
+            });
           } else {
             // Passed directly to a custom component — memoization is justified
             justifiedBindings.add(expr.name);
@@ -125,7 +157,7 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs({
       },
 
       'Program:exit'() {
-        for (const name of flaggedBindings) {
+        for (const [name, usages] of flaggedUsages) {
           if (justifiedBindings.has(name)) {
             continue;
           }
@@ -134,7 +166,7 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs({
             context.report({
               node: callNode,
               messageId: 'unnecessaryUseCallback',
-              data: {name},
+              data: {name, usages: formatUsages(usages)},
             });
           }
         }
