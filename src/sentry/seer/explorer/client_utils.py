@@ -28,6 +28,7 @@ from sentry.seer.explorer.client_models import SeerRunState
 from sentry.seer.models import SeerApiError
 from sentry.seer.seer_setup import has_seer_access_with_detail
 from sentry.seer.signed_seer_api import SeerViewerContext, make_signed_seer_api_request
+from sentry.seer.utils import get_github_username_for_user
 from sentry.users.models.user import User as SentryUser
 from sentry.users.services.user.model import RpcUser
 from sentry.users.services.user_option import user_option_service
@@ -284,6 +285,11 @@ def collect_user_org_context(
     # Get IP address from http request, if provided
     user_ip: str | None = request.META.get("REMOTE_ADDR") if request else None
 
+    # Resolve GitHub username for PR assignment/review
+    github_username = get_github_username_for_user(user, organization.id)
+
+    assign_pr_to_user = features.has("organizations:seer-assign-prs-to-user", organization)
+
     return {
         "org_slug": organization.slug,
         "user_id": user.id,
@@ -291,6 +297,8 @@ def collect_user_org_context(
         "user_name": user_name,
         "user_email": user.email,
         "user_timezone": user_timezone,
+        "github_username": github_username,
+        "assign_pr_to_user": assign_pr_to_user,
         "user_teams": user_teams,
         "user_projects": user_projects,
         "all_org_projects": all_org_projects,

@@ -511,6 +511,9 @@ def _call_autofix(
                     "sentry:enable_seer_coding", default=ENABLE_SEER_CODING_DEFAULT
                 ),
                 "stopping_point": stopping_point.value if stopping_point else None,
+                "assign_pr_to_user": features.has(
+                    "organizations:seer-assign-prs-to-user", group.organization
+                ),
             },
             "preference": preference.dict() if preference else None,
         },
