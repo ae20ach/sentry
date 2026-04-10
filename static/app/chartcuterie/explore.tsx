@@ -1,7 +1,10 @@
 import type {Theme} from '@emotion/react';
 import type {BarSeriesOption, LineSeriesOption} from 'echarts';
 
+import {Grid} from 'sentry/components/charts/components/grid';
+import {Legend} from 'sentry/components/charts/components/legend';
 import {XAxis} from 'sentry/components/charts/components/xAxis';
+import {YAxis} from 'sentry/components/charts/components/yAxis';
 import {AreaSeries} from 'sentry/components/charts/series/areaSeries';
 import {BarSeries} from 'sentry/components/charts/series/barSeries';
 import {LineSeries} from 'sentry/components/charts/series/lineSeries';
@@ -10,7 +13,7 @@ import {DisplayType} from 'sentry/views/dashboards/types';
 import type {TimeSeries} from 'sentry/views/dashboards/widgets/common/types';
 import {formatTimeSeriesLabel} from 'sentry/views/dashboards/widgets/timeSeriesWidget/formatters/formatTimeSeriesLabel';
 
-import {DEFAULT_FONT_FAMILY, makeSlackChartDefaults, slackChartSize} from './slack';
+import {DEFAULT_FONT_FAMILY, slackChartSize} from './slack';
 import type {RenderDescriptor} from './types';
 import {ChartType} from './types';
 
@@ -50,7 +53,26 @@ export const makeExploreCharts = (theme: Theme): Array<RenderDescriptor<ChartTyp
     axisLabel: {fontSize: 11, fontFamily: DEFAULT_FONT_FAMILY},
   });
 
-  const slackChartDefaults = makeSlackChartDefaults(theme);
+  const exploreDefaults = {
+    grid: Grid({left: 5, right: 5, bottom: 5}),
+    backgroundColor: theme.tokens.background.primary,
+    legend: Legend({
+      theme,
+      icon: 'roundRect',
+      itemHeight: 12,
+      itemWidth: 12,
+      itemGap: 16,
+      top: 4,
+      right: 10,
+      textStyle: {fontSize: 13, fontFamily: DEFAULT_FONT_FAMILY},
+    }),
+    yAxis: YAxis({
+      theme,
+      splitNumber: 3,
+      axisLabel: {fontSize: 11, fontFamily: DEFAULT_FONT_FAMILY},
+    }),
+  };
+
   const exploreCharts: Array<RenderDescriptor<ChartType>> = [];
 
   exploreCharts.push({
@@ -60,7 +82,7 @@ export const makeExploreCharts = (theme: Theme): Array<RenderDescriptor<ChartTyp
 
       if (timeSeries.length === 0) {
         return {
-          ...slackChartDefaults,
+          ...exploreDefaults,
           xAxis: exploreXAxis,
           useUTC: true,
           series: [],
@@ -80,7 +102,7 @@ export const makeExploreCharts = (theme: Theme): Array<RenderDescriptor<ChartTyp
         });
 
         return {
-          ...slackChartDefaults,
+          ...exploreDefaults,
           xAxis: exploreXAxis,
           useUTC: true,
           color,
@@ -109,7 +131,7 @@ export const makeExploreCharts = (theme: Theme): Array<RenderDescriptor<ChartTyp
       });
 
       return {
-        ...slackChartDefaults,
+        ...exploreDefaults,
         xAxis: exploreXAxis,
         useUTC: true,
         color,
