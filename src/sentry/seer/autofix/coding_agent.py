@@ -12,6 +12,7 @@ from requests import HTTPError
 from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
 
 from sentry import analytics, features
+from sentry.models.project import Project
 
 
 class IntegrationNotFound(NotFound):
@@ -57,6 +58,7 @@ from sentry.seer.autofix.utils import (
     get_coding_agent_prompt,
     get_project_seer_preferences,
     make_store_coding_agent_states_request,
+    read_preference_from_sentry_db,
     update_coding_agent_state,
 )
 from sentry.seer.models import SeerApiError, SeerApiResponseValidationError
@@ -231,20 +233,35 @@ def _launch_agents_for_repos(
 
     # Fetch project preferences to get auto_create_pr setting from automation_handoff
     auto_create_pr = False
-    try:
-        preference_response = get_project_seer_preferences(autofix_state.request.project_id)
-        if preference_response and preference_response.preference:
-            if preference_response.preference.automation_handoff:
-                auto_create_pr = preference_response.preference.automation_handoff.auto_create_pr
-    except (SeerApiError, SeerApiResponseValidationError):
-        logger.exception(
-            "coding_agent.get_project_seer_preferences_error",
-            extra={
-                "organization_id": organization.id,
-                "run_id": run_id,
-                "project_id": autofix_state.request.project_id,
-            },
-        )
+    if features.has("organizations:seer-project-settings-read-from-sentry", organization):
+        try:
+            project = Project.objects.get_from_cache(id=autofix_state.request.project_id)
+            preference = read_preference_from_sentry_db(project)
+            if preference and preference.automation_handoff:
+                auto_create_pr = preference.automation_handoff.auto_create_pr
+        except Project.DoesNotExist:
+            logger.exception(
+                "coding_agent.project_not_found",
+                extra={
+                    "organization_id": organization.id,
+                    "run_id": run_id,
+                    "project_id": autofix_state.request.project_id,
+                },
+            )
+    else:
+        try:
+            preference = get_project_seer_preferences(autofix_state.request.project_id).preference
+            if preference and preference.automation_handoff:
+                auto_create_pr = preference.automation_handoff.auto_create_pr
+        except (SeerApiError, SeerApiResponseValidationError):
+            logger.exception(
+                "coding_agent.get_project_seer_preferences_error",
+                extra={
+                    "organization_id": organization.id,
+                    "run_id": run_id,
+                    "project_id": autofix_state.request.project_id,
+                },
+            )
 
     repos = set(
         _extract_repos_from_root_cause(autofix_state)
