@@ -16,6 +16,8 @@ from sentry.issues.grouptype import FeedbackGroup
 from sentry.snuba.dataset import Dataset
 from sentry.testutils.cases import APITestCase, SnubaTestCase
 from sentry.testutils.helpers.datetime import before_now, freeze_time
+
+_FROZEN_NOW = before_now(days=1).replace(hour=0, minute=0, second=0, microsecond=0)
 from sentry.utils.snuba import raw_snql_query
 from tests.sentry.feedback import mock_feedback_event
 
@@ -121,7 +123,7 @@ class TestLabelQuery(APITestCase, SnubaTestCase):
         assert result[2]["label"] == "Checkout" or result[2]["label"] == "Colors"
         assert result[2]["count"] == 1
 
-    @freeze_time("2025-01-15T00:00:00Z")
+    @freeze_time(_FROZEN_NOW)
     def test_query_recent_feedbacks_with_ai_labels(self) -> None:
         self._create_feedback(
             "The UI is too slow and confusing",
