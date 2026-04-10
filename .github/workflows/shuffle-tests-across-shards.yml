@@ -23,7 +23,6 @@ jobs:
     timeout-minutes: 120
     permissions:
       contents: read
-      issues: write
     strategy:
       # This helps not having to run multiple jobs because one fails, thus, reducing resource usage
       # and reducing the risk that one of many runs would turn red again (read: intermittent tests)
@@ -62,55 +61,10 @@ jobs:
       - name: Bootstrap per-worker Snuba instances
         if: env.XDIST_PER_WORKER_SNUBA == '1'
         run: |
-          set -eo pipefail
-          SNUBA_IMAGE=$(docker inspect snuba-snuba-1 --format '{{.Config.Image}}')
-          SNUBA_NETWORK=$(docker inspect snuba-snuba-1 --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{end}}')
-          if [ -z "$SNUBA_IMAGE" ] || [ -z "$SNUBA_NETWORK" ]; then
-            echo "ERROR: Could not inspect snuba-snuba-1 container. Is devservices running?"
-            exit 1
-          fi
-
-          docker stop snuba-snuba-1 || true
-
-          PIDS=()
-          for i in $(seq 0 $(( ${XDIST_WORKERS} - 1 ))); do
-            (
-              WORKER_DB="default_gw${i}"
-              WORKER_PORT=$((1230 + i))
-              curl -sf 'http://localhost:8123/' --data-binary "CREATE DATABASE IF NOT EXISTS ${WORKER_DB}"
-              docker run --rm --network "$SNUBA_NETWORK" \
-                -e "CLICKHOUSE_DATABASE=${WORKER_DB}" -e "CLICKHOUSE_HOST=clickhouse" \
-                -e "CLICKHOUSE_PORT=9000" -e "CLICKHOUSE_HTTP_PORT=8123" \
-                -e "DEFAULT_BROKERS=kafka:9093" -e "REDIS_HOST=redis" \
-                -e "REDIS_PORT=6379" -e "REDIS_DB=1" -e "SNUBA_SETTINGS=docker" \
-                "$SNUBA_IMAGE" bootstrap --force 2>&1 | tail -3
-              docker run -d --name "snuba-gw${i}" --network "$SNUBA_NETWORK" \
-                -p "${WORKER_PORT}:1218" \
-                -e "CLICKHOUSE_DATABASE=${WORKER_DB}" -e "CLICKHOUSE_HOST=clickhouse" \
-                -e "CLICKHOUSE_PORT=9000" -e "CLICKHOUSE_HTTP_PORT=8123" \
-                -e "DEFAULT_BROKERS=kafka:9093" -e "REDIS_HOST=redis" \
-                -e "REDIS_PORT=6379" -e "REDIS_DB=1" -e "SNUBA_SETTINGS=docker" \
-                -e "DEBUG=1" "$SNUBA_IMAGE" api
-
-              for attempt in $(seq 1 30); do
-                if curl -sf "http://127.0.0.1:${WORKER_PORT}/health" > /dev/null 2>&1; then
-                  echo "snuba-gw${i} healthy on port ${WORKER_PORT}"
-                  break
-                fi
-                if [ "$attempt" -eq 30 ]; then
-                  echo "ERROR: snuba-gw${i} failed health check after 30 attempts"
-                  docker logs "snuba-gw${i}" 2>&1 | tail -20 || true
-                  exit 1
-                fi
-                sleep 2
-              done
-            ) &
-            PIDS+=($!)
-          done
-
-          for pid in "${PIDS[@]}"; do
-            wait "$pid" || { echo "ERROR: Snuba bootstrap subshell (PID $pid) failed"; exit 1; }
-          done
+          # devservices is already fully up (started synchronously by setup-sentry).
+          # Write the sentinel file bootstrap-snuba.py uses to know devservices is done.
+          echo "0" > /tmp/ds-exit
+          python3 .github/workflows/scripts/bootstrap-snuba.py
 
       - name: Run backend test (${{ steps.setup.outputs.matrix-instance-number }} of ${{ steps.setup.outputs.matrix-instance-total }})
         id: run-tests
@@ -173,37 +127,42 @@ jobs:
             echo "run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           } | tee -a "$GITHUB_STEP_SUMMARY" > "$GITHUB_WORKSPACE/issue-body"
 
-      - name: Create GitHub issue for test pollution
-        if: failure() && steps.detect-test-pollution.outcome == 'success'
+      - name: Write failure artifact
+        if: failure()
         env:
-          GH_TOKEN: ${{ github.token }}
+          DETECT_POLLUTION_OUTCOME: ${{ steps.detect-test-pollution.outcome }}
         run: |
           test -f "$GITHUB_WORKSPACE/failing-testid" || exit 0
           read -r FAILING_TESTID < "$GITHUB_WORKSPACE/failing-testid"
-          gh issue create \
-            --title "Test pollution: $FAILING_TESTID" \
-            --label test-pollution \
-            --body "$(cat "$GITHUB_WORKSPACE/issue-body")"
+          if [ "$DETECT_POLLUTION_OUTCOME" = "success" ]; then
+            POLLUTING_TESTID=$(tail -1 "$GITHUB_WORKSPACE/detect-test-pollution-output")
+            jq -n \
+              --arg type "pollution" \
+              --arg testid "$FAILING_TESTID" \
+              --arg polluting_testid "$POLLUTING_TESTID" \
+              --arg pollution_body "$(cat "$GITHUB_WORKSPACE/issue-body")" \
+              --arg sha "${{ github.sha }}" \
+              --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              '{type: $type, testid: $testid, polluting_testid: $polluting_testid, pollution_body: $pollution_body, sha: $sha, run_url: $run_url}' \
+              > "$GITHUB_WORKSPACE/failure.json"
+          else
+            LONGREPR=$(cat "$GITHUB_WORKSPACE/failing-testid-longrepr" 2>/dev/null || echo "no failure detail available")
+            jq -n \
+              --arg type "flaky" \
+              --arg testid "$FAILING_TESTID" \
+              --arg longrepr "$LONGREPR" \
+              --arg sha "${{ github.sha }}" \
+              --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              '{type: $type, testid: $testid, longrepr: $longrepr, sha: $sha, run_url: $run_url}' \
+              > "$GITHUB_WORKSPACE/failure.json"
+          fi
 
-      - name: Create GitHub issue for flaky test
-        if: failure() && steps.detect-test-pollution.outcome == 'failure'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          test -f "$GITHUB_WORKSPACE/failing-testid" || exit 0
-          read -r FAILING_TESTID < "$GITHUB_WORKSPACE/failing-testid"
-          LONGREPR=$(cat "$GITHUB_WORKSPACE/failing-testid-longrepr" 2>/dev/null || echo "no failure detail available")
-          BODY="Failing test: \`$FAILING_TESTID\`
-          Sentry sha: ${{ github.sha }}
-          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-          \`\`\`
-          $LONGREPR
-          \`\`\`"
-          gh issue create \
-            --title "Flaky test: $FAILING_TESTID" \
-            --label flaky-test \
-            --body "$BODY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: failure()
+        with:
+          name: failure-${{ matrix.instance }}
+          path: ${{ github.workspace }}/failure.json
+          if-no-files-found: ignore
 
       - name: Inspect failure
         if: failure()
@@ -218,3 +177,25 @@ jobs:
               docker logs "snuba-gw${i}" 2>&1 | tail -30 || true
             done
           fi
+
+  report:
+    name: Report failures
+    runs-on: ubuntu-24.04
+    needs: backend-test
+    if: failure()
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: failure-*
+          path: failures/
+
+      - name: Generate summary and create issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: python3 .github/workflows/scripts/report_shuffle_failures.py failures/
