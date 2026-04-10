@@ -34,11 +34,15 @@ Read the test file and the full `longrepr` traceback. Use `references/common-pat
 
 ## 3. Fix, verify, commit — one test at a time
 
+**Verification is mandatory before every commit. Do not skip it.**
+
 ```bash
-.venv/bin/pytest -xvs "<testid>" --reuse-db          # must pass
-.venv/bin/pytest -xvs "<test_file>" --reuse-db        # no regressions
-.venv/bin/pre-commit run --files <changed_files>
+.venv/bin/pytest -xvs "<testid>" --reuse-db          # MUST pass — stop if it doesn't
+.venv/bin/pytest -xvs "<test_file>" --reuse-db        # MUST pass — no regressions
+.venv/bin/pre-commit run --files <changed_files>      # fix lint before committing
 ```
+
+If the isolated test passes but the module run fails, your fix introduced a regression — revert and rethink before committing.
 
 Commit with the `commit` skill, type `test`:
 ```
