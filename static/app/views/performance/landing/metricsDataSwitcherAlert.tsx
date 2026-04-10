@@ -1,4 +1,4 @@
-import {useCallback, useMemo} from 'react';
+import {useMemo} from 'react';
 
 import {Alert} from '@sentry/scraps/alert';
 import {ExternalLink, Link} from '@sentry/scraps/link';
@@ -63,9 +63,9 @@ export function MetricsDataSwitcherAlert(
     'performance-mep-bannerless-ui'
   );
 
-  const handleReviewUpdatesClick = useCallback(() => {
+  const handleReviewUpdatesClick = () => {
     OnboardingDrawerStore.open(OnboardingDrawerKey.BROADCASTS);
-  }, []);
+  };
 
   const docsLink = useMemo(() => {
     const platforms = getSelectedProjectPlatformsArray(location, props.projects);
@@ -89,9 +89,9 @@ export function MetricsDataSwitcherAlert(
     return `https://docs.sentry.io/platforms/${supportedPlatform}/enriching-events/transaction-name/`;
   }, [location, props.projects]);
 
-  const handleSwitchToCompatibleProjects = useCallback(() => {
+  const handleSwitchToCompatibleProjects = () => {
     updateProjects(props.compatibleProjects || [], location, navigate);
-  }, [props.compatibleProjects, location, navigate]);
+  };
 
   if (!props.shouldNotifyUnnamedTransactions && !props.shouldWarnIncompatibleSDK) {
     // Control showing generic sdk-alert here since stacking alerts is noisy.

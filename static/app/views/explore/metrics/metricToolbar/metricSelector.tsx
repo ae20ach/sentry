@@ -394,9 +394,9 @@ export function MetricSelector({
     id: triggerId,
   });
 
-  const onSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const onSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchInputValue(e.target.value);
-  }, []);
+  };
 
   const virtualItems = virtualizer.getVirtualItems();
 
