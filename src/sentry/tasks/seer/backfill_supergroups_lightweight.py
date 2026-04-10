@@ -24,7 +24,6 @@ from sentry.utils.snuba import bulk_snuba_queries
 
 logger = logging.getLogger(__name__)
 
-BACKFILL_LAST_SEEN_DAYS = 90
 BATCH_SIZE = 50
 INTER_BATCH_DELAY_S = 1
 MAX_FAILURES_PER_BATCH = 20
@@ -78,14 +77,11 @@ def backfill_supergroups_lightweight_for_org(
     if project.id != last_project_id:
         last_group_id = 0
 
-    cutoff = datetime.now(UTC) - timedelta(days=BACKFILL_LAST_SEEN_DAYS)
-
     groups = list(
         Group.objects.filter(
             project_id=project.id,
             type=DEFAULT_TYPE_ID,
             id__gt=last_group_id,
-            last_seen__gte=cutoff,
             status=GroupStatus.UNRESOLVED,
             substatus__in=UNRESOLVED_SUBSTATUS_CHOICES,
         )
@@ -112,6 +108,7 @@ def backfill_supergroups_lightweight_for_org(
     # Phase 2: Send to Seer (per-group for now, bulk-ready)
     failure_count = 0
     success_count = 0
+    last_processed_group_id = last_group_id
     viewer_context = SeerViewerContext(organization_id=organization_id)
 
     for group, serialized_event in group_event_pairs:
@@ -150,12 +147,16 @@ def backfill_supergroups_lightweight_for_org(
             )
             failure_count += 1
 
+        last_processed_group_id = group.id
+
         if failure_count >= MAX_FAILURES_PER_BATCH:
             logger.error(
                 "supergroups_backfill_lightweight.max_failures_reached",
                 extra={
                     "organization_id": organization_id,
+                    "project_id": project.id,
                     "failure_count": failure_count,
+                    "last_processed_group_id": last_processed_group_id,
                 },
             )
             break
@@ -169,10 +170,13 @@ def backfill_supergroups_lightweight_for_org(
         amount=failure_count,
     )
 
+    if failure_count >= MAX_FAILURES_PER_BATCH:
+        return
+
     # Self-chain: more groups in this project, or move to next project
     if len(groups) == BATCH_SIZE:
         next_project_id = project.id
-        next_group_id = groups[-1].id
+        next_group_id = last_processed_group_id
     else:
         next_project_id = project.id + 1
         next_group_id = 0
@@ -237,6 +241,8 @@ def _batch_fetch_events(groups: Sequence[Group], organization_id: int) -> list[t
             continue
 
         serialized_event = serialize(ready_event, None, EventSerializer())
+        if not serialized_event:
+            continue
         group_event_pairs.append((group, serialized_event))
 
     return group_event_pairs

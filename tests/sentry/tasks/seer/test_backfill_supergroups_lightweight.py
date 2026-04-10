@@ -168,9 +168,13 @@ class BackfillSupergroupsLightweightForOrgTest(TestCase):
     @patch(
         "sentry.tasks.seer.backfill_supergroups_lightweight.make_lightweight_rca_cluster_request"
     )
-    def test_filters_old_groups(self, mock_request):
+    @patch("sentry.tasks.seer.backfill_supergroups_lightweight.bulk_snuba_queries")
+    def test_skips_old_groups_with_no_events(self, mock_snuba, mock_request):
+        """Old groups are still fetched from DB but skipped when Snuba returns no events."""
         self.group.last_seen = datetime.now(UTC) - timedelta(days=91)
         self.group.save(update_fields=["last_seen"])
+
+        mock_snuba.return_value = [{"data": []}]
 
         backfill_supergroups_lightweight_for_org(self.organization.id)
 
