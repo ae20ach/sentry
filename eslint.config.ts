@@ -461,6 +461,7 @@ export default typescript.config([
       '@sentry/no-dynamic-translations': 'error',
       '@sentry/no-static-translations': 'error',
       '@sentry/no-styled-shortcut': 'error',
+      '@sentry/no-unnecessary-use-callback': 'error',
     },
   },
   {
