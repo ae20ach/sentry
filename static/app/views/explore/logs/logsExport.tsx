@@ -3,11 +3,12 @@ import {Fragment} from 'react';
 import {ExportQueryType} from 'sentry/components/dataExport';
 import {DataExportWithModal} from 'sentry/components/dataExportWithModal';
 import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
-import {IconDownload} from 'sentry/icons';
-import {t} from 'sentry/locale';
 import {ExploreExport} from 'sentry/views/explore/components/exploreExport';
-import {QUERY_PAGE_LIMIT} from 'sentry/views/explore/logs/constants';
 import {downloadLogsAsCsv} from 'sentry/views/explore/logs/logsExportCsv';
+import {
+  canExportLogsInBrowserSession,
+  hasReachedLogsBrowserExportPageLimit,
+} from 'sentry/views/explore/logs/logsExportSession';
 import type {OurLogFieldKey, OurLogsResponseItem} from 'sentry/views/explore/logs/types';
 import {
   useQueryParamsFields,
@@ -34,19 +35,6 @@ interface LogsQueryInfo {
   statsPeriod?: string;
 }
 
-function getLogsExportDisabledTooltip(props: LogsExportButtonProps): string | undefined {
-  if (props.isLoading) {
-    return t('Loading...');
-  }
-  if (props.error !== null) {
-    return t('Unable to export due to an error');
-  }
-  if (!props.tableData || props.tableData.length === 0) {
-    return t('No data to export');
-  }
-  return undefined;
-}
-
 export function LogsExportButton(props: LogsExportButtonProps) {
   const {selection} = usePageFilters();
   const logsSearch = useQueryParamsSearch();
@@ -67,9 +55,6 @@ export function LogsExportButton(props: LogsExportButtonProps) {
     environment: environments,
   };
 
-  const isMoreThanOnePage =
-    props.tableData && props.tableData.length > QUERY_PAGE_LIMIT - 1;
-
   const disabled =
     props.isLoading ||
     props.error !== null ||
@@ -86,14 +71,12 @@ export function LogsExportButton(props: LogsExportButtonProps) {
     }
   };
 
-  const disabledTooltip = getLogsExportDisabledTooltip(props);
-
   return (
     <Fragment>
       <ExploreExport
         traceItemDataset={TraceItemDataset.LOGS}
         disabled={disabled}
-        hasReachedCSVLimit={!!isMoreThanOnePage}
+        hasReachedCSVLimit={hasReachedLogsBrowserExportPageLimit(props.tableData)}
         queryInfo={queryInfo}
         isDataEmpty={isDataEmpty}
         isDataLoading={isDataLoading}
@@ -101,7 +84,6 @@ export function LogsExportButton(props: LogsExportButtonProps) {
         downloadAsCsv={handleDownloadAsCsv}
       />
       <DataExportWithModal
-        size="xs"
         payload={{
           queryType: ExportQueryType.EXPLORE,
           queryInfo: {
@@ -109,10 +91,15 @@ export function LogsExportButton(props: LogsExportButtonProps) {
             dataset: TraceItemDataset.LOGS,
           },
         }}
-        disabled={disabled}
-        disabledTooltip={disabledTooltip}
         overrideFeatureFlags
-        icon={<IconDownload />}
+        sessionExport={{
+          canExportInSession: canExportLogsInBrowserSession(props.tableData),
+          onSessionExport: () => {
+            if (props.tableData) {
+              downloadLogsAsCsv(props.tableData, queryInfo.field, 'logs');
+            }
+          },
+        }}
       />
     </Fragment>
   );

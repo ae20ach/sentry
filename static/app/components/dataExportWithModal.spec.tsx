@@ -9,8 +9,11 @@ import {
   within,
 } from 'sentry-test/reactTestingLibrary';
 
+import {addSuccessMessage} from 'sentry/actionCreators/indicator';
 import {ExportQueryType} from 'sentry/components/dataExport';
 import {DataExportWithModal} from 'sentry/components/dataExportWithModal';
+
+jest.mock('sentry/actionCreators/indicator');
 
 describe('DataExportWithModal', () => {
   const organization = OrganizationFixture({
@@ -30,9 +33,10 @@ describe('DataExportWithModal', () => {
 
   beforeEach(() => {
     MockApiClient.clearMockResponses();
+    jest.mocked(addSuccessMessage).mockClear();
   });
 
-  it('opens modal and POSTs data export with limit from form', async () => {
+  it('opens modal and POSTs data export with limit when async export is required', async () => {
     const exportMock = MockApiClient.addMockResponse({
       url: `/organizations/${organization.slug}/data-export/`,
       method: 'POST',
@@ -40,9 +44,16 @@ describe('DataExportWithModal', () => {
     });
 
     renderGlobalModal({organization});
-    render(<DataExportWithModal payload={payload} overrideFeatureFlags />, {
-      organization,
-    });
+    render(
+      <DataExportWithModal
+        payload={payload}
+        overrideFeatureFlags
+        sessionExport={{canExportInSession: false, onSessionExport: jest.fn()}}
+      />,
+      {
+        organization,
+      }
+    );
 
     await userEvent.click(screen.getByRole('button', {name: 'Export Data (Modal)'}));
 
@@ -69,6 +80,45 @@ describe('DataExportWithModal', () => {
           limit: 250,
         }),
       })
+    );
+    expect(jest.mocked(addSuccessMessage)).not.toHaveBeenCalledWith(
+      expect.stringContaining('download momentarily')
+    );
+  });
+
+  it('runs in-session export and shows success when canExportInSession', async () => {
+    const onSessionExport = jest.fn();
+    const exportMock = MockApiClient.addMockResponse({
+      url: `/organizations/${organization.slug}/data-export/`,
+      method: 'POST',
+      body: {id: 721},
+    });
+
+    renderGlobalModal({organization});
+    render(
+      <DataExportWithModal
+        payload={payload}
+        overrideFeatureFlags
+        sessionExport={{canExportInSession: true, onSessionExport}}
+      />,
+      {
+        organization,
+      }
+    );
+
+    await userEvent.click(screen.getByRole('button', {name: 'Export Data (Modal)'}));
+
+    const dialog = await screen.findByRole('dialog');
+    await userEvent.click(within(dialog).getByRole('button', {name: 'Export'}));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(onSessionExport).toHaveBeenCalled();
+    expect(exportMock).not.toHaveBeenCalled();
+    expect(addSuccessMessage).toHaveBeenCalledWith(
+      'Your export has started — the file should download momentarily.'
     );
   });
 
