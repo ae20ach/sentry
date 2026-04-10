@@ -56,3 +56,12 @@ test(<module>): Fix flaky <TestClass>::<test_method>
 - **Fixed**: node ID + root cause + commit SHA
 - **Skipped**: node ID + reason
 - **Pollution**: list for `fix-test-pollution`
+
+## TODO — Known Unfixed Flakes
+
+Keep this list updated. Add entries when a test is skipped with no fix; remove when fixed.
+
+| Test | Symptom | Notes |
+|---|---|---|
+| `tests/snuba/api/endpoints/test_organization_events_stats.py::OrganizationEventsStatsEndpointTest::test_simple` | `CrossTransactionAssertionError: Transaction opened for db {'default'}, but command running against db control` | Order-dependent; `simulated_transaction_watermarks` state leaks from a prior test. The fixture resets it correctly on paper — root cause unclear without reproduction. |
+| `tests/snuba/tasks/test_unmerge.py::UnmergeTestCase::test_unmerge` | `times_seen=19 != 11` — 8 extra events counted | Likely Snuba cross-shard contamination: unmerge task re-counts events from Snuba, which may include events from parallel xdist workers. Seen once; needs reproduction. |

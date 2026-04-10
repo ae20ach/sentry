@@ -68,7 +68,6 @@ class ProjectAlertRuleTaskDetailsTest(APITestCase):
         assert rule_data["name"] == self.rule.name
 
     def test_workflow_engine_serializer(self) -> None:
-        self.set_value("success", self.rule.id)
         self.login_as(user=self.user)
 
         self.critical_trigger = self.create_alert_rule_trigger(
@@ -83,6 +82,9 @@ class ProjectAlertRuleTaskDetailsTest(APITestCase):
         self.critical_action, _, _ = migrate_metric_action(self.critical_trigger_action)
         self.resolve_trigger_data_condition = migrate_resolve_threshold_data_condition(self.rule)
 
+        # Set the Redis status immediately before the request to minimise the
+        # window in which a concurrent xdist worker's flushdb() could clear it.
+        self.set_value("success", self.rule.id)
         with self.feature("organizations:workflow-engine-rule-serializers"):
             response = self.client.get(self.url, format="json")
 
