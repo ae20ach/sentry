@@ -51,6 +51,7 @@ export function ScmRepoTreeModal({Header, Body, title}: Props) {
               search={search}
               repoFilter={repoFilter}
               providerFilter="seer-supported"
+              showEmptyProviders
             />
           </Stack>
         </Stack>

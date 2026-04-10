@@ -41,9 +41,15 @@ type Props = {
   providerFilter: ProviderFilter;
   repoFilter: RepoFilter;
   search: string;
+  showEmptyProviders: boolean;
 };
 
-export function ScmIntegrationTree({search, repoFilter, providerFilter}: Props) {
+export function ScmIntegrationTree({
+  showEmptyProviders,
+  search,
+  repoFilter,
+  providerFilter,
+}: Props) {
   const api = useApi();
   const organization = useOrganization();
   const queryClient = useQueryClient();
@@ -112,34 +118,36 @@ export function ScmIntegrationTree({search, repoFilter, providerFilter}: Props) 
   const flatNodes = useMemo<TreeNode[]>(
     () =>
       buildIntegrationTreeNodes({
-        scmProviders,
-        scmIntegrations,
+        connectedIdentifiers,
         connectedRepos,
+        expandedIntegrations,
+        expandedProviders,
+        providerFilter,
+        repoFilter,
         reposByIntegrationId,
         reposPendingByIntegrationId,
-        connectedIdentifiers,
-        expandedProviders,
-        expandedIntegrations,
-        togglingRepos,
+        scmIntegrations,
+        scmProviders,
         search,
-        repoFilter,
-        providerFilter,
+        showEmptyProviders,
         supportedProviderIds,
+        togglingRepos,
       }),
     [
-      scmProviders,
-      scmIntegrations,
+      connectedIdentifiers,
       connectedRepos,
+      expandedIntegrations,
+      expandedProviders,
+      providerFilter,
+      repoFilter,
       reposByIntegrationId,
       reposPendingByIntegrationId,
-      connectedIdentifiers,
-      expandedProviders,
-      expandedIntegrations,
-      togglingRepos,
+      scmIntegrations,
+      scmProviders,
       search,
-      repoFilter,
-      providerFilter,
+      showEmptyProviders,
       supportedProviderIds,
+      togglingRepos,
     ]
   );
 
@@ -309,7 +317,9 @@ export function ScmIntegrationTree({search, repoFilter, providerFilter}: Props) 
         <VirtualInner style={{height: virtualizer.getTotalSize()}}>
           {virtualizer.getVirtualItems().map(virtualItem => {
             const node = flatNodes[virtualItem.index];
-            if (!node) return null;
+            if (!node) {
+              return null;
+            }
 
             return (
               <ScmIntegrationTreeRow

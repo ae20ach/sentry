@@ -7,12 +7,14 @@ import {ScmTreeFilters} from 'sentry/components/repositories/scmIntegrationTree/
 import {useScmTreeFilters} from 'sentry/components/repositories/scmIntegrationTree/useScmTreeFilters';
 import {SentryDocumentTitle} from 'sentry/components/sentryDocumentTitle';
 import {t, tct} from 'sentry/locale';
+import {useOrganization} from 'sentry/utils/useOrganization';
 import {SettingsPageHeader} from 'sentry/views/settings/components/settingsPageHeader';
 
 import {SeerSettingsPageContent} from 'getsentry/views/seerAutomation/components/seerSettingsPageContent';
 import {SeerSettingsPageWrapper} from 'getsentry/views/seerAutomation/components/seerSettingsPageWrapper';
 
 export default function SeerAutomationSCM() {
+  const organization = useOrganization();
   const {repoFilter, setRepoFilter, searchTerm, setSearchTerm} = useScmTreeFilters();
 
   return (
@@ -49,6 +51,7 @@ export default function SeerAutomationSCM() {
             providerFilter="seer-supported"
             repoFilter={repoFilter}
             search={searchTerm}
+            showEmptyProviders={!organization.features.includes('scm-trimmed-tree')}
           />
         </SeerSettingsPageContent>
       </SeerSettingsPageWrapper>

@@ -8,15 +8,20 @@ import {IconVsts} from 'sentry/icons/iconVsts';
 import type {SVGIconProps} from 'sentry/icons/svgIcon';
 
 const PROVIDER_ICONS = {
-  github: IconGithub,
-  'integrations:github': IconGithub,
-  'integrations:github_enterprise': IconGithub,
-  bitbucket: IconBitbucket,
+  'integrations:bitbucket_server': IconBitbucket,
   'integrations:bitbucket': IconBitbucket,
-  visualstudio: IconVsts,
-  'integrations:vsts': IconVsts,
-  gitlab: IconGitlab,
+  'integrations:github_enterprise': IconGithub,
+  'integrations:github': IconGithub,
+  'integrations:gitlab_enterprise': IconGitlab,
   'integrations:gitlab': IconGitlab,
+  'integrations:vsts': IconVsts,
+  bitbucket_server: IconBitbucket,
+  bitbucket: IconBitbucket,
+  github_enterprise: IconGithub,
+  github: IconGithub,
+  gitlab: IconGitlab,
+  visualstudio: IconVsts,
+  vsts: IconVsts,
 };
 
 interface Props extends SVGIconProps {

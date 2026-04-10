@@ -24,24 +24,26 @@ type Props = {
   scmIntegrations: OrganizationIntegration[];
   scmProviders: IntegrationProvider[];
   search: string;
+  showEmptyProviders: boolean;
   supportedProviderIds: string[];
   togglingRepos: Set<string>;
 };
 
 export function buildIntegrationTreeNodes({
-  scmProviders,
-  scmIntegrations,
+  connectedIdentifiers,
   connectedRepos,
+  expandedIntegrations,
+  expandedProviders,
+  providerFilter,
+  repoFilter,
   reposByIntegrationId,
   reposPendingByIntegrationId,
-  connectedIdentifiers,
-  expandedProviders,
-  expandedIntegrations,
-  togglingRepos,
+  scmIntegrations,
+  scmProviders,
   search,
-  repoFilter,
-  providerFilter,
+  showEmptyProviders,
   supportedProviderIds,
+  togglingRepos,
 }: Props): TreeNode[] {
   const nodes: TreeNode[] = [];
   const query = search.trim().toLowerCase();
@@ -56,6 +58,9 @@ export function buildIntegrationTreeNodes({
       i => i.provider.key === provider.key
     );
 
+    if (!showEmptyProviders && providerIntegrations.length === 0) {
+      continue;
+    }
     nodes.push({
       type: 'provider',
       provider,
