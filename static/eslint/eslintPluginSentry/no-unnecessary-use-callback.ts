@@ -1,11 +1,5 @@
 import {AST_NODE_TYPES, ESLintUtils, type TSESTree} from '@typescript-eslint/utils';
 
-interface PendingReport {
-  data: Record<string, string>;
-  messageId: 'directlyInvoked' | 'intrinsicElement';
-  node: TSESTree.Node;
-}
-
 export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs({
   meta: {
     type: 'suggestion',
@@ -15,28 +9,18 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs({
     },
     schema: [],
     messages: {
-      directlyInvoked:
-        'Unnecessary useCallback. `{{name}}` is immediately called inside an inline arrow function, so the stable reference from useCallback is never used.',
-      intrinsicElement:
-        'Unnecessary useCallback. `{{name}}` is passed to the intrinsic element `<{{element}}>`, which is not memoized.',
+      unnecessaryUseCallback:
+        'Unnecessary useCallback. `{{name}}` is only used in contexts where memoization provides no benefit.',
     },
   },
   create(context) {
-    const useCallbackBindings = new Set<string>();
+    // Maps binding name to the useCallback() CallExpression node
+    const useCallbackBindings = new Map<string, TSESTree.CallExpression>();
     // Bindings that have at least one usage where memoization is justified
     // (e.g. passed directly to a custom component)
     const justifiedBindings = new Set<string>();
-    // Potential violations collected during traversal, reported at Program:exit
-    const pendingReports = new Map<string, PendingReport[]>();
-
-    function addPendingReport(name: string, report: PendingReport) {
-      let reports = pendingReports.get(name);
-      if (!reports) {
-        reports = [];
-        pendingReports.set(name, reports);
-      }
-      reports.push(report);
-    }
+    // Bindings with at least one flaggable usage, keyed by name
+    const flaggedBindings = new Set<string>();
 
     /**
      * Walks an AST node looking for a CallExpression whose callee is a
@@ -47,7 +31,8 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs({
       if (
         node.type === AST_NODE_TYPES.CallExpression &&
         node.callee.type === AST_NODE_TYPES.Identifier &&
-        useCallbackBindings.has(node.callee.name)
+        useCallbackBindings.has(node.callee.name) &&
+        !justifiedBindings.has(node.callee.name)
       ) {
         return node.callee.name;
       }
@@ -87,7 +72,7 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs({
           node.init.callee.type === AST_NODE_TYPES.Identifier &&
           node.init.callee.name === 'useCallback'
         ) {
-          useCallbackBindings.add(node.id.name);
+          useCallbackBindings.set(node.id.name, node.init);
         }
       },
 
@@ -104,11 +89,7 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs({
         if (expr.type === AST_NODE_TYPES.ArrowFunctionExpression) {
           const calledBinding = findCallToBinding(expr.body);
           if (calledBinding) {
-            addPendingReport(calledBinding, {
-              node: node.value,
-              messageId: 'directlyInvoked',
-              data: {name: calledBinding},
-            });
+            flaggedBindings.add(calledBinding);
             return;
           }
         }
@@ -135,11 +116,7 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs({
             tagName.name[0] === tagName.name[0]?.toLowerCase()
           ) {
             // Case 2: Direct reference on an intrinsic element
-            addPendingReport(expr.name, {
-              node: node.value,
-              messageId: 'intrinsicElement',
-              data: {name: expr.name, element: tagName.name},
-            });
+            flaggedBindings.add(expr.name);
           } else {
             // Passed directly to a custom component — memoization is justified
             justifiedBindings.add(expr.name);
@@ -148,12 +125,17 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs({
       },
 
       'Program:exit'() {
-        for (const [name, reports] of pendingReports) {
+        for (const name of flaggedBindings) {
           if (justifiedBindings.has(name)) {
             continue;
           }
-          for (const report of reports) {
-            context.report(report);
+          const callNode = useCallbackBindings.get(name);
+          if (callNode) {
+            context.report({
+              node: callNode,
+              messageId: 'unnecessaryUseCallback',
+              data: {name},
+            });
           }
         }
       },
