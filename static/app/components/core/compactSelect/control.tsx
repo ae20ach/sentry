@@ -272,9 +272,18 @@ export function Control({
           ?.focus();
       }
 
-      // Prevent form submissions on Enter key press in search box
+      // Prevent form submissions on Enter key press in search box.
+      // If there is exactly one enabled option visible, select it automatically.
       if (e.key === 'Enter') {
         e.preventDefault();
+        const role = grid ? 'row' : 'option';
+        const enabledOptions = [
+          ...(overlayRef.current?.querySelectorAll<HTMLLIElement>(`li[role="${role}"]`) ??
+            []),
+        ].filter(opt => opt.getAttribute('aria-disabled') !== 'true');
+        if (enabledOptions.length === 1) {
+          enabledOptions[0]?.click();
+        }
       }
 
       // Continue propagation, otherwise the overlay won't close on Esc key press

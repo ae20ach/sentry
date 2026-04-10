@@ -447,6 +447,60 @@ describe('CompactSelect', () => {
       expect(screen.queryByRole('option', {name: 'Option One'})).not.toBeInTheDocument();
     });
 
+    it('selects the single remaining option when Enter is pressed', async () => {
+      const onChange = jest.fn();
+      render(
+        <CompactSelect
+          search={{placeholder: 'Search here…'}}
+          options={[
+            {value: 'opt_one', label: 'Option One'},
+            {value: 'opt_two', label: 'Option Two'},
+          ]}
+          value={undefined}
+          onChange={onChange}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button'));
+      await userEvent.click(screen.getByPlaceholderText('Search here…'));
+
+      // type 'Two' to narrow the list to exactly one option
+      await userEvent.keyboard('Two');
+      expect(screen.getByRole('option', {name: 'Option Two'})).toBeInTheDocument();
+      expect(screen.queryByRole('option', {name: 'Option One'})).not.toBeInTheDocument();
+
+      // pressing Enter should select the single visible option
+      await userEvent.keyboard('{Enter}');
+      expect(onChange).toHaveBeenCalledWith(expect.objectContaining({value: 'opt_two'}));
+    });
+
+    it('does not auto-select when multiple options are visible and Enter is pressed', async () => {
+      const onChange = jest.fn();
+      render(
+        <CompactSelect
+          search={{placeholder: 'Search here…'}}
+          options={[
+            {value: 'opt_one', label: 'Option One'},
+            {value: 'opt_two', label: 'Option Two'},
+          ]}
+          value={undefined}
+          onChange={onChange}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button'));
+      await userEvent.click(screen.getByPlaceholderText('Search here…'));
+
+      // type 'Option' — both options are still visible
+      await userEvent.keyboard('Option');
+      expect(screen.getByRole('option', {name: 'Option One'})).toBeInTheDocument();
+      expect(screen.getByRole('option', {name: 'Option Two'})).toBeInTheDocument();
+
+      // pressing Enter should not select anything
+      await userEvent.keyboard('{Enter}');
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
     it('restores full list when search query is cleared', async () => {
       render(
         <CompactSelect
