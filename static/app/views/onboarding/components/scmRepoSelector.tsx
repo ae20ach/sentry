@@ -1,4 +1,4 @@
-import {useMemo} from 'react';
+import {useCallback, useMemo} from 'react';
 
 import {Select} from '@sentry/scraps/select';
 
@@ -9,6 +9,7 @@ import {trackAnalytics} from 'sentry/utils/analytics';
 import {useOrganization} from 'sentry/utils/useOrganization';
 
 import {ScmSearchControl} from './scmSearchControl';
+import {ScmVirtualizedMenuList} from './scmVirtualizedMenuList';
 import {useScmRepoSearch} from './useScmRepoSearch';
 import {useScmRepoSelection} from './useScmRepoSelection';
 
@@ -27,6 +28,9 @@ export function ScmRepoSelector({integration}: ScmRepoSelectorProps) {
     isError,
     debouncedSearch,
     setSearch,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
   } = useScmRepoSearch(integration.id, selectedRepository);
 
   const {busy, handleSelect, handleRemove} = useScmRepoSelection({
@@ -73,6 +77,12 @@ export function ScmRepoSelector({integration}: ScmRepoSelectorProps) {
     }
   }
 
+  const handleMenuScrollToBottom = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   function noOptionsMessage() {
     if (isError) {
       return t('Failed to search repositories. Please try again.');
@@ -82,7 +92,7 @@ export function ScmRepoSelector({integration}: ScmRepoSelectorProps) {
         'No repositories found. Check your installation permissions to ensure your integration has access.'
       );
     }
-    return t('Type to search repositories');
+    return t('No repositories found');
   }
 
   return (
@@ -96,14 +106,15 @@ export function ScmRepoSelector({integration}: ScmRepoSelectorProps) {
           setSearch(value);
         }
       }}
+      onMenuScrollToBottom={handleMenuScrollToBottom}
       // Disable client-side filtering; search is handled server-side.
       filterOption={() => true}
       noOptionsMessage={noOptionsMessage}
-      isLoading={isFetching}
+      isLoading={isFetching || isFetchingNextPage}
       isDisabled={busy}
       clearable
       searchable
-      components={{Control: ScmSearchControl}}
+      components={{Control: ScmSearchControl, MenuList: ScmVirtualizedMenuList}}
     />
   );
 }
