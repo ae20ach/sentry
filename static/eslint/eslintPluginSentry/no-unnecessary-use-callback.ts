@@ -17,17 +17,22 @@ function formatUsages(usages: UsageInfo[]): string {
     .join(' and ');
 }
 
-export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs({
+export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs<
+  readonly unknown[],
+  'unnecessaryUseCallback' | 'removeUseCallback'
+>({
   meta: {
     type: 'suggestion',
     docs: {
       description:
         'Disallow useCallback where it provides no benefit: when the result is directly invoked (defeating memoization) or passed to intrinsic elements (which are not memoized).',
     },
+    hasSuggestions: true,
     schema: [],
     messages: {
       unnecessaryUseCallback:
         'Unnecessary useCallback. `{{name}}` is only used in contexts where memoization provides no benefit. It is {{usages}}.',
+      removeUseCallback: 'Remove useCallback wrapper.',
     },
   },
   create(context) {
@@ -162,11 +167,21 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs({
             continue;
           }
           const callNode = useCallbackBindings.get(name);
-          if (callNode) {
+          if (callNode && callNode.arguments.length > 0) {
+            const firstArg = callNode.arguments[0];
+            const callbackText = context.sourceCode.getText(firstArg);
             context.report({
               node: callNode,
               messageId: 'unnecessaryUseCallback',
               data: {name, usages: formatUsages(usages)},
+              suggest: [
+                {
+                  messageId: 'removeUseCallback',
+                  fix(fixer) {
+                    return fixer.replaceText(callNode, callbackText);
+                  },
+                },
+              ],
             });
           }
         }
