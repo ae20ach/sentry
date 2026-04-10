@@ -25,9 +25,17 @@ from sentry.seer.autofix.utils import (
     CodingAgentState,
     CodingAgentStatus,
 )
-from sentry.seer.models import SeerApiError, SeerRepoDefinition
+from sentry.seer.models import (
+    AutofixHandoffPoint,
+    PreferenceResponse,
+    SeerApiError,
+    SeerAutomationHandoffConfiguration,
+    SeerProjectPreference,
+    SeerRepoDefinition,
+)
 from sentry.shared_integrations.exceptions import ApiError
 from sentry.testutils.cases import TestCase
+from sentry.testutils.helpers.features import with_feature
 
 
 class TestLaunchAgentsForRepos(TestCase):
@@ -213,8 +221,6 @@ class TestLaunchAgentsForRepos(TestCase):
         self, mock_get_preferences, mock_get_prompt, mock_store_states
     ):
         """Test that auto_create_pr defaults to False when automation_handoff is None."""
-        from sentry.seer.models import PreferenceResponse, SeerProjectPreference
-
         # Setup: Mock get_project_seer_preferences to return preference without automation_handoff
         preference = SeerProjectPreference(
             organization_id=self.organization.id,
@@ -256,6 +262,54 @@ class TestLaunchAgentsForRepos(TestCase):
         assert mock_installation.launch.called
         launch_request = mock_installation.launch.call_args[0][0]
         assert launch_request.auto_create_pr is False
+
+    @with_feature("organizations:seer-project-settings-read-from-sentry")
+    @patch("sentry.seer.autofix.coding_agent.store_coding_agent_states_to_seer")
+    @patch("sentry.seer.autofix.coding_agent.get_coding_agent_prompt")
+    @patch("sentry.seer.autofix.coding_agent.read_preference_from_sentry_db")
+    @patch("sentry.seer.autofix.coding_agent.get_project_seer_preferences")
+    def test_auto_create_pr_reads_from_sentry_db(
+        self, mock_get_preferences, mock_read_db, mock_get_prompt, mock_store_states
+    ):
+        """When feature flag enabled, reads preferences from Sentry DB instead of Seer API."""
+        mock_read_db.return_value = SeerProjectPreference(
+            organization_id=self.organization.id,
+            project_id=self.project.id,
+            repositories=[
+                SeerRepoDefinition(
+                    provider="github", owner="getsentry", name="sentry", external_id="123"
+                )
+            ],
+            automation_handoff=SeerAutomationHandoffConfiguration(
+                handoff_point=AutofixHandoffPoint.ROOT_CAUSE,
+                target="cursor_background_agent",
+                integration_id=123,
+                auto_create_pr=True,
+            ),
+        )
+
+        mock_get_prompt.return_value = "Test prompt"
+
+        mock_installation = MagicMock()
+        mock_installation.launch.return_value = {
+            "url": "https://example.com/agent",
+            "id": "agent-123",
+        }
+
+        _launch_agents_for_repos(
+            installation=mock_installation,
+            autofix_state=self.autofix_state,
+            run_id=self.run_id,
+            organization=self.organization,
+            trigger_source=AutofixTriggerSource.SOLUTION,
+        )
+
+        mock_get_preferences.assert_not_called()
+        assert mock_installation.launch.called
+        launch_request = mock_installation.launch.call_args[0][0]
+        assert launch_request.auto_create_pr is True
+        assert launch_request.repository.owner == "getsentry"
+        assert launch_request.repository.name == "sentry"
 
     @patch("sentry.seer.autofix.coding_agent.store_coding_agent_states_to_seer")
     @patch("sentry.seer.autofix.coding_agent.get_coding_agent_prompt")

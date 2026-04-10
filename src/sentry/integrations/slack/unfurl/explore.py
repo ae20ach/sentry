@@ -4,7 +4,7 @@ import html
 import logging
 import re
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, TypedDict
 from urllib.parse import urlparse
 
 from django.http.request import QueryDict
@@ -12,7 +12,7 @@ from django.http.request import QueryDict
 from sentry import analytics, features
 from sentry.api import client
 from sentry.charts import backend as charts
-from sentry.charts.types import ChartType
+from sentry.charts.types import ChartSize, ChartType
 from sentry.integrations.messaging.metrics import (
     MessagingInteractionEvent,
     MessagingInteractionType,
@@ -25,6 +25,7 @@ from sentry.integrations.slack.spec import SlackMessagingSpec
 from sentry.integrations.slack.unfurl.types import Handler, UnfurlableUrl, UnfurledUrl
 from sentry.models.apikey import ApiKey
 from sentry.models.organization import Organization
+from sentry.search.eap.types import SupportedTraceItemType
 from sentry.snuba.referrer import Referrer
 from sentry.users.models.user import User
 from sentry.users.services.user import RpcUser
@@ -33,8 +34,40 @@ from sentry.utils import json
 _logger = logging.getLogger(__name__)
 
 DEFAULT_PERIOD = "14d"
-DEFAULT_Y_AXIS = "count(span.duration)"
 TOP_N = 5
+
+EXPLORE_CHART_SIZE: ChartSize = {"width": 1600, "height": 1200}
+
+
+class ExploreDatasetDefaults(TypedDict):
+    title: str
+    y_axis: str
+
+
+EXPLORE_DATASET_DEFAULTS: dict[SupportedTraceItemType, ExploreDatasetDefaults] = {
+    SupportedTraceItemType.SPANS: {
+        "title": "Explore Traces",
+        "y_axis": "count(span.duration)",
+    },
+    SupportedTraceItemType.LOGS: {
+        "title": "Explore Logs",
+        "y_axis": "count(message)",
+    },
+}
+
+
+def _get_explore_dataset_defaults(dataset: SupportedTraceItemType) -> ExploreDatasetDefaults:
+    """Returns the default title and y_axis for the given explore dataset."""
+    return EXPLORE_DATASET_DEFAULTS.get(
+        dataset, EXPLORE_DATASET_DEFAULTS[SupportedTraceItemType.SPANS]
+    )
+
+
+def _get_explore_dataset(url: str) -> SupportedTraceItemType:
+    """Returns the dataset based on the explore URL."""
+    if explore_logs_link_regex.match(url) or customer_domain_explore_logs_link_regex.match(url):
+        return SupportedTraceItemType.LOGS
+    return SupportedTraceItemType.SPANS
 
 
 def unfurl_explore(
@@ -81,10 +114,14 @@ def _unfurl_explore(
             continue
 
         params = link.args["query"]
+        chart_type = link.args.get("chart_type")
+
+        explore_dataset = link.args.get("dataset", SupportedTraceItemType.SPANS)
+        defaults = _get_explore_dataset_defaults(explore_dataset)
 
         y_axes = params.getlist("yAxis")
         if not y_axes:
-            y_axes = [DEFAULT_Y_AXIS]
+            y_axes = [defaults["y_axis"]]
             params.setlist("yAxis", y_axes)
 
         group_bys = params.getlist("groupBy")
@@ -96,7 +133,7 @@ def _unfurl_explore(
         if not params.get("statsPeriod") and not params.get("start"):
             params["statsPeriod"] = DEFAULT_PERIOD
 
-        params["dataset"] = "spans"
+        params["dataset"] = explore_dataset.value
         params["referrer"] = Referrer.EXPLORE_SLACK_UNFURL.value
 
         try:
@@ -110,18 +147,22 @@ def _unfurl_explore(
             _logger.warning("Failed to load events-timeseries for explore unfurl")
             continue
 
-        chart_data = {
+        chart_data: dict[str, Any] = {
             "timeSeries": resp.data.get("timeSeries", []),
         }
+        if chart_type is not None:
+            chart_data["type"] = chart_type
 
         try:
-            url = charts.generate_chart(style, chart_data)
+            url = charts.generate_chart(style, chart_data, size=EXPLORE_CHART_SIZE)
         except RuntimeError:
             _logger.warning("Failed to generate chart for explore unfurl")
             continue
 
+        # Only one chart/y-axis is supported at a time in Explore
+        title = f"{defaults['title']} - {y_axes[0]}"
         unfurls[link.url] = SlackDiscoverMessageBuilder(
-            title="Explore Traces",
+            title=title,
             chart_url=url,
         ).build()
 
@@ -138,32 +179,44 @@ def _unfurl_explore(
     return unfurls
 
 
+CHART_TYPE_TO_DISPLAY_TYPE = {
+    0: "bar",
+    1: "line",
+    2: "area",
+}
+
+
 def map_explore_query_args(url: str, args: Mapping[str, str | None]) -> Mapping[str, Any]:
     """
     Extracts explore arguments from the explore link's query string.
-    Parses aggregateField JSON params to extract yAxes and groupBy.
+    Parses visualize/aggregateField JSON params to extract yAxes, groupBy, and chartType.
     """
     # Slack uses HTML escaped ampersands in its Event Links
     url = html.unescape(url)
     parsed_url = urlparse(url)
     raw_query = QueryDict(parsed_url.query)
 
-    # Parse aggregateField JSON params
-    aggregate_fields = raw_query.getlist("aggregateField")
+    explore_dataset = _get_explore_dataset(url)
+
+    # Parse visualize (spans explore) or aggregateField (logs explore) JSON params
+    visualize_fields = raw_query.getlist("visualize") or raw_query.getlist("aggregateField")
     y_axes: list[str] = []
     group_bys: list[str] = []
-    for field_json in aggregate_fields:
+    chart_type: str | None = None
+    for field_json in visualize_fields:
         try:
             parsed = json.loads(field_json)
             if "yAxes" in parsed and isinstance(parsed["yAxes"], list):
                 y_axes.extend(parsed["yAxes"])
             if "groupBy" in parsed and parsed["groupBy"]:
                 group_bys.append(parsed["groupBy"])
+            if chart_type is None and "chartType" in parsed:
+                chart_type = CHART_TYPE_TO_DISPLAY_TYPE.get(parsed["chartType"])
         except (json.JSONDecodeError, TypeError):
             continue
 
     if not y_axes:
-        y_axes = [DEFAULT_Y_AXIS]
+        y_axes = [_get_explore_dataset_defaults(explore_dataset)["y_axis"]]
 
     # Build query params
     query = QueryDict(mutable=True)
@@ -173,12 +226,12 @@ def map_explore_query_args(url: str, args: Mapping[str, str | None]) -> Mapping[
         query.setlist("groupBy", group_bys)
 
     # Copy standard params
-    for param in ("project", "statsPeriod", "start", "end", "query", "environment"):
+    for param in ("project", "statsPeriod", "start", "end", "query", "environment", "interval"):
         values = raw_query.getlist(param)
         if values:
             query.setlist(param, values)
 
-    return dict(**args, query=query)
+    return dict(**args, query=query, chart_type=chart_type, dataset=explore_dataset)
 
 
 explore_traces_link_regex = re.compile(
@@ -189,11 +242,21 @@ customer_domain_explore_traces_link_regex = re.compile(
     r"^https?\://(?P<org_slug>[^.]+?)\.(?#url_prefix)[^/]+/explore/traces/"
 )
 
+explore_logs_link_regex = re.compile(
+    r"^https?\://(?#url_prefix)[^/]+/organizations/(?P<org_slug>[^/]+)/explore/logs/"
+)
+
+customer_domain_explore_logs_link_regex = re.compile(
+    r"^https?\://(?P<org_slug>[^.]+?)\.(?#url_prefix)[^/]+/explore/logs/"
+)
+
 explore_handler = Handler(
     fn=unfurl_explore,
     matcher=[
         explore_traces_link_regex,
         customer_domain_explore_traces_link_regex,
+        explore_logs_link_regex,
+        customer_domain_explore_logs_link_regex,
     ],
     arg_mapper=map_explore_query_args,
 )

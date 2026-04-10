@@ -15,7 +15,7 @@ import {openConfirmModal} from 'sentry/components/confirm';
 import {Duration} from 'sentry/components/duration/duration';
 import {ErrorBoundary} from 'sentry/components/errorBoundary';
 import {KeyValueData} from 'sentry/components/keyValueData';
-import {useReplayBulkDeleteAuditLogQueryKey} from 'sentry/components/replays/bulkDelete/useReplayBulkDeleteAuditLog';
+import {replayBulkDeleteAuditLogApiOptions} from 'sentry/components/replays/bulkDelete/replayBulkDeleteAuditLogApiOptions';
 import {SimpleTable} from 'sentry/components/tables/simpleTable';
 import {TimeSince} from 'sentry/components/timeSince';
 import {IconCalendar, IconDelete} from 'sentry/icons';
@@ -75,12 +75,13 @@ export function DeleteReplays({selectedIds, replays, queryOptions}: Props) {
 
   const settingsPath = `/settings/${organization.slug}/projects/${project?.slug}/replays/?replaySettingsTab=bulk-delete`;
 
-  const queryKey = useReplayBulkDeleteAuditLogQueryKey({
-    projectSlug: project?.slug ?? '',
-    query: {referrer: analyticsArea},
-  });
   const refetchAuditLog = () => {
-    queryClient.invalidateQueries({queryKey});
+    queryClient.invalidateQueries({
+      queryKey: replayBulkDeleteAuditLogApiOptions(organization, {
+        projectSlug: project?.slug ?? '',
+        query: {referrer: analyticsArea},
+      }).queryKey,
+    });
   };
 
   return (
