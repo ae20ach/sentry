@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useRef} from 'react';
 import debounce from 'lodash/debounce';
 
 import {Button} from '@sentry/scraps/button';
@@ -6,7 +6,8 @@ import {Button} from '@sentry/scraps/button';
 import {addErrorMessage, addSuccessMessage} from 'sentry/actionCreators/indicator';
 import Feature from 'sentry/components/acl/feature';
 import {t} from 'sentry/locale';
-import {useApi} from 'sentry/utils/useApi';
+import {fetchMutationWithStatus, useMutation} from 'sentry/utils/queryClient';
+import {RequestError} from 'sentry/utils/requestError/requestError';
 import {useOrganization} from 'sentry/utils/useOrganization';
 
 // NOTE: Coordinate with other ExportQueryType (src/sentry/data_export/base.py)
@@ -21,7 +22,7 @@ export type DataExportPayload = {
   queryType: ExportQueryType; // TODO(ts): Formalize different possible payloads
 };
 
-export type DataExportInvokeOptions = {
+type DataExportInvokeOptions = {
   limit?: number;
 };
 
@@ -35,6 +36,16 @@ interface DataExportProps {
   size?: 'xs' | 'sm' | 'md';
 }
 
+function getDataExportErrorMessage(error: unknown): string {
+  if (error instanceof RequestError) {
+    const detail = error.responseJSON?.detail;
+    if (typeof detail === 'string') {
+      return detail;
+    }
+  }
+  return t("We tried our hardest, but we couldn't export your data. Give it another go.");
+}
+
 export function useDataExport({
   payload,
   inProgressCallback,
@@ -45,17 +56,10 @@ export function useDataExport({
   unmountedRef?: React.RefObject<boolean>;
 }) {
   const organization = useOrganization();
-  const api = useApi();
 
-  return useCallback(
-    async (invokeOptions?: DataExportInvokeOptions): Promise<boolean> => {
-      inProgressCallback?.(true);
-
-      const data: {
-        query_info: any;
-        query_type: ExportQueryType;
-        limit?: number;
-      } = {
+  const mutation = useMutation({
+    mutationFn: async (invokeOptions?: DataExportInvokeOptions) => {
+      const data: Record<string, unknown> = {
         query_type: payload.queryType,
         query_info: payload.queryInfo,
       };
@@ -63,51 +67,58 @@ export function useDataExport({
         data.limit = invokeOptions.limit;
       }
 
+      return fetchMutationWithStatus({
+        method: 'POST',
+        url: `/organizations/${organization.slug}/data-export/`,
+        data,
+      });
+    },
+    onMutate: () => {
+      inProgressCallback?.(true);
+    },
+    onSuccess: result => {
+      if (unmountedRef?.current) {
+        return;
+      }
+      addSuccessMessage(
+        result.statusCode === 201
+          ? t("Sit tight. We'll shoot you an email when your data is ready for download.")
+          : t("It looks like we're already working on it. Sit tight, we'll email you.")
+      );
+    },
+    onError: (error: unknown) => {
+      if (unmountedRef?.current) {
+        return;
+      }
+      addErrorMessage(getDataExportErrorMessage(error));
+      inProgressCallback?.(false);
+    },
+  });
+
+  const {reset} = mutation;
+
+  useEffect(() => {
+    reset();
+  }, [payload.queryInfo, payload.queryType, reset]);
+
+  const runExport = useCallback(
+    async (invokeOptions?: DataExportInvokeOptions): Promise<boolean> => {
       try {
-        const [_data, _, response] = await api.requestPromise(
-          `/organizations/${organization.slug}/data-export/`,
-          {
-            includeAllArgs: true,
-            method: 'POST',
-            data,
-          }
-        );
+        await mutation.mutateAsync(invokeOptions);
         if (unmountedRef?.current) {
           return false;
         }
-
-        addSuccessMessage(
-          response?.status === 201
-            ? t(
-                "Sit tight. We'll shoot you an email when your data is ready for download."
-              )
-            : t("It looks like we're already working on it. Sit tight, we'll email you.")
-        );
         return true;
-      } catch (err: unknown) {
-        if (unmountedRef?.current) {
-          return false;
-        }
-        const message =
-          (err as {responseJSON?: {detail?: string}})?.responseJSON?.detail ??
-          t(
-            "We tried our hardest, but we couldn't export your data. Give it another go."
-          );
-
-        addErrorMessage(message);
-        inProgressCallback?.(false);
+      } catch {
         return false;
       }
     },
-    [
-      payload.queryInfo,
-      payload.queryType,
-      organization.slug,
-      api,
-      inProgressCallback,
-      unmountedRef,
-    ]
+    [mutation, unmountedRef]
   );
+
+  const isExportWorking = mutation.isPending || mutation.isSuccess;
+
+  return {isExportWorking, runExport};
 }
 
 export function DataExport({
@@ -120,27 +131,11 @@ export function DataExport({
   onClick,
 }: DataExportProps): React.ReactElement {
   const unmountedRef = useRef(false);
-  const [inProgress, setInProgress] = useState(false);
-  const handleDataExport = useDataExport({
+  const {isExportWorking, runExport} = useDataExport({
     payload,
     unmountedRef,
-    inProgressCallback: setInProgress,
   });
 
-  // We clear the indicator if export props change so that the user
-  // can fire another export without having to wait for the previous one to finish.
-  useEffect(() => {
-    if (inProgress) {
-      setInProgress(false);
-    }
-    // We are skipping the inProgress dependency because it would have fired on each handleDataExport
-    // call and would have immediately turned off the value giving users no feedback on their click action.
-    // An alternative way to handle this would have probably been to key the component by payload/queryType,
-    // but that seems like it can be a complex object so tracking changes could result in very brittle behavior.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [payload.queryType, payload.queryInfo]);
-
-  // Tracking unmounting of the component to prevent setState call on unmounted component
   useEffect(() => {
     return () => {
       unmountedRef.current = true;
@@ -148,13 +143,15 @@ export function DataExport({
   }, []);
 
   const handleClick = () => {
-    debounce(handleDataExport, 500)();
+    debounce(() => {
+      void runExport();
+    }, 500)();
     onClick?.();
   };
 
   return (
     <Feature features={overrideFeatureFlags ? [] : 'organizations:discover-query'}>
-      {inProgress ? (
+      {isExportWorking ? (
         <Button
           size={size}
           priority="default"

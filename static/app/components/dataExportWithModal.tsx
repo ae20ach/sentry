@@ -28,7 +28,7 @@ function DataExportFormModal({
   closeModal,
   payload,
 }: ModalRenderProps & {payload: DataExportPayload}) {
-  const runExport = useDataExport({payload});
+  const {runExport} = useDataExport({payload});
 
   const form = useScrapsForm({
     ...defaultFormOptions,
@@ -64,7 +64,7 @@ function DataExportFormModal({
         </Stack>
       </Body>
       <Footer>
-        <Flex gap="xl" justify="flex-end">
+        <Flex gap="xl" justify="end">
           <Button priority="default" onClick={closeModal}>
             {t('Cancel')}
           </Button>
@@ -75,7 +75,7 @@ function DataExportFormModal({
   );
 }
 
-export type DataExportWithModalProps = {
+type DataExportWithModalProps = {
   payload: DataExportPayload;
   disabled?: boolean;
   disabledTooltip?: string;

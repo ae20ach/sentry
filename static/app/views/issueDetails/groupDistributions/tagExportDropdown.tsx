@@ -1,5 +1,3 @@
-import {useState} from 'react';
-
 import {Button} from '@sentry/scraps/button';
 
 import {ExportQueryType, useDataExport} from 'sentry/components/dataExport';
@@ -18,9 +16,8 @@ interface Props {
 }
 
 export function TagExportDropdown({tagKey, group, organization, project}: Props) {
-  const [isExportDisabled, setIsExportDisabled] = useState(false);
   const hasDiscoverQuery = organization.features.includes('discover-query');
-  const handleDataExport = useDataExport({
+  const {isExportWorking, runExport} = useDataExport({
     payload: {
       queryType: ExportQueryType.ISSUES_BY_TAG,
       queryInfo: {
@@ -57,12 +54,11 @@ export function TagExportDropdown({tagKey, group, organization, project}: Props)
         },
         {
           key: 'export-all',
-          label: isExportDisabled ? t('Export in progress...') : t('Export All to CSV'),
+          label: isExportWorking ? t('Export in progress...') : t('Export All to CSV'),
           onAction: () => {
-            handleDataExport();
-            setIsExportDisabled(true);
+            void runExport();
           },
-          disabled: isExportDisabled || !hasDiscoverQuery,
+          disabled: isExportWorking || !hasDiscoverQuery,
           tooltip: hasDiscoverQuery
             ? undefined
             : t('This feature is not available for your organization'),
