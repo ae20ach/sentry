@@ -233,3 +233,8 @@ class SeerOperatorExplorerCache[CachePayloadT]:
                 lifecycle.record_halt(halt_reason=CacheHaltReason.CACHE_MISS)
                 return None
             return cache_payload
+
+    @classmethod
+    def delete(cls, *, entrypoint_key: str, run_id: int) -> None:
+        cache_key = cls._get_cache_key(entrypoint_key=entrypoint_key, run_id=run_id)
+        cache.delete(cache_key)

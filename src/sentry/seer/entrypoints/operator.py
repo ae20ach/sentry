@@ -819,6 +819,11 @@ class SeerOperatorCompletionHook(ExplorerOnCompletionHook):
                     lifecycle.record_failure(failure_reason="org_mismatch")
                     return
 
+                SeerOperatorExplorerCache.delete(
+                    entrypoint_key=str(entrypoint_key),
+                    run_id=run_id,
+                )
+
                 with SeerOperatorEventLifecycleMetric(
                     interaction_type=SeerOperatorInteractionType.ENTRYPOINT_ON_EXPLORER_UPDATE,
                     entrypoint_key=str(entrypoint_key),

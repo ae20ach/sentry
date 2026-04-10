@@ -45,7 +45,7 @@ from .command import LINK_FROM_CHANNEL_MESSAGE
 
 _logger = logging.getLogger(__name__)
 
-_SEER_LOADING_MESSAGES = [
+SEER_LOADING_MESSAGES = [
     "Digging through your errors...",
     "Sifting through stack traces...",
     "Blaming the right code...",
@@ -451,7 +451,7 @@ class SlackEventEndpoint(SlackDMEndpoint):
                     channel_id=channel_id,
                     thread_ts=thread_ts or ts,
                     status="Thinking...",
-                    loading_messages=_SEER_LOADING_MESSAGES,
+                    loading_messages=SEER_LOADING_MESSAGES,
                 )
             except Exception:
                 _logger.exception(

@@ -42,6 +42,7 @@ class ProcessMentionForSlackTest(TestCase):
         mock_explorer_cls.return_value = mock_entrypoint
 
         mock_operator = MagicMock()
+        mock_operator.trigger_explorer.return_value = 42
         mock_operator_cls.return_value = mock_operator
 
         self._run_task()
@@ -170,6 +171,7 @@ class ProcessMentionForSlackTest(TestCase):
         mock_explorer_cls.return_value = mock_entrypoint
 
         mock_operator = MagicMock()
+        mock_operator.trigger_explorer.return_value = 42
         mock_operator_cls.return_value = mock_operator
 
         self._run_task(thread_ts="1234567890.000001")
@@ -195,6 +197,7 @@ class ProcessMentionForSlackTest(TestCase):
         mock_explorer_cls.return_value = mock_entrypoint
 
         mock_operator = MagicMock()
+        mock_operator.trigger_explorer.return_value = 42
         mock_operator_cls.return_value = mock_operator
 
         self._run_task(thread_ts=None)

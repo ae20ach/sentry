@@ -5,11 +5,14 @@ import logging
 from slack_sdk.models.blocks import ActionsBlock, ButtonElement, LinkButtonElement, MarkdownBlock
 from taskbroker_client.retry import Retry
 
+from sentry.constants import ObjectStatus
 from sentry.identity.services.identity import identity_service
+from sentry.integrations.services.integration import integration_service
 from sentry.integrations.services.integration.model import RpcIntegration
 from sentry.integrations.slack.views.link_identity import build_linking_url
 from sentry.models.organization import Organization
 from sentry.notifications.platform.slack.provider import SlackRenderable
+from sentry.seer.entrypoints.cache import SeerOperatorExplorerCache
 from sentry.seer.entrypoints.metrics import (
     SlackEntrypointEventLifecycleMetric,
     SlackEntrypointInteractionType,
@@ -21,12 +24,22 @@ from sentry.seer.entrypoints.slack.metrics import (
     ProcessMentionFailureReason,
     ProcessMentionHaltReason,
 )
+from sentry.seer.entrypoints.types import SeerEntrypointKey
 from sentry.tasks.base import instrumented_task
 from sentry.taskworker.namespaces import integrations_tasks
 from sentry.users.services.user import RpcUser
 from sentry.users.services.user.service import user_service
 
 logger = logging.getLogger(__name__)
+
+# How often to refresh the Slack thread status (seconds).
+# Slack auto-clears the status after 2 minutes of no message, so we refresh
+# before that window expires.
+THREAD_STATUS_REFRESH_INTERVAL_SECS = 90
+
+# Maximum number of status refreshes to schedule. 6 refreshes at 90s intervals
+# gives ~9 min of refresh coverage, plus the initial 2-min window = ~11 min total.
+MAX_STATUS_REFRESHES = 6
 
 
 @instrumented_task(
@@ -140,7 +153,7 @@ def process_mention_for_slack(
             thread_context = build_thread_context(messages) or None
 
         operator = SeerExplorerOperator(entrypoint=entrypoint)
-        operator.trigger_explorer(
+        run_id = operator.trigger_explorer(
             organization=organization,
             user=user,
             prompt=prompt,
@@ -148,6 +161,18 @@ def process_mention_for_slack(
             category_key="slack_thread",
             category_value=f"{channel_id}:{entrypoint.thread_ts}",
         )
+
+        if run_id is not None:
+            refresh_slack_thread_status.apply_async(
+                kwargs={
+                    "integration_id": integration_id,
+                    "organization_id": organization_id,
+                    "channel_id": channel_id,
+                    "thread_ts": entrypoint.thread_ts,
+                    "run_id": run_id,
+                },
+                countdown=THREAD_STATUS_REFRESH_INTERVAL_SECS,
+            )
 
 
 def _resolve_user(
@@ -231,3 +256,66 @@ def _send_not_org_member_message(
         renderable=renderable,
         thread_ts=thread_ts,
     )
+
+
+@instrumented_task(
+    name="sentry.seer.entrypoints.slack.refresh_slack_thread_status",
+    namespace=integrations_tasks,
+    processing_deadline_duration=30,
+    retry=None,
+)
+def refresh_slack_thread_status(
+    *,
+    integration_id: int,
+    organization_id: int,
+    channel_id: str,
+    thread_ts: str,
+    run_id: int,
+    remaining_refreshes: int = MAX_STATUS_REFRESHES,
+) -> None:
+    """
+    Refresh the Slack thread status indicator to prevent it from auto-clearing.
+
+    Slack's assistant_threads.setStatus auto-clears after 2 minutes of no message.
+    This task re-sends the status and chains another delayed task until the Explorer
+    run completes (explorer cache deleted) or the refresh budget is exhausted.
+    """
+    from sentry.integrations.slack.integration import SlackIntegration
+    from sentry.integrations.slack.webhooks.event import SEER_LOADING_MESSAGES
+    from sentry.seer.entrypoints.slack.entrypoint import SlackExplorerCachePayload
+
+    cache_payload = SeerOperatorExplorerCache[SlackExplorerCachePayload].get(
+        entrypoint_key=str(SeerEntrypointKey.SLACK),
+        run_id=run_id,
+    )
+    if not cache_payload:
+        return
+
+    integration = integration_service.get_integration(
+        integration_id=integration_id,
+        organization_id=organization_id,
+        status=ObjectStatus.ACTIVE,
+    )
+    if not integration:
+        return
+
+    install = SlackIntegration(model=integration, organization_id=organization_id)
+    install.set_thread_status(
+        channel_id=channel_id,
+        thread_ts=thread_ts,
+        status="Thinking...",
+        loading_messages=SEER_LOADING_MESSAGES,
+    )
+
+    if remaining_refreshes > 1:
+        refresh_slack_thread_status.apply_async(
+            kwargs={
+                "integration_id": integration_id,
+                "organization_id": organization_id,
+                "channel_id": channel_id,
+                "thread_ts": thread_ts,
+                "run_id": run_id,
+                "remaining_refreshes": remaining_refreshes - 1,
+            },
+            countdown=THREAD_STATUS_REFRESH_INTERVAL_SECS,
+        )
