@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Aggregate per-shard failure artifacts, write a job summary, and upsert GitHub issues.
+"""Aggregate per-shard failure artifacts and write a job summary.
 
 Called by the 'report' job after all shuffle-tests-across-shards matrix shards finish.
 Each shard uploads a failure.json on failure; this script collects them all, deduplicates
-by test node ID, writes a consolidated markdown summary, and creates or comments on issues.
+by test node ID, and writes a consolidated markdown summary.
 
 Usage:
     python3 report_shuffle_failures.py [failures-dir]
@@ -23,8 +23,6 @@ Failure JSON schema:
 
 Environment:
     GITHUB_STEP_SUMMARY  Path to the step summary file (set by GitHub Actions).
-    GH_TOKEN             GitHub token (consumed by the gh CLI).
-    GH_REPO              owner/repo (consumed by the gh CLI).
     RUN_URL              Workflow run URL for the summary header.
 """
 
@@ -32,7 +30,6 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
 import sys
 from pathlib import Path
 
@@ -119,82 +116,6 @@ def build_summary(failures: list[dict], run_url: str) -> str:
     return "\n".join(lines)
 
 
-def build_issue_body(failure: dict) -> str:
-    if failure["type"] == "pollution":
-        return failure.get("pollution_body", "")
-    tb = failure.get("longrepr") or "no failure detail available"
-    return (
-        f"Failing test: `{failure['testid']}`\n"
-        f"Sentry sha: {failure['sha']}\n"
-        f"Run: {failure['run_url']}\n"
-        f"\n"
-        f"```\n{tb}\n```"
-    )
-
-
-def _gh(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(["gh", *args], capture_output=True, text=True)
-
-
-def find_existing_issue(label: str, title: str) -> int | None:
-    """Return the issue number of an open issue with the exact title, or None."""
-    r = _gh(
-        "issue",
-        "list",
-        "--label",
-        label,
-        "--state",
-        "open",
-        "--search",
-        f'"{title}" in:title',
-        "--json",
-        "number,title",
-    )
-    if r.returncode != 0 or not r.stdout.strip():
-        return None
-    try:
-        for issue in json.loads(r.stdout):
-            if issue.get("title") == title:
-                return issue["number"]
-    except (json.JSONDecodeError, KeyError):
-        pass
-    return None
-
-
-def comment_on_issue(number: int, body: str) -> None:
-    r = _gh("issue", "comment", str(number), "--body", body)
-    if r.returncode != 0:
-        print(
-            f"WARNING: failed to comment on issue #{number}: {r.stderr.strip()}",
-            file=sys.stderr,
-        )
-
-
-def create_issue(title: str, label: str, body: str) -> None:
-    r = _gh("issue", "create", "--title", title, "--label", label, "--body", body)
-    if r.returncode != 0:
-        print(
-            f"WARNING: failed to create issue '{title}': {r.stderr.strip()}",
-            file=sys.stderr,
-        )
-
-
-def upsert_issue(failure: dict) -> None:
-    is_flaky = failure["type"] == "flaky"
-    label = "flaky-test" if is_flaky else "test-pollution"
-    prefix = "Flaky test" if is_flaky else "Test pollution"
-    title = f"{prefix}: {failure['testid']}"
-    body = build_issue_body(failure)
-
-    existing = find_existing_issue(label, title)
-    if existing is not None:
-        comment_on_issue(existing, body)
-        print(f"Commented on issue #{existing}: {title}")
-    else:
-        create_issue(title, label, body)
-        print(f"Created issue: {title}")
-
-
 def main(argv: list[str] | None = None) -> int:
     args = argv if argv is not None else sys.argv[1:]
     failures_dir = Path(args[0]) if args else Path("failures")
@@ -220,9 +141,6 @@ def main(argv: list[str] | None = None) -> int:
             fh.write(summary)
     else:
         print(summary)
-
-    for failure in failures:
-        upsert_issue(failure)
 
     return 0
 

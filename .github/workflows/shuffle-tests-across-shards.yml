@@ -160,8 +160,6 @@ jobs:
     runs-on: ubuntu-24.04
     needs: backend-test
     if: failure()
-    permissions:
-      issues: write
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
@@ -170,9 +168,7 @@ jobs:
           pattern: failure-*
           path: failures/
 
-      - name: Generate summary and create issues
+      - name: Generate summary
         env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: python3 .github/workflows/scripts/report_shuffle_failures.py failures/

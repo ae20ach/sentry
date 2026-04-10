@@ -99,7 +99,9 @@ def make_logrecord(
 )
 def test_emit(record, out, handler, logger) -> None:
     record = make_logrecord(**record)
-    handler.emit(record, logger=logger)
+    # Isolate from any ambient trace left by a previous test (e.g. test_emit_with_trace_id).
+    with sentry_sdk.isolation_scope():
+        handler.emit(record, logger=logger)
     expected = {
         "level": logging.INFO,
         "event": "msg",
