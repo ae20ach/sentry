@@ -211,6 +211,19 @@ export function makeDashboardHistoryQueryKey(orgSlug: string, dashboardId: strin
   ] as const;
 }
 
+export function makeDashboardHistorySnapshotQueryKey(
+  orgSlug: string,
+  dashboardId: string,
+  historyId: string
+) {
+  return [
+    getApiUrl(
+      '/organizations/$organizationIdOrSlug/dashboards/$dashboardId/history/$historyId/',
+      {path: {organizationIdOrSlug: orgSlug, dashboardId, historyId}}
+    ),
+  ] as const;
+}
+
 export function updateDashboard(
   api: Client,
   orgId: string,

@@ -85,6 +85,62 @@ class DashboardHistoryEndpoint(OrganizationDashboardBase):
 
 
 @cell_silo_endpoint
+class DashboardHistoryDetailEndpoint(OrganizationDashboardBase):
+    owner = ApiOwner.DASHBOARDS
+    publish_status = {
+        "GET": ApiPublishStatus.PRIVATE,
+    }
+
+    def convert_args(
+        self,
+        request: Request,
+        organization_id_or_slug: str | int,
+        dashboard_id: str | int,
+        history_id: str | int,
+        *args: Any,
+        **kwargs: Any,
+    ) -> tuple[tuple[Any, ...], dict[str, Any]]:
+        args, kwargs = super().convert_args(
+            request, organization_id_or_slug, dashboard_id, *args, **kwargs
+        )
+
+        try:
+            kwargs["history"] = DashboardHistory.objects.get(
+                id=history_id,
+                dashboard_id=kwargs["dashboard"].id
+                if isinstance(kwargs["dashboard"], Dashboard)
+                else None,
+                organization=kwargs["organization"],
+            )
+        except (DashboardHistory.DoesNotExist, ValueError):
+            raise ResourceDoesNotExist
+
+        return (args, kwargs)
+
+    def get(
+        self,
+        request: Request,
+        organization: Organization,
+        dashboard: Dashboard | dict[Any, Any],
+        history: DashboardHistory,
+    ) -> Response:
+        """
+        Get the full snapshot for a history entry.
+        Returns the snapshot as a DashboardDetails object.
+        """
+        if not feature_has(READ_FEATURE, organization, actor=request.user):
+            return Response(status=404)
+
+        if not feature_has("organizations:dashboards-history", organization, actor=request.user):
+            return Response(status=404)
+
+        if not history.snapshot:
+            raise ResourceDoesNotExist
+
+        return Response(history.snapshot, status=200)
+
+
+@cell_silo_endpoint
 class DashboardRestoreEndpoint(OrganizationDashboardBase):
     owner = ApiOwner.DASHBOARDS
     publish_status = {

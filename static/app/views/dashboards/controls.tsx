@@ -31,7 +31,7 @@ import {useDuplicatePrebuiltDashboard} from 'sentry/views/dashboards/hooks/useDu
 import {DataSet} from 'sentry/views/dashboards/widgetBuilder/utils';
 
 import {checkUserHasEditAccess} from './utils/checkUserHasEditAccess';
-import DashboardHistoryButton from './dashboardHistory';
+import {DashboardHistoryButton} from './dashboardHistory';
 import {UNSAVED_FILTERS_MESSAGE} from './detail';
 import {exportDashboard} from './exportDashboard';
 import type {DashboardDetails, DashboardListItem, DashboardPermissions} from './types';

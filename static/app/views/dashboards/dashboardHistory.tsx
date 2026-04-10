@@ -1,35 +1,44 @@
-import {Fragment, useCallback} from 'react';
+import {Fragment, useCallback, useEffect, useMemo, useState} from 'react';
+import {css} from '@emotion/react';
 import styled from '@emotion/styled';
 
 import {Badge} from '@sentry/scraps/badge';
 import {Button} from '@sentry/scraps/button';
 import {Flex} from '@sentry/scraps/layout';
+import {Text} from '@sentry/scraps/text';
 import {Tooltip} from '@sentry/scraps/tooltip';
 
 import {makeDashboardHistoryQueryKey} from 'sentry/actionCreators/dashboards';
 import {addErrorMessage, addSuccessMessage} from 'sentry/actionCreators/indicator';
-import {useDrawer} from 'sentry/components/globalDrawer';
-import {DrawerBody, DrawerHeader} from 'sentry/components/globalDrawer/components';
+import {openModal} from 'sentry/actionCreators/modal';
+import type {ModalRenderProps} from 'sentry/actionCreators/modal';
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
 import {IconClock} from 'sentry/icons/iconClock';
 import {t, tn} from 'sentry/locale';
+import {MEPSettingProvider} from 'sentry/utils/performance/contexts/metricsEnhancedSetting';
 import {fetchMutation, useMutation, useQueryClient} from 'sentry/utils/queryClient';
 import type {RequestError} from 'sentry/utils/requestError/requestError';
+import {useLocation} from 'sentry/utils/useLocation';
+import {useNavigate} from 'sentry/utils/useNavigate';
 import {useOrganization} from 'sentry/utils/useOrganization';
 
 import {useDashboardHistory} from './hooks/useDashboardHistory';
+import {useDashboardHistorySnapshot} from './hooks/useDashboardHistorySnapshot';
+import {Dashboard} from './dashboard';
 import type {DashboardDetails} from './types';
+import {WidgetLegendSelectionState} from './widgetLegendSelectionState';
+
+const NOOP = () => {};
 
 interface DashboardHistoryButtonProps {
   dashboard: DashboardDetails;
   onRestore: (restoredDashboard: DashboardDetails) => void;
 }
 
-export default function DashboardHistoryButton({
+export function DashboardHistoryButton({
   dashboard,
   onRestore,
 }: DashboardHistoryButtonProps) {
-  const {openDrawer} = useDrawer();
   const organization = useOrganization();
 
   const isValidDashboard =
@@ -43,20 +52,25 @@ export default function DashboardHistoryButton({
   const hasHistory = (history?.length ?? 0) > 0;
 
   const handleClick = useCallback(() => {
-    openDrawer(
-      ({closeDrawer}) => (
-        <DashboardHistoryDrawerContent
+    openModal(
+      props => (
+        <DashboardHistoryModal
+          {...props}
           dashboardId={dashboard.id}
           orgSlug={organization.slug}
           onRestore={restoredDashboard => {
             onRestore(restoredDashboard);
-            closeDrawer();
+            props.closeModal();
           }}
         />
       ),
-      {ariaLabel: t('Dashboard History')}
+      {
+        modalCss: css`
+          width: min(90vw, 1400px);
+        `,
+      }
     );
-  }, [openDrawer, dashboard.id, organization.slug, onRestore]);
+  }, [dashboard.id, organization.slug, onRestore]);
 
   if (!isValidDashboard) {
     return null;
@@ -81,17 +95,48 @@ export default function DashboardHistoryButton({
   );
 }
 
-function DashboardHistoryDrawerContent({
+function DashboardHistoryModal({
+  Header,
+  Body,
   dashboardId,
   orgSlug,
   onRestore,
-}: {
+}: ModalRenderProps & {
   dashboardId: string;
   onRestore: (restoredDashboard: DashboardDetails) => void;
   orgSlug: string;
 }) {
+  const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
   const queryClient = useQueryClient();
-  const {data: history, isPending} = useDashboardHistory({dashboardId});
+  const organization = useOrganization();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const {data: history, isPending: isHistoryPending} = useDashboardHistory({dashboardId});
+  const {data: snapshotDashboard, isPending: isSnapshotPending} =
+    useDashboardHistorySnapshot({
+      dashboardId,
+      historyId: selectedHistoryId,
+    });
+
+  useEffect(() => {
+    if (history?.length && selectedHistoryId === null) {
+      setSelectedHistoryId(history[0]!.id);
+    }
+  }, [history, selectedHistoryId]);
+
+  const selectedEntry = history?.find(e => e.id === selectedHistoryId);
+
+  const widgetLegendState = useMemo(
+    () =>
+      new WidgetLegendSelectionState({
+        dashboard: snapshotDashboard ?? null,
+        location,
+        navigate,
+        organization,
+      }),
+    [snapshotDashboard, location, navigate, organization]
+  );
 
   const {mutate: restoreSnapshot, isPending: isRestoring} = useMutation<
     DashboardDetails,
@@ -117,109 +162,172 @@ function DashboardHistoryDrawerContent({
 
   return (
     <Fragment>
-      <DrawerHeader>
-        <Flex align="center" justify="center">
-          {t('Dashboard History')}
-        </Flex>
-      </DrawerHeader>
-      <DrawerBody>
-        <HistoryDescription>
-          {t(
-            'Restore to a previous snapshot of the dashboard. Up to 10 snapshots are stored and created on each dashboard edit, deleting the oldest snapshots first when the limit is reached.'
-          )}
-        </HistoryDescription>
-        {isPending ? (
-          <LoadingIndicator />
-        ) : history?.length === 0 ? (
-          <p>
-            {t(
-              'No history entries yet. History is recorded when the dashboard is edited.'
-            )}
-          </p>
-        ) : (
-          <HistoryList>
-            {history?.map(entry => (
-              <HistoryItem key={entry.id}>
-                <HistoryInfo>
-                  <HistoryTitleRow>
-                    <HistoryTitle>{entry.title}</HistoryTitle>
-                    {entry.source === 'restore' && (
-                      <Badge variant="warning">{t('pre-restore')}</Badge>
-                    )}
-                  </HistoryTitleRow>
-                  <HistoryMeta>
-                    {new Date(entry.dateAdded).toLocaleString()}
-                    {' \u00b7 '}
-                    {tn('%s widget', '%s widgets', entry.widgetCount)}
+      <Header closeButton>{t('Dashboard History')}</Header>
+      <Body>
+        <ModalLayout>
+          <VersionsPanel>
+            <VersionsPanelHeader>
+              <Text size="sm" bold>
+                {t('Versions')}
+              </Text>
+            </VersionsPanelHeader>
+            <VersionsPanelDescription>
+              <Text size="sm" variant="muted">
+                {t(
+                  'Up to 10 snapshots stored, newest first. Oldest deleted when limit reached.'
+                )}
+              </Text>
+            </VersionsPanelDescription>
+            {isHistoryPending ? (
+              <LoadingIndicator />
+            ) : (
+              <VersionList>
+                {history?.map(entry => (
+                  <VersionItem
+                    key={entry.id}
+                    $isSelected={entry.id === selectedHistoryId}
+                    onClick={() => setSelectedHistoryId(entry.id)}
+                  >
+                    <Text size="sm">{new Date(entry.dateAdded).toLocaleString()}</Text>
+                    <Flex align="center" gap="sm">
+                      <Text size="xs" variant="muted">
+                        {tn('%s widget', '%s widgets', entry.widgetCount)}
+                      </Text>
+                      {entry.source === 'restore' && (
+                        <Badge variant="warning">{t('pre-restore')}</Badge>
+                      )}
+                    </Flex>
                     {entry.createdBy && (
-                      <span>
-                        {' \u00b7 '}
+                      <Text size="xs" variant="muted">
                         {entry.createdBy.name || entry.createdBy.email}
-                      </span>
+                      </Text>
                     )}
-                  </HistoryMeta>
-                </HistoryInfo>
+                  </VersionItem>
+                ))}
+              </VersionList>
+            )}
+          </VersionsPanel>
+
+          <PreviewPanel>
+            {selectedEntry && (
+              <PreviewToolbar>
+                <div>
+                  <Text size="md" bold>
+                    {selectedEntry.title}
+                  </Text>
+                  <Text size="sm" variant="muted">
+                    {new Date(selectedEntry.dateAdded).toLocaleString()}
+                  </Text>
+                </div>
                 <Button
-                  size="xs"
-                  onClick={() => restoreSnapshot({historyId: entry.id})}
+                  size="sm"
+                  priority="primary"
+                  onClick={() => restoreSnapshot({historyId: selectedEntry.id})}
                   disabled={isRestoring}
                 >
-                  {t('Restore')}
+                  {t('Restore this version')}
                 </Button>
-              </HistoryItem>
-            ))}
-          </HistoryList>
-        )}
-      </DrawerBody>
+              </PreviewToolbar>
+            )}
+            <PreviewScroll>
+              {selectedHistoryId ? (
+                isSnapshotPending ? (
+                  <LoadingIndicator />
+                ) : snapshotDashboard ? (
+                  <MEPSettingProvider>
+                    <Dashboard
+                      dashboard={snapshotDashboard}
+                      isEditingDashboard={false}
+                      isPreview
+                      widgetLegendState={widgetLegendState}
+                      widgetLimitReached={false}
+                      handleAddCustomWidget={NOOP}
+                      handleUpdateWidgetList={NOOP}
+                      onUpdate={NOOP}
+                    />
+                  </MEPSettingProvider>
+                ) : null
+              ) : (
+                <Flex align="center" justify="center" style={{height: '100%'}}>
+                  <Text variant="muted">{t('Select a version to preview')}</Text>
+                </Flex>
+              )}
+            </PreviewScroll>
+          </PreviewPanel>
+        </ModalLayout>
+      </Body>
     </Fragment>
   );
 }
 
-const HistoryDescription = styled('p')`
-  color: ${p => p.theme.tokens.content.primary};
-  font-size: ${p => p.theme.font.size.sm};
+const ModalLayout = styled('div')`
+  display: flex;
+  gap: ${p => p.theme.space.xl};
+  height: 65vh;
+  margin-top: ${p => p.theme.space.md};
+`;
+
+const VersionsPanel = styled('div')`
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid ${p => p.theme.tokens.border.primary};
+  padding-right: ${p => p.theme.space.xl};
+  overflow: hidden;
+`;
+
+const VersionsPanelHeader = styled('div')`
+  margin-bottom: ${p => p.theme.space.sm};
+`;
+
+const VersionsPanelDescription = styled('div')`
   margin-bottom: ${p => p.theme.space.md};
 `;
 
-const HistoryList = styled('ul')`
+const VersionList = styled('ul')`
   list-style: none;
   padding: 0;
   margin: 0;
+  overflow-y: auto;
+  flex: 1;
 `;
 
-const HistoryItem = styled('li')`
+const VersionItem = styled('li')<{$isSelected: boolean}>`
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: ${p => p.theme.space.md} 0;
-  border-bottom: 1px solid ${p => p.theme.tokens.border.primary};
+  flex-direction: column;
+  gap: ${p => p.theme.space.xs};
+  padding: ${p => p.theme.space.md};
+  border-radius: ${p => p.theme.radius.md};
+  cursor: pointer;
+  background: ${p =>
+    p.$isSelected ? p.theme.tokens.background.secondary : 'transparent'};
+  border: 1px solid ${p => (p.$isSelected ? p.theme.tokens.border.accent : 'transparent')};
 
-  &:last-child {
-    border-bottom: none;
+  &:hover {
+    background: ${p => p.theme.tokens.background.secondary};
   }
 `;
 
-const HistoryInfo = styled('div')`
+const PreviewPanel = styled('div')`
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: ${p => p.theme.space.sm};
-  min-width: 0;
+  overflow: hidden;
 `;
 
-const HistoryTitleRow = styled('div')`
+const PreviewToolbar = styled('div')`
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: ${p => p.theme.space.md};
+  margin-bottom: ${p => p.theme.space.md};
+  flex-shrink: 0;
 `;
 
-const HistoryTitle = styled('span')`
-  font-weight: ${p => p.theme.font.weight.sans.regular};
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`;
-
-const HistoryMeta = styled('span')`
-  color: ${p => p.theme.tokens.content.secondary};
-  font-size: ${p => p.theme.font.size.sm};
+const PreviewScroll = styled('div')`
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
 `;
