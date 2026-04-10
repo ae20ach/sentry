@@ -75,14 +75,14 @@ class SlackEventRequest(SlackDMRequest):
     def thread_ts(self) -> str:
         if self.is_assistant_thread_event:
             return self.dm_data.get("assistant_thread", {}).get("thread_ts", "")
-        return self.dm_data.get("thread_ts") or self.dm_data.get("ts", "")
+        return self.dm_data.get("thread_ts")
 
     @property
-    def has_assistant_scope(self):
+    def has_assistant_scope(self) -> bool:
         return SlackScope.ASSISTANT_WRITE in self.integration.metadata.get("scopes", [])
 
     @property
-    def is_assistant_thread_event(self):
+    def is_assistant_thread_event(self) -> bool:
         return self.dm_data.get("type") == "assistant_thread_started"
 
     @property

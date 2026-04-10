@@ -447,10 +447,17 @@ class SlackEventEndpoint(SlackDMEndpoint):
             spec=SlackMessagingSpec(),
         ).capture() as lifecycle:
             data = slack_request.data.get("event", {})
+            channel_id = data.get("channel")
+            text = data.get("text")
+            ts = data.get("ts") or data.get("message_ts")
+            thread_ts = slack_request.thread_ts
             lifecycle.add_extras(
                 {
                     "integration_id": slack_request.integration.id,
-                    "thread_ts": data.get("thread_ts"),
+                    "thread_ts": thread_ts,
+                    "channel_id": channel_id,
+                    "text": text,
+                    "ts": ts,
                 }
             )
 
@@ -464,21 +471,6 @@ class SlackEventEndpoint(SlackDMEndpoint):
 
             organization_id = result["organization_id"]
             installation = result["installation"]
-
-            channel_id = data.get("channel")
-            text = data.get("text")
-            ts = data.get("ts") or data.get("message_ts")
-            thread_ts = data.get("thread_ts")
-
-            lifecycle.add_extras(
-                {
-                    "channel_id": channel_id,
-                    "text": text,
-                    "ts": ts,
-                    "thread_ts": thread_ts,
-                    "user_id": slack_request.user_id,
-                }
-            )
 
             if not channel_id or not text or not ts or not slack_request.user_id:
                 lifecycle.record_halt(SeerSlackHaltReason.MISSING_EVENT_DATA)
@@ -606,6 +598,7 @@ class SlackEventEndpoint(SlackDMEndpoint):
             command, _ = slack_request.get_command_and_args()
 
             resp: Response | None
+            # If we have the assistant scope, we don't want to fallback to commands anymore.
             if slack_request.has_assistant_scope:
                 resp = self.on_direct_message(slack_request)
             elif command in COMMANDS:
