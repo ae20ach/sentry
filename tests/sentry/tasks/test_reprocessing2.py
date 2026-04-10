@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time as _time
 import uuid
 from time import time
 from typing import Any
@@ -185,7 +186,12 @@ def test_basic(
 
         assert is_group_finished(old_event.group_id)
 
-        # Old event is actually getting tombstoned
+        # Old event is actually getting tombstoned. Snuba processes the
+        # tombstone via Kafka asynchronously — retry briefly to let it propagate.
+        for _ in range(10):
+            if not get_event_by_processing_counter("x0"):
+                break
+            _time.sleep(0.5)
         assert not get_event_by_processing_counter("x0")
         if change_groups:
             assert tombstone_calls == [
@@ -648,9 +654,20 @@ def test_apply_new_stack_trace_rules(
     assert is_group_finished(event1.group_id)
     assert is_group_finished(event2.group_id)
 
-    # Events should now be in same group because of stacktrace rule
-    event1 = eventstore.backend.get_event_by_id(default_project.id, event_id1)
-    event2 = eventstore.backend.get_event_by_id(default_project.id, event_id2)
+    # Events should now be in same group because of stacktrace rule.
+    # Snuba processes the reprocessed events via Kafka asynchronously, so retry
+    # until Snuba returns the new versions whose group_ids exist in the DB.
+    for _ in range(10):
+        event1 = eventstore.backend.get_event_by_id(default_project.id, event_id1)
+        event2 = eventstore.backend.get_event_by_id(default_project.id, event_id2)
+        if (
+            event1 is not None
+            and event2 is not None
+            and Group.objects.filter(id=event1.group_id).exists()
+            and Group.objects.filter(id=event2.group_id).exists()
+        ):
+            break
+        _time.sleep(0.5)
     assert event1 is not None
     assert event2 is not None
     assert event1.group is not None
