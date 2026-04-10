@@ -157,8 +157,10 @@ def _unfurl_explore(
             _logger.warning("Failed to generate chart for explore unfurl")
             continue
 
+        # Only one chart/y-axis is supported at a time in Explore
+        title = f"{defaults['title']} - {y_axes[0]}"
         unfurls[link.url] = SlackDiscoverMessageBuilder(
-            title=defaults["title"],
+            title=title,
             chart_url=url,
         ).build()
 
