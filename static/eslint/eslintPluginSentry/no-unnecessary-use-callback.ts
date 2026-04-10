@@ -113,12 +113,17 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs<
       return null;
     }
 
+    // Scraps components that use memoized callbacks internally
+    const scrapsExclusions = new Set(['CompactSelect', 'CodeBlock']);
+
     return {
       ImportDeclaration(node) {
         const source = node.source.value;
         if (typeof source === 'string' && source.startsWith('@sentry/scraps')) {
           for (const spec of node.specifiers) {
-            scrapsImports.add(spec.local.name);
+            if (!scrapsExclusions.has(spec.local.name)) {
+              scrapsImports.add(spec.local.name);
+            }
           }
         }
       },

@@ -124,6 +124,22 @@ ruleTester.run('no-unnecessary-use-callback', noUnnecessaryUseCallback, {
         <Button onClick={fn} />
       `,
     },
+    {
+      name: 'useCallback passed to excluded scraps component CompactSelect',
+      code: `
+        import {CompactSelect} from '@sentry/scraps/compactSelect';
+        const fn = useCallback(() => {}, []);
+        <CompactSelect onChange={fn} />
+      `,
+    },
+    {
+      name: 'useCallback passed to excluded scraps component CodeBlock',
+      code: `
+        import {CodeBlock} from '@sentry/scraps/codeBlock';
+        const fn = useCallback(() => {}, []);
+        <CodeBlock onCopy={fn} />
+      `,
+    },
   ],
 
   invalid: [
