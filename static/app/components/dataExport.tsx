@@ -16,10 +16,14 @@ export enum ExportQueryType {
   EXPLORE = 'Explore',
 }
 
-interface DataExportPayload {
+export type DataExportPayload = {
   queryInfo: any;
   queryType: ExportQueryType; // TODO(ts): Formalize different possible payloads
-}
+};
+
+export type DataExportInvokeOptions = {
+  limit?: number;
+};
 
 interface DataExportProps {
   payload: DataExportPayload;
@@ -43,23 +47,33 @@ export function useDataExport({
   const organization = useOrganization();
   const api = useApi();
 
-  return useCallback(() => {
-    inProgressCallback?.(true);
+  return useCallback(
+    async (invokeOptions?: DataExportInvokeOptions): Promise<boolean> => {
+      inProgressCallback?.(true);
 
-    // This is a fire and forget request.
-    api
-      .requestPromise(`/organizations/${organization.slug}/data-export/`, {
-        includeAllArgs: true,
-        method: 'POST',
-        data: {
-          query_type: payload.queryType,
-          query_info: payload.queryInfo,
-        },
-      })
-      .then(([_data, _, response]) => {
-        // If component has unmounted, don't do anything
+      const data: {
+        query_info: any;
+        query_type: ExportQueryType;
+        limit?: number;
+      } = {
+        query_type: payload.queryType,
+        query_info: payload.queryInfo,
+      };
+      if (typeof invokeOptions?.limit === 'number') {
+        data.limit = invokeOptions.limit;
+      }
+
+      try {
+        const [_data, _, response] = await api.requestPromise(
+          `/organizations/${organization.slug}/data-export/`,
+          {
+            includeAllArgs: true,
+            method: 'POST',
+            data,
+          }
+        );
         if (unmountedRef?.current) {
-          return;
+          return false;
         }
 
         addSuccessMessage(
@@ -69,29 +83,31 @@ export function useDataExport({
               )
             : t("It looks like we're already working on it. Sit tight, we'll email you.")
         );
-      })
-      .catch(err => {
-        // If component has unmounted, don't do anything
+        return true;
+      } catch (err: unknown) {
         if (unmountedRef?.current) {
-          return;
+          return false;
         }
         const message =
-          err?.responseJSON?.detail ??
+          (err as {responseJSON?: {detail?: string}})?.responseJSON?.detail ??
           t(
             "We tried our hardest, but we couldn't export your data. Give it another go."
           );
 
         addErrorMessage(message);
         inProgressCallback?.(false);
-      });
-  }, [
-    payload.queryInfo,
-    payload.queryType,
-    organization.slug,
-    api,
-    inProgressCallback,
-    unmountedRef,
-  ]);
+        return false;
+      }
+    },
+    [
+      payload.queryInfo,
+      payload.queryType,
+      organization.slug,
+      api,
+      inProgressCallback,
+      unmountedRef,
+    ]
+  );
 }
 
 export function DataExport({

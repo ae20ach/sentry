@@ -1,4 +1,10 @@
+import {Fragment} from 'react';
+
+import {ExportQueryType} from 'sentry/components/dataExport';
+import {DataExportWithModal} from 'sentry/components/dataExportWithModal';
 import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
+import {IconDownload} from 'sentry/icons';
+import {t} from 'sentry/locale';
 import {ExploreExport} from 'sentry/views/explore/components/exploreExport';
 import {QUERY_PAGE_LIMIT} from 'sentry/views/explore/logs/constants';
 import {downloadLogsAsCsv} from 'sentry/views/explore/logs/logsExportCsv';
@@ -26,6 +32,19 @@ interface LogsQueryInfo {
   environment?: string[];
   start?: string;
   statsPeriod?: string;
+}
+
+function getLogsExportDisabledTooltip(props: LogsExportButtonProps): string | undefined {
+  if (props.isLoading) {
+    return t('Loading...');
+  }
+  if (props.error !== null) {
+    return t('Unable to export due to an error');
+  }
+  if (!props.tableData || props.tableData.length === 0) {
+    return t('No data to export');
+  }
+  return undefined;
 }
 
 export function LogsExportButton(props: LogsExportButtonProps) {
@@ -67,16 +86,34 @@ export function LogsExportButton(props: LogsExportButtonProps) {
     }
   };
 
+  const disabledTooltip = getLogsExportDisabledTooltip(props);
+
   return (
-    <ExploreExport
-      traceItemDataset={TraceItemDataset.LOGS}
-      disabled={disabled}
-      hasReachedCSVLimit={!!isMoreThanOnePage}
-      queryInfo={queryInfo}
-      isDataEmpty={isDataEmpty}
-      isDataLoading={isDataLoading}
-      isDataError={isDataError}
-      downloadAsCsv={handleDownloadAsCsv}
-    />
+    <Fragment>
+      <ExploreExport
+        traceItemDataset={TraceItemDataset.LOGS}
+        disabled={disabled}
+        hasReachedCSVLimit={!!isMoreThanOnePage}
+        queryInfo={queryInfo}
+        isDataEmpty={isDataEmpty}
+        isDataLoading={isDataLoading}
+        isDataError={isDataError}
+        downloadAsCsv={handleDownloadAsCsv}
+      />
+      <DataExportWithModal
+        size="xs"
+        payload={{
+          queryType: ExportQueryType.EXPLORE,
+          queryInfo: {
+            ...queryInfo,
+            dataset: TraceItemDataset.LOGS,
+          },
+        }}
+        disabled={disabled}
+        disabledTooltip={disabledTooltip}
+        overrideFeatureFlags
+        icon={<IconDownload />}
+      />
+    </Fragment>
   );
 }

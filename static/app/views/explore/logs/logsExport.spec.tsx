@@ -80,6 +80,7 @@ describe('LogsExportButton', () => {
 
     expect(screen.getByTestId('export-download-csv')).toBeInTheDocument();
     expect(screen.getByRole('button', {name: 'Export'})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Export Data (Modal)'})).toBeInTheDocument();
   });
 
   it('should send correct payload for async export with all LogsQueryInfo parameters', async () => {
