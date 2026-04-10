@@ -161,7 +161,7 @@ export function handleDeleteQuery(
   api: Client,
   organization: Organization,
   eventView: EventView
-): Promise<void> {
+) {
   trackAnalytics('discover_v2.delete_query_request', {
     organization,
     ...extractAnalyticsQueryFields(eventView.toNewQuery()),

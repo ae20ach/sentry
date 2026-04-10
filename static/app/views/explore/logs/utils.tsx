@@ -552,9 +552,11 @@ export const logOnceFactory = (logSeverity: 'info' | 'warn') => {
     if (!fired) {
       fired = true;
       if (logSeverity === 'info') {
-        return Sentry.logger.info(args[0], args[1]);
+        Sentry.logger.info(args[0], args[1]);
+        return;
       }
-      return Sentry.logger.warn(args[0], args[1]);
+      Sentry.logger.warn(args[0], args[1]);
+      return;
     }
     return () => {
       // Do nothing

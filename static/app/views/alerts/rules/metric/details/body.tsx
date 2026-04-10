@@ -84,16 +84,17 @@ export function MetricDetailsBody({
     const {start, end, relative} = datetime;
 
     if (start && end) {
-      return navigate({
+      navigate({
         ...location,
         query: {
           start: moment(start).utc().format(),
           end: moment(end).utc().format(),
         },
       });
+      return;
     }
 
-    return navigate({
+    navigate({
       ...location,
       query: {
         period: relative,

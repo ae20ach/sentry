@@ -75,12 +75,8 @@ export function updateSavedQueryVisit(
   return promise;
 }
 
-export function deleteSavedQuery(
-  api: Client,
-  orgId: string,
-  queryId: string
-): Promise<void> {
-  const promise: Promise<void> = api.requestPromise(
+export function deleteSavedQuery(api: Client, orgId: string, queryId: string) {
+  const promise: Promise<unknown> = api.requestPromise(
     `/organizations/${orgId}/discover/saved/${queryId}/`,
     {method: 'DELETE'}
   );

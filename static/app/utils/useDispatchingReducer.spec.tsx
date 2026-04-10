@@ -9,7 +9,7 @@ describe('useDispatchingReducer', () => {
       return setTimeout(cb, 0);
     });
     window.cancelAnimationFrame = jest.fn().mockImplementation(id => {
-      return clearTimeout(id);
+      clearTimeout(id);
     });
     jest.useFakeTimers();
   });

@@ -106,6 +106,5 @@ export function WidgetQueryQueueProvider({children}: {children: React.ReactNode}
 
 const fetchWidgetItem = async (item: QueueItem) => {
   // Call the function from the ref - this always gets the latest version with current props
-  const result = await item.fetchDataRef.current();
-  return result;
+  await item.fetchDataRef.current();
 };

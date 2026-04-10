@@ -109,12 +109,12 @@ function prodTypeloader(this: LoaderContext<any>, _source: string) {
       exports: moduleExports,
     },
   };
-  return callback(null, `export default ${JSON.stringify(typeLoaderResult)}`);
+  callback(null, `export default ${JSON.stringify(typeLoaderResult)}`);
 }
 
 function noopTypeLoader(this: LoaderContext<any>, _source: string) {
   const callback = this.async();
-  return callback(null, 'export default {props: {},exports: {}}');
+  callback(null, 'export default {props: {},exports: {}}');
 }
 
 export default function typeLoader(this: LoaderContext<any>, _source: string) {

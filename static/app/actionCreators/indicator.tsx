@@ -85,21 +85,23 @@ export function addLoadingMessage(
   msg: React.ReactNode = t('Saving changes...'),
   options?: IndicatorOptions
 ) {
-  return addMessage(msg, 'loading', options);
+  addMessage(msg, 'loading', options);
 }
 
 export function addErrorMessage(msg: React.ReactNode, options?: IndicatorOptions) {
   if (isDemoModeActive()) {
-    return addMessage(t('This action is not allowed in demo mode.'), 'error', options);
+    addMessage(t('This action is not allowed in demo mode.'), 'error', options);
+    return;
   }
   if (typeof msg === 'string' || isValidElement(msg)) {
-    return addMessage(msg, 'error', options);
+    addMessage(msg, 'error', options);
+    return;
   }
   // When non string, non-react element responses are passed, addErrorMessage
   // crashes the entire page because it falls outside any error
   // boundaries defined for the components on the page. Adding a fallback
   // to prevent page crashes.
-  return addMessage(
+  addMessage(
     t(
       "You've hit an issue, fortunately we use Sentry to monitor Sentry. So it's likely we're already looking into this!"
     ),
@@ -112,5 +114,5 @@ export function addSuccessMessage(
   msg: React.ReactNode,
   options?: IndicatorOptions | UndoableIndicatorOptions
 ) {
-  return addMessage(msg, 'success', options);
+  addMessage(msg, 'success', options);
 }

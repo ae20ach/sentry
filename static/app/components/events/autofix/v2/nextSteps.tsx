@@ -273,7 +273,8 @@ export function ExplorerNextSteps({
 
   const handleStepClick = (step: AutofixExplorerStep) => {
     setBusyStep(step);
-    loadingIndicatorRef.current = addLoadingMessage(t('Starting...'));
+    addLoadingMessage(t('Starting...'));
+    loadingIndicatorRef.current = undefined;
     onStartStep(step);
   };
 

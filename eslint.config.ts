@@ -605,6 +605,13 @@ export default typescript.config([
           '@typescript-eslint/consistent-type-exports': 'error',
           '@typescript-eslint/no-array-delete': 'error',
           '@typescript-eslint/no-base-to-string': 'error',
+          '@typescript-eslint/no-confusing-void-expression': [
+            'error',
+            {
+              ignoreArrowShorthand: true,
+              ignoreVoidReturningFunctions: true,
+            },
+          ],
           '@typescript-eslint/no-duplicate-type-constituents': 'error',
           '@typescript-eslint/no-for-in-array': 'error',
           '@typescript-eslint/no-unnecessary-template-expression': 'error',

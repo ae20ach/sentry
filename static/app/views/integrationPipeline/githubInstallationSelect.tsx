@@ -68,7 +68,7 @@ export function GithubInstallationSelect({
     };
 
     const newUrl = `${origin}/extensions/github/setup/?${qs.stringify(newParams)}`;
-    return testableWindowLocation.assign(newUrl);
+    testableWindowLocation.assign(newUrl);
   };
 
   const handleSelect = ({value}: SelectOption<SelectKey>) => {

@@ -345,7 +345,7 @@ export class VideoReplayer {
     const l = Math.max(0, low);
     const h = Math.min(high, this._attachments.length + 1);
 
-    return this._attachments.slice(l, h).forEach((attachment, index) => {
+    this._attachments.slice(l, h).forEach((attachment, index) => {
       const dictIndex = index + l;
 
       // Might be some videos we've already loaded before

@@ -356,7 +356,7 @@ export function openToggleConsolePlatformsModal({
   onSuccess: () => void;
   organization: Organization;
 }) {
-  return openModal(deps => (
+  openModal(deps => (
     <ToggleConsolePlatformsModal
       {...deps}
       organization={organization}

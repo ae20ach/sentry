@@ -153,7 +153,7 @@ export default function AlertRuleDetails() {
     pageUtc?: boolean | null;
     team?: string;
   }) {
-    return navigate({
+    navigate({
       ...location,
       query: {
         ...location.query,
@@ -236,16 +236,17 @@ export default function AlertRuleDetails() {
     if (start && end) {
       const parser = utc ? moment.utc : moment;
 
-      return setStateOnUrl({
+      setStateOnUrl({
         pageStatsPeriod: undefined,
         pageStart: parser(start).format(),
         pageEnd: parser(end).format(),
         pageUtc: utc ?? undefined,
         cursor: undefined,
       });
+      return;
     }
 
-    return setStateOnUrl({
+    setStateOnUrl({
       pageStatsPeriod: relative || undefined,
       pageStart: undefined,
       pageEnd: undefined,

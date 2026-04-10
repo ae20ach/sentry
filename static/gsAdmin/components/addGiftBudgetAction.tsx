@@ -192,7 +192,7 @@ function AddGiftBudgetModal({
 type Options = Pick<Props, 'onSuccess' | 'organization' | 'subscription'>;
 
 export const addGiftBudgetAction = (opts: Options) => {
-  return openModal(deps => <AddGiftBudgetModal {...deps} {...opts} />, {
+  openModal(deps => <AddGiftBudgetModal {...deps} {...opts} />, {
     closeEvents: 'escape-key',
   });
 };

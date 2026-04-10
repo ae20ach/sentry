@@ -496,7 +496,7 @@ export function useAnalytics({
         : 'breakdowns'
       : undefined;
 
-  return useTrackAnalytics({
+  useTrackAnalytics({
     queryType,
     aggregatesTableResult,
     spansTableResult,
@@ -544,7 +544,7 @@ export function useCompareAnalytics({
     })
   );
 
-  return useTrackAnalytics({
+  useTrackAnalytics({
     queryType,
     aggregatesTableResult,
     spansTableResult,

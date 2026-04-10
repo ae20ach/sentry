@@ -171,7 +171,7 @@ export function ReleasesPromo({organization, project}: Props) {
 
   const generateAndSetNewToken = async (sentryAppSlug: string) => {
     const newToken = await generateToken(sentryAppSlug);
-    return setToken(newToken);
+    setToken(newToken);
   };
 
   const generateToken = async (sentryAppSlug: string) => {

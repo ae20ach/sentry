@@ -187,9 +187,10 @@ function SentryAppExternalInstallationContent() {
         queryParams.state = state;
       }
       const redirectUrl = addQueryParamsToExistingUrl(sentryApp.redirectUrl, queryParams);
-      return testableWindowLocation.assign(redirectUrl);
+      testableWindowLocation.assign(redirectUrl);
+      return;
     }
-    return onClose();
+    onClose();
   }, [api, organization, sentryApp, onClose, location.query.state]);
 
   if (sentryAppLoading || orgsLoading || !sentryApp) {

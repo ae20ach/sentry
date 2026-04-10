@@ -185,7 +185,7 @@ function InnerContent(
       is_other_tag: isOtherTag,
     });
 
-    return changeTagSelected(tag);
+    changeTagSelected(tag);
   };
   if (tagSelected) {
     eventView.additionalConditions.setFilterValues('has', [tagSelected]);
