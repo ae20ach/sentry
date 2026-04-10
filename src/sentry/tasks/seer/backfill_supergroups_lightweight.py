@@ -177,7 +177,7 @@ def backfill_supergroups_lightweight_for_org(
     # Self-chain: more groups in this project, or move to next project
     if len(groups) == BATCH_SIZE:
         next_project_id = project.id
-        next_group_id = last_processed_group_id
+        next_group_id = groups[-1].id
     else:
         next_project_id = project.id + 1
         next_group_id = 0
