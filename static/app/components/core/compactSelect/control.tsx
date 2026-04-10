@@ -273,16 +273,22 @@ export function Control({
       }
 
       // Prevent form submissions on Enter key press in search box.
-      // If there is exactly one enabled option visible, select it automatically.
+      // If there is exactly one visible option (enabled or disabled), and it is
+      // enabled, select it automatically. We count all visible options so that a
+      // disabled-but-visible option does not trick us into auto-selecting when
+      // the user still sees multiple items in the list.
       if (e.key === 'Enter') {
         e.preventDefault();
         const role = grid ? 'row' : 'option';
-        const enabledOptions = [
+        const allVisibleOptions = [
           ...(overlayRef.current?.querySelectorAll<HTMLLIElement>(`li[role="${role}"]`) ??
             []),
-        ].filter(opt => opt.getAttribute('aria-disabled') !== 'true');
-        if (enabledOptions.length === 1) {
-          enabledOptions[0]?.click();
+        ];
+        if (
+          allVisibleOptions.length === 1 &&
+          allVisibleOptions[0]?.getAttribute('aria-disabled') !== 'true'
+        ) {
+          allVisibleOptions[0].click();
         }
       }
 

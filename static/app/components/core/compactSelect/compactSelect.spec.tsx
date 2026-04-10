@@ -501,6 +501,33 @@ describe('CompactSelect', () => {
       expect(onChange).not.toHaveBeenCalled();
     });
 
+    it('does not auto-select when one enabled and one disabled option are visible', async () => {
+      const onChange = jest.fn();
+      render(
+        <CompactSelect
+          search={{placeholder: 'Search here…'}}
+          options={[
+            {value: 'opt_one', label: 'Option One'},
+            {value: 'opt_two', label: 'Option Two', disabled: true},
+          ]}
+          value={undefined}
+          onChange={onChange}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button'));
+      await userEvent.click(screen.getByPlaceholderText('Search here…'));
+
+      // type 'Option' — both options are visible (one enabled, one disabled)
+      await userEvent.keyboard('Option');
+      expect(screen.getByRole('option', {name: 'Option One'})).toBeInTheDocument();
+      expect(screen.getByRole('option', {name: 'Option Two'})).toBeInTheDocument();
+
+      // pressing Enter must not auto-select even though only one option is enabled
+      await userEvent.keyboard('{Enter}');
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
     it('restores full list when search query is cleared', async () => {
       render(
         <CompactSelect
