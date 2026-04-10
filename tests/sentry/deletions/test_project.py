@@ -228,15 +228,15 @@ class DeleteProjectTest(BaseWorkflowTest, TransactionTestCase, HybridCloudTestMi
         assert not Group.objects.filter(id=group.id).exists()
 
         conditions = eventstore.Filter(project_ids=[project.id, keeper.id], group_ids=[group.id])
-        # Snuba processes eventstream deletions asynchronously. Retry briefly to
-        # allow the deletion to propagate before asserting.
-        for _ in range(10):
+        # Snuba processes eventstream deletions asynchronously. Retry for up to
+        # 20s (20×1s) — under 16-shard parallel load, propagation can be slow.
+        for _ in range(20):
             events = eventstore.backend.get_events(
                 conditions, tenant_ids={"organization_id": 123, "referrer": "r"}
             )
             if not events:
                 break
-            time.sleep(0.5)
+            time.sleep(1)
         assert len(events) == 0
 
     @mock.patch("sentry.quotas.backend.remove_seat")

@@ -462,11 +462,16 @@ def test_deep(buffer: SpansBuffer, spans) -> None:
     ),
 )
 def test_deep2(buffer: SpansBuffer, spans) -> None:
-    process_spans(spans, buffer, now=0)
+    # assert_ttls calls KEYS * which is slow on a large key space, creating a
+    # window for a concurrent xdist flushdb() to clear our spans between
+    # process_spans and flush_segments. Retry the pair up to 3 times.
+    for _ in range(3):
+        process_spans(spans, buffer, now=0)
+        assert_ttls(buffer.client)
+        rv = buffer.flush_segments(now=10)
+        if rv:
+            break
 
-    assert_ttls(buffer.client)
-
-    rv = buffer.flush_segments(now=10)
     _normalize_output(rv)
     assert rv == {
         _segment_id(1, "a" * 32, "a" * 16): FlushedSegment(

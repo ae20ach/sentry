@@ -99,8 +99,11 @@ def make_logrecord(
 )
 def test_emit(record, out, handler, logger) -> None:
     record = make_logrecord(**record)
-    # Isolate from any ambient trace left by a previous test (e.g. test_emit_with_trace_id).
+    # isolation_scope() forks (shallow-copies) the current scope, which means
+    # the parent's span is inherited. Explicitly clear it so get_trace_id()
+    # returns None regardless of any ambient trace from a previous test.
     with sentry_sdk.isolation_scope():
+        sentry_sdk.get_current_scope().span = None
         handler.emit(record, logger=logger)
     expected = {
         "level": logging.INFO,
