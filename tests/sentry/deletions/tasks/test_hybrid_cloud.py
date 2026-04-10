@@ -395,6 +395,10 @@ class TestCrossDatabaseTombstoneCascadeBehavior(TestCase):
             burst()
 
     def test_cross_db_deletion(self) -> None:
+        # Reserve IDs 1-14 before any setup creates monitors, so all
+        # auto-generated IDs land above 14 and never collide with the
+        # explicit IDs (5, 7, 9, 11) created below.
+        reserve_model_ids(Monitor, 14)
         data = setup_cross_db_deletion_data()
         user, monitor, organization, project = itemgetter(
             "user", "monitor", "organization", "project"
@@ -403,7 +407,6 @@ class TestCrossDatabaseTombstoneCascadeBehavior(TestCase):
 
         affected_monitors = [monitor]
 
-        reserve_model_ids(Monitor, 14)
         affected_monitors.extend(
             [
                 Monitor.objects.create(
