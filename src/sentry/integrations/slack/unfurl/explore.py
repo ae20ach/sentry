@@ -129,6 +129,10 @@ def _unfurl_explore(
         style = ChartType.SLACK_EXPLORE_LINE
         if group_bys:
             params.setlist("topEvents", [str(TOP_N)])
+            if not params.getlist("sort"):
+                # Default to descending by the first yAxis, matching Explore's
+                # defaultAggregateSortBys behavior
+                params.setlist("sort", [f"-{y_axes[0]}"])
 
         if not params.get("statsPeriod") and not params.get("start"):
             params["statsPeriod"] = DEFAULT_PERIOD
@@ -230,6 +234,12 @@ def map_explore_query_args(url: str, args: Mapping[str, str | None]) -> Mapping[
         values = raw_query.getlist(param)
         if values:
             query.setlist(param, values)
+
+    # Explore stores the aggregate sort as "aggregateSort" in the URL;
+    # the events-timeseries endpoint expects it as "sort".
+    aggregate_sort = raw_query.getlist("aggregateSort")
+    if aggregate_sort:
+        query.setlist("sort", aggregate_sort)
 
     return dict(**args, query=query, chart_type=chart_type, dataset=explore_dataset)
 

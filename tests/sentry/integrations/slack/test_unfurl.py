@@ -1578,6 +1578,37 @@ class UnfurlTest(TestCase):
         assert len(mock_generate_chart.mock_calls) == 1
         assert mock_generate_chart.call_args[0][0] == ChartType.SLACK_EXPLORE_LINE
 
+        # Verify sort is passed to the timeseries API for correct top events
+        api_params = mock_client_get.call_args[1]["params"]
+        assert api_params.getlist("sort") == ["-avg(span.duration)"]
+
+    @patch(
+        "sentry.integrations.slack.unfurl.explore.client.get",
+    )
+    @patch("sentry.charts.backend.generate_chart", return_value="chart-url")
+    def test_unfurl_explore_with_groupby_explicit_sort(
+        self, mock_generate_chart: MagicMock, mock_client_get: MagicMock
+    ) -> None:
+        mock_client_get.return_value = MagicMock(data=self._build_mock_timeseries_response())
+        url = f"https://sentry.io/organizations/{self.organization.slug}/explore/traces/?aggregateField=%7B%22groupBy%22%3A%22span.op%22%7D&aggregateField=%7B%22yAxes%22%3A%5B%22avg(span.duration)%22%5D%7D&aggregateSort=span.op&project={self.project.id}&statsPeriod=24h"
+        link_type, args = match_link(url)
+
+        if not args or not link_type:
+            raise AssertionError("Missing link_type/args")
+
+        links = [
+            UnfurlableUrl(url=url, args=args),
+        ]
+
+        with self.feature(["organizations:data-browsing-widget-unfurl"]):
+            unfurls = link_handlers[link_type].fn(self.integration, links, self.user)
+
+        assert len(unfurls) == 1
+
+        # Verify explicit aggregateSort from the URL is used instead of the default
+        api_params = mock_client_get.call_args[1]["params"]
+        assert api_params.getlist("sort") == ["span.op"]
+
     @patch(
         "sentry.integrations.slack.unfurl.explore.client.get",
     )
