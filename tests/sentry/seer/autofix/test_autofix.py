@@ -1322,7 +1322,7 @@ class TestCallAutofix(TestCase):
 
 
 class TestGetGithubUsernameForUser(TestCase):
-    def testget_github_username_for_user_with_github(self) -> None:
+    def test_get_github_username_for_user_with_github(self) -> None:
         """Tests getting GitHub username from ExternalActor with GitHub provider."""
         from sentry.integrations.models.external_actor import ExternalActor
         from sentry.integrations.types import ExternalProviders
@@ -1343,7 +1343,7 @@ class TestGetGithubUsernameForUser(TestCase):
         username = get_github_username_for_user(user, organization.id)
         assert username == "testuser"
 
-    def testget_github_username_for_user_with_github_enterprise(self) -> None:
+    def test_get_github_username_for_user_with_github_enterprise(self) -> None:
         """Tests getting GitHub username from ExternalActor with GitHub Enterprise provider."""
         from sentry.integrations.models.external_actor import ExternalActor
         from sentry.integrations.types import ExternalProviders
@@ -1364,7 +1364,7 @@ class TestGetGithubUsernameForUser(TestCase):
         username = get_github_username_for_user(user, organization.id)
         assert username == "gheuser"
 
-    def testget_github_username_for_user_without_at_prefix(self) -> None:
+    def test_get_github_username_for_user_without_at_prefix(self) -> None:
         """Tests getting GitHub username when external_name doesn't have @ prefix."""
         from sentry.integrations.models.external_actor import ExternalActor
         from sentry.integrations.types import ExternalProviders
@@ -1385,7 +1385,7 @@ class TestGetGithubUsernameForUser(TestCase):
         username = get_github_username_for_user(user, organization.id)
         assert username == "noprefixuser"
 
-    def testget_github_username_for_user_no_mapping(self) -> None:
+    def test_get_github_username_for_user_no_mapping(self) -> None:
         """Tests that None is returned when user has no GitHub mapping."""
         user = self.create_user()
         organization = self.create_organization()
@@ -1393,7 +1393,7 @@ class TestGetGithubUsernameForUser(TestCase):
         username = get_github_username_for_user(user, organization.id)
         assert username is None
 
-    def testget_github_username_for_user_non_github_provider(self) -> None:
+    def test_get_github_username_for_user_non_github_provider(self) -> None:
         """Tests that None is returned when user only has non-GitHub external actors."""
         from sentry.integrations.models.external_actor import ExternalActor
         from sentry.integrations.types import ExternalProviders
@@ -1414,7 +1414,7 @@ class TestGetGithubUsernameForUser(TestCase):
         username = get_github_username_for_user(user, organization.id)
         assert username is None
 
-    def testget_github_username_for_user_multiple_mappings(self) -> None:
+    def test_get_github_username_for_user_multiple_mappings(self) -> None:
         """Tests that most recent GitHub mapping is used when multiple exist."""
         from sentry.integrations.models.external_actor import ExternalActor
         from sentry.integrations.types import ExternalProviders
@@ -1447,7 +1447,7 @@ class TestGetGithubUsernameForUser(TestCase):
         username = get_github_username_for_user(user, organization.id)
         assert username == "newuser"
 
-    def testget_github_username_for_user_from_commit_author(self) -> None:
+    def test_get_github_username_for_user_from_commit_author(self) -> None:
         """Tests getting GitHub username from CommitAuthor when ExternalActor doesn't exist."""
         from sentry.models.commitauthor import CommitAuthor
 
@@ -1466,7 +1466,7 @@ class TestGetGithubUsernameForUser(TestCase):
         username = get_github_username_for_user(user, organization.id)
         assert username == "githubuser"
 
-    def testget_github_username_for_user_from_commit_author_github_enterprise(self) -> None:
+    def test_get_github_username_for_user_from_commit_author_github_enterprise(self) -> None:
         """Tests getting GitHub Enterprise username from CommitAuthor."""
         from sentry.models.commitauthor import CommitAuthor
 
@@ -1485,7 +1485,7 @@ class TestGetGithubUsernameForUser(TestCase):
         username = get_github_username_for_user(user, organization.id)
         assert username == "ghuser"
 
-    def testget_github_username_for_user_external_actor_priority(self) -> None:
+    def test_get_github_username_for_user_external_actor_priority(self) -> None:
         """Tests that ExternalActor is checked before CommitAuthor."""
         from sentry.integrations.models.external_actor import ExternalActor
         from sentry.integrations.types import ExternalProviders
@@ -1516,7 +1516,7 @@ class TestGetGithubUsernameForUser(TestCase):
         username = get_github_username_for_user(user, organization.id)
         assert username == "externaluser"
 
-    def testget_github_username_for_user_commit_author_no_external_id(self) -> None:
+    def test_get_github_username_for_user_commit_author_no_external_id(self) -> None:
         """Tests that None is returned when CommitAuthor exists but has no external_id."""
         from sentry.models.commitauthor import CommitAuthor
 
@@ -1535,7 +1535,7 @@ class TestGetGithubUsernameForUser(TestCase):
         username = get_github_username_for_user(user, organization.id)
         assert username is None
 
-    def testget_github_username_for_user_wrong_organization(self) -> None:
+    def test_get_github_username_for_user_wrong_organization(self) -> None:
         """Tests that CommitAuthor from different organization is not used."""
         from sentry.models.commitauthor import CommitAuthor
 
@@ -1555,7 +1555,7 @@ class TestGetGithubUsernameForUser(TestCase):
         username = get_github_username_for_user(user, organization1.id)
         assert username is None
 
-    def testget_github_username_for_user_unverified_email_not_matched(self) -> None:
+    def test_get_github_username_for_user_unverified_email_not_matched(self) -> None:
         """Tests that unverified emails don't match CommitAuthor (security requirement)."""
         from sentry.models.commitauthor import CommitAuthor
 
@@ -1578,7 +1578,7 @@ class TestGetGithubUsernameForUser(TestCase):
         username = get_github_username_for_user(user, organization.id)
         assert username is None
 
-    def testget_github_username_for_user_verified_secondary_email_matched(self) -> None:
+    def test_get_github_username_for_user_verified_secondary_email_matched(self) -> None:
         """Tests that verified secondary emails DO match CommitAuthor."""
         from sentry.models.commitauthor import CommitAuthor
 
