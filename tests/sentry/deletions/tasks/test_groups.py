@@ -1,3 +1,4 @@
+import time
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -78,8 +79,13 @@ class DeleteGroupTest(TestCase):
         assert not nodestore.backend.get(node_id)
         assert not nodestore.backend.get(node_id_2)
 
-        # Ensure events are deleted from Snuba
-        events = eventstore.backend.get_events(conditions, tenant_ids=tenant_ids)
+        # Snuba processes eventstream deletions asynchronously. Retry briefly to
+        # allow the deletion to propagate before asserting.
+        for _ in range(10):
+            events = eventstore.backend.get_events(conditions, tenant_ids=tenant_ids)
+            if not events:
+                break
+            time.sleep(0.5)
         assert len(events) == 0
 
     def test_max_chunk_size_calls_once(self) -> None:

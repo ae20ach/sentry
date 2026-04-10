@@ -275,6 +275,9 @@ class AwsLambdaIntegrationTest(IntegrationTestCase):
         ]
 
         aws_external_id = "12-323"
+        # Re-initialize to get a fresh Redis key immediately before setting state,
+        # in case a concurrent xdist worker's flushdb() cleared the key set during setUp.
+        self.pipeline.initialize()
         self.pipeline.state.step_index = 2
         self.pipeline.state.data = {
             "region": region,
@@ -282,6 +285,7 @@ class AwsLambdaIntegrationTest(IntegrationTestCase):
             "aws_external_id": aws_external_id,
             "project_id": self.projectA.id,
         }
+        self.save_session()
 
         with assume_test_silo_mode(SiloMode.CELL):
             sentry_project_dsn = ProjectKey.get_default(project=self.projectA).get_dsn(public=True)
