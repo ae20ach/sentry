@@ -4,6 +4,7 @@ import functools
 import hashlib
 import itertools
 import logging
+import time as _time
 import uuid
 from datetime import timedelta
 from unittest import mock
@@ -20,6 +21,7 @@ from sentry.models.grouphash import GroupHash
 from sentry.models.grouprelease import GroupRelease
 from sentry.models.release import Release
 from sentry.models.userreport import UserReport
+from sentry.services import eventstore
 from sentry.services.eventstore.models import GroupEvent
 from sentry.similarity import _make_index_backend, features
 from sentry.tasks.merge import merge_groups
@@ -287,6 +289,27 @@ class UnmergeTestCase(TestCase, SnubaTestCase):
         assert similar_items[0][1]["message:message:character-shingles"] == 1.0
         assert similar_items[1][0] == destination.id
         assert similar_items[1][1]["message:message:character-shingles"] < 1.0
+
+        # ClickHouse's ReplacingMergeTree may temporarily double-count events
+        # under source.id when the Snuba groupedmessage merge mapping is still active
+        # while Kafka replace messages (updating group_id in ClickHouse rows) are
+        # landing concurrently. Wait until Snuba returns a stable count (16 = 10
+        # from merge_source + 6 original source events) before running unmerge, so
+        # get_group_backfill_attributes doesn't accumulate extra increments.
+        expected_source_count = sum(len(x) for x in events.values()) - 1  # 17 - 1 group3 = 16
+        tenant_ids = {"organization_id": project.organization_id, "referrer": "test"}
+        for _ in range(20):
+            source_event_count = len(
+                list(
+                    eventstore.backend.get_events(
+                        eventstore.Filter(project_ids=[project.id], group_ids=[source.id]),
+                        tenant_ids=tenant_ids,
+                    )
+                )
+            )
+            if source_event_count == expected_source_count:
+                break
+            _time.sleep(0.5)
 
         with self.tasks():
             unmerge.delay(
