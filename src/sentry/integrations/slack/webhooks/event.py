@@ -350,7 +350,7 @@ class SlackEventEndpoint(SlackDMEndpoint):
 
         return True
 
-    def _resolve_seer_organization(self, slack_request: SlackDMRequest) -> SeerResolutionResult:
+    def _resolve_seer_organization(self, slack_request: SlackEventRequest) -> SeerResolutionResult:
         """
         Resolve and validate an organization/user for a Seer Slack event.
 
@@ -377,6 +377,7 @@ class SlackEventEndpoint(SlackDMEndpoint):
                 channel_id=slack_request.channel_id,
                 thread_ts=slack_request.thread_ts,
                 slack_user_id=slack_request.user_id,
+                is_welcome_message=slack_request.is_assistant_thread_event,
             )
             return result
 
@@ -419,7 +420,7 @@ class SlackEventEndpoint(SlackDMEndpoint):
 
     def _handle_seer_mention(
         self,
-        slack_request: SlackDMRequest,
+        slack_request: SlackEventRequest,
         interaction_type: MessagingInteractionType,
     ) -> Response:
         """Shared handler for app mentions and DMs that trigger the Seer workflow."""
@@ -499,11 +500,11 @@ class SlackEventEndpoint(SlackDMEndpoint):
             )
             return self.respond()
 
-    def on_app_mention(self, slack_request: SlackDMRequest) -> Response:
-        """Handle @mention events for Seer Explorer."""
+    def on_prompt(self, slack_request: SlackEventRequest) -> Response:
+        """Handle @mention and DM events for Seer Explorer."""
         return self._handle_seer_mention(slack_request, MessagingInteractionType.APP_MENTION)
 
-    def on_assistant_thread_started(self, slack_request: SlackDMRequest) -> Response:
+    def on_assistant_thread_started(self, slack_request: SlackEventRequest) -> Response:
         """Handle assistant_thread_started events by sending suggested prompts."""
         with MessagingInteractionEvent(
             interaction_type=MessagingInteractionType.ASSISTANT_THREAD_STARTED,
@@ -576,7 +577,7 @@ class SlackEventEndpoint(SlackDMEndpoint):
     # TODO(dcramer): implement app_uninstalled and tokens_revoked
     def post(self, request: Request) -> Response:
         try:
-            slack_request = self.slack_request_class(request)
+            slack_request: SlackEventRequest = self.slack_request_class(request)
             slack_request.validate()
         except SlackRequestError as e:
             return self.respond(status=e.status)
@@ -591,7 +592,7 @@ class SlackEventEndpoint(SlackDMEndpoint):
                 return self.respond()
 
         if slack_request.type == "app_mention":
-            return self.on_app_mention(slack_request)
+            return self.on_prompt(slack_request)
 
         if slack_request.type == "assistant_thread_started":
             return self.on_assistant_thread_started(slack_request)
@@ -603,8 +604,8 @@ class SlackEventEndpoint(SlackDMEndpoint):
             command, _ = slack_request.get_command_and_args()
 
             resp: Response | None
-            if slack_request.is_assistant:
-                resp = self.on_app_mention(slack_request)
+            if slack_request.has_assistant_scope:
+                resp = self.on_prompt(slack_request)
             elif command in COMMANDS:
                 resp = super().post_dispatcher(slack_request)
             else:

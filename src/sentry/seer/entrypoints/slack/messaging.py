@@ -266,7 +266,12 @@ def update_existing_message(
 
 
 def send_identity_link_prompt(
-    *, integration: RpcIntegration, channel_id: str, thread_ts: str, slack_user_id: str
+    *,
+    integration: RpcIntegration,
+    channel_id: str,
+    thread_ts: str,
+    slack_user_id: str,
+    is_welcome_message: bool = False,
 ) -> None:
     from sentry.integrations.slack.integration import SlackIntegration
     from sentry.integrations.slack.message_builder.types import SlackAction
@@ -278,7 +283,11 @@ def send_identity_link_prompt(
         channel_id=channel_id,
         response_url=None,
     )
-    message = "Link your Slack account to Sentry — so bugs find you, not the other way around."
+    message = (
+        "Link your Slack account to Sentry — so bugs find you, not the other way around."
+        if is_welcome_message
+        else "I'd love to help, but I don't know you like that — link your Slack account to Sentry first."
+    )
     renderable = SlackRenderable(
         blocks=[
             MarkdownBlock(text=message),

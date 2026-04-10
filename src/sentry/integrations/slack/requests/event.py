@@ -61,18 +61,29 @@ class SlackEventRequest(SlackDMRequest):
 
     @property
     def channel_id(self) -> str:
+        if self.is_assistant_thread_event:
+            return self.dm_data.get("assistant_thread", {}).get("channel_id", "")
         return self.dm_data.get("channel", "")
 
     @property
     def user_id(self) -> str:
-        # The location for the Slack User ID in `assistant_thread_started` events differs from the rest
-        if self.dm_data.get("type") == "assistant_thread_started":
+        if self.is_assistant_thread_event:
             return self.dm_data.get("assistant_thread", {}).get("user_id", "")
         return self.dm_data.get("user", "")
 
     @property
-    def is_assistant(self):
+    def thread_ts(self) -> str:
+        if self.is_assistant_thread_event:
+            return self.dm_data.get("assistant_thread", {}).get("thread_ts", "")
+        return self.dm_data.get("ts", "")
+
+    @property
+    def has_assistant_scope(self):
         return SlackScope.ASSISTANT_WRITE in self.integration.metadata.get("scopes", [])
+
+    @property
+    def is_assistant_thread_event(self):
+        return self.dm_data.get("type") == "assistant_thread_started"
 
     @property
     def links(self) -> list[str]:
