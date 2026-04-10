@@ -284,11 +284,13 @@ export function Control({
           ...(overlayRef.current?.querySelectorAll<HTMLLIElement>(`li[role="${role}"]`) ??
             []),
         ];
+        const firstOption = allVisibleOptions[0];
         if (
           allVisibleOptions.length === 1 &&
-          allVisibleOptions[0]?.getAttribute('aria-disabled') !== 'true'
+          firstOption &&
+          firstOption.getAttribute('aria-disabled') !== 'true'
         ) {
-          allVisibleOptions[0].click();
+          firstOption.click();
         }
       }
 
