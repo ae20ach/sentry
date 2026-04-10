@@ -17,7 +17,11 @@ from sentry.dashboards.endpoints.organization_dashboard_details import (
     READ_FEATURE,
     OrganizationDashboardBase,
 )
-from sentry.dashboards.history import capture_dashboard_snapshot, restore_dashboard_from_snapshot
+from sentry.dashboards.history import (
+    capture_dashboard_snapshot,
+    migrate_snapshot,
+    restore_dashboard_from_snapshot,
+)
 from sentry.features import has as feature_has
 from sentry.models.dashboard import Dashboard
 from sentry.models.dashboard_history import DashboardHistory, DashboardHistorySource
@@ -137,7 +141,7 @@ class DashboardHistoryDetailEndpoint(OrganizationDashboardBase):
         if not history.snapshot:
             raise ResourceDoesNotExist
 
-        return Response(history.snapshot, status=200)
+        return Response(migrate_snapshot(history.snapshot), status=200)
 
 
 @cell_silo_endpoint
