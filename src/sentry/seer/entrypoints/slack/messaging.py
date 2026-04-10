@@ -277,6 +277,8 @@ def send_identity_link_prompt(
     from sentry.integrations.slack.message_builder.types import SlackAction
     from sentry.integrations.slack.views.link_identity import build_linking_url
 
+    # TODO(leander): We'll need to revisit the UX around linking. We can't pass threads and the messages
+    # are not ephemeral but we don't want to start new 'Conversations' with a success message.
     associate_url = build_linking_url(
         integration=integration,
         slack_id=slack_user_id,

@@ -403,7 +403,7 @@ class SlackEventEndpoint(SlackDMEndpoint):
             if not SlackExplorerEntrypoint.has_access(organization):
                 continue
 
-            if identity_user and not organization.has_access(identity_user):
+            if not organization.has_access(identity_user):
                 continue
 
             installation = slack_request.integration.get_installation(
@@ -418,12 +418,12 @@ class SlackEventEndpoint(SlackDMEndpoint):
         result["error_reason"] = SeerSlackHaltReason.NO_VALID_ORGANIZATION
         return result
 
-    def _handle_seer_mention(
+    def _handle_seer_prompt(
         self,
         slack_request: SlackEventRequest,
         interaction_type: MessagingInteractionType,
     ) -> Response:
-        """Shared handler for app mentions and DMs that trigger the Seer workflow."""
+        """Shared handler for app mentions and DMs that trigger the Seer Explorer agent."""
         with MessagingInteractionEvent(
             interaction_type=interaction_type,
             spec=SlackMessagingSpec(),
@@ -500,9 +500,11 @@ class SlackEventEndpoint(SlackDMEndpoint):
             )
             return self.respond()
 
-    def on_prompt(self, slack_request: SlackEventRequest) -> Response:
-        """Handle @mention and DM events for Seer Explorer."""
-        return self._handle_seer_mention(slack_request, MessagingInteractionType.APP_MENTION)
+    def on_app_mention(self, slack_request: SlackEventRequest) -> Response:
+        return self._handle_seer_prompt(slack_request, MessagingInteractionType.APP_MENTION)
+
+    def on_dm(self, slack_request: SlackEventRequest) -> Response:
+        return self._handle_seer_prompt(slack_request, MessagingInteractionType.DIRECT_MESSAGE)
 
     def on_assistant_thread_started(self, slack_request: SlackEventRequest) -> Response:
         """Handle assistant_thread_started events by sending suggested prompts."""
@@ -510,8 +512,6 @@ class SlackEventEndpoint(SlackDMEndpoint):
             interaction_type=MessagingInteractionType.ASSISTANT_THREAD_STARTED,
             spec=SlackMessagingSpec(),
         ).capture() as lifecycle:
-            data = slack_request.data.get("event", {})
-            assistant_thread = data.get("assistant_thread", {})
             lifecycle.add_extra("integration_id", slack_request.integration.id)
             result = self._resolve_seer_organization(slack_request)
             if result["error_reason"]:
@@ -523,8 +523,9 @@ class SlackEventEndpoint(SlackDMEndpoint):
 
             installation = result["installation"]
 
-            channel_id = assistant_thread.get("channel_id")
-            thread_ts = assistant_thread.get("thread_ts")
+            channel_id = slack_request.channel_id
+            thread_ts = slack_request.thread_ts
+            assistant_thread = slack_request.data.get("event", {}).get("assistant_thread", {})
 
             lifecycle.add_extras(
                 {
@@ -592,7 +593,7 @@ class SlackEventEndpoint(SlackDMEndpoint):
                 return self.respond()
 
         if slack_request.type == "app_mention":
-            return self.on_prompt(slack_request)
+            return self.on_app_mention(slack_request)
 
         if slack_request.type == "assistant_thread_started":
             return self.on_assistant_thread_started(slack_request)
@@ -605,7 +606,7 @@ class SlackEventEndpoint(SlackDMEndpoint):
 
             resp: Response | None
             if slack_request.has_assistant_scope:
-                resp = self.on_prompt(slack_request)
+                resp = self.on_direct_message(slack_request)
             elif command in COMMANDS:
                 resp = super().post_dispatcher(slack_request)
             else:
