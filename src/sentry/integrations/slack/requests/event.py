@@ -75,7 +75,7 @@ class SlackEventRequest(SlackDMRequest):
     def thread_ts(self) -> str:
         if self.is_assistant_thread_event:
             return self.dm_data.get("assistant_thread", {}).get("thread_ts", "")
-        return self.dm_data.get("ts", "")
+        return self.dm_data.get("thread_ts") or self.dm_data.get("ts", "")
 
     @property
     def has_assistant_scope(self):

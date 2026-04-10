@@ -278,7 +278,7 @@ def send_identity_link_prompt(
     from sentry.integrations.slack.views.link_identity import build_linking_url
 
     # TODO(leander): We'll need to revisit the UX around linking. We can't pass threads here so while
-    # the linking start message is correctly located and ephemeral, the success message afterwards is not.abs
+    # the linking start message is correctly located and ephemeral, the success message afterwards is not.
     # By omitting the response_url here, it will arrive as a DM, but it doesn't accept threads so this is the best we can do for now.
     associate_url = build_linking_url(
         integration=integration,

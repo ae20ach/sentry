@@ -46,6 +46,24 @@ from .command import LINK_FROM_CHANNEL_MESSAGE
 
 _logger = logging.getLogger(__name__)
 
+_SEER_STARTING_PROMPTS = [
+    {
+        "title": "Summarize recent issues",
+        "message": "What are the most important unresolved issues in my projects right now?",
+    },
+    {
+        "title": "Investigate an error",
+        "message": "Help me investigate what's causing errors in my project.",
+    },
+    {
+        "title": "Explain a stack trace",
+        "message": "Can you explain the root cause of this stack trace?",
+    },
+    {
+        "title": "Find performance bottlenecks",
+        "message": "What are the slowest endpoints or pages in my projects?",
+    },
+]
 _SEER_LOADING_MESSAGES = [
     "Digging through your errors...",
     "Sifting through stack traces...",
@@ -544,24 +562,7 @@ class SlackEventEndpoint(SlackDMEndpoint):
                     channel_id=channel_id,
                     thread_ts=thread_ts,
                     title="Hi there! I'm Seer, Sentry's AI assistant. How can I help?",
-                    prompts=[
-                        {
-                            "title": "Summarize recent issues",
-                            "message": "What are the most important unresolved issues in my projects right now?",
-                        },
-                        {
-                            "title": "Investigate an error",
-                            "message": "Help me investigate what's causing errors in my project.",
-                        },
-                        {
-                            "title": "Explain a stack trace",
-                            "message": "Can you explain the root cause of this stack trace?",
-                        },
-                        {
-                            "title": "Find performance bottlenecks",
-                            "message": "What are the slowest endpoints or pages in my projects?",
-                        },
-                    ],
+                    prompts=_SEER_STARTING_PROMPTS,
                 )
             except Exception:
                 _logger.exception(
