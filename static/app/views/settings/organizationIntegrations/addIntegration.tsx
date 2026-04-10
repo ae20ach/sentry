@@ -50,7 +50,7 @@ const API_PIPELINE_FEATURE_FLAGS = {
 
 type ApiPipelineProvider = keyof typeof API_PIPELINE_FEATURE_FLAGS;
 
-function getApiPipelineProvider(
+export function getApiPipelineProvider(
   organization: Organization,
   providerKey: string
 ): ApiPipelineProvider | null {
@@ -65,7 +65,7 @@ function getApiPipelineProvider(
   return key;
 }
 
-function computeCenteredWindow(width: number, height: number) {
+export function computeCenteredWindow(width: number, height: number) {
   const screenLeft = window.screenLeft === undefined ? window.screenX : window.screenLeft;
   const screenTop = window.screenTop === undefined ? window.screenY : window.screenTop;
 
