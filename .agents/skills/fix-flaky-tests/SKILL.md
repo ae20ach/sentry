@@ -28,7 +28,7 @@ If artifacts expired: `gh run view "$RUN_ID" --repo getsentry/sentry --log | gre
 
 ## 2. Triage each failure
 
-Read the test file and the full `longrepr` traceback. Use `references/common-patterns.md` to classify. You must be able to state: *"This fails because X."*
+Read the test file and the full `longrepr` traceback. Use `references/common-patterns.md` to classify. You must be able to state: _"This fails because X."_
 
 **Skip and note** if: fix requires production code changes, root cause is unclear, test needs real network/external services.
 
@@ -45,6 +45,7 @@ Read the test file and the full `longrepr` traceback. Use `references/common-pat
 If the isolated test passes but the module run fails, your fix introduced a regression — revert and rethink before committing.
 
 Commit with the `commit` skill, type `test`:
+
 ```
 test(<module>): Fix flaky <TestClass>::<test_method>
 
@@ -61,7 +62,8 @@ test(<module>): Fix flaky <TestClass>::<test_method>
 
 Keep this list updated. Add entries when a test is skipped with no fix; remove when fixed.
 
-| Test | Symptom | Notes |
-|---|---|---|
-| `tests/snuba/api/endpoints/test_organization_events_stats.py::OrganizationEventsStatsEndpointTest::test_simple` | `CrossTransactionAssertionError: Transaction opened for db {'default'}, but command running against db control` | Order-dependent; `simulated_transaction_watermarks` state leaks from a prior test. The fixture resets it correctly on paper — root cause unclear without reproduction. |
-| `tests/snuba/tasks/test_unmerge.py::UnmergeTestCase::test_unmerge` | `times_seen=19 != 11` — 8 extra events counted | Likely Snuba cross-shard contamination: unmerge task re-counts events from Snuba, which may include events from parallel xdist workers. Seen once; needs reproduction. |
+| Test                                                                                                            | Symptom                                                                                                         | Notes                                                                                                                                                                                                                                                                                   |
+| --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/snuba/api/endpoints/test_organization_events_stats.py::OrganizationEventsStatsEndpointTest::test_simple` | `CrossTransactionAssertionError: Transaction opened for db {'default'}, but command running against db control` | Order-dependent; `simulated_transaction_watermarks` state leaks from a prior test. The fixture resets it correctly on paper — root cause unclear without reproduction.                                                                                                                  |
+| `tests/snuba/tasks/test_unmerge.py::UnmergeTestCase::test_unmerge`                                              | `times_seen=19 != 11` — 8 extra events counted                                                                  | Likely Snuba cross-shard contamination: unmerge task re-counts events from Snuba, which may include events from parallel xdist workers. Seen once; needs reproduction.                                                                                                                  |
+| `tests/sentry/web/frontend/test_auth_oauth2.py::AuthOAuth2Test::test_oauth2_flow_customer_domain`               | `assert '/auth/login/' == 'http://albertos-apples.testserver/auth/login/'`                                      | OAuth pipeline state (subdomain) stored in Redis via `PipelineSessionStore`; a concurrent xdist `flushdb()` between `initiate_oauth_flow` POST and `initiate_callback` GET clears it. Fix requires storing subdomain in the Django session (DB) as a fallback — production code change. |
