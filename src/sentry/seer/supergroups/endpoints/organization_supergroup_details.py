@@ -35,13 +35,20 @@ class OrganizationSupergroupDetailsEndpoint(OrganizationEndpoint):
         if not features.has("organizations:top-issues-ui", organization, actor=request.user):
             return Response({"detail": "Feature not available"}, status=403)
 
-        rca_source = (
-            RCASource.LIGHTWEIGHT
-            if features.has(
-                "organizations:supergroups-lightweight-rca-clustering-read", organization
+        rca_source_param = request.GET.get("rca_source")
+        try:
+            rca_source = RCASource(rca_source_param) if rca_source_param else None
+        except ValueError:
+            rca_source = None
+
+        if rca_source is None:
+            rca_source = (
+                RCASource.LIGHTWEIGHT
+                if features.has(
+                    "organizations:supergroups-lightweight-rca-clustering-read", organization
+                )
+                else RCASource.EXPLORER
             )
-            else RCASource.EXPLORER
-        )
 
         response = make_supergroups_get_request(
             {

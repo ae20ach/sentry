@@ -78,13 +78,20 @@ class OrganizationSupergroupsByGroupEndpoint(OrganizationEndpoint):
                 status=status_codes.HTTP_404_NOT_FOUND,
             )
 
-        rca_source = (
-            RCASource.LIGHTWEIGHT
-            if features.has(
-                "organizations:supergroups-lightweight-rca-clustering-read", organization
+        rca_source_param = request.GET.get("rca_source")
+        try:
+            rca_source = RCASource(rca_source_param) if rca_source_param else None
+        except ValueError:
+            rca_source = None
+
+        if rca_source is None:
+            rca_source = (
+                RCASource.LIGHTWEIGHT
+                if features.has(
+                    "organizations:supergroups-lightweight-rca-clustering-read", organization
+                )
+                else RCASource.EXPLORER
             )
-            else RCASource.EXPLORER
-        )
 
         response = make_supergroups_get_by_group_ids_request(
             {"organization_id": organization.id, "group_ids": group_ids, "rca_source": rca_source},

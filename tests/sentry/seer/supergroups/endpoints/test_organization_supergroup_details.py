@@ -65,3 +65,27 @@ class OrganizationSupergroupDetailsEndpointTest(APITestCase):
 
         body = mock_seer.call_args.args[0]
         assert body["rca_source"] == "LIGHTWEIGHT"
+
+    @patch(
+        "sentry.seer.supergroups.endpoints.organization_supergroup_details.make_supergroups_get_request"
+    )
+    def test_rca_source_query_param_overrides_flag(self, mock_seer):
+        mock_seer.return_value = mock_seer_response({"id": 1, "title": "test"})
+
+        with self.feature("organizations:top-issues-ui"):
+            self.get_success_response(self.organization.slug, "1", rca_source="LIGHTWEIGHT")
+
+        body = mock_seer.call_args.args[0]
+        assert body["rca_source"] == "LIGHTWEIGHT"
+
+    @patch(
+        "sentry.seer.supergroups.endpoints.organization_supergroup_details.make_supergroups_get_request"
+    )
+    def test_rca_source_invalid_param_falls_back_to_flag(self, mock_seer):
+        mock_seer.return_value = mock_seer_response({"id": 1, "title": "test"})
+
+        with self.feature("organizations:top-issues-ui"):
+            self.get_success_response(self.organization.slug, "1", rca_source="INVALID")
+
+        body = mock_seer.call_args.args[0]
+        assert body["rca_source"] == "EXPLORER"
