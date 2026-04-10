@@ -190,7 +190,10 @@ def test_logging_raiseExcpetions_disabled_generic_logging(caplog, snafu) -> None
 
 def test_gke_emit() -> None:
     logger = mock.Mock()
-    GKEStructLogHandler().emit(make_logrecord(), logger=logger)
+    # Isolate from any ambient trace left by a previous test; get_trace_id()
+    # must return None when no span is active.
+    with sentry_sdk.isolation_scope():
+        GKEStructLogHandler().emit(make_logrecord(), logger=logger)
     logger.log.assert_called_once_with(
         name="name",
         level=logging.INFO,
