@@ -1,3 +1,4 @@
+import time
 from uuid import uuid4
 
 import pytest
@@ -57,8 +58,13 @@ class NodestoreDeletionTaskTest(TestCase):
                 },
             )
 
-        # Events should be deleted from eventstore after nodestore deletion
-        events_after = self.fetch_events_from_eventstore(group_ids, dataset=Dataset.Events)
+        # Snuba processes eventstream deletions asynchronously. Retry briefly to
+        # allow the deletion to propagate before asserting.
+        for _ in range(10):
+            events_after = self.fetch_events_from_eventstore(group_ids, dataset=Dataset.Events)
+            if not events_after:
+                break
+            time.sleep(0.5)
         assert len(events_after) == 0
 
     def test_deletion_with_project_deleted(self) -> None:

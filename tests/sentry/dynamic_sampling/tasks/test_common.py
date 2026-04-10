@@ -78,23 +78,26 @@ class TestGetActiveOrgsVolumes(BaseMetricsLayerTestCase, TestCase, SnubaTestCase
     def setUp(self) -> None:
         self.orgs = []
         # create 12 orgs each and some transactions with a 2/1 drop/keep rate
-        for i in range(12):
-            org = self.create_organization(f"org-{i}")
-            self.orgs.append(org)
-            project = self.create_project(organization=org)
-            for decision, value in [("drop", 2), ("keep", 1)]:
-                self.store_performance_metric(
-                    name=SpanMRI.COUNT_PER_ROOT_PROJECT.value,
-                    tags={
-                        "transaction": "foo_transaction",
-                        "decision": decision,
-                        "is_segment": "true",
-                    },
-                    minutes_before_now=1,
-                    value=value,
-                    project_id=project.id,
-                    org_id=org.id,
-                )
+        # Use tick=True so each create_project call gets a unique millisecond timestamp,
+        # preventing MaxSnowflakeRetryError when multiple xdist workers share MOCK_DATETIME.
+        with time_machine.travel(MOCK_DATETIME, tick=True):
+            for i in range(12):
+                org = self.create_organization(f"org-{i}")
+                self.orgs.append(org)
+                project = self.create_project(organization=org)
+                for decision, value in [("drop", 2), ("keep", 1)]:
+                    self.store_performance_metric(
+                        name=SpanMRI.COUNT_PER_ROOT_PROJECT.value,
+                        tags={
+                            "transaction": "foo_transaction",
+                            "decision": decision,
+                            "is_segment": "true",
+                        },
+                        minutes_before_now=1,
+                        value=value,
+                        project_id=project.id,
+                        org_id=org.id,
+                    )
 
     @property
     def now(self):

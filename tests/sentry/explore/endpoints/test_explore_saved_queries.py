@@ -625,7 +625,7 @@ class ExploreSavedQueriesTest(APITestCase):
                 "query": "span.op:pageload",
             }
         ]
-        assert data["projects"] == self.project_ids
+        assert sorted(data["projects"]) == sorted(self.project_ids)
         assert data["dataset"] == "spans"
 
     def test_post_all_projects(self) -> None:
