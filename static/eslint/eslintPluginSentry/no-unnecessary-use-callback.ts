@@ -36,21 +36,24 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs<
     },
   },
   create(context) {
-    // Maps binding name to the useCallback() CallExpression node
-    const useCallbackBindings = new Map<string, TSESTree.CallExpression>();
-    // Bindings that have at least one usage where memoization is justified
-    // (e.g. passed directly to a custom component)
-    const justifiedBindings = new Set<string>();
+    // Maps binding name to the useCallback() CallExpression node and its declaring scope
+    const useCallbackBindings = new Map<
+      string,
+      {declarator: TSESTree.VariableDeclarator; node: TSESTree.CallExpression}
+    >();
     // Collected flagged usages per binding
     const flaggedUsages = new Map<string, UsageInfo[]>();
+    // Number of references we've accounted for (flagged) per binding
+    const flaggedRefCount = new Map<string, number>();
 
-    function addFlaggedUsage(name: string, usage: UsageInfo) {
+    function addFlaggedUsage(name: string, usage: UsageInfo, refCount: number) {
       let usages = flaggedUsages.get(name);
       if (!usages) {
         usages = [];
         flaggedUsages.set(name, usages);
       }
       usages.push(usage);
+      flaggedRefCount.set(name, (flaggedRefCount.get(name) ?? 0) + refCount);
     }
 
     /**
@@ -102,7 +105,7 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs<
           node.init.callee.type === AST_NODE_TYPES.Identifier &&
           node.init.callee.name === 'useCallback'
         ) {
-          useCallbackBindings.set(node.id.name, node.init);
+          useCallbackBindings.set(node.id.name, {node: node.init, declarator: node});
         }
       },
 
@@ -116,13 +119,17 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs<
         // Case 1: Arrow function that calls a useCallback binding in its body
         // e.g. onClick={() => fn()}, onClick={(e) => fn(e)},
         //      onClick={() => { fn(); doSomethingElse(); }}
+        // Case 1: Arrow function that calls a useCallback binding in its body
+        // The arrow wrapper creates a new ref each render, defeating memoization.
+        // The binding is referenced inside the arrow body — count as 1 reference.
         if (expr.type === AST_NODE_TYPES.ArrowFunctionExpression) {
           const calledBinding = findCallToBinding(expr.body);
           if (calledBinding) {
-            addFlaggedUsage(calledBinding, {
-              reason: 'directlyInvoked',
-              line: node.value.loc.start.line,
-            });
+            addFlaggedUsage(
+              calledBinding,
+              {reason: 'directlyInvoked', line: node.value.loc.start.line},
+              1
+            );
             return;
           }
         }
@@ -134,6 +141,7 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs<
           return;
         }
 
+        // Case 2: Direct reference on an intrinsic element — counts as 1 reference.
         if (
           expr.type === AST_NODE_TYPES.Identifier &&
           useCallbackBindings.has(expr.name)
@@ -148,42 +156,57 @@ export const noUnnecessaryUseCallback = ESLintUtils.RuleCreator.withoutDocs<
             tagName.type === AST_NODE_TYPES.JSXIdentifier &&
             tagName.name[0] === tagName.name[0]?.toLowerCase()
           ) {
-            // Case 2: Direct reference on an intrinsic element
-            addFlaggedUsage(expr.name, {
-              reason: 'intrinsicElement',
-              element: tagName.name,
-              line: node.value.loc.start.line,
-            });
-          } else {
-            // Passed directly to a custom component — memoization is justified
-            justifiedBindings.add(expr.name);
+            addFlaggedUsage(
+              expr.name,
+              {
+                reason: 'intrinsicElement',
+                element: tagName.name,
+                line: node.value.loc.start.line,
+              },
+              1
+            );
           }
         }
       },
 
       'Program:exit'() {
         for (const [name, usages] of flaggedUsages) {
-          if (justifiedBindings.has(name)) {
+          const binding = useCallbackBindings.get(name);
+          if (!binding || binding.node.arguments.length === 0) {
             continue;
           }
-          const callNode = useCallbackBindings.get(name);
-          if (callNode && callNode.arguments.length > 0) {
-            const firstArg = callNode.arguments[0];
-            const callbackText = context.sourceCode.getText(firstArg);
-            context.report({
-              node: callNode,
-              messageId: 'unnecessaryUseCallback',
-              data: {name, usages: formatUsages(usages)},
-              suggest: [
-                {
-                  messageId: 'removeUseCallback',
-                  fix(fixer) {
-                    return fixer.replaceText(callNode, callbackText);
-                  },
-                },
-              ],
-            });
+
+          // Count total references to this binding via scope analysis.
+          // If there are references beyond the ones we flagged, the
+          // useCallback may be justified (dep arrays, other hooks, etc.)
+          const scope = context.sourceCode.getScope(binding.declarator);
+          const variable = scope.variables.find(v => v.name === name);
+          // references includes the declaration itself, so subtract 1
+          const totalRefs = variable
+            ? variable.references.filter(r => r.isRead()).length
+            : 0;
+          const flagged = flaggedRefCount.get(name) ?? 0;
+
+          if (totalRefs > flagged) {
+            continue;
           }
+
+          const callNode = binding.node;
+          const firstArg = callNode.arguments[0];
+          const callbackText = context.sourceCode.getText(firstArg);
+          context.report({
+            node: callNode,
+            messageId: 'unnecessaryUseCallback',
+            data: {name, usages: formatUsages(usages)},
+            suggest: [
+              {
+                messageId: 'removeUseCallback',
+                fix(fixer) {
+                  return fixer.replaceText(callNode, callbackText);
+                },
+              },
+            ],
+          });
         }
       },
     };

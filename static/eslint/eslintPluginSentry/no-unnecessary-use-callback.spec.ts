@@ -99,6 +99,22 @@ ruleTester.run('no-unnecessary-use-callback', noUnnecessaryUseCallback, {
         <input ref={fn} />
       `,
     },
+    {
+      name: 'useCallback used in useEffect dependency array alongside intrinsic element',
+      code: `
+        const fn = useCallback(() => {}, []);
+        useEffect(() => { fn() }, [fn]);
+        <button onClick={fn} />
+      `,
+    },
+    {
+      name: 'useCallback used in any other expression alongside direct invocation',
+      code: `
+        const fn = useCallback(() => {}, []);
+        console.log(fn);
+        <button onClick={() => fn()} />
+      `,
+    },
   ],
 
   invalid: [
