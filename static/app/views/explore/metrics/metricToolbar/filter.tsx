@@ -58,9 +58,9 @@ export function Filter({traceMetric}: FilterProps) {
   const setQuery = useSetQueryParamsQuery();
   const organization = useOrganization();
 
-  const hasTranslateEndpoint = organization.features.includes(
-    'gen-ai-explore-metrics-search'
-  );
+  const hasTranslateEndpoint =
+    organization.features.includes('gen-ai-search-agent-translate') &&
+    organization.features.includes('gen-ai-explore-metrics-search');
 
   const traceMetricFilter = createTraceMetricFilter(traceMetric);
 
