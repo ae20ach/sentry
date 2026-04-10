@@ -12,6 +12,7 @@ export enum SentryInitRenderReactComponent {
   SYSTEM_ALERTS = 'SystemAlerts',
   WEB_AUTHN_ASSSERT = 'WebAuthnAssert',
   SU_STAFF_ACCESS_FORM = 'SuperuserStaffAccessForm',
+  VIEW_AS_BAR = 'ViewAsBar',
 }
 
 export type OnSentryInitConfiguration =

@@ -32,6 +32,8 @@ const COMPONENT_MAP = {
     import(
       /* webpackChunkName: "WebAuthnAssert" */ 'sentry/components/webAuthn/webAuthnAssert'
     ),
+  [SentryInitRenderReactComponent.VIEW_AS_BAR]: () =>
+    import(/* webpackChunkName: "ViewAsBar" */ 'sentry/components/viewAsBar'),
   [SentryInitRenderReactComponent.SU_STAFF_ACCESS_FORM]: () =>
     import(
       /* webpackChunkName: "SuperuserStaffAccessForm" */ 'sentry/components/superuserStaffAccessForm'
