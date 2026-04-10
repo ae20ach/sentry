@@ -120,17 +120,21 @@ ruleTester.run('no-unnecessary-use-callback', noUnnecessaryUseCallback, {
   invalid: [
     {
       name: 'arrow wrap on intrinsic element',
-      code: `const fn = useCallback(() => { console.log('click'); }, []);
-<button onClick={() => fn()} />`,
+      code: `
+        const fn = useCallback(() => { console.log('click'); }, []);
+        <button onClick={() => fn()} />
+      `,
       errors: [
         {
           messageId: 'unnecessaryUseCallback',
-          data: {name: 'fn', usages: 'directly invoked in line 2'},
+          data: {name: 'fn', usages: 'directly invoked in line 3'},
           suggestions: [
             {
               messageId: 'removeUseCallback',
-              output: `const fn = () => { console.log('click'); };
-<button onClick={() => fn()} />`,
+              output: `
+        const fn = () => { console.log('click'); };
+        <button onClick={() => fn()} />
+      `,
             },
           ],
         },
@@ -138,17 +142,21 @@ ruleTester.run('no-unnecessary-use-callback', noUnnecessaryUseCallback, {
     },
     {
       name: 'arrow wrap on custom component',
-      code: `const fn = useCallback(() => { console.log('click'); }, []);
-<MyComponent onClick={() => fn()} />`,
+      code: `
+        const fn = useCallback(() => { console.log('click'); }, []);
+        <MyComponent onClick={() => fn()} />
+      `,
       errors: [
         {
           messageId: 'unnecessaryUseCallback',
-          data: {name: 'fn', usages: 'directly invoked in line 2'},
+          data: {name: 'fn', usages: 'directly invoked in line 3'},
           suggestions: [
             {
               messageId: 'removeUseCallback',
-              output: `const fn = () => { console.log('click'); };
-<MyComponent onClick={() => fn()} />`,
+              output: `
+        const fn = () => { console.log('click'); };
+        <MyComponent onClick={() => fn()} />
+      `,
             },
           ],
         },
@@ -156,17 +164,21 @@ ruleTester.run('no-unnecessary-use-callback', noUnnecessaryUseCallback, {
     },
     {
       name: 'arrow wrap with argument forwarding',
-      code: `const fn = useCallback((e) => { console.log(e); }, []);
-<button onClick={(e) => fn(e)} />`,
+      code: `
+        const fn = useCallback((e) => { console.log(e); }, []);
+        <button onClick={(e) => fn(e)} />
+      `,
       errors: [
         {
           messageId: 'unnecessaryUseCallback',
-          data: {name: 'fn', usages: 'directly invoked in line 2'},
+          data: {name: 'fn', usages: 'directly invoked in line 3'},
           suggestions: [
             {
               messageId: 'removeUseCallback',
-              output: `const fn = (e) => { console.log(e); };
-<button onClick={(e) => fn(e)} />`,
+              output: `
+        const fn = (e) => { console.log(e); };
+        <button onClick={(e) => fn(e)} />
+      `,
             },
           ],
         },
@@ -174,20 +186,24 @@ ruleTester.run('no-unnecessary-use-callback', noUnnecessaryUseCallback, {
     },
     {
       name: 'direct reference on <button>',
-      code: `const fn = useCallback((e) => { console.log('click'); }, []);
-<button onClick={fn} />`,
+      code: `
+        const fn = useCallback((e) => { console.log('click'); }, []);
+        <button onClick={fn} />
+      `,
       errors: [
         {
           messageId: 'unnecessaryUseCallback',
           data: {
             name: 'fn',
-            usages: 'passed to intrinsic element <button> in line 2',
+            usages: 'passed to intrinsic element <button> in line 3',
           },
           suggestions: [
             {
               messageId: 'removeUseCallback',
-              output: `const fn = (e) => { console.log('click'); };
-<button onClick={fn} />`,
+              output: `
+        const fn = (e) => { console.log('click'); };
+        <button onClick={fn} />
+      `,
             },
           ],
         },
@@ -195,20 +211,24 @@ ruleTester.run('no-unnecessary-use-callback', noUnnecessaryUseCallback, {
     },
     {
       name: 'direct reference on <div>',
-      code: `const fn = useCallback(() => {}, []);
-<div onMouseEnter={fn} />`,
+      code: `
+        const fn = useCallback(() => {}, []);
+        <div onMouseEnter={fn} />
+      `,
       errors: [
         {
           messageId: 'unnecessaryUseCallback',
           data: {
             name: 'fn',
-            usages: 'passed to intrinsic element <div> in line 2',
+            usages: 'passed to intrinsic element <div> in line 3',
           },
           suggestions: [
             {
               messageId: 'removeUseCallback',
-              output: `const fn = () => {};
-<div onMouseEnter={fn} />`,
+              output: `
+        const fn = () => {};
+        <div onMouseEnter={fn} />
+      `,
             },
           ],
         },
@@ -216,20 +236,24 @@ ruleTester.run('no-unnecessary-use-callback', noUnnecessaryUseCallback, {
     },
     {
       name: 'direct reference on <input>',
-      code: `const fn = useCallback(() => {}, []);
-<input onChange={fn} />`,
+      code: `
+        const fn = useCallback(() => {}, []);
+        <input onChange={fn} />
+      `,
       errors: [
         {
           messageId: 'unnecessaryUseCallback',
           data: {
             name: 'fn',
-            usages: 'passed to intrinsic element <input> in line 2',
+            usages: 'passed to intrinsic element <input> in line 3',
           },
           suggestions: [
             {
               messageId: 'removeUseCallback',
-              output: `const fn = () => {};
-<input onChange={fn} />`,
+              output: `
+        const fn = () => {};
+        <input onChange={fn} />
+      `,
             },
           ],
         },
@@ -237,20 +261,24 @@ ruleTester.run('no-unnecessary-use-callback', noUnnecessaryUseCallback, {
     },
     {
       name: 'direct reference on <a>',
-      code: `const fn = useCallback(() => {}, []);
-<a onClick={fn} />`,
+      code: `
+        const fn = useCallback(() => {}, []);
+        <a onClick={fn} />
+      `,
       errors: [
         {
           messageId: 'unnecessaryUseCallback',
           data: {
             name: 'fn',
-            usages: 'passed to intrinsic element <a> in line 2',
+            usages: 'passed to intrinsic element <a> in line 3',
           },
           suggestions: [
             {
               messageId: 'removeUseCallback',
-              output: `const fn = () => {};
-<a onClick={fn} />`,
+              output: `
+        const fn = () => {};
+        <a onClick={fn} />
+      `,
             },
           ],
         },
@@ -258,17 +286,21 @@ ruleTester.run('no-unnecessary-use-callback', noUnnecessaryUseCallback, {
     },
     {
       name: 'arrow wrap with multiple arguments',
-      code: `const handler = useCallback((a, b) => {}, []);
-<button onClick={(a, b) => handler(a, b)} />`,
+      code: `
+        const handler = useCallback((a, b) => {}, []);
+        <button onClick={(a, b) => handler(a, b)} />
+      `,
       errors: [
         {
           messageId: 'unnecessaryUseCallback',
-          data: {name: 'handler', usages: 'directly invoked in line 2'},
+          data: {name: 'handler', usages: 'directly invoked in line 3'},
           suggestions: [
             {
               messageId: 'removeUseCallback',
-              output: `const handler = (a, b) => {};
-<button onClick={(a, b) => handler(a, b)} />`,
+              output: `
+        const handler = (a, b) => {};
+        <button onClick={(a, b) => handler(a, b)} />
+      `,
             },
           ],
         },
@@ -276,17 +308,21 @@ ruleTester.run('no-unnecessary-use-callback', noUnnecessaryUseCallback, {
     },
     {
       name: 'useCallback called inside block-body arrow with additional logic',
-      code: `const fn = useCallback(() => {}, []);
-<button onClick={() => { fn(); doSomethingElse(); }} />`,
+      code: `
+        const fn = useCallback(() => {}, []);
+        <button onClick={() => { fn(); doSomethingElse(); }} />
+      `,
       errors: [
         {
           messageId: 'unnecessaryUseCallback',
-          data: {name: 'fn', usages: 'directly invoked in line 2'},
+          data: {name: 'fn', usages: 'directly invoked in line 3'},
           suggestions: [
             {
               messageId: 'removeUseCallback',
-              output: `const fn = () => {};
-<button onClick={() => { fn(); doSomethingElse(); }} />`,
+              output: `
+        const fn = () => {};
+        <button onClick={() => { fn(); doSomethingElse(); }} />
+      `,
             },
           ],
         },
@@ -294,21 +330,25 @@ ruleTester.run('no-unnecessary-use-callback', noUnnecessaryUseCallback, {
     },
     {
       name: 'multiple flagged usages reported together',
-      code: `const fn = useCallback(() => {}, []);
-<><button onClick={() => fn()} /><div onMouseEnter={fn} /></>`,
+      code: `
+        const fn = useCallback(() => {}, []);
+        <><button onClick={() => fn()} /><div onMouseEnter={fn} /></>
+      `,
       errors: [
         {
           messageId: 'unnecessaryUseCallback',
           data: {
             name: 'fn',
             usages:
-              'directly invoked in line 2 and passed to intrinsic element <div> in line 2',
+              'directly invoked in line 3 and passed to intrinsic element <div> in line 3',
           },
           suggestions: [
             {
               messageId: 'removeUseCallback',
-              output: `const fn = () => {};
-<><button onClick={() => fn()} /><div onMouseEnter={fn} /></>`,
+              output: `
+        const fn = () => {};
+        <><button onClick={() => fn()} /><div onMouseEnter={fn} /></>
+      `,
             },
           ],
         },
