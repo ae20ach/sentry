@@ -387,3 +387,136 @@ class FormatSnapshotPrCommentNoBaseTest(SnapshotPrCommentTestBase):
         result = format_snapshot_pr_comment([artifact], {artifact.id: metrics}, {}, {}, {})
 
         assert "`com.example.myapp`" in result
+
+
+@cell_silo_test
+class FormatSnapshotPrCommentSummaryLineTest(SnapshotPrCommentTestBase):
+    def test_single_unchanged_app_shows_summary(self) -> None:
+        head_artifact, head_metrics = self._create_artifact_with_metrics()
+        base_artifact, base_metrics = self._create_artifact_with_metrics(app_id="com.example.base")
+        self._create_comparison(head_metrics, base_metrics)
+
+        result = format_snapshot_pr_comment(
+            [head_artifact],
+            {head_artifact.id: head_metrics},
+            {
+                head_metrics.id: PreprodSnapshotComparison.objects.get(
+                    head_snapshot_metrics=head_metrics
+                )
+            },
+            {head_artifact.id: base_artifact},
+            {},
+        )
+
+        assert "✅ 1 unchanged" in result
+
+    def test_mixed_statuses_shows_all_in_summary(self) -> None:
+        # Failed artifact
+        failed_artifact, failed_metrics = self._create_artifact_with_metrics(
+            app_id="com.example.failed", build_number=1
+        )
+        failed_base, failed_base_metrics = self._create_artifact_with_metrics(
+            app_id="com.example.fbase", build_number=10
+        )
+        failed_comparison = self._create_comparison(
+            failed_metrics, failed_base_metrics, state=PreprodSnapshotComparison.State.FAILED
+        )
+
+        # Unchanged artifact
+        ok_artifact, ok_metrics = self._create_artifact_with_metrics(
+            app_id="com.example.ok", build_number=2
+        )
+        ok_base, ok_base_metrics = self._create_artifact_with_metrics(
+            app_id="com.example.obase", build_number=11
+        )
+        ok_comparison = self._create_comparison(ok_metrics, ok_base_metrics)
+
+        result = format_snapshot_pr_comment(
+            [failed_artifact, ok_artifact],
+            {failed_artifact.id: failed_metrics, ok_artifact.id: ok_metrics},
+            {failed_metrics.id: failed_comparison, ok_metrics.id: ok_comparison},
+            {failed_artifact.id: failed_base, ok_artifact.id: ok_base},
+            {},
+        )
+
+        assert "❌ 1 failed" in result
+        assert "✅ 1 unchanged" in result
+
+    def test_summary_line_omits_zero_count_statuses(self) -> None:
+        artifact, metrics = self._create_artifact_with_metrics()
+
+        result = format_snapshot_pr_comment([artifact], {artifact.id: metrics}, {}, {}, {})
+
+        # Only "uploaded" should appear, not "failed" or "unchanged"
+        summary_line = result.split("\n")[2]  # Line after header and blank line
+        assert "uploaded" in summary_line
+        assert "failed" not in summary_line
+        assert "unchanged" not in summary_line
+
+
+@cell_silo_test
+class FormatSnapshotPrCommentSortOrderTest(SnapshotPrCommentTestBase):
+    def test_failed_appears_before_unchanged(self) -> None:
+        # Create unchanged first
+        ok_artifact, ok_metrics = self._create_artifact_with_metrics(
+            app_id="com.example.aaa_ok", build_number=1
+        )
+        ok_base, ok_base_metrics = self._create_artifact_with_metrics(
+            app_id="com.example.obase", build_number=10
+        )
+        ok_comparison = self._create_comparison(ok_metrics, ok_base_metrics)
+
+        # Create failed second
+        failed_artifact, failed_metrics = self._create_artifact_with_metrics(
+            app_id="com.example.zzz_failed", build_number=2
+        )
+        failed_base, failed_base_metrics = self._create_artifact_with_metrics(
+            app_id="com.example.fbase", build_number=11
+        )
+        failed_comparison = self._create_comparison(
+            failed_metrics, failed_base_metrics, state=PreprodSnapshotComparison.State.FAILED
+        )
+
+        # Pass unchanged first in list — should still render failed first
+        result = format_snapshot_pr_comment(
+            [ok_artifact, failed_artifact],
+            {ok_artifact.id: ok_metrics, failed_artifact.id: failed_metrics},
+            {ok_metrics.id: ok_comparison, failed_metrics.id: failed_comparison},
+            {ok_artifact.id: ok_base, failed_artifact.id: failed_base},
+            {},
+        )
+
+        failed_pos = result.index("com.example.zzz_failed")
+        ok_pos = result.index("com.example.aaa_ok")
+        assert failed_pos < ok_pos
+
+    def test_needs_approval_appears_before_unchanged(self) -> None:
+        ok_artifact, ok_metrics = self._create_artifact_with_metrics(
+            app_id="com.example.ok", build_number=1
+        )
+        ok_base, ok_base_metrics = self._create_artifact_with_metrics(
+            app_id="com.example.obase1", build_number=10
+        )
+        ok_comparison = self._create_comparison(ok_metrics, ok_base_metrics)
+
+        pending_artifact, pending_metrics = self._create_artifact_with_metrics(
+            app_id="com.example.pending", build_number=2
+        )
+        pending_base, pending_base_metrics = self._create_artifact_with_metrics(
+            app_id="com.example.obase2", build_number=11
+        )
+        pending_comparison = self._create_comparison(
+            pending_metrics, pending_base_metrics, images_changed=5
+        )
+
+        result = format_snapshot_pr_comment(
+            [ok_artifact, pending_artifact],
+            {ok_artifact.id: ok_metrics, pending_artifact.id: pending_metrics},
+            {ok_metrics.id: ok_comparison, pending_metrics.id: pending_comparison},
+            {ok_artifact.id: ok_base, pending_artifact.id: pending_base},
+            {pending_artifact.id: True},
+        )
+
+        pending_pos = result.index("com.example.pending")
+        ok_pos = result.index("com.example.ok")
+        assert pending_pos < ok_pos

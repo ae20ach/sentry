@@ -8,10 +8,14 @@ from sentry.preprod.models import PreprodArtifact, PreprodComparisonApproval
 from sentry.preprod.snapshots.models import PreprodSnapshotComparison, PreprodSnapshotMetrics
 from sentry.preprod.url_utils import get_preprod_artifact_comparison_url, get_preprod_artifact_url
 from sentry.preprod.vcs.pr_comments.snapshot_templates import (
+    _STATUS_DISPLAY,
     COMPARISON_TABLE_HEADER,
     PROCESSING_STATUS,
     _app_display_info,
+    _ArtifactStatus,
+    _compute_artifact_status,
     _format_name_cell,
+    _format_summary_line,
     _name_cell,
     _section_cell,
 )
@@ -224,28 +228,40 @@ def _format_snapshot_summary(
     changes_map: dict[int, bool],
     approvals_map: dict[int, PreprodComparisonApproval] | None = None,
 ) -> str:
+    from collections import Counter
+
+    artifact_statuses = [
+        (
+            artifact,
+            _compute_artifact_status(
+                artifact,
+                snapshot_metrics_map,
+                comparisons_map,
+                base_artifact_map,
+                changes_map,
+                approvals_map,
+            ),
+        )
+        for artifact in artifacts
+    ]
+    artifact_statuses.sort(key=lambda pair: (pair[1].value, _app_display_info(pair[0])[0]))
+
+    status_counts: Counter[_ArtifactStatus] = Counter(s for _, s in artifact_statuses)
+    summary_line = _format_summary_line(status_counts)
+
     table_rows = []
-
-    for artifact in artifacts:
+    for artifact, status in artifact_statuses:
         name = _name_cell(artifact, snapshot_metrics_map, base_artifact_map)
-
         metrics = snapshot_metrics_map.get(artifact.id)
-        if not metrics:
-            table_rows.append(f"| {name} | - | - | - | - | - | {PROCESSING_STATUS} |")
-            continue
 
-        comparison = comparisons_map.get(metrics.id)
-        if not comparison:
-            table_rows.append(f"| {name} | - | - | - | - | - | {PROCESSING_STATUS} |")
-            continue
-
-        if comparison.state in (
-            PreprodSnapshotComparison.State.PENDING,
-            PreprodSnapshotComparison.State.PROCESSING,
-        ):
-            table_rows.append(f"| {name} | - | - | - | - | - | {PROCESSING_STATUS} |")
+        if status == _ArtifactStatus.UPLOADED_NO_BASE:
+            image_count = metrics.image_count if metrics else 0
+            table_rows.append(f"| {name} | - | - | - | - | - | ✅ {image_count} uploaded |")
+        elif status in (_ArtifactStatus.PROCESSING, _ArtifactStatus.FAILED):
+            table_rows.append(f"| {name} | - | - | - | - | - | {_STATUS_DISPLAY[status]} |")
         else:
             base_artifact = base_artifact_map.get(artifact.id)
+            comparison = comparisons_map.get(metrics.id) if metrics else None
             artifact_url = (
                 get_preprod_artifact_comparison_url(
                     artifact, base_artifact, comparison_type="snapshots"
@@ -254,23 +270,14 @@ def _format_snapshot_summary(
                 else get_preprod_artifact_url(artifact, view_type="snapshots")
             )
 
-            has_changes = changes_map.get(artifact.id, False)
-            is_approved = approvals_map is not None and artifact.id in approvals_map
-            if has_changes and is_approved:
-                status = "✅ Approved"
-            elif has_changes:
-                status = "⏳ Needs approval"
-            else:
-                status = "✅ Unchanged"
-
             table_rows.append(
                 f"| {name}"
-                f" | {_section_cell(comparison.images_added, 'added', artifact_url)}"
-                f" | {_section_cell(comparison.images_removed, 'removed', artifact_url)}"
-                f" | {_section_cell(comparison.images_changed, 'changed', artifact_url)}"
-                f" | {_section_cell(comparison.images_renamed, 'renamed', artifact_url)}"
-                f" | {_section_cell(comparison.images_unchanged, 'unchanged', artifact_url)}"
-                f" | {status} |"
+                f" | {_section_cell(comparison.images_added, 'added', artifact_url) if comparison else '0'}"
+                f" | {_section_cell(comparison.images_removed, 'removed', artifact_url) if comparison else '0'}"
+                f" | {_section_cell(comparison.images_changed, 'changed', artifact_url) if comparison else '0'}"
+                f" | {_section_cell(comparison.images_renamed, 'renamed', artifact_url) if comparison else '0'}"
+                f" | {_section_cell(comparison.images_unchanged, 'unchanged', artifact_url) if comparison else '0'}"
+                f" | {_STATUS_DISPLAY[status]} |"
             )
 
-    return COMPARISON_TABLE_HEADER + "\n".join(table_rows)
+    return f"{summary_line}\n\n{COMPARISON_TABLE_HEADER}" + "\n".join(table_rows)

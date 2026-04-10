@@ -118,7 +118,7 @@ class SnapshotProcessingStateFormattingTest(SnapshotStatusCheckTestBase):
 
         assert title == "Snapshot Testing"
         assert subtitle == "Comparing snapshots..."
-        assert "Processing" in summary
+        assert "uploaded" in summary
 
     def test_comparison_in_pending_state_shows_comparing(self) -> None:
         head_artifact, head_metrics = self._create_artifact_with_metrics(app_id="com.example.head")
@@ -640,6 +640,7 @@ class SnapshotSummaryFormattingTest(SnapshotStatusCheckTestBase):
         assert subtitle == "No changes detected"
 
         expected = (
+            "✅ 1 unchanged\n\n"
             "| Name | Added | Removed | Modified | Renamed | Unchanged | Status |\n"
             "| :--- | :---: | :---: | :---: | :---: | :---: | :---: |\n"
             f"| [My App]({artifact_url})<br>`com.example.app`"
@@ -682,6 +683,7 @@ class SnapshotSummaryFormattingTest(SnapshotStatusCheckTestBase):
         assert subtitle == "3 modified, 1 added, 2 removed, 1 renamed, 4 unchanged"
 
         expected = (
+            "⏳ 1 needs approval\n\n"
             "| Name | Added | Removed | Modified | Renamed | Unchanged | Status |\n"
             "| :--- | :---: | :---: | :---: | :---: | :---: | :---: |\n"
             f"| [My App]({artifact_url})<br>`com.example.app`"
@@ -1035,6 +1037,7 @@ class SnapshotApprovalFormattingTest(SnapshotStatusCheckTestBase):
         assert subtitle == "3 modified, 1 added, 2 removed, 1 renamed, 4 unchanged"
 
         expected = (
+            "✅ 1 approved\n\n"
             "| Name | Added | Removed | Modified | Renamed | Unchanged | Status |\n"
             "| :--- | :---: | :---: | :---: | :---: | :---: | :---: |\n"
             f"| [My App]({artifact_url})<br>`com.example.app`"
