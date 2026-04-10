@@ -16,6 +16,27 @@ logger = logging.getLogger(__name__)
 
 MAX_SNAPSHOTS_PER_DASHBOARD = 10
 
+# Increment this when the serializer contract changes in a way that would break
+# restore of existing snapshots, and add a migration step in migrate_snapshot().
+CURRENT_SNAPSHOT_VERSION = 1
+
+
+def migrate_snapshot(data: dict[str, Any]) -> dict[str, Any]:
+    """
+    Upgrade a snapshot dict to the current format.
+
+    Add a migration step here whenever the serializer contract changes in a way
+    that would break restore of existing snapshots (e.g. a field rename or
+    removal).  New optional fields don't need a migration because the restore
+    path already uses a blocklist rather than an allowlist.
+
+    Example future migration:
+        version = data.get("version", 0)
+        if version < 2:
+            data = _migrate_v1_to_v2(data)
+    """
+    return data
+
 
 def capture_dashboard_snapshot(
     dashboard: Dashboard,
@@ -36,6 +57,7 @@ def capture_dashboard_snapshot(
     deleting the oldest snapshots first when the limit is reached.
     """
     snapshot_data = serialize(dashboard)
+    snapshot_data["version"] = CURRENT_SNAPSHOT_VERSION
     history = DashboardHistory.objects.create(
         dashboard=dashboard,
         organization=dashboard.organization,
@@ -59,7 +81,7 @@ def capture_dashboard_snapshot(
 # Read-only / computed fields to strip at each level so the serializer
 # treats the snapshot as fresh input.  Using a blocklist instead of an
 # allowlist means new schema fields pass through automatically.
-_DASHBOARD_EXCLUDE = {"id", "dateCreated", "createdBy", "isFavorited", "prebuiltId"}
+_DASHBOARD_EXCLUDE = {"id", "dateCreated", "createdBy", "isFavorited", "prebuiltId", "version"}
 _WIDGET_EXCLUDE = {"id", "dateCreated", "dashboardId", "exploreUrls", "changedReason"}
 _QUERY_EXCLUDE = {"id", "widgetId", "onDemand"}
 
@@ -98,7 +120,7 @@ def restore_dashboard_from_snapshot(
     ``DashboardDetailsSerializer.update()`` so all widget CRUD is
     handled by the existing serializer logic.
     """
-    input_data = _snapshot_to_input_format(snapshot)
+    input_data = _snapshot_to_input_format(migrate_snapshot(snapshot))
 
     serializer = DashboardDetailsSerializer(
         data=input_data,
