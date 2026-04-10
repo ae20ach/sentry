@@ -558,6 +558,26 @@ class GitHubBaseClient(
                 page_number_limit=page_number_limit,
             )
 
+    def get_repos_page(
+        self, page: int = 1, per_page: int = 100
+    ) -> tuple[list[dict[str, Any]], int]:
+        """
+        Fetch a single page of repositories accessible to this installation.
+
+        Returns (repositories, total_count).
+        https://docs.github.com/en/rest/apps/installations#list-repositories-accessible-to-the-app-installation
+        """
+        with SCMIntegrationInteractionEvent(
+            interaction_type=SCMIntegrationInteractionType.GET_REPOSITORIES,
+            provider_key=self.integration_name,
+            integration_id=self.integration.id,
+        ).capture():
+            response = self.get(
+                "/installation/repositories",
+                params={"per_page": per_page, "page": page},
+            )
+            return response["repositories"], response["total_count"]
+
     def get_repos_cached(self, ttl: int = 300) -> list[CachedRepo]:
         """
         Return all repos accessible to this installation, cached in

@@ -380,21 +380,17 @@ class GitHubIntegration(
         offset: int = 0,
         per_page: int = 100,
     ) -> tuple[list[RepositoryInfo], bool]:
-        """Paginate over the cached accessible-repos list.
+        """Fetch a single page of repos from the GitHub API.
 
-        Always serves from ``get_repos_cached()`` so every page is
-        fast after the initial cache warm-up. If the cache expires
-        between page fetches the underlying list can change,
-        which may cause duplicates or skipped repos across pages.
-        This is acceptable for infinite-scroll consumers.
+        Converts the cursor offset to a GitHub page number and makes
+        one API call per page request.
         """
         client = self.get_client()
-        all_repos = client.get_repos_cached()
-        repos = [r for r in all_repos if not r.get("archived")]
-
-        page = repos[offset : offset + per_page]
-        has_next = len(repos) > offset + per_page
-        return self._to_repo_info(page), has_next
+        page_number = (offset // per_page) + 1
+        repos, total_count = client.get_repos_page(page=page_number, per_page=per_page)
+        active_repos = [r for r in repos if not r.get("archived")]
+        has_next = (page_number * per_page) < total_count
+        return self._to_repo_info(active_repos), has_next
 
     def get_unmigratable_repositories(self) -> list[RpcRepository]:
         accessible_repos = self.get_repositories()

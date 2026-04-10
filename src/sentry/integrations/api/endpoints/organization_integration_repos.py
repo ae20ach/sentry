@@ -86,22 +86,19 @@ class OrganizationIntegrationReposEndpoint(CellOrganizationIntegrationBaseEndpoi
             # continue to receive the full list.
             paginate = "per_page" in request.GET and not search
             if paginate:
+                per_page = self.get_per_page(request)
+                cursor = self.get_cursor_from_request(request)
+                offset = max(0, cursor.offset) if cursor is not None else 0
                 try:
-                    per_page = max(1, min(int(request.GET["per_page"]), 100))
-                except (ValueError, TypeError):
-                    per_page = 100
-                cursor = self._parse_cursor(request)
-                offset = max(0, cursor.offset)
-                try:
-                    paginated = install.get_repositories_paginated(offset=offset, per_page=per_page)
+                    repositories, has_next = install.get_repositories_paginated(
+                        offset=offset, per_page=per_page
+                    )
+                except NotImplementedError:
+                    paginate = False
                 except (IntegrationError, IdentityNotValid) as e:
                     return self.respond({"detail": str(e)}, status=400)
-            else:
-                paginated = None
 
-            if paginated is not None:
-                repositories, has_next = paginated
-            else:
+            if not paginate:
                 try:
                     repositories = install.get_repositories(
                         search,
@@ -114,11 +111,6 @@ class OrganizationIntegrationReposEndpoint(CellOrganizationIntegrationBaseEndpoi
 
             installable_only = request.GET.get("installableOnly", "false").lower() == "true"
 
-            # NOTE: installableOnly filtering happens after pagination slicing,
-            # so pages may contain fewer items than per_page when installed repos
-            # are filtered out. This is acceptable for the infinite-scroll use
-            # case (SCM onboarding) but would need to move before slicing if
-            # exact page sizes matter for a future consumer.
             serialized_repositories = [
                 IntegrationRepository(
                     name=repo["name"],
@@ -135,9 +127,7 @@ class OrganizationIntegrationReposEndpoint(CellOrganizationIntegrationBaseEndpoi
                 {"repos": serialized_repositories, "searchable": install.repo_search}
             )
 
-            # per_page and offset are guaranteed set when paginated is not None
-            if paginated is not None and (has_next or offset > 0):
-                # CursorResult only used for Link header generation
+            if paginate and (has_next or offset > 0):
                 cursor_result: CursorResult[IntegrationRepository] = CursorResult(
                     results=[],
                     prev=Cursor(0, max(0, offset - per_page), True, offset > 0),
@@ -148,13 +138,3 @@ class OrganizationIntegrationReposEndpoint(CellOrganizationIntegrationBaseEndpoi
             return response
 
         return self.respond({"detail": "Repositories not supported"}, status=400)
-
-    @staticmethod
-    def _parse_cursor(request: Request) -> Cursor:
-        cursor_param = request.GET.get("cursor", "")
-        if not cursor_param:
-            return Cursor(0, 0, False)
-        try:
-            return Cursor.from_string(cursor_param)
-        except (ValueError, TypeError):
-            return Cursor(0, 0, False)

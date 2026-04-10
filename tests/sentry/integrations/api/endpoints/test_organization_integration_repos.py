@@ -1,16 +1,16 @@
+from typing import Any
 from unittest.mock import MagicMock, patch
 
-from sentry.integrations.github.client import CachedRepo
 from sentry.testutils.cases import APITestCase
 
 
-def _make_cached_repo(
+def _make_github_repo(
     id: int,
     name: str,
     full_name: str,
     default_branch: str | None = "main",
     archived: bool = False,
-) -> CachedRepo:
+) -> dict[str, Any]:
     return {
         "id": id,
         "name": name,
@@ -354,11 +354,13 @@ class OrganizationIntegrationReposTest(APITestCase):
         assert response.status_code == 400
 
 
-CACHED_REPOS = [_make_cached_repo(i, f"repo-{i}", f"Example/repo-{i}") for i in range(1, 6)]
+ALL_REPOS = [_make_github_repo(i, f"repo-{i}", f"Example/repo-{i}") for i in range(1, 6)]
+TOTAL_COUNT = len(ALL_REPOS)
+MOCK_TARGET = "sentry.integrations.github.client.GitHubBaseClient.get_repos_page"
 
 
 class OrganizationIntegrationReposPaginatedTest(APITestCase):
-    """Tests for cursor-based pagination triggered by sending per_page."""
+    """Tests for cursor-based pagination via GitHub API page params."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -372,14 +374,13 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
             f"/api/0/organizations/{self.org.slug}/integrations/{self.integration.id}/repos/"
         )
 
-    @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
-    )
-    def test_first_page(self, mock_cache: MagicMock) -> None:
-        mock_cache.return_value = CACHED_REPOS
+    @patch(MOCK_TARGET)
+    def test_first_page(self, mock_page: MagicMock) -> None:
+        mock_page.return_value = (ALL_REPOS[:2], TOTAL_COUNT)
         response = self.client.get(self.path, data={"per_page": "2"}, format="json")
 
         assert response.status_code == 200, response.content
+        mock_page.assert_called_once_with(page=1, per_page=2)
         repos = response.data["repos"]
         assert len(repos) == 2
         assert repos[0]["identifier"] == "Example/repo-1"
@@ -388,31 +389,29 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
         assert 'rel="next"' in response["Link"]
         assert 'results="true"' in response["Link"].split("next")[1]
 
-    @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
-    )
-    def test_second_page(self, mock_cache: MagicMock) -> None:
-        mock_cache.return_value = CACHED_REPOS
+    @patch(MOCK_TARGET)
+    def test_second_page(self, mock_page: MagicMock) -> None:
+        mock_page.return_value = (ALL_REPOS[2:4], TOTAL_COUNT)
         response = self.client.get(
             self.path, data={"per_page": "2", "cursor": "0:2:0"}, format="json"
         )
 
         assert response.status_code == 200, response.content
+        mock_page.assert_called_once_with(page=2, per_page=2)
         repos = response.data["repos"]
         assert len(repos) == 2
         assert repos[0]["identifier"] == "Example/repo-3"
         assert repos[1]["identifier"] == "Example/repo-4"
 
-    @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
-    )
-    def test_last_page(self, mock_cache: MagicMock) -> None:
-        mock_cache.return_value = CACHED_REPOS
+    @patch(MOCK_TARGET)
+    def test_last_page(self, mock_page: MagicMock) -> None:
+        mock_page.return_value = (ALL_REPOS[4:], TOTAL_COUNT)
         response = self.client.get(
             self.path, data={"per_page": "2", "cursor": "0:4:0"}, format="json"
         )
 
         assert response.status_code == 200, response.content
+        mock_page.assert_called_once_with(page=3, per_page=2)
         repos = response.data["repos"]
         assert len(repos) == 1
         assert repos[0]["identifier"] == "Example/repo-5"
@@ -420,14 +419,15 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
         next_part = link.split("next")[1]
         assert 'results="false"' in next_part
 
-    @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
-    )
-    def test_excludes_archived(self, mock_cache: MagicMock) -> None:
-        mock_cache.return_value = [
-            _make_cached_repo(1, "active", "Example/active"),
-            _make_cached_repo(2, "archived", "Example/archived", archived=True),
-        ]
+    @patch(MOCK_TARGET)
+    def test_excludes_archived(self, mock_page: MagicMock) -> None:
+        mock_page.return_value = (
+            [
+                _make_github_repo(1, "active", "Example/active"),
+                _make_github_repo(2, "archived", "Example/archived", archived=True),
+            ],
+            2,
+        )
         response = self.client.get(self.path, data={"per_page": "100"}, format="json")
 
         assert response.status_code == 200, response.content
@@ -435,14 +435,15 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
         assert len(repos) == 1
         assert repos[0]["identifier"] == "Example/active"
 
-    @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
-    )
-    def test_installable_only(self, mock_cache: MagicMock) -> None:
-        mock_cache.return_value = [
-            _make_cached_repo(1, "installed-repo", "Example/installed-repo"),
-            _make_cached_repo(2, "available-repo", "Example/available-repo"),
-        ]
+    @patch(MOCK_TARGET)
+    def test_installable_only(self, mock_page: MagicMock) -> None:
+        mock_page.return_value = (
+            [
+                _make_github_repo(1, "installed-repo", "Example/installed-repo"),
+                _make_github_repo(2, "available-repo", "Example/available-repo"),
+            ],
+            2,
+        )
         self.create_repo(
             project=self.project,
             integration_id=self.integration.id,
@@ -458,12 +459,10 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
         assert repos[0]["identifier"] == "Example/available-repo"
         assert repos[0]["isInstalled"] is False
 
-    @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
-    )
-    def test_no_cursor_on_single_page(self, mock_cache: MagicMock) -> None:
+    @patch(MOCK_TARGET)
+    def test_no_cursor_on_single_page(self, mock_page: MagicMock) -> None:
         """When all repos fit in one page, no Link header is added."""
-        mock_cache.return_value = [_make_cached_repo(1, "repo-1", "Example/repo-1")]
+        mock_page.return_value = ([_make_github_repo(1, "repo-1", "Example/repo-1")], 1)
         response = self.client.get(self.path, data={"per_page": "100"}, format="json")
 
         assert response.status_code == 200, response.content
@@ -499,67 +498,30 @@ class OrganizationIntegrationReposPaginatedTest(APITestCase):
         get_repositories.assert_called_once_with("repo", accessible_only=False, use_cache=False)
         assert "Link" not in response
 
-    @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
-    )
-    def test_per_page_zero_clamped_to_one(self, mock_cache: MagicMock) -> None:
-        mock_cache.return_value = CACHED_REPOS
-        response = self.client.get(self.path, data={"per_page": "0"}, format="json")
+    def test_per_page_invalid_returns_400(self) -> None:
+        """Invalid per_page values (0, negative, non-numeric, >100) return 400."""
+        for value in ("0", "-1", "abc", "200"):
+            response = self.client.get(self.path, data={"per_page": value}, format="json")
+            assert response.status_code == 400, f"per_page={value} should return 400"
 
-        assert response.status_code == 200, response.content
-        assert len(response.data["repos"]) == 1
-
-    @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
-    )
-    def test_per_page_negative_clamped_to_one(self, mock_cache: MagicMock) -> None:
-        mock_cache.return_value = CACHED_REPOS
-        response = self.client.get(self.path, data={"per_page": "-1"}, format="json")
-
-        assert response.status_code == 200, response.content
-        assert len(response.data["repos"]) == 1
-
-    @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
-    )
-    def test_per_page_non_numeric_defaults_to_100(self, mock_cache: MagicMock) -> None:
-        mock_cache.return_value = CACHED_REPOS
-        response = self.client.get(self.path, data={"per_page": "abc"}, format="json")
-
-        assert response.status_code == 200, response.content
-        assert len(response.data["repos"]) == 5
-
-    @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
-    )
-    def test_per_page_over_max_clamped_to_100(self, mock_cache: MagicMock) -> None:
-        mock_cache.return_value = CACHED_REPOS
-        response = self.client.get(self.path, data={"per_page": "200"}, format="json")
-
-        assert response.status_code == 200, response.content
-        assert len(response.data["repos"]) == 5
-
-    @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
-    )
-    def test_negative_cursor_offset_clamped_to_zero(self, mock_cache: MagicMock) -> None:
-        mock_cache.return_value = CACHED_REPOS
+    @patch(MOCK_TARGET)
+    def test_negative_cursor_offset_clamped_to_zero(self, mock_page: MagicMock) -> None:
+        mock_page.return_value = (ALL_REPOS[:2], TOTAL_COUNT)
         response = self.client.get(
             self.path, data={"per_page": "2", "cursor": "0:-5:0"}, format="json"
         )
 
         assert response.status_code == 200, response.content
+        mock_page.assert_called_once_with(page=1, per_page=2)
         repos = response.data["repos"]
         assert len(repos) == 2
         assert repos[0]["identifier"] == "Example/repo-1"
 
-    @patch(
-        "sentry.integrations.github.client.GitHubBaseClient.get_repos_cached",
-    )
-    def test_integration_error_returns_400(self, mock_cache: MagicMock) -> None:
+    @patch(MOCK_TARGET)
+    def test_integration_error_returns_400(self, mock_page: MagicMock) -> None:
         from sentry.shared_integrations.exceptions import IntegrationError
 
-        mock_cache.side_effect = IntegrationError("token revoked")
+        mock_page.side_effect = IntegrationError("token revoked")
         response = self.client.get(self.path, data={"per_page": "2"}, format="json")
 
         assert response.status_code == 400
