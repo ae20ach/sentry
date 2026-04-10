@@ -298,7 +298,7 @@ class UnmergeTestCase(TestCase, SnubaTestCase):
         # get_group_backfill_attributes doesn't accumulate extra increments.
         expected_source_count = sum(len(x) for x in events.values()) - 1  # 17 - 1 group3 = 16
         tenant_ids = {"organization_id": project.organization_id, "referrer": "test"}
-        for _ in range(20):
+        for _ in range(60):
             source_event_count = len(
                 list(
                     eventstore.backend.get_events(
@@ -309,7 +309,7 @@ class UnmergeTestCase(TestCase, SnubaTestCase):
             )
             if source_event_count == expected_source_count:
                 break
-            _time.sleep(0.5)
+            _time.sleep(1)
 
         with self.tasks():
             unmerge.delay(

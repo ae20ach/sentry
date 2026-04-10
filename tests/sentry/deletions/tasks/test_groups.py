@@ -79,13 +79,14 @@ class DeleteGroupTest(TestCase):
         assert not nodestore.backend.get(node_id)
         assert not nodestore.backend.get(node_id_2)
 
-        # Snuba processes eventstream deletions asynchronously. Retry briefly to
-        # allow the deletion to propagate before asserting.
-        for _ in range(10):
+        # ClickHouse's ReplacingMergeTree keeps tombstoned rows until its
+        # background merge runs. Under 16-shard parallel load this can take
+        # longer than 30s. Retry for up to 60s.
+        for _ in range(30):
             events = eventstore.backend.get_events(conditions, tenant_ids=tenant_ids)
             if not events:
                 break
-            time.sleep(0.5)
+            time.sleep(2)
         assert len(events) == 0
 
     def test_max_chunk_size_calls_once(self) -> None:
