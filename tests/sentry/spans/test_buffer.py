@@ -382,7 +382,7 @@ def test_flush_segments_with_null_attributes(buffer: SpansBuffer) -> None:
 )
 def test_deep(buffer: SpansBuffer, spans) -> None:
     # Retry if a concurrent xdist flushdb() clears spans between process and flush.
-    for _ in range(3):
+    for _ in range(5):
         process_spans(spans, buffer, now=0)
         assert_ttls(buffer.client)
         rv = buffer.flush_segments(now=10)
@@ -468,7 +468,7 @@ def test_deep2(buffer: SpansBuffer, spans) -> None:
     # assert_ttls calls KEYS * which is slow on a large key space, creating a
     # window for a concurrent xdist flushdb() to clear our spans between
     # process_spans and flush_segments. Retry the pair up to 3 times.
-    for _ in range(3):
+    for _ in range(5):
         process_spans(spans, buffer, now=0)
         assert_ttls(buffer.client)
         rv = buffer.flush_segments(now=10)
@@ -545,7 +545,7 @@ def test_deep2(buffer: SpansBuffer, spans) -> None:
 )
 def test_parent_in_other_project(buffer: SpansBuffer, spans) -> None:
     # Retry if a concurrent xdist flushdb() clears spans between process and flush.
-    for _ in range(3):
+    for _ in range(5):
         process_spans(spans, buffer, now=0)
         assert_ttls(buffer.client)
         assert buffer.flush_segments(now=5) == {}
