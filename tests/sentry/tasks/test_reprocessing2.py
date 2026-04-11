@@ -327,7 +327,13 @@ def test_max_events(
         burst(max_jobs=100)
 
     for i, event_id in enumerate(event_ids):
-        event = eventstore.backend.get_event_by_id(default_project.id, event_id)
+        # Snuba may not have propagated the new group_id yet; retry until
+        # the event reflects the reprocessed state or the timeout expires.
+        for _ in range(10):
+            event = eventstore.backend.get_event_by_id(default_project.id, event_id)
+            if event is None or event.group_id != group_id:
+                break
+            _time.sleep(0.5)
         if max_events is not None and i < (len(event_ids) - max_events):
             if remaining_events == "delete":
                 assert event is None

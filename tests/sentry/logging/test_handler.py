@@ -197,7 +197,10 @@ def test_gke_emit() -> None:
     logger = mock.Mock()
     # Isolate from any ambient trace left by a previous test; get_trace_id()
     # must return None when no span is active.
+    # isolation_scope() forks (shallow-copies) the current scope, inheriting the
+    # parent's span. Explicitly clear it so get_trace_id() returns None.
     with sentry_sdk.isolation_scope():
+        sentry_sdk.get_current_scope().span = None
         GKEStructLogHandler().emit(make_logrecord(), logger=logger)
     logger.log.assert_called_once_with(
         name="name",

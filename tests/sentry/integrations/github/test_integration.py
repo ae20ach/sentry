@@ -1450,6 +1450,10 @@ class GitHubIntegrationTest(IntegrationTestCase):
     def test_github_installation_calls_ui(
         self, mock_render: MagicMock, mock_record: MagicMock
     ) -> None:
+        # Re-initialize to get a fresh Redis key in case a concurrent xdist
+        # flushdb() cleared the pipeline state set during setUp.
+        self.pipeline.initialize()
+        self.save_session()
         self._setup_with_existing_installations()
         self.create_integration(organization=self.organization, external_id="1", provider="github")
         self.create_integration(organization=self.organization, external_id="2", provider="github")
