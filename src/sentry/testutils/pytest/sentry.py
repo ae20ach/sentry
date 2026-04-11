@@ -225,9 +225,14 @@ def pytest_configure(config: pytest.Config) -> None:
     if not hasattr(settings, "SENTRY_OPTIONS"):
         settings.SENTRY_OPTIONS = {}
 
+    redis_db = xdist.get_redis_db()
     settings.SENTRY_OPTIONS.update(
         {
-            "redis.clusters": {"default": {"hosts": {0: {"db": xdist.get_redis_db()}}}},
+            # Each xdist worker gets its own Redis DB so that teardown
+            # flushdb() only affects that worker's data.  Isolation is
+            # intra-shard (within a single pytest process); each CI shard
+            # job runs on its own runner with its own Redis service.
+            "redis.clusters": {"default": {"hosts": {0: {"db": redis_db}}}},
             "mail.backend": "django.core.mail.backends.locmem.EmailBackend",
             "system.url-prefix": "http://testserver",
             "system.base-hostname": "testserver",
@@ -267,6 +272,21 @@ def pytest_configure(config: pytest.Config) -> None:
     )
     settings.SENTRY_OPTIONS_COMPLAIN_ON_ERRORS = True
     settings.VALIDATE_SUPERUSER_ACCESS_CATEGORY_AND_REASON = False
+
+    # Flush the options store's local cache so that any redis.clusters value
+    # that may have been cached before this configure hook (e.g. during early
+    # Django import) is evicted.  The next access will re-read from settings
+    # and pick up the worker-specific DB number.
+    from sentry import options as sentry_options
+
+    sentry_options.default_manager.store.flush_local_cache()
+
+    # Also bust the redis_clusters manager's cluster cache so it re-creates
+    # the connection with the correct DB on first use.
+    from sentry.utils.redis import redis_clusters
+
+    redis_clusters._clusters_bytes.clear()
+    redis_clusters._clusters_str.clear()
 
     _configure_test_env_cells()
 

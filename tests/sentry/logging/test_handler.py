@@ -13,6 +13,7 @@ from sentry.logging.handlers import (
     SamplingFilter,
     StructLogHandler,
 )
+from sentry.testutils.helpers.sdk import reset_trace_context
 from sentry.utils.sdk import get_trace_id
 
 
@@ -99,11 +100,7 @@ def make_logrecord(
 )
 def test_emit(record, out, handler, logger) -> None:
     record = make_logrecord(**record)
-    # isolation_scope() forks (shallow-copies) the current scope, which means
-    # the parent's span is inherited. Explicitly clear it so get_trace_id()
-    # returns None regardless of any ambient trace from a previous test.
-    with sentry_sdk.isolation_scope():
-        sentry_sdk.get_current_scope().span = None
+    with reset_trace_context():
         handler.emit(record, logger=logger)
     expected = {
         "level": logging.INFO,
@@ -197,10 +194,7 @@ def test_gke_emit() -> None:
     logger = mock.Mock()
     # Isolate from any ambient trace left by a previous test; get_trace_id()
     # must return None when no span is active.
-    # isolation_scope() forks (shallow-copies) the current scope, inheriting the
-    # parent's span. Explicitly clear it so get_trace_id() returns None.
-    with sentry_sdk.isolation_scope():
-        sentry_sdk.get_current_scope().span = None
+    with reset_trace_context():
         GKEStructLogHandler().emit(make_logrecord(), logger=logger)
     logger.log.assert_called_once_with(
         name="name",

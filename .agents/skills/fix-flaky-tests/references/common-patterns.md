@@ -2,20 +2,24 @@
 
 ## Lookup
 
-| Symptom | Pattern |
-|---|---|
-| `datetime` off by seconds/minutes | [1] freeze time |
-| `result[N].field` wrong intermittently | [2] ordering |
-| `assert count == 0` but got >0 | [3] celery timing |
-| Unique constraint / duplicate key | [4] hardcoded IDs |
-| `HTTPConnectionPool` / `SnubaError` | [5] mock Snuba |
-| Batch split unexpectedly | [6] batch timeout |
-| `assert len(buckets) == N` off by ±1 | [7] bucket boundary |
-| Global option/cache wrong value | [8] teardown gap |
-| Snuba count too high | [9] cross-test contamination |
-| `IndexError` / `KeyError` on Snuba result | [10] retention expired |
-| `assert N == M` where N==M | [11] stale ORM object |
-| `time.sleep` mock brittleness | [12] configurable interval |
+| Symptom                                       | Pattern                              |
+| --------------------------------------------- | ------------------------------------ |
+| `datetime` off by seconds/minutes             | [1] freeze time                      |
+| `result[N].field` wrong intermittently        | [2] ordering                         |
+| `assert count == 0` but got >0                | [3] celery timing                    |
+| Unique constraint / duplicate key             | [4] hardcoded IDs                    |
+| `HTTPConnectionPool` / `SnubaError`           | [5] mock Snuba                       |
+| Batch split unexpectedly                      | [6] batch timeout                    |
+| `assert len(buckets) == N` off by ±1          | [7] bucket boundary                  |
+| Global option/cache wrong value               | [8] teardown gap                     |
+| Snuba count too high                          | [9] cross-test contamination         |
+| `IndexError` / `KeyError` on Snuba result     | [10] retention expired               |
+| `assert N == M` where N==M                    | [11] stale ORM object                |
+| `time.sleep` mock brittleness                 | [12] configurable interval           |
+| `sentry.trace.trace_id` non-None when no span | [13] isolation_scope span inherit    |
+| `IntegrationPipeline` Redis state missing     | [14] pipeline Redis race             |
+| Reprocessing: `event.group_id == old_id`      | [15] Snuba group_id propagation      |
+| ClickHouse deletion/merge count wrong         | [16] ClickHouse background merge lag |
 
 ---
 
@@ -67,7 +71,7 @@ with self.tasks():
 # assert post-task state here
 ```
 
-Wrap the action that *triggers* the task, not just the assertion. For signal-triggered tasks, wrap the model operation that fires the signal.
+Wrap the action that _triggers_ the task, not just the assertion. For signal-triggered tasks, wrap the model operation that fires the signal.
 
 ---
 
@@ -130,6 +134,7 @@ class MyStatsTest(...): ...
 `override_settings` restores `CACHES` dict but not object references that were set from it (e.g. `default_store.cache`). Options set via `options.set(...)` persist across tests.
 
 **try/finally for in-test mutations:**
+
 ```python
 response = self.client.put(url, {"auth.allow-registration": 1})
 try:
@@ -139,6 +144,7 @@ finally:
 ```
 
 **Autouse fixture for deep singletons:**
+
 ```python
 @pytest.fixture(autouse=True)
 def reset_option_store_cache() -> Generator[None]:
@@ -154,6 +160,7 @@ def reset_option_store_cache() -> Generator[None]:
 Queries against `self.project` pick up events written by other tests in the same session (Snuba data is not rolled back between tests).
 
 **Dedicated project:**
+
 ```python
 project = self.create_project(organization=self.organization)
 self.store_event(data=..., project_id=project.id)
@@ -161,6 +168,7 @@ result = query_snuba(project_ids=[project.id], ...)
 ```
 
 **Tight query window** (use `hours=4` to stay outside the common `before_now(minutes=N)` range other tests use):
+
 ```python
 event_time = before_now(hours=4)
 self.store_event(data={..., "timestamp": event_time}, project_id=project.id)
@@ -206,6 +214,95 @@ assert obj.count == expected
 ```
 
 For cache: `cache.clear()` then re-fetch.
+
+---
+
+## 13. `isolation_scope()` inherits parent span — `sentry.trace.trace_id` non-None
+
+`sentry_sdk.isolation_scope()` **forks** (shallow-copies) the current scope, inheriting the parent's `span` attribute. `get_trace_id()` then returns the parent span's trace_id instead of None.
+
+**Fix:** Use the `reset_trace_context()` helper which combines `isolation_scope()` with an explicit span clear:
+
+```python
+from sentry.testutils.helpers.sdk import reset_trace_context
+
+# Instead of:
+with sentry_sdk.isolation_scope():
+    handler.emit(record, logger=logger)
+
+# Use:
+with reset_trace_context():
+    handler.emit(record, logger=logger)
+```
+
+---
+
+## 14. `IntegrationPipeline` Redis state cleared between setUp and test body
+
+`IntegrationTestCase.setUp()` stores pipeline state in Redis (via `PipelineSessionStore`). A concurrent xdist worker's `flushdb()` can clear that state in the window between setUp and the first HTTP request in the test body.
+
+**Already fixed systemically:** `IntegrationTestCase._callTestMethod()` re-initializes the pipeline immediately before the test body runs (after setUp). This shrinks the vulnerable window to near-zero.
+
+If a test also sets custom `pipeline.state` values (e.g., `step_index`, `data`), re-initialize AGAIN inside the test body just before the critical request and call `save_session()`:
+
+```python
+self.pipeline.initialize()
+self.pipeline.state.step_index = 2
+self.pipeline.state.data = {...}
+self.save_session()
+resp = self.client.post(self.setup_path, {...})
+```
+
+---
+
+## 15. Reprocessing: `event.group_id` still points to deleted group
+
+After `reprocess_group()` + `BurstTaskRunner`, the reprocessed event in Snuba may still carry the old `group_id` because Snuba's Kafka consumer hasn't propagated the new version yet.
+
+**Fix:** Retry `get_event_by_id` until `event.group_id` has changed AND the new group exists in the DB:
+
+```python
+for _ in range(10):
+    event = eventstore.backend.get_event_by_id(project.id, event_id)
+    if (event is not None
+            and event.group_id != old_group_id
+            and Group.objects.filter(id=event.group_id).exists()):
+        break
+    _time.sleep(0.5)
+assert event.group_id != old_group_id
+```
+
+---
+
+## 16. ClickHouse background merge lag — deletion / merge counts wrong
+
+`start_delete_groups`/`end_delete_groups` and `start_merge`/`end_merge` are synchronous HTTP calls to Snuba's test endpoint. Snuba processes them immediately, but ClickHouse's `ReplacingMergeTree` keeps both old and new rows until its background merge deduplicates them. Under 16-shard parallel load this can take 60+ seconds.
+
+**For deletion tests:** Assert that `start_delete_groups`/`end_delete_groups` were called (our code's contract), and add a best-effort Snuba check rather than hard-failing on slow ClickHouse:
+
+```python
+with patch.object(eventstream.backend, "start_delete_groups",
+                  wraps=eventstream.backend.start_delete_groups) as mock_start, \
+     patch.object(eventstream.backend, "end_delete_groups",
+                  wraps=eventstream.backend.end_delete_groups) as mock_end:
+    with self.tasks():
+        delete_groups_for_project(...)
+mock_start.assert_called_once_with(project_id, [group.id])
+mock_end.assert_called_once()
+```
+
+**For merge/unmerge:** Poll until Snuba shows the expected stable event count before running the dependent operation:
+
+```python
+for _ in range(60):  # up to 60s
+    count = len(list(eventstore.backend.get_events(
+        eventstore.Filter(project_ids=[project.id], group_ids=[source.id]),
+        tenant_ids=tenant_ids,
+    )))
+    if count == expected_count:
+        break
+    _time.sleep(1)
+```
 
 ---
 
