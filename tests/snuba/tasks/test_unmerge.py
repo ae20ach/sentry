@@ -296,8 +296,8 @@ class UnmergeTestCase(TestCase, SnubaTestCase):
         # on ClickHouse immediately deduplicates the ReplacingMergeTree rows
         # (removing old merge_source.id rows) AND flushes Snuba's internal queue,
         # leaving exactly 16 clean literal events in source.id.
-        optimize_snuba_table("errors_local")
-        optimize_snuba_table("groupedmessage_local")
+        optimize_snuba_table("events")
+        optimize_snuba_table("groupedmessage")
 
         # Verify the count is now exactly 16 before starting the unmerge.
         expected_source_count = sum(len(x) for x in events.values()) - 1  # 17 - 1 group3 = 16
@@ -332,8 +332,8 @@ class UnmergeTestCase(TestCase, SnubaTestCase):
         # no-ops). Force ClickHouse to deduplicate now so the TSDB assertions
         # below see the correct post-unmerge counts immediately.
         rollup_duration = 3600
-        optimize_snuba_table("errors_local")
-        optimize_snuba_table("groupedmessage_local")
+        optimize_snuba_table("events")
+        optimize_snuba_table("groupedmessage")
 
         assert (
             list(

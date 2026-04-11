@@ -88,8 +88,8 @@ class MergeGroupTest(TestCase, SnubaTestCase):
 
         # OPTIMIZE deduplicates existing rows; also retry briefly for merge Kafka
         # replace messages that update event group_ids asynchronously.
-        optimize_snuba_table("errors_local")
-        optimize_snuba_table("groupedmessage_local")
+        optimize_snuba_table("events")
+        optimize_snuba_table("groupedmessage")
         for _ in range(10):
             event1 = eventstore.backend.get_event_by_id(project.id, event1.event_id)
             if event1 is not None and event1.group_id == group2.id:

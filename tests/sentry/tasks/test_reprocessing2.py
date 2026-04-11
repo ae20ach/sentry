@@ -189,7 +189,7 @@ def test_basic(
 
         # Old event is actually getting tombstoned. Force ClickHouse to
         # immediately deduplicate so the tombstone takes effect without waiting.
-        optimize_snuba_table("errors_local")
+        optimize_snuba_table("events")
         assert not get_event_by_processing_counter("x0")
         if change_groups:
             assert tombstone_calls == [
@@ -261,7 +261,7 @@ def test_concurrent_events_go_into_new_group(
         burst_reprocess(max_jobs=100)
 
     # Force ClickHouse to propagate the reprocessed event's new group_id.
-    optimize_snuba_table("errors_local")
+    optimize_snuba_table("events")
     event3 = eventstore.backend.get_event_by_id(default_project.id, event_id)
     assert event3 is not None
     assert event3.group is not None
@@ -328,7 +328,7 @@ def test_max_events(
 
     # OPTIMIZE deduplicates existing rows; also retry briefly for reprocessing
     # Kafka messages that write new events with updated group_ids asynchronously.
-    optimize_snuba_table("errors_local")
+    optimize_snuba_table("events")
     for i, event_id in enumerate(event_ids):
         for _ in range(10):
             event = eventstore.backend.get_event_by_id(default_project.id, event_id)
@@ -662,7 +662,7 @@ def test_apply_new_stack_trace_rules(
     assert is_group_finished(event2.group_id)
 
     # Force ClickHouse to propagate the reprocessed events before asserting.
-    optimize_snuba_table("errors_local")
+    optimize_snuba_table("events")
     event1 = eventstore.backend.get_event_by_id(default_project.id, event_id1)
     event2 = eventstore.backend.get_event_by_id(default_project.id, event_id2)
     assert event1 is not None

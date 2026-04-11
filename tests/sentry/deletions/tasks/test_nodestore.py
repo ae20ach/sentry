@@ -60,7 +60,7 @@ class NodestoreDeletionTaskTest(TestCase):
 
         # Force ClickHouse to immediately deduplicate so tombstoned rows are
         # removed without waiting for background merge.
-        optimize_snuba_table("errors_local")
+        optimize_snuba_table("events")
         events_after = self.fetch_events_from_eventstore(group_ids, dataset=Dataset.Events)
         assert len(events_after) == 0
 

@@ -97,7 +97,7 @@ class DeleteGroupTest(TestCase):
         mock_start.assert_called_once_with(self.project.id, [group.id])
         mock_end.assert_called_once()
 
-        optimize_snuba_table("errors_local")
+        optimize_snuba_table("events")
         events = eventstore.backend.get_events(conditions, tenant_ids=tenant_ids)
         assert len(events) == 0
 

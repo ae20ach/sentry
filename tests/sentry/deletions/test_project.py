@@ -246,7 +246,7 @@ class DeleteProjectTest(BaseWorkflowTest, TransactionTestCase, HybridCloudTestMi
         mock_start.assert_called_once()
         mock_end.assert_called_once()
 
-        optimize_snuba_table("errors_local")
+        optimize_snuba_table("events")
         conditions = eventstore.Filter(project_ids=[project.id, keeper.id], group_ids=[group.id])
         # Retry briefly in case the tombstone Kafka message hasn't landed yet.
         for _ in range(10):

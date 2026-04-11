@@ -1,33 +1,33 @@
 """
-Helpers for interacting with ClickHouse directly in tests.
+Helpers for forcing ClickHouse deduplication in tests via Snuba's test API.
 """
 
 from __future__ import annotations
 
-import os
-
 import requests
+from django.conf import settings
 
 
-def optimize_snuba_table(table: str) -> None:
-    """Run ``OPTIMIZE TABLE <table> FINAL`` against ClickHouse.
+def optimize_snuba_table(dataset: str) -> None:
+    """Force ClickHouse to immediately deduplicate a ReplacingMergeTree dataset.
 
-    This forces ClickHouse's ReplacingMergeTree to immediately deduplicate rows
-    rather than waiting for its background merge.  Useful in tests that need to
-    assert on post-merge/post-delete event counts without spinning in a retry
-    loop waiting for the background process to catch up.
+    Calls POST /tests/{dataset}/optimize on the local Snuba server, which runs
+    ``OPTIMIZE TABLE … FINAL`` on every ClickHouse table in that dataset.
 
-    The ClickHouse HTTP API is available at localhost:8123 in both local dev
-    (devservices exposes the container port) and CI (same pattern).  Override
-    via CLICKHOUSE_HOST / CLICKHOUSE_HTTP_PORT environment variables if needed.
+    This makes tombstoned rows from deletions, and replacement rows from
+    merge/unmerge operations, take effect immediately without waiting for
+    ClickHouse's background merge process.
+
+    Args:
+        dataset: Snuba dataset name, e.g. ``"events"``, ``"groupedmessage"``.
+
+    Raises:
+        RuntimeError: if the Snuba endpoint returns a non-200 response.
     """
-    host = os.environ.get("CLICKHOUSE_HOST", "localhost")
-    # bootstrap-snuba.py sets CLICKHOUSE_HTTP_PORT=8123; fall back to that default.
-    port = int(os.environ.get("CLICKHOUSE_HTTP_PORT", "8123"))
-    url = f"http://{host}:{port}"
-
-    resp = requests.post(url, data=f"OPTIMIZE TABLE {table} FINAL", timeout=60)
+    snuba_url = getattr(settings, "SENTRY_SNUBA", "http://127.0.0.1:1218")
+    url = f"{snuba_url}/tests/{dataset}/optimize"
+    resp = requests.post(url, timeout=60)
     if resp.status_code != 200:
         raise RuntimeError(
-            f"ClickHouse OPTIMIZE TABLE {table} FINAL failed ({resp.status_code}): {resp.text}"
+            f"Snuba /tests/{dataset}/optimize failed ({resp.status_code}): {resp.text}"
         )
