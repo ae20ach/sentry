@@ -316,6 +316,28 @@ class UnmergeTestCase(TestCase, SnubaTestCase):
                 project.id, source.id, destination.id, [list(events.keys())[0]], None, batch_size=5
             )
 
+        # TSDBModel.group reads come from Snuba ClickHouse (writes are DummyTSDB
+        # no-ops). Wait for the unmerge's Kafka replacement messages to propagate
+        # so ClickHouse shows source.id with only group2's 6 events, not the full
+        # merged 16. Use the same rollup as the assertions below.
+        rollup_duration = 3600
+        expected_source_events = list(events.values())[1]  # group2, 6 events
+        expected_source_tsdb_count = len(expected_source_events)
+        for _ in range(60):
+            probe = dict(
+                tsdb.backend.get_range(
+                    TSDBModel.group,
+                    [source.id],
+                    now - timedelta(seconds=rollup_duration),
+                    time_from_now(17),
+                    rollup_duration,
+                    tenant_ids={"referrer": "get_range", "organization_id": 1},
+                )[source.id]
+            )
+            if sum(probe.values()) <= expected_source_tsdb_count:
+                break
+            _time.sleep(1)
+
         assert (
             list(
                 Group.objects.filter(id=merge_source.id).values_list(
@@ -393,8 +415,6 @@ class UnmergeTestCase(TestCase, SnubaTestCase):
             (production_environment.id, time_from_now(0)),
             (staging_environment.id, time_from_now(16)),
         }
-
-        rollup_duration = 3600
 
         time_series = tsdb.backend.get_range(
             TSDBModel.group,
