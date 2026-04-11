@@ -156,10 +156,13 @@ class RedisBackendTestCase(TestCase):
     def test_large_digest(self) -> None:
         backend = RedisBackend()
 
+        # Use a unique timeline key so a concurrent xdist flushdb() mid-loop
+        # doesn't clear records that were added before it fired.
+        timeline = f"timeline:{uuid.uuid4().hex}"
         n = 8192
         t = time.time()
         for i in range(n):
-            backend.add("timeline", Record(f"record:{i}", self.notification, t))
+            backend.add(timeline, Record(f"record:{i}", self.notification, t))
 
-        with backend.digest("timeline", 0) as records:
+        with backend.digest(timeline, 0) as records:
             assert len(records) == n
