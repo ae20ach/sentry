@@ -308,18 +308,38 @@ class UnmergeTestCase(TestCase, SnubaTestCase):
         ]:
             assert resp.status_code == 200, f"Snuba drop failed: {resp.status_code}"
 
-        # Re-store all 17 events with their original data; GroupHash now routes them
-        # to the correct post-merge groups (source or destination).
+        # Re-store all 17 events with minimal clean data (NOT raw evt.data which
+        # contains internal Sentry processing fields that fail re-ingestion).
+        # store_event uses GroupHash to route events to the correct post-merge groups.
         all_stored_events = (
             list(events.values())[0]  # group1 → source
             + list(events.values())[1]  # group2 → source
             + list(events.values())[2]  # group3 → destination
         )
         for evt in all_stored_events:
-            self.store_event(
-                data=dict(evt.data),
-                project_id=project.id,
-            )
+            clean = {
+                "event_id": evt.event_id,
+                "timestamp": evt.datetime.isoformat(),
+                "fingerprint": evt.data.get("fingerprint") or ["default"],
+                "type": "default",
+            }
+            if evt.data.get("user"):
+                clean["user"] = evt.data["user"]
+            env = evt.get_tag("environment")
+            if env:
+                clean["environment"] = env
+            release = evt.get_tag("sentry:release")
+            if release:
+                clean["release"] = release
+            # Preserve color tag for TSDB consistency checks
+            color = evt.get_tag("color")
+            if color:
+                clean["tags"] = [["color", color]]
+            self.store_event(data=clean, project_id=project.id)
+
+        # Re-storing group3 increments destination.times_seen; reset it so the
+        # unmerge's get_group_backfill_attributes starts from the correct baseline.
+        Group.objects.filter(id=destination.id).update(times_seen=1)
 
         # Now source.id has exactly 16 clean events (no mapping, no duplicates).
         expected_source_count = sum(len(x) for x in events.values()) - 1  # 17 - 1 group3 = 16
