@@ -187,11 +187,12 @@ def test_basic(
         assert is_group_finished(old_event.group_id)
 
         # Old event is actually getting tombstoned. Snuba processes the
-        # tombstone via Kafka asynchronously — retry briefly to let it propagate.
-        for _ in range(10):
+        # tombstone via Kafka asynchronously — retry for up to 30s under
+        # 16-shard parallel load where Snuba's consumer can be slow.
+        for _ in range(30):
             if not get_event_by_processing_counter("x0"):
                 break
-            _time.sleep(0.5)
+            _time.sleep(1)
         assert not get_event_by_processing_counter("x0")
         if change_groups:
             assert tombstone_calls == [
