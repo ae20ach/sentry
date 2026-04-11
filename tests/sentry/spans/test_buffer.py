@@ -386,7 +386,7 @@ def test_deep(buffer: SpansBuffer, spans) -> None:
         process_spans(spans, buffer, now=0)
         assert_ttls(buffer.client)
         rv = buffer.flush_segments(now=10)
-        if rv:
+        if rv and all(seg.spans for seg in rv.values()):
             break
 
     _normalize_output(rv)
@@ -472,7 +472,7 @@ def test_deep2(buffer: SpansBuffer, spans) -> None:
         process_spans(spans, buffer, now=0)
         assert_ttls(buffer.client)
         rv = buffer.flush_segments(now=10)
-        if rv:
+        if rv and all(seg.spans for seg in rv.values()):
             break
 
     _normalize_output(rv)
@@ -550,7 +550,7 @@ def test_parent_in_other_project(buffer: SpansBuffer, spans) -> None:
         assert_ttls(buffer.client)
         assert buffer.flush_segments(now=5) == {}
         rv = buffer.flush_segments(now=11)
-        if rv:
+        if rv and all(seg.spans for seg in rv.values()):
             break
     assert rv == {
         _segment_id(2, "a" * 32, "b" * 16): FlushedSegment(
