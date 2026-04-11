@@ -20,10 +20,11 @@ class OrganizationSamplingProjectSpanCountsTest(MetricsEnhancedPerformanceTestCa
         super().setUp()
         self.login_as(user=self.user)
         self.org = self.create_organization(owner=self.user)
-        self.project_1 = self.create_project(organization=self.org, name="project_1")
-        self.project_2 = self.create_project(organization=self.org, name="project_2")
-        self.project_3 = self.create_project(organization=self.org, name="project_3")
-        self.project_4 = self.create_project(organization=self.org, name="project_4")
+        with time_machine.travel(self.MOCK_DATETIME, tick=True):
+            self.project_1 = self.create_project(organization=self.org, name="project_1")
+            self.project_2 = self.create_project(organization=self.org, name="project_2")
+            self.project_3 = self.create_project(organization=self.org, name="project_3")
+            self.project_4 = self.create_project(organization=self.org, name="project_4")
         self.url = reverse(
             "sentry-api-0-organization-sampling-root-counts",
             kwargs={"organization_id_or_slug": self.org.slug},
@@ -180,10 +181,11 @@ class OrganizationSamplingProjectSpanCountsNoMetricsTest(MetricsEnhancedPerforma
         super().setUp()
         self.login_as(user=self.user)
         self.org = self.create_organization(owner=self.user)
-        self.project_1 = self.create_project(organization=self.org, name="project_1")
-        self.project_2 = self.create_project(organization=self.org, name="project_2")
-        self.project_3 = self.create_project(organization=self.org, name="project_3")
-        self.project_4 = self.create_project(organization=self.org, name="project_4")
+        with time_machine.travel(self.MOCK_DATETIME, tick=True):
+            self.project_1 = self.create_project(organization=self.org, name="project_1")
+            self.project_2 = self.create_project(organization=self.org, name="project_2")
+            self.project_3 = self.create_project(organization=self.org, name="project_3")
+            self.project_4 = self.create_project(organization=self.org, name="project_4")
         self.url = reverse(
             "sentry-api-0-organization-sampling-root-counts",
             kwargs={"organization_id_or_slug": self.org.slug},

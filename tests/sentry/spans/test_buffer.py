@@ -381,11 +381,14 @@ def test_flush_segments_with_null_attributes(buffer: SpansBuffer) -> None:
     ),
 )
 def test_deep(buffer: SpansBuffer, spans) -> None:
-    process_spans(spans, buffer, now=0)
+    # Retry if a concurrent xdist flushdb() clears spans between process and flush.
+    for _ in range(3):
+        process_spans(spans, buffer, now=0)
+        assert_ttls(buffer.client)
+        rv = buffer.flush_segments(now=10)
+        if rv:
+            break
 
-    assert_ttls(buffer.client)
-
-    rv = buffer.flush_segments(now=10)
     _normalize_output(rv)
     assert rv == {
         _segment_id(1, "a" * 32, "a" * 16): FlushedSegment(
@@ -541,12 +544,14 @@ def test_deep2(buffer: SpansBuffer, spans) -> None:
     ),
 )
 def test_parent_in_other_project(buffer: SpansBuffer, spans) -> None:
-    process_spans(spans, buffer, now=0)
-
-    assert_ttls(buffer.client)
-
-    assert buffer.flush_segments(now=5) == {}
-    rv = buffer.flush_segments(now=11)
+    # Retry if a concurrent xdist flushdb() clears spans between process and flush.
+    for _ in range(3):
+        process_spans(spans, buffer, now=0)
+        assert_ttls(buffer.client)
+        assert buffer.flush_segments(now=5) == {}
+        rv = buffer.flush_segments(now=11)
+        if rv:
+            break
     assert rv == {
         _segment_id(2, "a" * 32, "b" * 16): FlushedSegment(
             queue_key=mock.ANY,
