@@ -478,6 +478,7 @@ def test_nodestore_missing(
     assert event.group_id is not None
     assert is_group_finished(event.group_id)
 
+    optimize_snuba_table("events")
     new_event = eventstore.backend.get_event_by_id(default_project.id, event_id)
 
     if remaining_events == "delete":
