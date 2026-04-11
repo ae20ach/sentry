@@ -159,9 +159,10 @@ def create_issue_occurrence_from_detection(
     detection_time = datetime.now(UTC)
     trace_id = detected_issue.trace_id
     transaction_name = normalize_description(detected_issue.transaction_name)
-    group_for_fingerprint = detected_issue.group_for_fingerprint
+    transaction_name_for_fingerprint = transaction_name.strip().lower().replace(" ", "-")
+    group_for_fingerprint = detected_issue.group_for_fingerprint.strip().lower().replace(" ", "-")
 
-    fingerprint = [f"llm-detected-{group_for_fingerprint.strip().lower().replace(' ', '-')}"]
+    fingerprint = [f"llm-detected-{group_for_fingerprint}-{transaction_name_for_fingerprint}"]
 
     evidence_data = {
         "trace_id": trace_id,

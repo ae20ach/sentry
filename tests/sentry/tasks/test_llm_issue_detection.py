@@ -111,7 +111,7 @@ class LLMIssueDetectionTest(TestCase):
         assert occurrence.culprit == "test_transaction"
         assert occurrence.level == "warning"
 
-        assert occurrence.fingerprint == ["llm-detected-slow-database-query"]
+        assert occurrence.fingerprint == ["llm-detected-slow-database-query-test_transaction"]
 
         assert occurrence.evidence_data["trace_id"] == "abc123xyz"
         assert occurrence.evidence_data["transaction"] == "test_transaction"
@@ -162,7 +162,7 @@ class LLMIssueDetectionTest(TestCase):
             project=self.project,
         )
         occurrence = mock_produce_occurrence.call_args.kwargs["occurrence"]
-        assert occurrence.fingerprint == ["llm-detected-n+1-database-queries"]
+        assert occurrence.fingerprint == ["llm-detected-n+1-database-queries-get-/api"]
 
     @with_feature("organizations:gen-ai-features")
     @patch("sentry.tasks.llm_issue_detection.detection.mark_traces_as_processed")
