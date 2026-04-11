@@ -6,12 +6,17 @@ import {Container, Flex, Stack} from '@sentry/scraps/layout';
 import {ExternalLink} from '@sentry/scraps/link';
 import {SegmentedControl} from '@sentry/scraps/segmentedControl';
 import {Text} from '@sentry/scraps/text';
+import {Tooltip} from '@sentry/scraps/tooltip';
 
 import {hasEveryAccess} from 'sentry/components/acl/access';
 import {AnalyticsArea} from 'sentry/components/analyticsArea';
 import {DropdownButton} from 'sentry/components/dropdownButton';
 import {DropdownMenu} from 'sentry/components/dropdownMenu';
 import {EmptyMessage} from 'sentry/components/emptyMessage';
+import {
+  isSeerSupportedProvider,
+  useSeerSupportedProviderIds,
+} from 'sentry/components/events/autofix/utils';
 import {RepoProviderIcon} from 'sentry/components/repositories/repoProviderIcon';
 import {organizationConfigIntegrationsQueryOptions} from 'sentry/components/repositories/scmIntegrationTree/organizationConfigIntegrationsQueryOptions';
 import {ScmIntegrationTree} from 'sentry/components/repositories/scmIntegrationTree/scmIntegrationTree';
@@ -23,6 +28,8 @@ import {IconBitbucket} from 'sentry/icons/iconBitbucket';
 import {IconChevron} from 'sentry/icons/iconChevron';
 import {IconGithub} from 'sentry/icons/iconGithub';
 import {IconGitlab} from 'sentry/icons/iconGitlab';
+import {IconInfo} from 'sentry/icons/iconInfo';
+import {IconSeer} from 'sentry/icons/iconSeer';
 import {IconVsts} from 'sentry/icons/iconVsts';
 import {t, tct} from 'sentry/locale';
 import {isActiveSuperuser} from 'sentry/utils/isActiveSuperuser';
@@ -34,6 +41,7 @@ export default function OrganizationRepositories() {
   const canAccess =
     hasEveryAccess(['org:integrations'], {organization}) || isActiveSuperuser();
 
+  const supportedProviderIds = useSeerSupportedProviderIds();
   const providersQuery = useQuery(
     organizationConfigIntegrationsQueryOptions({organization})
   );
@@ -55,7 +63,7 @@ export default function OrganizationRepositories() {
   //   modalParams,
   // });
 
-  const hasProviders = false; // scmProviders.length > 0;
+  const hasProviders = scmProviders.length > 0;
   const {repoFilter, setRepoFilter, searchTerm, setSearchTerm} = useScmTreeFilters();
 
   return (
@@ -79,10 +87,26 @@ export default function OrganizationRepositories() {
                   key: provider.key,
                   label: provider.name,
                   leadingItems: <RepoProviderIcon provider={provider.key} size="sm" />,
+                  trailingItems: isSeerSupportedProvider(
+                    {id: provider.key, name: provider.name},
+                    supportedProviderIds
+                  ) ? (
+                    <Tooltip title={t('Supported by Seer')}>
+                      <IconSeer size="xs" variant="muted" />
+                    </Tooltip>
+                  ) : null,
                   onAction: () => {
                     console.log('need to install integration for', provider.key);
                   },
                 })) ?? []
+              }
+              menuFooter={
+                <Flex align="center" gap="xs" padding="md">
+                  <IconSeer size="xs" variant="muted" />
+                  <Text variant="muted" size="sm">
+                    Supported by Sentry's Seer Agent
+                  </Text>
+                </Flex>
               }
             />
           ) : null
