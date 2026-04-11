@@ -1935,8 +1935,14 @@ class OrganizationUpdateTest(OrganizationDetailsTestBase):
         data = {"replayAccessMembers": [valid_member.user_id, nonexistent_id]}
         response = self.get_error_response(self.organization.slug, **data, status_code=400)
         assert "replayAccessMembers" in response.data
-        assert str(nonexistent_id) in response.data["replayAccessMembers"]
-        assert str(valid_member.user_id) not in response.data["replayAccessMembers"]
+        # The error field is a string-like ErrorDetail containing the invalid IDs.
+        # Use word-boundary matching to avoid false positives when the valid user's
+        # ID is a substring of the nonexistent ID (e.g. user_id=9 vs 999999999).
+        import re
+
+        error_str = str(response.data["replayAccessMembers"])
+        assert re.search(r"\b" + str(nonexistent_id) + r"\b", error_str)
+        assert not re.search(r"\b" + str(valid_member.user_id) + r"\b", error_str)
 
         access_count = OrganizationMemberReplayAccess.objects.filter(
             organizationmember__organization=self.organization

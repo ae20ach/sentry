@@ -290,15 +290,20 @@ class UnmergeTestCase(TestCase, SnubaTestCase):
         assert similar_items[1][0] == destination.id
         assert similar_items[1][1]["message:message:character-shingles"] < 1.0
 
-        # ClickHouse's ReplacingMergeTree may temporarily double-count events
-        # under source.id when the Snuba groupedmessage merge mapping is still active
-        # while Kafka replace messages (updating group_id in ClickHouse rows) are
-        # landing concurrently. Wait until Snuba returns a stable count (16 = 10
-        # from merge_source + 6 original source events) before running unmerge, so
-        # get_group_backfill_attributes doesn't accumulate extra increments.
+        # After the merge, ClickHouse's ReplacingMergeTree temporarily keeps both
+        # the old row (group_id=merge_source.id) and the new literal row
+        # (group_id=source.id) for each group1 event until its background merge
+        # deduplicates them. During this window, Snuba can double-count events
+        # causing the unmerge's get_group_backfill_attributes to inflate times_seen.
+        #
+        # Wait until Snuba shows the expected count (16 = 10 merge_source + 6 source)
+        # STABLY for 3 consecutive reads before running the unmerge. Requiring
+        # stability (not just a single hit) ensures ClickHouse has truly settled and
+        # won't fluctuate during the unmerge's multi-batch queries.
         expected_source_count = sum(len(x) for x in events.values()) - 1  # 17 - 1 group3 = 16
         tenant_ids = {"organization_id": project.organization_id, "referrer": "test"}
-        for _ in range(60):
+        stable_reads = 0
+        for _ in range(120):  # up to 120s
             source_event_count = len(
                 list(
                     eventstore.backend.get_events(
@@ -308,7 +313,11 @@ class UnmergeTestCase(TestCase, SnubaTestCase):
                 )
             )
             if source_event_count == expected_source_count:
-                break
+                stable_reads += 1
+                if stable_reads >= 3:
+                    break
+            else:
+                stable_reads = 0
             _time.sleep(1)
 
         with self.tasks():
@@ -323,7 +332,8 @@ class UnmergeTestCase(TestCase, SnubaTestCase):
         rollup_duration = 3600
         expected_source_events = list(events.values())[1]  # group2, 6 events
         expected_source_tsdb_count = len(expected_source_events)
-        for _ in range(60):
+        tsdb_stable_reads = 0
+        for _ in range(120):  # up to 120s
             probe = dict(
                 tsdb.backend.get_range(
                     TSDBModel.group,
@@ -335,7 +345,11 @@ class UnmergeTestCase(TestCase, SnubaTestCase):
                 )[source.id]
             )
             if sum(probe.values()) <= expected_source_tsdb_count:
-                break
+                tsdb_stable_reads += 1
+                if tsdb_stable_reads >= 3:
+                    break
+            else:
+                tsdb_stable_reads = 0
             _time.sleep(1)
 
         assert (
