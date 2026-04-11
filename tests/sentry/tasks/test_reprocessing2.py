@@ -262,7 +262,17 @@ def test_concurrent_events_go_into_new_group(
 
         burst_reprocess(max_jobs=100)
 
-    event3 = eventstore.backend.get_event_by_id(default_project.id, event_id)
+    # Snuba may not have propagated the reprocessed event's new group_id yet.
+    # Retry until event3's group_id points to an existing DB group.
+    for _ in range(10):
+        event3 = eventstore.backend.get_event_by_id(default_project.id, event_id)
+        if (
+            event3 is not None
+            and event3.group_id != event.group_id
+            and Group.objects.filter(id=event3.group_id).exists()
+        ):
+            break
+        _time.sleep(0.5)
     assert event3 is not None
     assert event3.group is not None
     assert event3.event_id == event.event_id
