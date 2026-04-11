@@ -271,13 +271,15 @@ class SeerRpcServiceEndpoint(Endpoint):
         except SnubaRPCRateLimitExceeded as e:
             sentry_sdk.capture_exception()
             raise Throttled(detail="Rate limit exceeded") from e
+        except APIException:
+            raise
         except Exception as e:
             if in_test_environment():
                 raise
             if settings.DEBUG:
                 raise Exception(f"Problem processing seer rpc endpoint {method_name}") from e
             sentry_sdk.capture_exception()
-            raise ValidationError from e
+            raise APIException from e
         return Response(data=result)
 
 

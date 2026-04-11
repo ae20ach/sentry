@@ -87,6 +87,50 @@ class TestSeerRpc(APITestCase):
         assert response.status_code == 429
         assert "Rate limit exceeded" in response.data["detail"]
 
+    def test_rest_framework_exceptions_are_reraised(self) -> None:
+        """Test that REST framework exceptions preserve their status codes."""
+        from rest_framework.exceptions import APIException
+
+        class CustomAPIException(APIException):
+            status_code = 503
+            default_detail = "Service temporarily unavailable"
+
+        path = self._get_path("get_organization_slug")
+        data: dict[str, Any] = {"args": {"org_id": 1}, "meta": {}}
+
+        with patch(
+            "sentry.seer.endpoints.seer_rpc.SeerRpcServiceEndpoint._dispatch_to_local_method"
+        ) as mock_dispatch:
+            mock_dispatch.side_effect = CustomAPIException()
+
+            response = self.client.post(
+                path, data=data, HTTP_AUTHORIZATION=self.auth_header(path, data)
+            )
+
+        assert response.status_code == 503
+        assert "Service temporarily unavailable" in response.data["detail"]
+
+    def test_generic_exceptions_return_500(self) -> None:
+        """Test that generic exceptions return 500 instead of 400."""
+        path = self._get_path("get_organization_slug")
+        data: dict[str, Any] = {"args": {"org_id": 1}, "meta": {}}
+
+        for is_test_environment in [True, False]:
+            with patch(
+                "sentry.seer.endpoints.seer_rpc.in_test_environment",
+                return_value=is_test_environment,
+            ):
+                with patch(
+                    "sentry.seer.endpoints.seer_rpc.SeerRpcServiceEndpoint._dispatch_to_local_method"
+                ) as mock_dispatch:
+                    mock_dispatch.side_effect = RuntimeError("Unexpected internal error")
+
+                    response = self.client.post(
+                        path, data=data, HTTP_AUTHORIZATION=self.auth_header(path, data)
+                    )
+
+                assert response.status_code == 500
+
 
 class TestSeerRpcMethods(APITestCase):
     """Test individual RPC methods"""
