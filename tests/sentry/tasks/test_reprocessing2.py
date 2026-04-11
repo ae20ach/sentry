@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time as _time
 import uuid
 from time import time
 from typing import Any
@@ -26,6 +25,7 @@ from sentry.services.eventstore.models import Event
 from sentry.services.eventstore.processing import event_processing_store
 from sentry.tasks.reprocessing2 import finish_reprocessing, reprocess_group
 from sentry.tasks.store import preprocess_event
+from sentry.testutils.helpers.clickhouse import optimize_snuba_table
 from sentry.testutils.helpers.datetime import before_now
 from sentry.testutils.helpers.task_runner import BurstTaskRunner
 from sentry.testutils.pytest.fixtures import django_db_all
@@ -186,13 +186,9 @@ def test_basic(
 
         assert is_group_finished(old_event.group_id)
 
-        # Old event is actually getting tombstoned. Snuba processes the
-        # tombstone via Kafka asynchronously — retry for up to 30s under
-        # 16-shard parallel load where Snuba's consumer can be slow.
-        for _ in range(30):
-            if not get_event_by_processing_counter("x0"):
-                break
-            _time.sleep(1)
+        # Old event is actually getting tombstoned. Force ClickHouse to
+        # immediately deduplicate so the tombstone takes effect without waiting.
+        optimize_snuba_table("errors_local")
         assert not get_event_by_processing_counter("x0")
         if change_groups:
             assert tombstone_calls == [
@@ -263,17 +259,9 @@ def test_concurrent_events_go_into_new_group(
 
         burst_reprocess(max_jobs=100)
 
-    # Snuba may not have propagated the reprocessed event's new group_id yet.
-    # Retry until event3's group_id points to an existing DB group.
-    for _ in range(10):
-        event3 = eventstore.backend.get_event_by_id(default_project.id, event_id)
-        if (
-            event3 is not None
-            and event3.group_id != event.group_id
-            and Group.objects.filter(id=event3.group_id).exists()
-        ):
-            break
-        _time.sleep(0.5)
+    # Force ClickHouse to propagate the reprocessed event's new group_id.
+    optimize_snuba_table("errors_local")
+    event3 = eventstore.backend.get_event_by_id(default_project.id, event_id)
     assert event3 is not None
     assert event3.group is not None
     assert event3.event_id == event.event_id
@@ -337,14 +325,9 @@ def test_max_events(
 
         burst(max_jobs=100)
 
+    optimize_snuba_table("errors_local")
     for i, event_id in enumerate(event_ids):
-        # Snuba may not have propagated the new group_id yet; retry until
-        # the event reflects the reprocessed state or the timeout expires.
-        for _ in range(10):
-            event = eventstore.backend.get_event_by_id(default_project.id, event_id)
-            if event is None or event.group_id != group_id:
-                break
-            _time.sleep(0.5)
+        event = eventstore.backend.get_event_by_id(default_project.id, event_id)
         if max_events is not None and i < (len(event_ids) - max_events):
             if remaining_events == "delete":
                 assert event is None
@@ -671,20 +654,10 @@ def test_apply_new_stack_trace_rules(
     assert is_group_finished(event1.group_id)
     assert is_group_finished(event2.group_id)
 
-    # Events should now be in same group because of stacktrace rule.
-    # Snuba processes the reprocessed events via Kafka asynchronously, so retry
-    # until Snuba returns the new versions whose group_ids exist in the DB.
-    for _ in range(10):
-        event1 = eventstore.backend.get_event_by_id(default_project.id, event_id1)
-        event2 = eventstore.backend.get_event_by_id(default_project.id, event_id2)
-        if (
-            event1 is not None
-            and event2 is not None
-            and Group.objects.filter(id=event1.group_id).exists()
-            and Group.objects.filter(id=event2.group_id).exists()
-        ):
-            break
-        _time.sleep(0.5)
+    # Force ClickHouse to propagate the reprocessed events before asserting.
+    optimize_snuba_table("errors_local")
+    event1 = eventstore.backend.get_event_by_id(default_project.id, event_id1)
+    event2 = eventstore.backend.get_event_by_id(default_project.id, event_id2)
     assert event1 is not None
     assert event2 is not None
     assert event1.group is not None

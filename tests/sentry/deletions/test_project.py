@@ -1,4 +1,3 @@
-import time
 from unittest import mock
 
 from sentry import eventstream
@@ -36,6 +35,7 @@ from sentry.sentry_apps.models.servicehook import ServiceHook
 from sentry.services import eventstore
 from sentry.snuba.models import QuerySubscription, SnubaQuery
 from sentry.testutils.cases import TransactionTestCase
+from sentry.testutils.helpers.clickhouse import optimize_snuba_table
 from sentry.testutils.helpers.datetime import before_now
 from sentry.testutils.hybrid_cloud import HybridCloudTestMixin
 from sentry.testutils.skips import requires_snuba
@@ -241,21 +241,17 @@ class DeleteProjectTest(BaseWorkflowTest, TransactionTestCase, HybridCloudTestMi
         assert not Group.objects.filter(id=group.id).exists()
 
         # Verify the correct Snuba delete API calls were made — our code's
-        # responsibility. ClickHouse's background merge may take an unbounded
-        # time under 16-shard parallel load, so we assert on the eventstream
-        # signals rather than waiting for ClickHouse.
+        # responsibility. Then force ClickHouse to immediately deduplicate so
+        # tombstoned rows are removed without waiting for background merge.
         mock_start.assert_called_once()
         mock_end.assert_called_once()
 
+        optimize_snuba_table("errors_local")
         conditions = eventstore.Filter(project_ids=[project.id, keeper.id], group_ids=[group.id])
-        # Best-effort Snuba state check; don't fail the test on propagation lag.
-        for _ in range(10):
-            events = eventstore.backend.get_events(
-                conditions, tenant_ids={"organization_id": 123, "referrer": "r"}
-            )
-            if not events:
-                break
-            time.sleep(1)
+        events = eventstore.backend.get_events(
+            conditions, tenant_ids={"organization_id": 123, "referrer": "r"}
+        )
+        assert len(events) == 0
 
     @mock.patch("sentry.quotas.backend.remove_seat")
     def test_delete_with_uptime_monitors(self, mock_remove_seat: mock.MagicMock) -> None:

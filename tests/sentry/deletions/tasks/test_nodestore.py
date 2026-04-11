@@ -1,4 +1,3 @@
-import time
 from uuid import uuid4
 
 import pytest
@@ -11,6 +10,7 @@ from sentry.services.eventstore.models import Event
 from sentry.snuba.dataset import Dataset
 from sentry.snuba.referrer import Referrer
 from sentry.testutils.cases import TestCase
+from sentry.testutils.helpers.clickhouse import optimize_snuba_table
 from sentry.utils.snuba import UnqualifiedQueryError
 
 
@@ -58,13 +58,10 @@ class NodestoreDeletionTaskTest(TestCase):
                 },
             )
 
-        # Snuba processes eventstream deletions asynchronously. Retry briefly to
-        # allow the deletion to propagate before asserting.
-        for _ in range(10):
-            events_after = self.fetch_events_from_eventstore(group_ids, dataset=Dataset.Events)
-            if not events_after:
-                break
-            time.sleep(0.5)
+        # Force ClickHouse to immediately deduplicate so tombstoned rows are
+        # removed without waiting for background merge.
+        optimize_snuba_table("errors_local")
+        events_after = self.fetch_events_from_eventstore(group_ids, dataset=Dataset.Events)
         assert len(events_after) == 0
 
     def test_deletion_with_project_deleted(self) -> None:

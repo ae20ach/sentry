@@ -4,7 +4,6 @@ import functools
 import hashlib
 import itertools
 import logging
-import time as _time
 import uuid
 from datetime import timedelta
 from unittest import mock
@@ -36,6 +35,7 @@ from sentry.tasks.unmerge import (
 )
 from sentry.testutils.cases import SnubaTestCase, TestCase
 from sentry.testutils.helpers.analytics import assert_last_analytics_event
+from sentry.testutils.helpers.clickhouse import optimize_snuba_table
 from sentry.testutils.helpers.datetime import before_now
 from sentry.testutils.helpers.features import with_feature
 from sentry.tsdb.base import TSDBModel
@@ -290,72 +290,30 @@ class UnmergeTestCase(TestCase, SnubaTestCase):
         assert similar_items[1][0] == destination.id
         assert similar_items[1][1]["message:message:character-shingles"] < 1.0
 
-        # Root cause: end_merge sends an async HTTP message to Snuba that re-adds
-        # the merge mapping to groupedmessage from its internal queue even after
-        # groupedmessage/drop. The only reliable fix is to reset ALL Snuba event +
-        # groupedmessage state and re-populate with the correct post-merge group_ids.
-        #
-        # After the merge, GroupHash records point to:
-        #   "group1" fingerprint → source.id  (moved during merge)
-        #   "group2" fingerprint → source.id  (unchanged)
-        #   "group3" fingerprint → destination.id  (unchanged)
-        #
-        # Re-storing via store_event uses those GroupHash pointers, so events land
-        # on the correct groups without any groupedmessage mapping needed.
-        for resp in [
-            self.call_snuba("/tests/events/drop"),
-            self.call_snuba("/tests/groupedmessage/drop"),
-        ]:
-            assert resp.status_code == 200, f"Snuba drop failed: {resp.status_code}"
+        # After end_merge, Snuba's internal queue may re-add the groupedmessage
+        # mapping, causing source.id to show 26 events (6 literal + 10 via mapping
+        # + 10 Kafka-replaced rows) instead of 16.  Forcing OPTIMIZE TABLE FINAL
+        # on ClickHouse immediately deduplicates the ReplacingMergeTree rows
+        # (removing old merge_source.id rows) AND flushes Snuba's internal queue,
+        # leaving exactly 16 clean literal events in source.id.
+        optimize_snuba_table("errors_local")
+        optimize_snuba_table("groupedmessage_local")
 
-        # Re-store all 17 events with minimal clean data (NOT raw evt.data which
-        # contains internal Sentry processing fields that fail re-ingestion).
-        # store_event uses GroupHash to route events to the correct post-merge groups.
-        all_stored_events = (
-            list(events.values())[0]  # group1 → source
-            + list(events.values())[1]  # group2 → source
-            + list(events.values())[2]  # group3 → destination
-        )
-        for evt in all_stored_events:
-            clean = {
-                "event_id": evt.event_id,
-                "timestamp": evt.datetime.isoformat(),
-                "fingerprint": evt.data.get("fingerprint") or ["default"],
-                "type": "default",
-            }
-            if evt.data.get("user"):
-                clean["user"] = evt.data["user"]
-            env = evt.get_tag("environment")
-            if env:
-                clean["environment"] = env
-            release = evt.get_tag("sentry:release")
-            if release:
-                clean["release"] = release
-            # Preserve color tag for TSDB consistency checks
-            color = evt.get_tag("color")
-            if color:
-                clean["tags"] = [["color", color]]
-            self.store_event(data=clean, project_id=project.id)
-
-        # Re-storing group3 increments destination.times_seen; reset it so the
-        # unmerge's get_group_backfill_attributes starts from the correct baseline.
-        Group.objects.filter(id=destination.id).update(times_seen=1)
-
-        # Now source.id has exactly 16 clean events (no mapping, no duplicates).
+        # Verify the count is now exactly 16 before starting the unmerge.
         expected_source_count = sum(len(x) for x in events.values()) - 1  # 17 - 1 group3 = 16
         tenant_ids = {"organization_id": project.organization_id, "referrer": "test"}
-        for _ in range(30):
-            source_event_count = len(
-                list(
-                    eventstore.backend.get_events(
-                        eventstore.Filter(project_ids=[project.id], group_ids=[source.id]),
-                        tenant_ids=tenant_ids,
-                    )
+        source_event_count = len(
+            list(
+                eventstore.backend.get_events(
+                    eventstore.Filter(project_ids=[project.id], group_ids=[source.id]),
+                    tenant_ids=tenant_ids,
                 )
             )
-            if source_event_count == expected_source_count:
-                break
-            _time.sleep(1)
+        )
+        assert source_event_count == expected_source_count, (
+            f"After OPTIMIZE, source.id still has {source_event_count} events "
+            f"(expected {expected_source_count})"
+        )
 
         with self.tasks():
             unmerge.delay(
@@ -363,26 +321,11 @@ class UnmergeTestCase(TestCase, SnubaTestCase):
             )
 
         # TSDBModel.group reads come from Snuba ClickHouse (writes are DummyTSDB
-        # no-ops). Wait for the unmerge's Kafka replacement messages to propagate
-        # so ClickHouse shows source.id with only group2's 6 events, not the full
-        # merged 16. Use the same rollup as the assertions below.
+        # no-ops). Force ClickHouse to deduplicate now so the TSDB assertions
+        # below see the correct post-unmerge counts immediately.
         rollup_duration = 3600
-        expected_source_events = list(events.values())[1]  # group2, 6 events
-        expected_source_tsdb_count = len(expected_source_events)
-        for _ in range(60):
-            probe = dict(
-                tsdb.backend.get_range(
-                    TSDBModel.group,
-                    [source.id],
-                    now - timedelta(seconds=rollup_duration),
-                    time_from_now(17),
-                    rollup_duration,
-                    tenant_ids={"referrer": "get_range", "organization_id": 1},
-                )[source.id]
-            )
-            if sum(probe.values()) <= expected_source_tsdb_count:
-                break
-            _time.sleep(1)
+        optimize_snuba_table("errors_local")
+        optimize_snuba_table("groupedmessage_local")
 
         assert (
             list(

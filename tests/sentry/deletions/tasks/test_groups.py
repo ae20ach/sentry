@@ -1,4 +1,3 @@
-import time
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -16,6 +15,7 @@ from sentry.models.groupredirect import GroupRedirect
 from sentry.services import eventstore
 from sentry.services.eventstore.models import Event
 from sentry.testutils.cases import TestCase
+from sentry.testutils.helpers.clickhouse import optimize_snuba_table
 from sentry.testutils.helpers.datetime import before_now
 from sentry.testutils.skips import requires_snuba
 
@@ -92,18 +92,14 @@ class DeleteGroupTest(TestCase):
         assert not nodestore.backend.get(node_id_2)
 
         # Verify the correct Snuba delete API calls were made — our code's
-        # responsibility. ClickHouse's background merge may take an unbounded
-        # time to process tombstones under 16-shard parallel load, so we assert
-        # on the eventstream signals rather than waiting for ClickHouse.
+        # responsibility. Then force ClickHouse to immediately deduplicate so
+        # tombstoned rows are removed without waiting for background merge.
         mock_start.assert_called_once_with(self.project.id, [group.id])
         mock_end.assert_called_once()
 
-        # Best-effort Snuba state check: retry briefly without failing the test.
-        for _ in range(10):
-            events = eventstore.backend.get_events(conditions, tenant_ids=tenant_ids)
-            if not events:
-                break
-            time.sleep(1)
+        optimize_snuba_table("errors_local")
+        events = eventstore.backend.get_events(conditions, tenant_ids=tenant_ids)
+        assert len(events) == 0
 
     def test_max_chunk_size_calls_once(self) -> None:
         CHUNK_SIZE = 5
