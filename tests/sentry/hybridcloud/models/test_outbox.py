@@ -201,7 +201,11 @@ class OutboxDrainTest(TransactionTestCase):
 
         with outbox_context(flush=False):
             outbox1.save()
-        barrier = _PairwiseSync()
+        # Use the standard Barrier here: the short timeout (1s) is intentional.
+        # The drain should process outbox1 then stop — if it tries to reach a
+        # third barrier point (i.e. processes outbox2 it shouldn't), the 1s
+        # timeout raises BrokenBarrierError, which is a deliberate test signal.
+        barrier = threading.Barrier(2, timeout=1)
         processing_thread = threading.Thread(
             target=wrap_with_connection_closure(
                 lambda: outbox1.drain_shard(_test_processing_barrier=barrier)
