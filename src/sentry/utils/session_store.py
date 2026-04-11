@@ -123,9 +123,13 @@ class RedisSessionStore:
             try:
                 return loads(state_json)
             except Exception as e:
+                # Redis has the key but the value is malformed (e.g. bit flip).
+                # Do NOT fall back to the session copy — the caller should treat
+                # this as an invalid state, same as the pre-fallback behaviour.
                 sentry_sdk.capture_exception(e)
+                return None
 
-        # Redis miss — fall back to the Django session copy.
+        # Redis key is absent (flushed) — fall back to the Django session copy.
         fallback = self.request.session.get(self._fallback_session_key)
         if fallback is not None:
             # Re-warm Redis so subsequent reads are fast.

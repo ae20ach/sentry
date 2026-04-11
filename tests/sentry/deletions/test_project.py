@@ -248,9 +248,16 @@ class DeleteProjectTest(BaseWorkflowTest, TransactionTestCase, HybridCloudTestMi
 
         optimize_snuba_table("errors_local")
         conditions = eventstore.Filter(project_ids=[project.id, keeper.id], group_ids=[group.id])
-        events = eventstore.backend.get_events(
-            conditions, tenant_ids={"organization_id": 123, "referrer": "r"}
-        )
+        # Retry briefly in case the tombstone Kafka message hasn't landed yet.
+        for _ in range(10):
+            events = eventstore.backend.get_events(
+                conditions, tenant_ids={"organization_id": 123, "referrer": "r"}
+            )
+            if not events:
+                break
+            import time as _t
+
+            _t.sleep(0.5)
         assert len(events) == 0
 
     @mock.patch("sentry.quotas.backend.remove_seat")

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time as _time
 import uuid
 from time import time
 from typing import Any
@@ -325,9 +326,15 @@ def test_max_events(
 
         burst(max_jobs=100)
 
+    # OPTIMIZE deduplicates existing rows; also retry briefly for reprocessing
+    # Kafka messages that write new events with updated group_ids asynchronously.
     optimize_snuba_table("errors_local")
     for i, event_id in enumerate(event_ids):
-        event = eventstore.backend.get_event_by_id(default_project.id, event_id)
+        for _ in range(10):
+            event = eventstore.backend.get_event_by_id(default_project.id, event_id)
+            if event is None or event.group_id != group_id:
+                break
+            _time.sleep(0.5)
         if max_events is not None and i < (len(event_ids) - max_events):
             if remaining_events == "delete":
                 assert event is None

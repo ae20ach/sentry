@@ -316,8 +316,16 @@ class UnmergeTestCase(TestCase, SnubaTestCase):
         )
 
         with self.tasks():
+            # Use batch_size > total events (16) so the unmerge processes all
+            # events in a single Snuba query, eliminating inter-batch races where
+            # Snuba's groupedmessage queue re-adds the merge mapping mid-unmerge.
             unmerge.delay(
-                project.id, source.id, destination.id, [list(events.keys())[0]], None, batch_size=5
+                project.id,
+                source.id,
+                destination.id,
+                [list(events.keys())[0]],
+                None,
+                batch_size=20,
             )
 
         # TSDBModel.group reads come from Snuba ClickHouse (writes are DummyTSDB
