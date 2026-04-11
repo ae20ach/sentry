@@ -555,6 +555,7 @@ def test_apply_new_fingerprinting_rules(
     assert is_group_finished(event1.group_id)
 
     # Events should now be in different groups
+    optimize_snuba_table("events")
     event1 = eventstore.backend.get_event_by_id(default_project.id, event_id1)
     event2 = eventstore.backend.get_event_by_id(default_project.id, event_id2)
     assert event1 is not None
