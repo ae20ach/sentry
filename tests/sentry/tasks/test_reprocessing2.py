@@ -427,6 +427,7 @@ def test_attachments_and_userfeedback(
 
         burst(max_jobs=100)
 
+    optimize_snuba_table("events")
     new_event = eventstore.backend.get_event_by_id(default_project.id, event_id)
     assert new_event is not None
     assert new_event.group_id is not None
