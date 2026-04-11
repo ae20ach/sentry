@@ -165,6 +165,10 @@ def test_basic(
 
             burst(max_jobs=100)
 
+        # Force ClickHouse to propagate reprocessed event before asserting on
+        # event.group — without this, event.group_id may still be the old
+        # (deleted) group if the Snuba replace message hasn't landed yet.
+        optimize_snuba_table("events")
         (event,) = get_event_by_processing_counter("x1")
 
         # Assert original data is used
@@ -187,9 +191,6 @@ def test_basic(
 
         assert is_group_finished(old_event.group_id)
 
-        # Old event is actually getting tombstoned. Force ClickHouse to
-        # immediately deduplicate so the tombstone takes effect without waiting.
-        optimize_snuba_table("events")
         assert not get_event_by_processing_counter("x0")
         if change_groups:
             assert tombstone_calls == [

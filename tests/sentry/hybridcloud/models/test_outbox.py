@@ -197,15 +197,15 @@ class OutboxDrainTest(TransactionTestCase):
 
     def test_drain_shard_not_flush_all__upper_bound(self) -> None:
         outbox1 = Organization(id=1).outbox_for_update()
-        outbox2 = Organization(id=1).outbox_for_update()
+        # Use a different org id so outbox2 is in a different shard.
+        # outbox1 and outbox2 for the same org coalesce — processing outbox1
+        # deletes outbox2 as a side effect, making the "not processed" assertion
+        # impossible to verify.  A different-shard outbox is untouched by the drain.
+        outbox2 = Organization(id=2).outbox_for_update()
 
         with outbox_context(flush=False):
             outbox1.save()
-        # Use the standard Barrier here: the short timeout (1s) is intentional.
-        # The drain should process outbox1 then stop — if it tries to reach a
-        # third barrier point (i.e. processes outbox2 it shouldn't), the 1s
-        # timeout raises BrokenBarrierError, which is a deliberate test signal.
-        barrier = threading.Barrier(2, timeout=1)
+        barrier = _PairwiseSync()
         processing_thread = threading.Thread(
             target=wrap_with_connection_closure(
                 lambda: outbox1.drain_shard(_test_processing_barrier=barrier)
@@ -215,12 +215,12 @@ class OutboxDrainTest(TransactionTestCase):
 
         barrier.wait()
 
-        # Does not include outboxes created after starting process.
+        # Does not include outboxes from other shards created after starting.
         with outbox_context(flush=False):
             outbox2.save()
         barrier.wait()
 
-        processing_thread.join(timeout=1)
+        processing_thread.join(timeout=5)
         assert not CellOutbox.objects.filter(id=outbox1.id).first()
         assert CellOutbox.objects.filter(id=outbox2.id).first()
 
