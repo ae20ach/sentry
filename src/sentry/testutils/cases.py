@@ -1035,7 +1035,7 @@ class IntegrationTestCase(TestCase):
         self.pipeline.initialize()
         self.save_session()
 
-    def _callTestMethod(self):
+    def _callTestMethod(self, *args, **kwargs):
         # setUp() has already run, so self.pipeline exists.
         # Re-initialize immediately before the test body to get a fresh Redis
         # key, in case a concurrent xdist worker's flushdb() cleared the one
@@ -1043,7 +1043,7 @@ class IntegrationTestCase(TestCase):
         # microseconds between save_session() and the first HTTP request.
         self.pipeline.initialize()
         self.save_session()
-        super()._callTestMethod()
+        super()._callTestMethod(*args, **kwargs)
 
     def assertDialogSuccess(self, resp):
         assert b'window.opener.postMessage({"success":true' in resp.content
