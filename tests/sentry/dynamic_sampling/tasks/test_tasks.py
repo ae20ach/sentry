@@ -3,6 +3,7 @@ from datetime import timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
+import time_machine
 from django.utils import timezone
 
 from sentry.dynamic_sampling import RuleType, generate_rules, get_redis_client_for_ds
@@ -411,26 +412,30 @@ class TestBoostLowVolumeTransactionsTasks(TasksTestCase):
         self.orgs_info = []
         num_orgs = 3
         num_proj_per_org = 3
-        for org_idx in range(num_orgs):
-            org = self.create_old_organization(f"test-org{org_idx}")
-            org_info = {"org_id": org.id, "project_ids": []}
-            self.orgs_info.append(org_info)
-            for proj_idx in range(num_proj_per_org):
-                p = self.create_old_project(name=f"test-project-{proj_idx}", organization=org)
-                org_info["project_ids"].append(p.id)
-                # create 5 transaction types
-                for name in ["ts1", "ts2", "tm3", "tl4", "tl5"]:
-                    # make up some unique count
-                    idx = org_idx * num_orgs + proj_idx
-                    num_transactions = self.get_count_for_transaction(idx, name)
-                    self.store_performance_metric(
-                        name=SpanMRI.COUNT_PER_ROOT_PROJECT.value,
-                        tags={"transaction": name, "is_segment": "true"},
-                        minutes_before_now=30,
-                        value=num_transactions,
-                        project_id=p.id,
-                        org_id=org.id,
-                    )
+        # Wrap create_old_project calls in time_machine.travel(tick=True) so each
+        # project.save() gets a unique millisecond timestamp, preventing
+        # MaxSnowflakeRetryError when multiple xdist workers share MOCK_DATETIME.
+        with time_machine.travel(MOCK_DATETIME, tick=True):
+            for org_idx in range(num_orgs):
+                org = self.create_old_organization(f"test-org{org_idx}")
+                org_info = {"org_id": org.id, "project_ids": []}
+                self.orgs_info.append(org_info)
+                for proj_idx in range(num_proj_per_org):
+                    p = self.create_old_project(name=f"test-project-{proj_idx}", organization=org)
+                    org_info["project_ids"].append(p.id)
+                    # create 5 transaction types
+                    for name in ["ts1", "ts2", "tm3", "tl4", "tl5"]:
+                        # make up some unique count
+                        idx = org_idx * num_orgs + proj_idx
+                        num_transactions = self.get_count_for_transaction(idx, name)
+                        self.store_performance_metric(
+                            name=SpanMRI.COUNT_PER_ROOT_PROJECT.value,
+                            tags={"transaction": name, "is_segment": "true"},
+                            minutes_before_now=30,
+                            value=num_transactions,
+                            project_id=p.id,
+                            org_id=org.id,
+                        )
         self.org_ids = [org["org_id"] for org in self.orgs_info]
 
     def get_count_for_transaction(self, idx: int, name: str):

@@ -300,9 +300,11 @@ class UnmergeTestCase(TestCase, SnubaTestCase):
         # Fix: drop the groupedmessage table so only literal ClickHouse rows count.
         # Then wait until source.id shows exactly 16 events (confirming all 10
         # Kafka replace messages have been processed and no mapping exists).
-        self.call_snuba("/tests/groupedmessage/drop")
+        resp = self.call_snuba("/tests/groupedmessage/drop")
+        assert resp.status_code == 200, f"groupedmessage drop failed: {resp.status_code}"
         expected_source_count = sum(len(x) for x in events.values()) - 1  # 17 - 1 group3 = 16
         tenant_ids = {"organization_id": project.organization_id, "referrer": "test"}
+        source_event_count = -1
         for _ in range(60):
             source_event_count = len(
                 list(
@@ -315,6 +317,13 @@ class UnmergeTestCase(TestCase, SnubaTestCase):
             if source_event_count == expected_source_count:
                 break
             _time.sleep(1)
+        # Fail fast with a diagnostic message if the count never stabilised.
+        # This tells us whether the issue is in the poll or in the unmerge itself.
+        assert source_event_count == expected_source_count, (
+            f"source.id event count did not reach {expected_source_count} after 60s "
+            f"(final count: {source_event_count}). "
+            f"source.id={source.id}, project.id={project.id}"
+        )
 
         with self.tasks():
             unmerge.delay(
