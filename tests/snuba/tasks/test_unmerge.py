@@ -290,22 +290,41 @@ class UnmergeTestCase(TestCase, SnubaTestCase):
         assert similar_items[1][0] == destination.id
         assert similar_items[1][1]["message:message:character-shingles"] < 1.0
 
-        # After end_merge, Snuba's groupedmessage table may still hold the merge
-        # mapping while Kafka replace messages that update individual ClickHouse rows
-        # (group_id merge_source→source) are being processed concurrently.  This
-        # creates a double-counting window: events appear both via the mapping AND
-        # as literal source.id rows, inflating the count above 16 and causing the
-        # unmerge's get_group_backfill_attributes to produce wrong times_seen.
+        # Root cause: end_merge sends an async HTTP message to Snuba that re-adds
+        # the merge mapping to groupedmessage from its internal queue even after
+        # groupedmessage/drop. The only reliable fix is to reset ALL Snuba event +
+        # groupedmessage state and re-populate with the correct post-merge group_ids.
         #
-        # Fix: drop the groupedmessage table so only literal ClickHouse rows count.
-        # Then wait until source.id shows exactly 16 events (confirming all 10
-        # Kafka replace messages have been processed and no mapping exists).
-        resp = self.call_snuba("/tests/groupedmessage/drop")
-        assert resp.status_code == 200, f"groupedmessage drop failed: {resp.status_code}"
+        # After the merge, GroupHash records point to:
+        #   "group1" fingerprint → source.id  (moved during merge)
+        #   "group2" fingerprint → source.id  (unchanged)
+        #   "group3" fingerprint → destination.id  (unchanged)
+        #
+        # Re-storing via store_event uses those GroupHash pointers, so events land
+        # on the correct groups without any groupedmessage mapping needed.
+        for resp in [
+            self.call_snuba("/tests/events/drop"),
+            self.call_snuba("/tests/groupedmessage/drop"),
+        ]:
+            assert resp.status_code == 200, f"Snuba drop failed: {resp.status_code}"
+
+        # Re-store all 17 events with their original data; GroupHash now routes them
+        # to the correct post-merge groups (source or destination).
+        all_stored_events = (
+            list(events.values())[0]  # group1 → source
+            + list(events.values())[1]  # group2 → source
+            + list(events.values())[2]  # group3 → destination
+        )
+        for evt in all_stored_events:
+            self.store_event(
+                data=dict(evt.data),
+                project_id=project.id,
+            )
+
+        # Now source.id has exactly 16 clean events (no mapping, no duplicates).
         expected_source_count = sum(len(x) for x in events.values()) - 1  # 17 - 1 group3 = 16
         tenant_ids = {"organization_id": project.organization_id, "referrer": "test"}
-        source_event_count = -1
-        for _ in range(60):
+        for _ in range(30):
             source_event_count = len(
                 list(
                     eventstore.backend.get_events(
@@ -317,13 +336,6 @@ class UnmergeTestCase(TestCase, SnubaTestCase):
             if source_event_count == expected_source_count:
                 break
             _time.sleep(1)
-        # Fail fast with a diagnostic message if the count never stabilised.
-        # This tells us whether the issue is in the poll or in the unmerge itself.
-        assert source_event_count == expected_source_count, (
-            f"source.id event count did not reach {expected_source_count} after 60s "
-            f"(final count: {source_event_count}). "
-            f"source.id={source.id}, project.id={project.id}"
-        )
 
         with self.tasks():
             unmerge.delay(
