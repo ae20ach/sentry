@@ -52,7 +52,7 @@ from urllib3.response import BaseHTTPResponse
 
 from sentry.utils import json, metrics
 from sentry.utils.concurrent import ContextPropagatingThreadPoolExecutor
-from sentry.utils.snuba import SnubaError, _snuba_pool
+from sentry.utils.snuba import SnubaError, _get_snuba_pool
 
 logger = logging.getLogger(__name__)
 RPCResponseType = TypeVar("RPCResponseType", bound=ProtobufMessage)
@@ -376,7 +376,7 @@ def _make_rpc_request(
                     span.set_tag("snuba.referrer", referrer)
                     span.set_data("snuba.query", req)
                 try:
-                    http_resp = _snuba_pool.urlopen(
+                    http_resp = _get_snuba_pool().urlopen(
                         "POST",
                         f"/rpc/{endpoint_name}/{class_version}",
                         body=req.SerializeToString(),

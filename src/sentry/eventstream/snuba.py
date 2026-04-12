@@ -487,7 +487,7 @@ class SnubaEventStream(SnubaProtocolEventStream):
         codec.decode(serialized_data.encode("utf-8"), validate=True)
 
         try:
-            resp = snuba._snuba_pool.urlopen(
+            resp = snuba._get_snuba_pool().urlopen(
                 "POST",
                 f"/tests/{entity}/eventstream",
                 body=serialized_data,
@@ -508,7 +508,7 @@ class SnubaEventStream(SnubaProtocolEventStream):
             field.make_multipart(content_type="application/octet-stream")
             body, content_type = encode_multipart_formdata([field])
 
-            resp = snuba._snuba_pool.urlopen(
+            resp = snuba._get_snuba_pool().urlopen(
                 "POST",
                 EAP_ITEMS_INSERT_ENDPOINT,
                 body=body,
