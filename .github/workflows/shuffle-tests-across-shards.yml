@@ -116,48 +116,63 @@ jobs:
             exit "$rc"
           }
 
-      - name: Detect test pollution
-        if: failure() && steps.run-tests.outcome == 'failure'
-        id: detect-pollution
-        run: |
-          test -f "$GITHUB_WORKSPACE/failing-testid" || exit 0
-          read -r FAILING_TESTID < "$GITHUB_WORKSPACE/failing-testid"
-
-          # Run the failing test in isolation (no shuffle, no other tests).
-          # If it passes alone, the failure is likely caused by test pollution
-          # (state leaked from a prior test). If it fails alone, it's a genuine
-          # flaky test. Either way we don't fail this step — just record the type.
-          if SENTRY_SHUFFLE_TESTS=0 timeout 300 .venv/bin/pytest \
-              -x "$FAILING_TESTID" \
-              --reuse-db \
-              --no-header -q \
-              > /tmp/isolation-run.log 2>&1; then
-            echo "is_pollution=true" >> "$GITHUB_OUTPUT"
-            echo "Test passes in isolation → likely pollution"
-          else
-            echo "is_pollution=false" >> "$GITHUB_OUTPUT"
-            echo "Test fails in isolation → genuine flake"
-          fi
-
-      - name: Write failure artifact
+      - name: Truncate testids
         if: failure()
         run: |
           test -f "$GITHUB_WORKSPACE/failing-testid" || exit 0
+          # Keep only tests up to and including the failing test;
+          # tests that run after it cannot be polluting it.
           read -r FAILING_TESTID < "$GITHUB_WORKSPACE/failing-testid"
-          LONGREPR=$(cat "$GITHUB_WORKSPACE/failing-testid-longrepr" 2>/dev/null || echo "no failure detail available")
-          # Use pollution type if detect-pollution determined the test passes alone.
-          FAILURE_TYPE="flaky"
-          if [ "${{ steps.detect-pollution.outputs.is_pollution }}" = "true" ]; then
-            FAILURE_TYPE="pollution"
+          head -n "$(grep -nF "$FAILING_TESTID" "$GITHUB_WORKSPACE/testids-full" | head -1 | cut -d: -f1)" "$GITHUB_WORKSPACE/testids-full" > "$GITHUB_WORKSPACE/testids"
+
+      - name: Detect test pollution
+        id: detect-test-pollution
+        if: failure()
+        env:
+          PYTHONUNBUFFERED: 1
+        run: |
+          test -f "$GITHUB_WORKSPACE/failing-testid" || exit 0
+          read -r FAILING_TESTID < "$GITHUB_WORKSPACE/failing-testid"
+          python .github/workflows/scripts/detect_test_pollution.py \
+            --failing-test "$FAILING_TESTID" \
+            --testids-file "$GITHUB_WORKSPACE/testids" \
+            | tee "$GITHUB_WORKSPACE/detect-test-pollution-output"
+          read -r POLLUTING_TESTID < <(tail -1 "$GITHUB_WORKSPACE/detect-test-pollution-output")
+          {
+            echo "detected test pollution: \`pytest $POLLUTING_TESTID $FAILING_TESTID\`"
+            echo "sentry sha: ${{ github.sha }}"
+            echo "run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } | tee -a "$GITHUB_STEP_SUMMARY" > "$GITHUB_WORKSPACE/issue-body"
+
+      - name: Write failure artifact
+        if: failure()
+        env:
+          DETECT_POLLUTION_OUTCOME: ${{ steps.detect-test-pollution.outcome }}
+        run: |
+          test -f "$GITHUB_WORKSPACE/failing-testid" || exit 0
+          read -r FAILING_TESTID < "$GITHUB_WORKSPACE/failing-testid"
+          if [ "$DETECT_POLLUTION_OUTCOME" = "success" ]; then
+            POLLUTING_TESTID=$(tail -1 "$GITHUB_WORKSPACE/detect-test-pollution-output")
+            jq -n \
+              --arg type "pollution" \
+              --arg testid "$FAILING_TESTID" \
+              --arg polluting_testid "$POLLUTING_TESTID" \
+              --arg pollution_body "$(cat "$GITHUB_WORKSPACE/issue-body")" \
+              --arg sha "${{ github.sha }}" \
+              --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              '{type: $type, testid: $testid, polluting_testid: $polluting_testid, pollution_body: $pollution_body, sha: $sha, run_url: $run_url}' \
+              > "$GITHUB_WORKSPACE/failure.json"
+          else
+            LONGREPR=$(cat "$GITHUB_WORKSPACE/failing-testid-longrepr" 2>/dev/null || echo "no failure detail available")
+            jq -n \
+              --arg type "flaky" \
+              --arg testid "$FAILING_TESTID" \
+              --arg longrepr "$LONGREPR" \
+              --arg sha "${{ github.sha }}" \
+              --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              '{type: $type, testid: $testid, longrepr: $longrepr, sha: $sha, run_url: $run_url}' \
+              > "$GITHUB_WORKSPACE/failure.json"
           fi
-          jq -n \
-            --arg type "$FAILURE_TYPE" \
-            --arg testid "$FAILING_TESTID" \
-            --arg longrepr "$LONGREPR" \
-            --arg sha "${{ github.sha }}" \
-            --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            '{type: $type, testid: $testid, longrepr: $longrepr, sha: $sha, run_url: $run_url}' \
-            > "$GITHUB_WORKSPACE/failure.json"
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
