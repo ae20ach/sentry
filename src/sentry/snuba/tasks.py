@@ -27,7 +27,7 @@ from sentry.snuba.utils import build_query_strings
 from sentry.tasks.base import instrumented_task
 from sentry.taskworker.namespaces import alerts_tasks
 from sentry.utils import metrics, snuba_rpc
-from sentry.utils.snuba import SNUBA_INFO, SnubaError, _get_snuba_pool
+from sentry.utils.snuba import SNUBA_INFO, SnubaError, _snuba_pool
 
 logger = logging.getLogger(__name__)
 
@@ -291,7 +291,7 @@ def _create_snql_in_snuba(
     entity_key = get_entity_key_from_request(snql_query)
 
     post_body: str | bytes = orjson.dumps(body)
-    response = _get_snuba_pool().urlopen(
+    response = _snuba_pool.urlopen(
         "POST",
         f"/{snuba_query.dataset}/{entity_key.value}/subscriptions",
         body=post_body,
@@ -325,7 +325,7 @@ def _create_rpc_in_snuba(
 
 
 def _delete_from_snuba(dataset: Dataset, subscription_id: str, entity_key: EntityKey) -> None:
-    response = _get_snuba_pool().urlopen(
+    response = _snuba_pool.urlopen(
         "DELETE", f"/{dataset.value}/{entity_key.value}/subscriptions/{subscription_id}"
     )
     if response.status != 202:

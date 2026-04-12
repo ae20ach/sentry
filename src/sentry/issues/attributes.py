@@ -22,7 +22,7 @@ from sentry.signals import issue_assigned, issue_deleted, issue_unassigned, post
 from sentry.utils import json, metrics, snuba
 from sentry.utils.arroyo_producer import SingletonProducer, get_arroyo_producer
 from sentry.utils.kafka_config import get_topic_definition
-from sentry.utils.snuba import _get_snuba_pool
+from sentry.utils.snuba import _snuba_pool
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +108,7 @@ def produce_snapshot_to_kafka(snapshot: GroupAttributesSnapshot) -> None:
         # If we're not running Kafka then we're just in dev. Skip producing to Kafka and just
         # write to snuba directly
         try:
-            resp = _get_snuba_pool().urlopen(
+            resp = _snuba_pool.urlopen(
                 "POST",
                 "/tests/entities/group_attributes/insert",
                 body=json.dumps([snapshot]),

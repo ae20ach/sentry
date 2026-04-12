@@ -562,33 +562,46 @@ class RetrySkipTimeout(urllib3.Retry):
             )
 
 
-_snuba_pool: urllib3.HTTPConnectionPool | None = None
+class _SnubaPool:
+    """Proxy for the Snuba HTTP connection pool.
 
+    Reads ``settings.SENTRY_SNUBA`` on first use instead of at module-import
+    time.  This ensures xdist workers that override the setting in
+    ``pytest_configure`` (to point at a per-worker snuba-gw container) get the
+    correct pool, even when the module was imported before the override ran.
 
-def _get_snuba_pool() -> urllib3.HTTPConnectionPool:
-    """Return the Snuba HTTP connection pool, creating it on first call.
-
-    Lazy initialisation ensures the pool is built from the current value of
-    settings.SENTRY_SNUBA rather than the value present at module-import time.
-    In tests, pytest workers override SENTRY_SNUBA before the first Snuba
-    request, so the pool targets the correct per-worker gateway.
+    The proxy is a regular object so existing ``patch.object(_snuba_pool, ...)``
+    calls in tests continue to work without modification.
     """
-    global _snuba_pool
-    if _snuba_pool is None:
-        _snuba_pool = connection_from_url(
-            settings.SENTRY_SNUBA,
-            retries=RetrySkipTimeout(
-                total=5,
-                # Our calls to snuba frequently fail due to network issues. We want to
-                # automatically retry most requests. Some of our POSTs and all of our DELETEs
-                # do cause mutations, but we have other things in place to handle duplicate
-                # mutations.
-                allowed_methods={"GET", "POST", "DELETE"},
-            ),
-            timeout=settings.SENTRY_SNUBA_TIMEOUT,
-            maxsize=10,
-        )
-    return _snuba_pool
+
+    def __init__(self) -> None:
+        self._pool: urllib3.HTTPConnectionPool | None = None
+        self._url: str | None = None
+
+    def _get(self) -> urllib3.HTTPConnectionPool:
+        url = settings.SENTRY_SNUBA
+        if self._pool is None or self._url != url:
+            self._pool = connection_from_url(
+                url,
+                retries=RetrySkipTimeout(
+                    total=5,
+                    # Our calls to snuba frequently fail due to network issues. We want to
+                    # automatically retry most requests. Some of our POSTs and all of our DELETEs
+                    # do cause mutations, but we have other things in place to handle duplicate
+                    # mutations.
+                    allowed_methods={"GET", "POST", "DELETE"},
+                ),
+                timeout=settings.SENTRY_SNUBA_TIMEOUT,
+                maxsize=10,
+            )
+            self._url = url
+        return self._pool
+
+    def urlopen(self, *args: Any, **kwargs: Any) -> urllib3.response.HTTPResponse:
+        return self._get().urlopen(*args, **kwargs)
+
+
+_snuba_pool = _SnubaPool()
 
 
 epoch_naive = datetime(1970, 1, 1, tzinfo=None)
@@ -1479,7 +1492,7 @@ def _raw_delete_query(
 
         with sentry_sdk.start_span(op="snuba_delete.run", name=body) as span:
             span.set_tag("snuba.referrer", referrer)
-            return _get_snuba_pool().urlopen(
+            return _snuba_pool.urlopen(
                 "DELETE", f"/{query.storage_name}", body=body, headers=headers
             )
 
@@ -1497,7 +1510,7 @@ def _raw_mql_query(request: Request, headers: Mapping[str, str]) -> urllib3.resp
 
         with sentry_sdk.start_span(op="snuba_mql.run", name=serialized_req) as span:
             span.set_tag("snuba.referrer", referrer)
-            return _get_snuba_pool().urlopen(
+            return _snuba_pool.urlopen(
                 "POST", f"/{request.dataset}/mql", body=body, headers=headers
             )
 
@@ -1514,7 +1527,7 @@ def _raw_snql_query(request: Request, headers: Mapping[str, str]) -> urllib3.res
 
         with sentry_sdk.start_span(op="snuba_snql.run", name=serialized_req) as span:
             span.set_tag("snuba.referrer", referrer)
-            return _get_snuba_pool().urlopen(
+            return _snuba_pool.urlopen(
                 "POST", f"/{request.dataset}/snql", body=body, headers=headers
             )
 

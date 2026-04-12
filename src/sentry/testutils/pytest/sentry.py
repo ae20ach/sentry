@@ -219,13 +219,8 @@ def pytest_configure(config: pytest.Config) -> None:
 
     if snuba_url := xdist.get_snuba_url():
         settings.SENTRY_SNUBA = snuba_url
-        # _snuba_pool in sentry.utils.snuba is now lazy (_get_snuba_pool()),
-        # so updating settings.SENTRY_SNUBA here is sufficient: the pool will
-        # be created on first use with the correct per-worker URL.
-        # If it was already created (unlikely but possible), reset it so the
-        # next call recreates from the updated settings.
-        if "sentry.utils.snuba" in sys.modules:
-            sys.modules["sentry.utils.snuba"]._snuba_pool = None
+        # _snuba_pool is a _SnubaPool proxy that reads settings.SENTRY_SNUBA
+        # on each new URL, so updating the setting here is sufficient.
 
     settings.SENTRY_ISSUE_PLATFORM_FUTURES_MAX_LIMIT = 1
 
