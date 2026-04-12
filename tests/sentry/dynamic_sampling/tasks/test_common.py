@@ -23,10 +23,10 @@ MOCK_DATETIME = (timezone.now() - timedelta(days=1)).replace(
 @freeze_time(MOCK_DATETIME)
 class TestGetActiveOrgs(BaseMetricsLayerTestCase, TestCase, SnubaTestCase):
     def setUp(self) -> None:
+        super().setUp()
         # Use tick=True so the clock advances during the 100 create_organization /
         # create_project calls, giving each a unique millisecond timestamp and
-        # preventing MaxSnowflakeRetryError when multiple xdist workers run with
-        # the same frozen MOCK_DATETIME.
+        # preventing MaxSnowflakeRetryError under @freeze_time with many objects.
         with time_machine.travel(MOCK_DATETIME, tick=True):
             for i in range(10):
                 org = self.create_organization(f"org-{i}")
