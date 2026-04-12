@@ -219,23 +219,13 @@ def pytest_configure(config: pytest.Config) -> None:
 
     if snuba_url := xdist.get_snuba_url():
         settings.SENTRY_SNUBA = snuba_url
-        # _snuba_pool in sentry.utils.snuba is a module-level pool created at
-        # import time from settings.SENTRY_SNUBA (default: port 1218).
-        #
-        # If the module is already in sys.modules (imported before configure
-        # ran), the pool needs to be recreated now — the settings override
-        # won't affect the already-live pool object.
-        #
-        # If the module is NOT yet imported we skip this: the next import will
-        # read the already-updated settings.SENTRY_SNUBA and create the pool
-        # with the correct per-worker URL, so no action is needed here.
-        # (We cannot import sentry.utils.snuba at configure time because it
-        # triggers an import chain that accesses settings keys not yet
-        # available in the worker subprocess.)
-        # Best-effort update at configure time if snuba is already imported.
-        # _ensure_snuba_pool() in pytest_runtest_setup is the safety net.
+        # _snuba_pool in sentry.utils.snuba is now lazy (_get_snuba_pool()),
+        # so updating settings.SENTRY_SNUBA here is sufficient: the pool will
+        # be created on first use with the correct per-worker URL.
+        # If it was already created (unlikely but possible), reset it so the
+        # next call recreates from the updated settings.
         if "sentry.utils.snuba" in sys.modules:
-            _ensure_snuba_pool()
+            sys.modules["sentry.utils.snuba"]._snuba_pool = None
 
     settings.SENTRY_ISSUE_PLATFORM_FUTURES_MAX_LIMIT = 1
 
@@ -429,43 +419,7 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
                 f.write(longrepr)
 
 
-def _ensure_snuba_pool() -> None:
-    """Guarantee _snuba_pool points at the per-worker snuba-gw URL.
-
-    Called from both pytest_configure (as early as possible) and
-    pytest_runtest_setup (as a safety net, after all imports are done).
-    """
-    snuba_url = xdist.get_snuba_url()
-    if not snuba_url:
-        return
-    if "sentry.utils.snuba" not in sys.modules:
-        return
-    _snuba_mod = sys.modules["sentry.utils.snuba"]
-    current = getattr(_snuba_mod, "_snuba_pool", None)
-    # Only recreate if the pool is still pointing at the wrong host/port.
-    if current is not None and getattr(current, "host", None) == "127.0.0.1":
-        try:
-            port = int(getattr(current, "port", 0))
-        except (TypeError, ValueError):
-            port = 0
-        expected_port = xdist._SNUBA_BASE_PORT + (xdist._worker_num or 0)
-        if port == expected_port:
-            return  # already correct, skip recreation
-    from sentry.net.http import connection_from_url as _cfurl
-
-    _snuba_mod._snuba_pool = _cfurl(
-        snuba_url,
-        retries=_snuba_mod.RetrySkipTimeout(
-            total=5,
-            allowed_methods={"GET", "POST", "DELETE"},
-        ),
-        timeout=settings.SENTRY_SNUBA_TIMEOUT,
-        maxsize=10,
-    )
-
-
 def pytest_runtest_setup(item: pytest.Item) -> None:
-    _ensure_snuba_pool()
     if item.config.getvalue("nomigrations") and any(
         mark for mark in item.iter_markers(name="migrations")
     ):
