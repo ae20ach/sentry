@@ -20,7 +20,7 @@ jobs:
   backend-test:
     name: run backend tests
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 55
     permissions:
       contents: read
     strategy:
@@ -98,7 +98,7 @@ jobs:
           # order-dependent failures this workflow is designed to catch.
           # Keep only xdist flags.
           export PYTEST_ADDOPTS="-n ${XDIST_WORKERS} --dist=loadfile"
-          timeout 6000 python3 -b -m pytest \
+          timeout 2400 python3 -b -m pytest \
             --exitfirst \
             tests \
             --reuse-db \
