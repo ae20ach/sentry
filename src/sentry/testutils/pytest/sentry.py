@@ -219,6 +219,22 @@ def pytest_configure(config: pytest.Config) -> None:
 
     if snuba_url := xdist.get_snuba_url():
         settings.SENTRY_SNUBA = snuba_url
+        # _snuba_pool in sentry.utils.snuba is created at module import time
+        # using the default settings.SENTRY_SNUBA (port 1218). Recreate it now
+        # so per-worker tests actually reach the correct snuba-gw container.
+        from urllib3 import connection_from_url as _connection_from_url
+
+        import sentry.utils.snuba as _snuba_mod
+
+        _snuba_mod._snuba_pool = _connection_from_url(
+            snuba_url,
+            retries=_snuba_mod.RetrySkipTimeout(
+                total=5,
+                allowed_methods={"GET", "POST", "DELETE"},
+            ),
+            timeout=settings.SENTRY_SNUBA_TIMEOUT,
+            maxsize=10,
+        )
 
     settings.SENTRY_ISSUE_PLATFORM_FUTURES_MAX_LIMIT = 1
 
