@@ -168,7 +168,7 @@ from sentry.utils.eap import EAP_ITEMS_INSERT_ENDPOINT, hex_to_item_id
 from sentry.utils.json import dumps_htmlsafe
 from sentry.utils.not_set import NOT_SET, NotSet, default_if_not_set
 from sentry.utils.samples import load_data
-from sentry.utils.snuba import _snuba_pool
+from sentry.utils.snuba import _get_snuba_pool
 
 from ..shared_integrations.client.proxy import IntegrationProxyClient
 from ..snuba.metrics import (
@@ -1164,12 +1164,14 @@ class SnubaTestCase(BaseTestCase):
     def store_group(self, group):
         data = [self.__wrap_group(group)]
         assert (
-            _snuba_pool.urlopen(
+            _get_snuba_pool()
+            .urlopen(
                 "POST",
                 "/tests/entities/groupedmessage/insert",
                 body=json.dumps(data),
                 headers={},
-            ).status
+            )
+            .status
             == 200
         )
 
