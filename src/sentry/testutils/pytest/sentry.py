@@ -219,22 +219,32 @@ def pytest_configure(config: pytest.Config) -> None:
 
     if snuba_url := xdist.get_snuba_url():
         settings.SENTRY_SNUBA = snuba_url
-        # _snuba_pool in sentry.utils.snuba is created at module import time
-        # using the default settings.SENTRY_SNUBA (port 1218). Recreate it now
-        # so per-worker tests actually reach the correct snuba-gw container.
-        from urllib3 import connection_from_url as _connection_from_url
+        # _snuba_pool in sentry.utils.snuba is a module-level pool created at
+        # import time from settings.SENTRY_SNUBA (default: port 1218).
+        #
+        # If the module is already in sys.modules (imported before configure
+        # ran), the pool needs to be recreated now — the settings override
+        # won't affect the already-live pool object.
+        #
+        # If the module is NOT yet imported we skip this: the next import will
+        # read the already-updated settings.SENTRY_SNUBA and create the pool
+        # with the correct per-worker URL, so no action is needed here.
+        # (We cannot import sentry.utils.snuba at configure time because it
+        # triggers an import chain that accesses settings keys not yet
+        # available in the worker subprocess.)
+        if "sentry.utils.snuba" in sys.modules:
+            _snuba_mod = sys.modules["sentry.utils.snuba"]
+            from urllib3 import connection_from_url as _connection_from_url
 
-        import sentry.utils.snuba as _snuba_mod
-
-        _snuba_mod._snuba_pool = _connection_from_url(
-            snuba_url,
-            retries=_snuba_mod.RetrySkipTimeout(
-                total=5,
-                allowed_methods={"GET", "POST", "DELETE"},
-            ),
-            timeout=settings.SENTRY_SNUBA_TIMEOUT,
-            maxsize=10,
-        )
+            _snuba_mod._snuba_pool = _connection_from_url(
+                snuba_url,
+                retries=_snuba_mod.RetrySkipTimeout(
+                    total=5,
+                    allowed_methods={"GET", "POST", "DELETE"},
+                ),
+                timeout=settings.SENTRY_SNUBA_TIMEOUT,
+                maxsize=10,
+            )
 
     settings.SENTRY_ISSUE_PLATFORM_FUTURES_MAX_LIMIT = 1
 
