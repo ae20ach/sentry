@@ -579,7 +579,10 @@ class _SnubaPool:
         self._url: str | None = None
 
     def _get(self) -> urllib3.HTTPConnectionPool:
-        url = settings.SENTRY_SNUBA
+        # Prefer the env-var override set by pytest_runtest_setup, which is
+        # immune to Django override_settings / TestCase isolation that can
+        # reset settings.SENTRY_SNUBA back to the default 1218 mid-session.
+        url = os.environ.get("_SENTRY_SNUBA_POOL_URL") or settings.SENTRY_SNUBA
         if self._pool is None or self._url != url:
             self._pool = connection_from_url(
                 url,

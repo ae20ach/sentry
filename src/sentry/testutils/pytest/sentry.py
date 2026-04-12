@@ -219,8 +219,9 @@ def pytest_configure(config: pytest.Config) -> None:
 
     if snuba_url := xdist.get_snuba_url():
         settings.SENTRY_SNUBA = snuba_url
-        # _snuba_pool is a _SnubaPool proxy that reads settings.SENTRY_SNUBA
-        # on each new URL, so updating the setting here is sufficient.
+        # Also set the env var that _SnubaPool._get() prefers; this is immune
+        # to Django override_settings resets that can happen mid-session.
+        os.environ["_SENTRY_SNUBA_POOL_URL"] = snuba_url
 
     settings.SENTRY_ISSUE_PLATFORM_FUTURES_MAX_LIMIT = 1
 
@@ -424,13 +425,17 @@ def pytest_runtest_setup(item: pytest.Item) -> None:
     # Re-read the target URL from env here (call-time, not import-time) and
     # force the proxy to rebuild the pool if the cached URL doesn't match.
     snuba_url = xdist.get_snuba_url()
-    if snuba_url and "sentry.utils.snuba" in sys.modules:
-        # Keep settings in sync too, in case configure_for_worker missed it.
+    if snuba_url:
+        # Set an env var that _SnubaPool._get() prefers over settings.SENTRY_SNUBA.
+        # Environment variables are immune to Django's override_settings and
+        # TestCase isolation mechanisms that can reset the Django setting mid-session.
+        os.environ["_SENTRY_SNUBA_POOL_URL"] = snuba_url
         settings.SENTRY_SNUBA = snuba_url
-        snuba_mod = sys.modules["sentry.utils.snuba"]
-        pool_proxy = getattr(snuba_mod, "_snuba_pool", None)
-        if pool_proxy is not None and pool_proxy._url != snuba_url:
-            pool_proxy._url = None  # force _get() to rebuild pool at correct URL
+        if "sentry.utils.snuba" in sys.modules:
+            snuba_mod = sys.modules["sentry.utils.snuba"]
+            pool_proxy = getattr(snuba_mod, "_snuba_pool", None)
+            if pool_proxy is not None and pool_proxy._url != snuba_url:
+                pool_proxy._url = None  # force _get() to rebuild pool at correct URL
 
     if item.config.getvalue("nomigrations") and any(
         mark for mark in item.iter_markers(name="migrations")
