@@ -775,6 +775,16 @@ class TestRecalibrateOrgsTasks(TasksTestCase):
                 # we sampled at 40% twice as much as we wanted we should adjust by 0.5
                 assert float(val) == 0.5
 
+        # Re-seed the sliding window cache and recalibration factors before the
+        # second run. A concurrent xdist worker's flushdb() can clear both
+        # between the first-run assertion loop and the second task invocation,
+        # which would cause the second run to see no prior factor (1.0) and the
+        # default blended rate (0.1) as target, producing adjusted_factor=1.0
+        # and deleting the key instead of doubling it.
+        self.set_sliding_window_org_sample_rate_for_all(0.2)
+        redis_client.set(generate_recalibrate_orgs_cache_key(self.orgs[0].id), 2.0)
+        redis_client.set(generate_recalibrate_orgs_cache_key(self.orgs[2].id), 0.5)
+
         # now if we run it again (with the same data in the database, the algorithm
         # should double down... the previous factor didn't do anything so apply it again)
         with self.tasks():
