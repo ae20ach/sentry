@@ -1,3 +1,4 @@
+from itertools import chain, repeat
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -782,7 +783,9 @@ class TestSeerExplorerClientPushChanges(TestCase):
                 "owner/repo": RepoPRState(repo_name="owner/repo", pr_creation_status="creating")
             },
         )
-        mock_time.side_effect = [0, 0, 200]  # Exceeds 120s timeout
+        # Use chain+repeat so extra time.time() calls (e.g. from retry machinery)
+        # don't exhaust the side_effect list and raise StopIteration.
+        mock_time.side_effect = chain([0, 0], repeat(200))  # Exceeds 120s timeout
 
         # get_option call in client init interferes with the mock time.time() - patch it
         self.organization.get_option = MagicMock(return_value=True)

@@ -639,17 +639,19 @@ class TestRecalibrateOrgsTasks(TasksTestCase):
         self.orgs = []
         self.num_proj = 2
         self.orgs_sampling = [10, 20, 40]
-        # create some orgs, projects and transactions
-        for org_rate in self.orgs_sampling:
-            org = self.create_old_organization(f"test-org-{org_rate}")
-            org_info = {"org_id": org.id, "project_ids": [], "projects": []}
-            self.orgs_info.append(org_info)
-            self.orgs.append(org)
-            for proj_idx in range(self.num_proj):
-                p = self.create_old_project(name=f"test-project-{proj_idx}", organization=org)
-                org_info["projects"].append(p)
-                org_info["project_ids"].append(p.id)
-                self.add_metrics(org, p, org_rate)
+        # Wrap in tick=True so each create_old_project gets a unique millisecond,
+        # preventing MaxSnowflakeRetryError under @freeze_time with parallel workers.
+        with time_machine.travel(MOCK_DATETIME, tick=True):
+            for org_rate in self.orgs_sampling:
+                org = self.create_old_organization(f"test-org-{org_rate}")
+                org_info = {"org_id": org.id, "project_ids": [], "projects": []}
+                self.orgs_info.append(org_info)
+                self.orgs.append(org)
+                for proj_idx in range(self.num_proj):
+                    p = self.create_old_project(name=f"test-project-{proj_idx}", organization=org)
+                    org_info["projects"].append(p)
+                    org_info["project_ids"].append(p.id)
+                    self.add_metrics(org, p, org_rate)
 
     def add_metrics(self, org, project, sample_rate):
         base_tags = {"transaction": "trans-x", "is_segment": "true"}
