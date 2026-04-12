@@ -415,6 +415,16 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
 
 
 def pytest_runtest_setup(item: pytest.Item) -> None:
+    # If the _SnubaPool proxy has cached a pool for a URL that no longer matches
+    # settings.SENTRY_SNUBA (e.g., the proxy was first used before configure_for_worker
+    # set the per-worker URL), clear the cached URL so _get() creates a new pool at
+    # the correct address on the next Snuba call.
+    if xdist.get_snuba_url() and "sentry.utils.snuba" in sys.modules:
+        snuba_mod = sys.modules["sentry.utils.snuba"]
+        pool_proxy = getattr(snuba_mod, "_snuba_pool", None)
+        if pool_proxy is not None and pool_proxy._url != settings.SENTRY_SNUBA:
+            pool_proxy._url = None  # force _get() to re-evaluate on next call
+
     if item.config.getvalue("nomigrations") and any(
         mark for mark in item.iter_markers(name="migrations")
     ):
