@@ -36,6 +36,19 @@ def get_kafka_topic(base_name: str) -> str:
 
 
 def get_snuba_url() -> str | None:
-    if _worker_num is not None and os.environ.get("XDIST_PER_WORKER_SNUBA"):
-        return f"http://127.0.0.1:{_SNUBA_BASE_PORT + _worker_num}"
-    return None
+    """Return the per-worker Snuba URL, or None if not in per-worker Snuba mode.
+
+    Reads both env vars at call time (not just at module import time) to handle
+    any edge case where xdist.py was imported before the subprocess environment
+    was fully initialised.
+    """
+    if not os.environ.get("XDIST_PER_WORKER_SNUBA"):
+        return None
+    worker_id = os.environ.get("PYTEST_XDIST_WORKER") or ""
+    if not worker_id.startswith("gw"):
+        return None
+    try:
+        worker_num = int(worker_id[2:])
+    except ValueError:
+        return None
+    return f"http://127.0.0.1:{_SNUBA_BASE_PORT + worker_num}"

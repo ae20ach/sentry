@@ -305,6 +305,8 @@ def test_max_events(
         process_and_save({"message": "hello world"}, seconds_ago=i + 1) for i in reversed(range(5))
     ]
 
+    optimize_snuba_table("events")  # force ClickHouse deduplication before first read
+
     old_events = {}
     for event_id in event_ids:
         old_event = eventstore.backend.get_event_by_id(default_project.id, event_id)

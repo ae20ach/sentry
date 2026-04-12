@@ -415,15 +415,22 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
 
 
 def pytest_runtest_setup(item: pytest.Item) -> None:
-    # If the _SnubaPool proxy has cached a pool for a URL that no longer matches
-    # settings.SENTRY_SNUBA (e.g., the proxy was first used before configure_for_worker
-    # set the per-worker URL), clear the cached URL so _get() creates a new pool at
-    # the correct address on the next Snuba call.
-    if xdist.get_snuba_url() and "sentry.utils.snuba" in sys.modules:
+    # Ensure the _SnubaPool proxy uses the correct per-worker Snuba URL before
+    # each test.  The proxy caches settings.SENTRY_SNUBA on first use; if that
+    # first use happened before configure_for_worker updated the setting (or if
+    # the setting was never updated because xdist.get_snuba_url() returned None
+    # due to a stale module-level env read), the pool may point at 1218.
+    #
+    # Re-read the target URL from env here (call-time, not import-time) and
+    # force the proxy to rebuild the pool if the cached URL doesn't match.
+    snuba_url = xdist.get_snuba_url()
+    if snuba_url and "sentry.utils.snuba" in sys.modules:
+        # Keep settings in sync too, in case configure_for_worker missed it.
+        settings.SENTRY_SNUBA = snuba_url
         snuba_mod = sys.modules["sentry.utils.snuba"]
         pool_proxy = getattr(snuba_mod, "_snuba_pool", None)
-        if pool_proxy is not None and pool_proxy._url != settings.SENTRY_SNUBA:
-            pool_proxy._url = None  # force _get() to re-evaluate on next call
+        if pool_proxy is not None and pool_proxy._url != snuba_url:
+            pool_proxy._url = None  # force _get() to rebuild pool at correct URL
 
     if item.config.getvalue("nomigrations") and any(
         mark for mark in item.iter_markers(name="migrations")
