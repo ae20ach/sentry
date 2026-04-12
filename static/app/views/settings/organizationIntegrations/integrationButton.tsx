@@ -5,6 +5,7 @@ import {LinkButton} from '@sentry/scraps/button';
 import {IconOpen} from 'sentry/icons';
 import type {Integration} from 'sentry/types/integrations';
 import {useOrganization} from 'sentry/utils/useOrganization';
+import {PostMessageProvider} from 'sentry/utils/window/usePostMessage';
 import {AddIntegrationButton} from 'sentry/views/settings/organizationIntegrations/addIntegrationButton';
 import {DirectEnableButton} from 'sentry/views/settings/organizationIntegrations/directEnableButton';
 import {IntegrationContext} from 'sentry/views/settings/organizationIntegrations/integrationContext';
@@ -56,15 +57,17 @@ export function IntegrationButton({
   }
   if (provider.canAdd) {
     return (
-      <AddIntegrationButton
-        provider={provider}
-        onAddIntegration={onAddIntegration}
-        installStatus={installStatus}
-        analyticsParams={analyticsParams}
-        modalParams={modalParams}
-        {...buttonProps}
-        organization={organization}
-      />
+      <PostMessageProvider>
+        <AddIntegrationButton
+          provider={provider}
+          onAddIntegration={onAddIntegration}
+          installStatus={installStatus}
+          analyticsParams={analyticsParams}
+          modalParams={modalParams}
+          {...buttonProps}
+          organization={organization}
+        />
+      </PostMessageProvider>
     );
   }
   if (metadata.aspects.externalInstall) {

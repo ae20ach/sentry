@@ -9,11 +9,13 @@ import {ConfigStore} from 'sentry/stores/configStore';
 import type {IntegrationProvider, IntegrationWithConfig} from 'sentry/types/integrations';
 import type {Organization} from 'sentry/types/organization';
 import {trackIntegrationAnalytics} from 'sentry/utils/integrationUtil';
+import {useOrganization} from 'sentry/utils/useOrganization';
+import {computeCenteredWindow} from 'sentry/utils/window/computeCenteredWindow';
+import {usePostMessageCallback} from 'sentry/utils/window/usePostMessage';
 import type {MessagingIntegrationAnalyticsView} from 'sentry/views/alerts/rules/issue/setupMessagingIntegrationButton';
 
 export interface AddIntegrationParams {
   onInstall: (data: IntegrationWithConfig) => void;
-  organization: Organization;
   provider: IntegrationProvider;
   account?: string | null;
   analyticsParams?: {
@@ -30,6 +32,7 @@ export interface AddIntegrationParams {
       | 'test_analytics_org_selector';
   };
   modalParams?: Record<string, string>;
+  urlParams?: Record<string, string>;
 }
 
 /**
@@ -65,92 +68,24 @@ function getApiPipelineProvider(
   return key;
 }
 
-function computeCenteredWindow(width: number, height: number) {
-  const screenLeft = window.screenLeft === undefined ? window.screenX : window.screenLeft;
-  const screenTop = window.screenTop === undefined ? window.screenY : window.screenTop;
+// ---------------------------------------------------------------------------
+// Legacy dialog strategy (uses PostMessageContext)
+// ---------------------------------------------------------------------------
 
-  const innerWidth = window.innerWidth
-    ? window.innerWidth
-    : document.documentElement.clientWidth
-      ? document.documentElement.clientWidth
-      : screen.width;
-
-  const innerHeight = window.innerHeight
-    ? window.innerHeight
-    : document.documentElement.clientHeight
-      ? document.documentElement.clientHeight
-      : screen.height;
-
-  const left = innerWidth / 2 - width / 2 + screenLeft;
-  const top = innerHeight / 2 - height / 2 + screenTop;
-
-  return {left, top};
-}
-
-/**
- * Opens the legacy Django-driven integration setup flow in a popup window and
- * listens for a `postMessage` callback on completion.
- *
- * Used  for integrations that have not been migrated to the API pipeline system.
- */
-function useLegacyAddIntegration({
-  provider,
-  organization,
-  onInstall,
-  account,
-  analyticsParams,
-  modalParams,
-}: AddIntegrationParams) {
-  const dialogRef = useRef<Window | null>(null);
-  const onInstallRef = useRef(onInstall);
-  onInstallRef.current = onInstall;
-  const analyticsParamsRef = useRef(analyticsParams);
-  analyticsParamsRef.current = analyticsParams;
-
-  useEffect(() => {
-    function handleMessage(message: MessageEvent) {
-      const validOrigins = [
-        ConfigStore.get('links').sentryUrl,
-        ConfigStore.get('links').organizationUrl,
-        document.location.origin,
-      ];
-      if (!validOrigins.includes(message.origin)) {
-        return;
-      }
-      if (message.source !== dialogRef.current) {
-        return;
-      }
-
-      const {success, data} = message.data;
-      dialogRef.current = null;
-
-      if (!success) {
-        addErrorMessage(data?.error ?? t('An unknown error occurred'));
-        return;
-      }
-      if (!data) {
-        return;
-      }
-
-      trackIntegrationAnalytics('integrations.installation_complete', {
-        integration: provider.key,
-        integration_type: 'first_party',
-        organization,
-        ...analyticsParamsRef.current,
-      });
-      addSuccessMessage(t('%s added', provider.name));
-      onInstallRef.current(data);
-    }
-
-    window.addEventListener('message', handleMessage);
-    return () => {
-      window.removeEventListener('message', handleMessage);
-      dialogRef.current?.close();
-    };
-  }, [provider.key, provider.name, organization]);
+function useLegacyDialogStrategy() {
+  const organization = useOrganization();
+  const subscribe = usePostMessageCallback();
+  const unsubscribeRef = useRef<() => void | null>(null);
 
   const startFlow = useCallback(
-    (urlParams?: Record<string, string>) => {
+    ({
+      provider,
+      onInstall,
+      account,
+      analyticsParams,
+      modalParams,
+      urlParams,
+    }: AddIntegrationParams) => {
       trackIntegrationAnalytics('integrations.installation_start', {
         integration: provider.key,
         integration_type: 'first_party',
@@ -175,31 +110,77 @@ function useLegacyAddIntegration({
       const installUrl = `${url}?${qs.stringify(query)}`;
       const opts = `scrollbars=yes,width=${width},height=${height},top=${top},left=${left}`;
 
-      dialogRef.current = window.open(installUrl, name, opts);
-      dialogRef.current?.focus();
+      let dialog = window.open(installUrl, name, opts);
+      if (!dialog) {
+        // Popup was blocked?
+        return;
+      }
+      dialog?.focus();
+
+      unsubscribeRef.current = subscribe((message: MessageEvent) => {
+        const validOrigins = [
+          ConfigStore.get('links').sentryUrl,
+          ConfigStore.get('links').organizationUrl,
+          document.location.origin,
+        ];
+        if (!validOrigins.includes(message.origin)) {
+          return;
+        }
+        if (message.source !== dialog) {
+          return;
+        }
+
+        const {success, data} = message.data;
+        dialog = null;
+        unsubscribeRef.current?.();
+        unsubscribeRef.current = null;
+
+        if (!success) {
+          addErrorMessage(data?.error ?? t('An unknown error occurred'));
+          return;
+        }
+        if (!data) {
+          return;
+        }
+
+        trackIntegrationAnalytics('integrations.installation_complete', {
+          integration: provider.key,
+          integration_type: 'first_party',
+          organization,
+          ...analyticsParams,
+        });
+        addSuccessMessage(t('%s added', provider.name));
+        onInstall(data);
+      });
     },
-    [provider, organization, account, analyticsParams, modalParams]
+    [subscribe, organization]
   );
+
+  useEffect(() => {
+    return () => {
+      // Unsubscribe if we unmount after having started the flow
+      unsubscribeRef.current?.();
+      unsubscribeRef.current = null;
+    };
+  }, []);
 
   return {startFlow};
 }
+// ---------------------------------------------------------------------------
+// Public hook: selects between pipeline modal and legacy dialog
+// ---------------------------------------------------------------------------
 
-/**
- * Opens the integration setup flow. Automatically selects between the new
- * API-driven pipeline modal and the legacy popup-based flow depending on
- * the organization's feature flags.
- */
-export function useAddIntegration(params: AddIntegrationParams) {
-  const {provider, organization, onInstall} = params;
-  const {startFlow: legacyStartFlow} = useLegacyAddIntegration(params);
-  const pipelineProvider = getApiPipelineProvider(organization, provider.key);
+export function useAddIntegration() {
+  const organization = useOrganization();
+  const {startFlow: legacyStartFlow} = useLegacyDialogStrategy();
 
   const startFlow = useCallback(
-    (urlParams?: Record<string, string>) => {
-      // Fallback to legacy view-based flow when the feature flag for API based
-      // flows is not enabled for the provider.
+    (params: AddIntegrationParams) => {
+      const {provider, onInstall, analyticsParams} = params;
+      const pipelineProvider = getApiPipelineProvider(organization, provider.key);
+
       if (pipelineProvider === null) {
-        legacyStartFlow(urlParams);
+        legacyStartFlow(params);
         return;
       }
 
@@ -207,7 +188,7 @@ export function useAddIntegration(params: AddIntegrationParams) {
         integration: provider.key,
         integration_type: 'first_party',
         organization,
-        ...params.analyticsParams,
+        ...analyticsParams,
       });
       openPipelineModal({
         type: 'integration',
@@ -217,21 +198,14 @@ export function useAddIntegration(params: AddIntegrationParams) {
             integration: provider.key,
             integration_type: 'first_party',
             organization,
-            ...params.analyticsParams,
+            ...analyticsParams,
           });
           addSuccessMessage(t('%s added', provider.name));
           onInstall(data);
         },
       });
     },
-    [
-      pipelineProvider,
-      provider,
-      organization,
-      params.analyticsParams,
-      onInstall,
-      legacyStartFlow,
-    ]
+    [legacyStartFlow, organization]
   );
 
   return {startFlow};

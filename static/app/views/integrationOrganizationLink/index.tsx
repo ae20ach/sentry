@@ -20,6 +20,7 @@ import type {Organization} from 'sentry/types/organization';
 import {generateOrgSlugUrl, urlEncode} from 'sentry/utils';
 import type {IntegrationAnalyticsKey} from 'sentry/utils/analytics/integrations';
 import {getApiUrl} from 'sentry/utils/api/getApiUrl';
+import {useAddIntegration} from 'sentry/utils/integrations/useAddIntegration';
 import {
   getIntegrationFeatureGate,
   trackIntegrationAnalytics,
@@ -30,8 +31,8 @@ import {testableWindowLocation} from 'sentry/utils/testableWindowLocation';
 import {normalizeUrl} from 'sentry/utils/url/normalizeUrl';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useParams} from 'sentry/utils/useParams';
+import {PostMessageProvider} from 'sentry/utils/window/usePostMessage';
 import RouteError from 'sentry/views/routeError';
-import {useAddIntegration} from 'sentry/views/settings/organizationIntegrations/addIntegration';
 import {IntegrationLayout} from 'sentry/views/settings/organizationIntegrations/detailedView/integrationLayout';
 
 interface GitHubIntegrationInstallation {
@@ -231,16 +232,17 @@ export default function IntegrationOrganizationLink() {
     return (
       <IntegrationFeatures organization={organization} features={featuresComponents}>
         {({disabled, disabledReason}) => (
-          <AddIntegrationButton
-            provider={provider}
-            organization={organization}
-            onInstall={onInstallWithInstallationId}
-            installationId={installationId}
-            hasAccess={hasAccess}
-            disabled={disabled}
-            disabledReason={disabledReason}
-            finishInstallation={finishInstallation}
-          />
+          <PostMessageProvider>
+            <AddIntegrationButton
+              provider={provider}
+              onInstall={onInstallWithInstallationId}
+              installationId={installationId}
+              hasAccess={hasAccess}
+              disabled={disabled}
+              disabledReason={disabledReason}
+              finishInstallation={finishInstallation}
+            />
+          </PostMessageProvider>
         )}
       </IntegrationFeatures>
     );
@@ -404,7 +406,6 @@ export default function IntegrationOrganizationLink() {
 
 function AddIntegrationButton({
   provider,
-  organization,
   onInstall,
   installationId,
   hasAccess,
@@ -417,11 +418,10 @@ function AddIntegrationButton({
   finishInstallation: () => void;
   hasAccess: boolean | undefined;
   onInstall: (data: Integration) => void;
-  organization: Organization;
   provider: IntegrationProvider;
   installationId?: string;
 }) {
-  const {startFlow} = useAddIntegration({provider, organization, onInstall});
+  const {startFlow} = useAddIntegration();
 
   return (
     <ButtonWrapper>
@@ -430,7 +430,11 @@ function AddIntegrationButton({
         disabled={!hasAccess || disabled}
         onClick={() =>
           installationId
-            ? startFlow({installation_id: installationId})
+            ? startFlow({
+                provider,
+                onInstall,
+                urlParams: {installation_id: installationId},
+              })
             : finishInstallation()
         }
       >

@@ -8,8 +8,7 @@ import {t} from 'sentry/locale';
 import {getApiUrl} from 'sentry/utils/api/getApiUrl';
 import {fetchMutation, useQueryClient} from 'sentry/utils/queryClient';
 import {useOrganization} from 'sentry/utils/useOrganization';
-
-import type {AddIntegrationButton} from './addIntegrationButton';
+import type {AddIntegrationButton} from 'sentry/views/settings/organizationIntegrations/addIntegrationButton';
 
 interface DirectEnableButtonProps {
   buttonProps: Pick<

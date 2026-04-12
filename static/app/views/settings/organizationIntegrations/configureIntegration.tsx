@@ -26,6 +26,7 @@ import type {
 } from 'sentry/types/integrations';
 import type {Organization} from 'sentry/types/organization';
 import {getApiUrl} from 'sentry/utils/api/getApiUrl';
+import {useAddIntegration} from 'sentry/utils/integrations/useAddIntegration';
 import {isActiveSuperuser} from 'sentry/utils/isActiveSuperuser';
 import {singleLineRenderer} from 'sentry/utils/marked/marked';
 import {
@@ -47,10 +48,10 @@ import {useOrganization} from 'sentry/utils/useOrganization';
 import {useParams} from 'sentry/utils/useParams';
 import {useProjects} from 'sentry/utils/useProjects';
 import {useRoutes} from 'sentry/utils/useRoutes';
+import {PostMessageProvider} from 'sentry/utils/window/usePostMessage';
 import {BreadcrumbTitle} from 'sentry/views/settings/components/settingsBreadcrumb/breadcrumbTitle';
 import {SettingsPageHeader} from 'sentry/views/settings/components/settingsPageHeader';
 
-import {useAddIntegration} from './addIntegration';
 import {IntegrationAlertRules} from './integrationAlertRules';
 import {IntegrationCodeMappings} from './integrationCodeMappings';
 import {IntegrationExternalTeamMappings} from './integrationExternalTeamMappings';
@@ -256,12 +257,13 @@ function ConfigureIntegration() {
   const getAction = () => {
     if (provider.key === 'pagerduty') {
       return (
-        <PagerdutyAddServicesButton
-          provider={provider}
-          onInstall={onUpdateIntegration}
-          account={integration.domainName}
-          organization={organization}
-        />
+        <PostMessageProvider>
+          <PagerdutyAddServicesButton
+            provider={provider}
+            onInstall={onUpdateIntegration}
+            account={integration.domainName}
+          />
+        </PostMessageProvider>
       );
     }
 
@@ -557,17 +559,20 @@ function PagerdutyAddServicesButton({
   provider,
   onInstall,
   account,
-  organization,
 }: {
   account: string | null;
   onInstall: () => void;
-  organization: Organization;
   provider: IntegrationProvider;
 }) {
-  const {startFlow} = useAddIntegration({provider, onInstall, account, organization});
+  const {startFlow} = useAddIntegration();
 
   return (
-    <Button priority="primary" size="sm" icon={<IconAdd />} onClick={() => startFlow()}>
+    <Button
+      priority="primary"
+      size="sm"
+      icon={<IconAdd />}
+      onClick={() => startFlow({provider, onInstall, account})}
+    >
       {t('Add Services')}
     </Button>
   );

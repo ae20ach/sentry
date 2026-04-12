@@ -33,6 +33,7 @@ import type {InfiniteData} from 'sentry/utils/queryClient';
 import {useQueryClient} from 'sentry/utils/queryClient';
 import {useApi} from 'sentry/utils/useApi';
 import {useOrganization} from 'sentry/utils/useOrganization';
+import {PostMessageProvider} from 'sentry/utils/window/usePostMessage';
 
 const ROW_HEIGHT = 56;
 const BOTTOM_PADDING = 24;
@@ -299,37 +300,41 @@ export function ScmIntegrationTree({search, repoFilter, providerFilter}: Props) 
   }
 
   return (
-    <TreePanel>
-      <ScrollableBody
-        ref={setScrollBodyRef}
-        style={{
-          maxHeight: scrollBodyHeight ? `calc(100vh - ${scrollBodyHeight}px)` : undefined,
-        }}
-      >
-        <VirtualInner style={{height: virtualizer.getTotalSize()}}>
-          {virtualizer.getVirtualItems().map(virtualItem => {
-            const node = flatNodes[virtualItem.index];
-            if (!node) return null;
+    <PostMessageProvider>
+      <TreePanel>
+        <ScrollableBody
+          ref={setScrollBodyRef}
+          style={{
+            maxHeight: scrollBodyHeight
+              ? `calc(100vh - ${scrollBodyHeight}px)`
+              : undefined,
+          }}
+        >
+          <VirtualInner style={{height: virtualizer.getTotalSize()}}>
+            {virtualizer.getVirtualItems().map(virtualItem => {
+              const node = flatNodes[virtualItem.index];
+              if (!node) return null;
 
-            return (
-              <ScmIntegrationTreeRow
-                key={virtualItem.key}
-                node={node}
-                style={{
-                  transform: `translateY(${virtualItem.start}px)`,
-                  height: virtualItem.size,
-                }}
-                onAddIntegration={handleAddIntegration}
-                onToggleProvider={toggleProvider}
-                onToggleIntegration={toggleIntegration}
-                onToggleRepo={handleToggleRepo}
-                onRemoveDisconnectedRepo={handleRemoveDisconnectedRepo}
-              />
-            );
-          })}
-        </VirtualInner>
-      </ScrollableBody>
-    </TreePanel>
+              return (
+                <ScmIntegrationTreeRow
+                  key={virtualItem.key}
+                  node={node}
+                  style={{
+                    transform: `translateY(${virtualItem.start}px)`,
+                    height: virtualItem.size,
+                  }}
+                  onAddIntegration={handleAddIntegration}
+                  onToggleProvider={toggleProvider}
+                  onToggleIntegration={toggleIntegration}
+                  onToggleRepo={handleToggleRepo}
+                  onRemoveDisconnectedRepo={handleRemoveDisconnectedRepo}
+                />
+              );
+            })}
+          </VirtualInner>
+        </ScrollableBody>
+      </TreePanel>
+    </PostMessageProvider>
   );
 }
 

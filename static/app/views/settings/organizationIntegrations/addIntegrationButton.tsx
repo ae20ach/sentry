@@ -3,20 +3,17 @@ import {Button} from '@sentry/scraps/button';
 import {Tooltip} from '@sentry/scraps/tooltip';
 
 import {t} from 'sentry/locale';
-import type {IntegrationWithConfig} from 'sentry/types/integrations';
+import type {Organization} from 'sentry/types/organization';
 import {trackAnalytics} from 'sentry/utils/analytics';
-
-import type {AddIntegrationParams} from './addIntegration';
-import {useAddIntegration} from './addIntegration';
+import type {AddIntegrationParams} from 'sentry/utils/integrations/useAddIntegration';
+import {useAddIntegration} from 'sentry/utils/integrations/useAddIntegration';
 
 interface AddIntegrationButtonProps
   extends
     Omit<ButtonProps, 'children' | 'analyticsParams'>,
-    Pick<
-      AddIntegrationParams,
-      'provider' | 'organization' | 'analyticsParams' | 'modalParams'
-    > {
-  onAddIntegration: (data: IntegrationWithConfig) => void;
+    Pick<AddIntegrationParams, 'provider' | 'analyticsParams' | 'modalParams'> {
+  onAddIntegration: AddIntegrationParams['onInstall'];
+  organization: Organization;
   buttonText?: string;
   installStatus?: string;
   reinstall?: boolean;
@@ -41,13 +38,7 @@ export function AddIntegrationButton({
         ? t('Reinstall')
         : t('Add %s', provider.metadata.noun));
 
-  const {startFlow} = useAddIntegration({
-    provider,
-    organization,
-    onInstall: onAddIntegration,
-    analyticsParams,
-    modalParams,
-  });
+  const {startFlow} = useAddIntegration();
 
   return (
     <Tooltip
@@ -64,7 +55,12 @@ export function AddIntegrationButton({
               provider: provider.metadata.noun,
             });
           }
-          startFlow();
+          startFlow({
+            provider,
+            onInstall: onAddIntegration,
+            analyticsParams,
+            modalParams,
+          });
         }}
         aria-label={t('Add integration')}
       >

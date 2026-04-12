@@ -17,6 +17,7 @@ import type {Organization} from 'sentry/types/organization';
 import type {IntegrationAnalyticsKey} from 'sentry/utils/analytics/integrations';
 import {getIntegrationStatus} from 'sentry/utils/integrationUtil';
 import {isActiveSuperuser} from 'sentry/utils/isActiveSuperuser';
+import {PostMessageProvider} from 'sentry/utils/window/usePostMessage';
 
 import {AddIntegrationButton} from './addIntegrationButton';
 import {IntegrationItem} from './integrationItem';
@@ -137,21 +138,23 @@ export class InstalledIntegration extends Component<Props> {
                   )}
                 >
                   {requiresUpgrade && (
-                    <AddIntegrationButton
-                      analyticsParams={{
-                        view: 'integrations_directory_integration_detail',
-                        already_installed: true,
-                      }}
-                      buttonText={t('Update Now')}
-                      data-test-id="integration-upgrade-button"
-                      disabled={disableAction}
-                      icon={<IconWarning />}
-                      onAddIntegration={() => {}}
-                      organization={organization}
-                      provider={provider}
-                      priority="primary"
-                      size="sm"
-                    />
+                    <PostMessageProvider>
+                      <AddIntegrationButton
+                        analyticsParams={{
+                          view: 'integrations_directory_integration_detail',
+                          already_installed: true,
+                        }}
+                        buttonText={t('Update Now')}
+                        data-test-id="integration-upgrade-button"
+                        disabled={disableAction}
+                        icon={<IconWarning />}
+                        onAddIntegration={() => {}}
+                        organization={organization}
+                        provider={provider}
+                        priority="primary"
+                        size="sm"
+                      />
+                    </PostMessageProvider>
                   )}
                   {!provider.metadata.aspects?.directEnable && (
                     <StyledLinkButton

@@ -8,7 +8,8 @@ import * as indicators from 'sentry/actionCreators/indicator';
 import * as pipelineModal from 'sentry/components/pipeline/modal';
 import {ConfigStore} from 'sentry/stores/configStore';
 import type {Config} from 'sentry/types/system';
-import {useAddIntegration} from 'sentry/views/settings/organizationIntegrations/addIntegration';
+import {useAddIntegration} from 'sentry/utils/integrations/useAddIntegration';
+import {PostMessageProvider} from 'sentry/utils/window/usePostMessage';
 
 describe('useAddIntegration', () => {
   const provider = GitHubIntegrationProviderFixture();
@@ -54,15 +55,16 @@ describe('useAddIntegration', () => {
     });
 
     it('opens a popup window when startFlow is called', () => {
-      const {result} = renderHookWithProviders(() =>
-        useAddIntegration({
+      const {result} = renderHookWithProviders(useAddIntegration, {
+        additionalWrapper: PostMessageProvider,
+      });
+
+      act(() =>
+        result.current.startFlow({
           provider,
-          organization: OrganizationFixture(),
           onInstall: jest.fn(),
         })
       );
-
-      act(() => result.current.startFlow());
 
       expect(window.open).toHaveBeenCalledTimes(1);
       expect(jest.mocked(window.open).mock.calls[0]![0]).toBe(
@@ -72,17 +74,18 @@ describe('useAddIntegration', () => {
     });
 
     it('includes account and modalParams in the popup URL', () => {
-      const {result} = renderHookWithProviders(() =>
-        useAddIntegration({
+      const {result} = renderHookWithProviders(useAddIntegration, {
+        additionalWrapper: PostMessageProvider,
+      });
+
+      act(() =>
+        result.current.startFlow({
           provider,
-          organization: OrganizationFixture(),
           onInstall: jest.fn(),
           account: 'my-account',
           modalParams: {use_staging: '1'},
         })
       );
-
-      act(() => result.current.startFlow());
 
       const calls = jest.mocked(window.open).mock.calls[0]!;
       const url = calls[0] as string;
@@ -92,15 +95,17 @@ describe('useAddIntegration', () => {
     });
 
     it('includes urlParams passed to startFlow', () => {
-      const {result} = renderHookWithProviders(() =>
-        useAddIntegration({
+      const {result} = renderHookWithProviders(useAddIntegration, {
+        additionalWrapper: PostMessageProvider,
+      });
+
+      act(() =>
+        result.current.startFlow({
           provider,
-          organization: OrganizationFixture(),
           onInstall: jest.fn(),
+          urlParams: {custom_param: 'value'},
         })
       );
-
-      act(() => result.current.startFlow({custom_param: 'value'}));
 
       const url = jest.mocked(window.open).mock.calls[0]![0] as string;
       expect(url).toContain('custom_param=value');
@@ -109,15 +114,16 @@ describe('useAddIntegration', () => {
     it('calls onInstall when a success message is received', async () => {
       const onInstall = jest.fn();
 
-      const {result} = renderHookWithProviders(() =>
-        useAddIntegration({
+      const {result} = renderHookWithProviders(useAddIntegration, {
+        additionalWrapper: PostMessageProvider,
+      });
+
+      act(() =>
+        result.current.startFlow({
           provider,
-          organization: OrganizationFixture(),
           onInstall,
         })
       );
-
-      act(() => result.current.startFlow());
 
       const newIntegration = {
         success: true,
@@ -137,15 +143,16 @@ describe('useAddIntegration', () => {
     it('shows a success indicator on successful installation', async () => {
       const successSpy = jest.spyOn(indicators, 'addSuccessMessage');
 
-      const {result} = renderHookWithProviders(() =>
-        useAddIntegration({
+      const {result} = renderHookWithProviders(useAddIntegration, {
+        additionalWrapper: PostMessageProvider,
+      });
+
+      act(() =>
+        result.current.startFlow({
           provider,
-          organization: OrganizationFixture(),
           onInstall: jest.fn(),
         })
       );
-
-      act(() => result.current.startFlow());
 
       postMessageFromPopup(popup, {success: true, data: integration});
       await waitFor(() => expect(successSpy).toHaveBeenCalledWith('GitHub added'));
@@ -154,15 +161,16 @@ describe('useAddIntegration', () => {
     it('shows an error indicator when the message has success: false', async () => {
       const errorSpy = jest.spyOn(indicators, 'addErrorMessage');
 
-      const {result} = renderHookWithProviders(() =>
-        useAddIntegration({
+      const {result} = renderHookWithProviders(useAddIntegration, {
+        additionalWrapper: PostMessageProvider,
+      });
+
+      act(() =>
+        result.current.startFlow({
           provider,
-          organization: OrganizationFixture(),
           onInstall: jest.fn(),
         })
       );
-
-      act(() => result.current.startFlow());
 
       postMessageFromPopup(popup, {success: false, data: {error: 'OAuth failed'}});
       await waitFor(() => expect(errorSpy).toHaveBeenCalledWith('OAuth failed'));
@@ -171,15 +179,16 @@ describe('useAddIntegration', () => {
     it('shows a generic error when no error message is provided', async () => {
       const errorSpy = jest.spyOn(indicators, 'addErrorMessage');
 
-      const {result} = renderHookWithProviders(() =>
-        useAddIntegration({
+      const {result} = renderHookWithProviders(useAddIntegration, {
+        additionalWrapper: PostMessageProvider,
+      });
+
+      act(() =>
+        result.current.startFlow({
           provider,
-          organization: OrganizationFixture(),
           onInstall: jest.fn(),
         })
       );
-
-      act(() => result.current.startFlow());
 
       postMessageFromPopup(popup, {success: false, data: {}});
       await waitFor(() =>
@@ -190,10 +199,13 @@ describe('useAddIntegration', () => {
     it('ignores messages from invalid origins', async () => {
       const onInstall = jest.fn();
 
-      renderHookWithProviders(() =>
-        useAddIntegration({
+      const {result} = renderHookWithProviders(useAddIntegration, {
+        additionalWrapper: PostMessageProvider,
+      });
+
+      act(() =>
+        result.current.startFlow({
           provider,
-          organization: OrganizationFixture(),
           onInstall,
         })
       );
@@ -210,15 +222,16 @@ describe('useAddIntegration', () => {
     it('does not call onInstall when data is empty on success', async () => {
       const onInstall = jest.fn();
 
-      const {result} = renderHookWithProviders(() =>
-        useAddIntegration({
+      const {result} = renderHookWithProviders(useAddIntegration, {
+        additionalWrapper: PostMessageProvider,
+      });
+
+      act(() =>
+        result.current.startFlow({
           provider,
-          organization: OrganizationFixture(),
           onInstall,
         })
       );
-
-      act(() => result.current.startFlow());
 
       postMessageFromPopup(popup, {success: true, data: null});
 
@@ -228,19 +241,24 @@ describe('useAddIntegration', () => {
       expect(onInstall).not.toHaveBeenCalled();
     });
 
-    it('closes the dialog on unmount', () => {
-      const {result, unmount} = renderHookWithProviders(() =>
-        useAddIntegration({
+    it('unsubscribes from messages on unmount', () => {
+      const onInstall = jest.fn();
+
+      const {result, unmount} = renderHookWithProviders(useAddIntegration, {
+        additionalWrapper: PostMessageProvider,
+      });
+
+      act(() =>
+        result.current.startFlow({
           provider,
-          organization: OrganizationFixture(),
-          onInstall: jest.fn(),
+          onInstall,
         })
       );
 
-      act(() => result.current.startFlow());
       unmount();
 
-      expect(popup.close).toHaveBeenCalledTimes(1);
+      postMessageFromPopup(popup, {success: true, data: integration});
+      expect(onInstall).not.toHaveBeenCalled();
     });
   });
 
@@ -253,15 +271,17 @@ describe('useAddIntegration', () => {
         features: ['integration-api-pipeline-github'],
       });
 
-      const {result} = renderHookWithProviders(() =>
-        useAddIntegration({
+      const {result} = renderHookWithProviders(useAddIntegration, {
+        additionalWrapper: PostMessageProvider,
+        organization,
+      });
+
+      act(() =>
+        result.current.startFlow({
           provider,
-          organization,
           onInstall,
         })
       );
-
-      act(() => result.current.startFlow());
 
       expect(openPipelineModalSpy).toHaveBeenCalledWith({
         type: 'integration',
@@ -278,15 +298,17 @@ describe('useAddIntegration', () => {
         features: ['integration-api-pipeline-github'],
       });
 
-      const {result} = renderHookWithProviders(() =>
-        useAddIntegration({
+      const {result} = renderHookWithProviders(useAddIntegration, {
+        additionalWrapper: PostMessageProvider,
+        organization,
+      });
+
+      act(() =>
+        result.current.startFlow({
           provider,
-          organization,
           onInstall: jest.fn(),
         })
       );
-
-      act(() => result.current.startFlow());
 
       expect(window.open).not.toHaveBeenCalled();
     });
@@ -299,15 +321,17 @@ describe('useAddIntegration', () => {
 
       const organization = OrganizationFixture({features: []});
 
-      const {result} = renderHookWithProviders(() =>
-        useAddIntegration({
+      const {result} = renderHookWithProviders(useAddIntegration, {
+        additionalWrapper: PostMessageProvider,
+        organization,
+      });
+
+      act(() =>
+        result.current.startFlow({
           provider,
-          organization,
           onInstall: jest.fn(),
         })
       );
-
-      act(() => result.current.startFlow());
 
       expect(openPipelineModalSpy).not.toHaveBeenCalled();
       expect(window.open).toHaveBeenCalledTimes(1);
