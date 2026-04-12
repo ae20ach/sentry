@@ -90,11 +90,24 @@ def build_summary(failures: list[dict], run_url: str) -> str:
     lines.append("")
 
     for f in pollution:
+        polluter = f.get("polluting_testid")
+        if polluter:
+            summary_line = (
+                f"<details><summary><code>{f['testid']}</code>"
+                f" — polluted by <code>{polluter}</code></summary>"
+            )
+            body = f.get("pollution_body", "")
+        else:
+            # Simple isolation detection: test passes alone but fails in shuffle.
+            summary_line = (
+                f"<details><summary><code>{f['testid']}</code>"
+                f" — passes in isolation (likely pollution)</summary>"
+            )
+            body = f.get("longrepr", "No traceback available")
         lines += [
-            f"<details><summary><code>{f['testid']}</code>"
-            f" — polluted by <code>{f['polluting_testid']}</code></summary>",
+            summary_line,
             "",
-            f.get("pollution_body", ""),
+            body,
             "",
             "</details>",
             "",

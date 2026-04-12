@@ -116,8 +116,28 @@ jobs:
             exit "$rc"
           }
 
-      # Temporarily disabled: pollution detection re-runs the full test suite
-      # adding ~10min per failing shard. Re-enable once flake rate is lower.
+      - name: Detect test pollution
+        if: failure() && steps.run-tests.outcome == 'failure'
+        id: detect-pollution
+        run: |
+          test -f "$GITHUB_WORKSPACE/failing-testid" || exit 0
+          read -r FAILING_TESTID < "$GITHUB_WORKSPACE/failing-testid"
+
+          # Run the failing test in isolation (no shuffle, no other tests).
+          # If it passes alone, the failure is likely caused by test pollution
+          # (state leaked from a prior test). If it fails alone, it's a genuine
+          # flaky test. Either way we don't fail this step — just record the type.
+          if SENTRY_SHUFFLE_TESTS=0 timeout 300 .venv/bin/pytest \
+              -x "$FAILING_TESTID" \
+              --reuse-db \
+              --no-header -q \
+              > /tmp/isolation-run.log 2>&1; then
+            echo "is_pollution=true" >> "$GITHUB_OUTPUT"
+            echo "Test passes in isolation → likely pollution"
+          else
+            echo "is_pollution=false" >> "$GITHUB_OUTPUT"
+            echo "Test fails in isolation → genuine flake"
+          fi
 
       - name: Write failure artifact
         if: failure()
@@ -125,8 +145,13 @@ jobs:
           test -f "$GITHUB_WORKSPACE/failing-testid" || exit 0
           read -r FAILING_TESTID < "$GITHUB_WORKSPACE/failing-testid"
           LONGREPR=$(cat "$GITHUB_WORKSPACE/failing-testid-longrepr" 2>/dev/null || echo "no failure detail available")
+          # Use pollution type if detect-pollution determined the test passes alone.
+          FAILURE_TYPE="flaky"
+          if [ "${{ steps.detect-pollution.outputs.is_pollution }}" = "true" ]; then
+            FAILURE_TYPE="pollution"
+          fi
           jq -n \
-            --arg type "flaky" \
+            --arg type "$FAILURE_TYPE" \
             --arg testid "$FAILING_TESTID" \
             --arg longrepr "$LONGREPR" \
             --arg sha "${{ github.sha }}" \
