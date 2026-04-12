@@ -229,11 +229,12 @@ def main() -> None:
     log(f"Phase 1 done ({time.monotonic() - start:.0f}s)")
 
     wait_for_devservices()
-    try:
-        docker("stop", "snuba-snuba-1", timeout=30)
-    except subprocess.TimeoutExpired:
-        log("WARNING: docker stop snuba-snuba-1 timed out, killing")
-        docker("kill", "snuba-snuba-1")
+    # Keep the main snuba container (port 1218) running as a fallback.
+    # Workers are configured to use per-worker containers on ports 1230+, but
+    # any test that misses the per-worker URL will fall back to 1218 rather
+    # than getting connection refused.  The per-worker containers use isolated
+    # ClickHouse databases so there is no cross-worker data contamination for
+    # tests that use the correct per-worker URL.
 
     log("Phase 2: starting per-worker Snuba API containers")
     rc = run_parallel(
