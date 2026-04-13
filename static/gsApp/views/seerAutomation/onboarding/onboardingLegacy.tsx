@@ -36,7 +36,7 @@ import type {Repository} from 'sentry/types/integrations';
 import type {Project} from 'sentry/types/project';
 import {useFetchAllPages} from 'sentry/utils/api/apiFetch';
 import {makeDetailedProjectQueryKey} from 'sentry/utils/project/useDetailedProject';
-import {useInfiniteQuery, useQuery, useQueryClient} from 'sentry/utils/queryClient';
+import {useInfiniteQuery, useQueryClient} from 'sentry/utils/queryClient';
 import {organizationRepositoriesInfiniteOptions} from 'sentry/utils/repositories/repoQueryOptions';
 import {useApi} from 'sentry/utils/useApi';
 import {useNavigate} from 'sentry/utils/useNavigate';
