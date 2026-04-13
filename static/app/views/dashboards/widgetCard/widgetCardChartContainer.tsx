@@ -1,4 +1,5 @@
 import {Fragment} from 'react';
+import * as Sentry from '@sentry/react';
 import type {LegendComponentOption} from 'echarts';
 
 import type {Client} from 'sentry/api';
@@ -157,10 +158,13 @@ export function WidgetCardChartContainer({
         if (errorOrEmptyMessage) {
           if (
             typeof errorOrEmptyMessage === 'string' &&
-            errorOrEmptyMessage !== t('No data found') &&
-            onWidgetError
+            errorOrEmptyMessage !== t('No data found')
           ) {
-            onWidgetError(widget, errorOrEmptyMessage);
+            Sentry.captureMessage('Dashboard widget query error', {
+              level: 'error',
+              extra: {widget_title: widget.title, error_message: errorOrEmptyMessage},
+            });
+            onWidgetError?.(widget, errorOrEmptyMessage);
           }
 
           return <Widget.WidgetError />;

@@ -1,6 +1,7 @@
 import {Fragment} from 'react';
 import {Link} from 'react-router-dom';
 import {useTheme} from '@emotion/react';
+import * as Sentry from '@sentry/react';
 
 import {Container, Flex, type ContainerProps} from '@sentry/scraps/layout';
 import {Text} from '@sentry/scraps/text';
@@ -132,8 +133,12 @@ export function VisualizationWidget({
         isSampled,
         sampleCount,
       }) => {
-        if (errorMessage && onWidgetError) {
-          onWidgetError(widget, errorMessage);
+        if (errorMessage) {
+          Sentry.captureMessage('Dashboard widget query error', {
+            level: 'error',
+            extra: {widget_title: widget.title, error_message: errorMessage},
+          });
+          onWidgetError?.(widget, errorMessage);
         }
 
         return (

@@ -1,6 +1,7 @@
 import {Fragment} from 'react';
 import {css} from '@emotion/react';
 import styled from '@emotion/styled';
+import * as Sentry from '@sentry/react';
 
 import {Container, Flex} from '@sentry/scraps/layout';
 
@@ -85,11 +86,14 @@ function WidgetLayout(props: Widget) {
       {props.Visualization && (
         <VisualizationWrapper noPadding={props.noVisualizationPadding}>
           <ErrorBoundary
-            customComponent={() => (
-              <Container position="absolute" inset={0}>
-                <WidgetError />
-              </Container>
-            )}
+            customComponent={({error}) => {
+              Sentry.captureException(error);
+              return (
+                <Container position="absolute" inset={0}>
+                  <WidgetError />
+                </Container>
+              );
+            }}
           >
             {props.Visualization}
           </ErrorBoundary>
@@ -98,7 +102,12 @@ function WidgetLayout(props: Widget) {
 
       {props.Footer && (
         <FooterWrapper noPadding={props.noFooterPadding}>
-          <ErrorBoundary customComponent={() => <WidgetError />}>
+          <ErrorBoundary
+            customComponent={({error}) => {
+              Sentry.captureException(error);
+              return <WidgetError />;
+            }}
+          >
             {props.Footer}
           </ErrorBoundary>
         </FooterWrapper>
