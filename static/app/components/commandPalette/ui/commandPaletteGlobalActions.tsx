@@ -335,9 +335,7 @@ export function GlobalCommandPaletteActions() {
               });
             }}
           >
-            {data => {
-              return data.map((item, i) => renderAsyncResult(item, i));
-            }}
+            {data => data.map((item, i) => renderAsyncResult(item, i))}
           </CMDKAction>
         )}
       </CMDKAction>
