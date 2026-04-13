@@ -77,10 +77,15 @@ def _normalize_output(output: dict[SegmentKey, FlushedSegment]):
         segment.spans.sort(key=lambda span: span.payload["span_id"])
 
 
+_SKIP_CLUSTER = pytest.mark.skip(
+    reason="test pollution: the Redis Cluster (ports 7000-7005) is shared across all xdist workers; stale keys from concurrent tests on other workers cause assert_clean failures"
+)
+
+
 @pytest.fixture(
     params=[
-        pytest.param(("cluster", 0), id="cluster-nochunk"),
-        pytest.param(("cluster", 1), id="cluster-chunk1"),
+        pytest.param(("cluster", 0), id="cluster-nochunk", marks=_SKIP_CLUSTER),
+        pytest.param(("cluster", 1), id="cluster-chunk1", marks=_SKIP_CLUSTER),
         pytest.param(("single", 0), id="single-nochunk"),
         pytest.param(("single", 1), id="single-chunk1"),
     ]
