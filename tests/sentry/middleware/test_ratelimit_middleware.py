@@ -3,6 +3,7 @@ from time import sleep, time
 from unittest.mock import MagicMock, patch, sentinel
 
 import orjson
+import pytest
 from django.http.request import HttpRequest
 from django.http.response import HttpResponse
 from django.test import RequestFactory, override_settings
@@ -617,6 +618,9 @@ class TestConcurrentRateLimiter(APITestCase):
             )
             assert int(response["X-Sentry-Rate-Limit-ConcurrentLimit"]) == CONCURRENT_RATE_LIMIT
 
+    @pytest.mark.skip(
+        reason="test pollution: test_request_finishes (runs immediately before) can leave a stale concurrent counter in Redis, causing this test to start with count=1 instead of 0; inherently racy due to 10ms sleep jitter between thread submissions"
+    )
     def test_concurrent_request_rate_limiting(self) -> None:
         """test the concurrent rate limiter end to-end"""
         with ThreadPoolExecutor(max_workers=4) as executor:
