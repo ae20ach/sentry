@@ -148,13 +148,14 @@ export function MetricsTabSeerComboBox({traceMetric}: MetricsTabSeerComboBoxProp
         status: 'ok',
         unsupported_reason: data.unsupported_reason,
         queries: data.responses.map(r => ({
-          visualizations: r.visualization.map(v => ({
-            chartType: v.chart_type,
-            yAxes: v.y_axes,
-          })),
+          visualizations:
+            r.visualization?.map(v => ({
+              chartType: v.chart_type,
+              yAxes: v.y_axes,
+            })) ?? [],
           query: r.query,
           sort: r.sort,
-          groupBys: r.group_by,
+          groupBys: r.group_by ?? [],
           statsPeriod: r.stats_period,
           start: r.start,
           end: r.end,
@@ -350,13 +351,14 @@ export function MetricsTabSeerComboBox({traceMetric}: MetricsTabSeerComboBoxProp
 
       if (seerResponse.responses && Array.isArray(seerResponse.responses)) {
         return seerResponse.responses.map(r => ({
-          visualizations: r.visualization.map(v => ({
-            chartType: v.chart_type,
-            yAxes: v.y_axes,
-          })),
+          visualizations:
+            r.visualization?.map(v => ({
+              chartType: v.chart_type,
+              yAxes: v.y_axes,
+            })) ?? [],
           query: r.query,
           sort: r.sort,
-          groupBys: r.group_by,
+          groupBys: r.group_by ?? [],
           statsPeriod: r.stats_period,
           start: r.start,
           end: r.end,
