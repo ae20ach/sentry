@@ -348,6 +348,21 @@ class OrganizationReleaseDetailsEndpoint(
         if health_stats_period and health_stats_period not in STATS_PERIODS:
             raise ParseError(detail=get_stats_period_detail("healthStatsPeriod", STATS_PERIODS))
 
+        # Validate project access early if project_id is provided
+        project = None
+        if project_id:
+            try:
+                projects = self.get_projects(
+                    request=request,
+                    organization=organization,
+                    project_ids=[int(project_id)],
+                )
+                if not projects:
+                    raise ParseError(detail="Invalid project")
+                project = projects[0]
+            except (ValueError, TypeError):
+                raise ParseError(detail="Invalid project")
+
         try:
             release = Release.objects.get(organization_id=organization.id, version=version)
         except Release.DoesNotExist:
@@ -356,20 +371,16 @@ class OrganizationReleaseDetailsEndpoint(
         if not self.has_release_permission(request, organization, release):
             raise ResourceDoesNotExist
 
-        if with_health and project_id:
-            try:
-                project = Project.objects.get_from_cache(id=int(project_id))
-            except (ValueError, Project.DoesNotExist):
-                raise ParseError(detail="Invalid project")
+        if with_health and project:
             release._for_project_id = project.id
 
-        if project_id:
+        if project:
             # Add sessions time bound to current project meta data
             environments = set(request.GET.getlist("environment")) or None
             current_project_meta.update(
                 {
                     **release_health.backend.get_release_sessions_time_bounds(
-                        project_id=int(project_id),
+                        project_id=project.id,
                         release=release.version,
                         org_id=organization.id,
                         environments=environments,
@@ -394,7 +405,7 @@ class OrganizationReleaseDetailsEndpoint(
                         **self.get_first_and_last_releases(
                             org=organization,
                             environment=filter_params.get("environment"),
-                            project_id=[project_id],
+                            project_id=[project.id],
                             sort=sort,
                         ),
                     }
