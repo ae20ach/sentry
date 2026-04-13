@@ -730,9 +730,7 @@ describe('MetricsTabContent (tracemetrics-ui-refresh)', () => {
 
       await userEvent.click(screen.getByRole('button', {name: 'Expand sidebar'}));
 
-      const metricToolbar = await waitFor(() => {
-        return screen.getByTestId('metric-toolbar');
-      });
+      const metricToolbar = await screen.findByTestId('metric-toolbar');
 
       // Wait for the SearchQueryBuilderCombobox inside the re-expanded sidebar to
       // finish initialising, otherwise its async state updates fire after test end
