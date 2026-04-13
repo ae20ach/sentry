@@ -1101,13 +1101,6 @@ const StyledResultTable = styled(ResultTable)`
 
 const TOCContainer = styled('nav')`
   margin-bottom: ${p => p.theme.space['3xl']};
-  ul {
-    list-style-type: none;
-    padding-left: ${p => p.theme.space.xl};
-  }
-  li {
-    margin-bottom: ${p => p.theme.space.md};
-  }
   a {
     text-decoration: none;
     color: ${p => p.theme.tokens.interactive.link.accent.rest};
