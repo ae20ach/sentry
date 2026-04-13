@@ -30,13 +30,7 @@ export function ExceptionContent({
   return (
     <ErrorBoundary mini>
       {stackView === StackView.RAW ? (
-        <RawContent
-          eventId={event.id}
-          projectSlug={projectSlug}
-          type={stackType}
-          values={values}
-          platform={event.platform}
-        />
+        <RawContent type={stackType} values={values} platform={event.platform} />
       ) : (
         <LineCoverageProvider>
           <Content

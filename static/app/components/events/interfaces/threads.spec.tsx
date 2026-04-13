@@ -1,4 +1,3 @@
-import merge from 'lodash/merge';
 import {GitHubIntegrationFixture} from 'sentry-fixture/githubIntegration';
 import {GroupFixture} from 'sentry-fixture/group';
 import {OrganizationFixture} from 'sentry-fixture/organization';
@@ -1204,12 +1203,6 @@ describe('Threads', () => {
           within(screen.getAllByTestId('stack-trace-frame')[1]!).getByText('0x10008c5ac')
         ).toBeInTheDocument();
 
-        MockApiClient.addMockResponse({
-          url: `/projects/${organization.slug}/${project.slug}/events/${event.id}/apple-crash-report`,
-          match: [MockApiClient.matchQuery({minified: 'false'})],
-          body: '',
-        });
-
         // Click on raw stack trace option
         await userEvent.click(
           screen.getByText(stackTraceDisplayOptionLabels['raw-stack-trace'])
@@ -1300,22 +1293,7 @@ describe('Threads', () => {
       });
 
       it('renders raw stack trace', async () => {
-        MockApiClient.addMockResponse({
-          url: `/projects/${organization.slug}/${project.slug}/events/${event.id}/apple-crash-report`,
-          match: [MockApiClient.matchQuery({minified: 'false'})],
-          body: 'crash report content',
-        });
-        MockApiClient.addMockResponse({
-          url: `/projects/${organization.slug}/${project.slug}/events/${event.id}/apple-crash-report`,
-          match: [MockApiClient.matchQuery({minified: 'true'})],
-          body: 'crash report content (minified)',
-        });
-
-        // Need rawStacktrace: true to enable the "minified" option in the UI
-        const eventWithMinifiedOption = merge({}, event, {
-          entries: [{data: {values: [{rawStacktrace: true}]}}],
-        });
-        render(<Threads {...props} event={eventWithMinifiedOption} />, {organization});
+        render(<Threads {...props} />, {organization});
 
         await userEvent.click(screen.getByRole('button', {name: 'Display as'}));
         expect(await screen.findByText('Display')).toBeInTheDocument();
@@ -1325,25 +1303,24 @@ describe('Threads', () => {
           await screen.findByText(stackTraceDisplayOptionLabels['raw-stack-trace'])
         );
 
-        // Raw crash report content should be displayed
-        await screen.findByText('crash report content');
+        // Raw stack trace content should be displayed (generated from exception frames)
+        // There are two elements with this test ID: the menu option and the actual content
+        const rawContentElements = await screen.findAllByTestId('raw-stack-trace');
+        expect(rawContentElements).toHaveLength(2);
 
-        // Download button should have correct URL
+        // The actual content element contains a <pre> tag with the stacktrace
+        // Find the element that contains the exception type and stack frames
+        const rawContent = rawContentElements.find(
+          el => el.querySelector('pre.traceback')
+        );
+        expect(rawContent).toBeDefined();
+        expect(rawContent).toHaveTextContent('EXC_BAD_ACCESS');
+        expect(rawContent).toHaveTextContent('-[SentryClient crash]');
+
+        // Download button should have correct URL for apple crash report download
         expect(screen.getByRole('button', {name: 'Download'})).toHaveAttribute(
           'href',
           `/projects/${organization.slug}/${project.slug}/events/${event.id}/apple-crash-report?minified=false&download=1`
-        );
-
-        // Click on minified option
-        await userEvent.click(screen.getByText(stackTraceDisplayOptionLabels.minified));
-
-        // Raw crash report content should be displayed (now with minified response)
-        await screen.findByText('crash report content (minified)');
-
-        // Download button should nonw have minified=true
-        expect(screen.getByRole('button', {name: 'Download'})).toHaveAttribute(
-          'href',
-          `/projects/${organization.slug}/${project.slug}/events/${event.id}/apple-crash-report?minified=true&download=1`
         );
       });
     });

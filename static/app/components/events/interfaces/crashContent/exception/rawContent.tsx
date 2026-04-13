@@ -1,72 +1,16 @@
 import {Fragment} from 'react';
 
-import {ClippedBox} from 'sentry/components/clippedBox';
 import {displayRawContent as rawStacktraceContent} from 'sentry/components/events/interfaces/crashContent/stackTrace/rawContent';
-import {LoadingError} from 'sentry/components/loadingError';
-import {Placeholder} from 'sentry/components/placeholder';
-import type {Event, ExceptionType} from 'sentry/types/event';
-import type {PlatformKey, Project} from 'sentry/types/project';
-import {defined} from 'sentry/utils';
-import {getApiUrl} from 'sentry/utils/api/getApiUrl';
-import {useApiQuery} from 'sentry/utils/queryClient';
-import {useOrganization} from 'sentry/utils/useOrganization';
+import type {ExceptionType} from 'sentry/types/event';
+import type {PlatformKey} from 'sentry/types/project';
 
 interface Props {
-  eventId: Event['id'];
-  projectSlug: Project['slug'];
   type: 'original' | 'minified';
   values: ExceptionType['values'];
   platform?: PlatformKey;
 }
 
-export function RawContent({eventId, projectSlug, type, platform, values}: Props) {
-  const organization = useOrganization();
-
-  const isNative =
-    platform === 'native' ||
-    platform === 'cocoa' ||
-    platform === 'nintendo-switch' ||
-    platform === 'playstation' ||
-    platform === 'xbox';
-
-  const hasCrashReport = isNative && defined(organization);
-
-  const {
-    data: crashReport,
-    isPending,
-    isError,
-  } = useApiQuery<string>(
-    [
-      getApiUrl(
-        // Note that this endpoint does not have a trailing slash for some reason
-        '/projects/$organizationIdOrSlug/$projectIdOrSlug/events/$eventId/apple-crash-report',
-        {
-          path: {
-            organizationIdOrSlug: organization.slug,
-            projectIdOrSlug: projectSlug,
-            eventId,
-          },
-        }
-      ),
-      {
-        query: {minified: String(type === 'minified')},
-        headers: {Accept: '*/*; charset=utf-8'},
-      },
-    ],
-    {
-      enabled: hasCrashReport,
-      staleTime: Infinity,
-    }
-  );
-
-  if (isPending && hasCrashReport) {
-    return <Placeholder height="270px" />;
-  }
-
-  if (isError) {
-    return <LoadingError />;
-  }
-
+export function RawContent({type, platform, values}: Props) {
   if (!values) {
     return null;
   }
@@ -74,35 +18,25 @@ export function RawContent({eventId, projectSlug, type, platform, values}: Props
   return (
     <Fragment>
       {values.map((exc, excIdx) => {
-        if (!isNative) {
-          const exceptionValue =
-            type === 'original' ? exc.value : exc.rawValue || exc.value;
-          const exceptionType = type === 'original' ? exc.type : exc.rawType || exc.type;
+        const exceptionValue =
+          type === 'original' ? exc.value : exc.rawValue || exc.value;
+        const exceptionType = type === 'original' ? exc.type : exc.rawType || exc.type;
 
-          const nonNativeContent = exc.stacktrace ? (
-            rawStacktraceContent({
-              data: type === 'original' ? exc.stacktrace : exc.rawStacktrace,
-              platform,
-              exception: exc,
-              isMinified: type === 'minified',
-            })
-          ) : (
-            <div>
-              {exceptionType}: {exceptionValue}
-            </div>
-          );
-          return (
-            <div key={excIdx} data-test-id="raw-stack-trace">
-              <pre className="traceback plain">{nonNativeContent}</pre>
-            </div>
-          );
-        }
-
+        const rawContent = exc.stacktrace ? (
+          rawStacktraceContent({
+            data: type === 'original' ? exc.stacktrace : exc.rawStacktrace,
+            platform,
+            exception: exc,
+            isMinified: type === 'minified',
+          })
+        ) : (
+          <div>
+            {exceptionType}: {exceptionValue}
+          </div>
+        );
         return (
           <div key={excIdx} data-test-id="raw-stack-trace">
-            <pre className="traceback plain">
-              <ClippedBox clipHeight={250}>{crashReport}</ClippedBox>
-            </pre>
+            <pre className="traceback plain">{rawContent}</pre>
           </div>
         );
       })}
