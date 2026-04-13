@@ -19,6 +19,7 @@ from sentry.notifications.models.notificationaction import ActionTarget
 from sentry.snuba.models import QuerySubscription, SnubaQuery
 from sentry.workflow_engine.models import Action, Condition, Detector
 from sentry.workflow_engine.models.alertrule_detector import AlertRuleDetector
+from sentry.workflow_engine.models.detector_workflow import DetectorWorkflow
 from sentry.workflow_engine.types import DetectorPriorityLevel
 
 if TYPE_CHECKING:
@@ -135,6 +136,7 @@ class AlertContext:
 
         # Use the alert rule name if one exists, since the detector name may be
         # the monitor name rather than the user-defined alert rule name.
+        # Fallback chain: alert rule name → workflow name → detector name.
         name = detector.name
         try:
             alert_rule_id = AlertRuleDetector.objects.values_list("alert_rule_id", flat=True).get(
@@ -146,7 +148,14 @@ class AlertContext:
                 )
                 name = alert_rule_name
         except (AlertRuleDetector.DoesNotExist, AlertRule.DoesNotExist):
-            pass
+            # No alert rule linked — fall back to the triggering workflow name.
+            workflow_name = (
+                DetectorWorkflow.objects.filter(detector_id=detector.id)
+                .values_list("workflow__name", flat=True)
+                .first()
+            )
+            if workflow_name is not None:
+                name = workflow_name
 
         return cls(
             name=name,
