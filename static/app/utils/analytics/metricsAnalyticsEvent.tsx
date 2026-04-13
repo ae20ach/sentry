@@ -2,21 +2,6 @@ import type {Organization} from 'sentry/types/organization';
 import type {PlatformKey} from 'sentry/types/project';
 
 export type MetricsAnalyticsEventParameters = {
-  'metrics.ai_query_applied': {
-    group_by_count: number;
-    query: string;
-    visualize_count: number;
-  };
-  'metrics.ai_query_interface': {
-    action: 'opened' | 'closed' | 'consent_accepted';
-  };
-  'metrics.ai_query_rejected': {
-    natural_language_query: string;
-    num_queries_returned: number;
-  };
-  'metrics.ai_query_submitted': {
-    natural_language_query: string;
-  };
   'metrics.explorer.metadata': {
     datetime_selection: string;
     environment_count: number;
@@ -87,10 +72,6 @@ export type MetricsAnalyticsEventParameters = {
 type MetricsAnalyticsEventKey = keyof MetricsAnalyticsEventParameters;
 
 export const metricsAnalyticsEventMap: Record<MetricsAnalyticsEventKey, string | null> = {
-  'metrics.ai_query_applied': 'Metrics AI Query Applied',
-  'metrics.ai_query_interface': 'Metrics AI Query Interface',
-  'metrics.ai_query_rejected': 'Metrics AI Query Rejected',
-  'metrics.ai_query_submitted': 'Metrics AI Query Submitted',
   'metrics.explorer.metadata': 'Metric Explorer Pageload Metadata',
   'metrics.explorer.panel.metadata': 'Metric Explorer Panel Metadata',
   'metrics.issue_details.drawer_opened': 'Metrics Issue Details Drawer Opened',

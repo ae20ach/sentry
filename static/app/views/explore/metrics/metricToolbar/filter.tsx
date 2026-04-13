@@ -58,9 +58,12 @@ export function Filter({traceMetric}: FilterProps) {
   const setQuery = useSetQueryParamsQuery();
   const organization = useOrganization();
 
-  const hasTranslateEndpoint =
-    organization.features.includes('gen-ai-search-agent-translate') &&
-    organization.features.includes('gen-ai-explore-metrics-search');
+  const hasTranslateEndpoint = organization.features.includes(
+    'gen-ai-search-agent-translate'
+  );
+  const hasMetricsAISearch = organization.features.includes(
+    'gen-ai-explore-metrics-search'
+  );
 
   const traceMetricFilter = createTraceMetricFilter(traceMetric);
 
@@ -171,7 +174,7 @@ export function Filter({traceMetric}: FilterProps) {
       // This prevents race conditions when navigating between different metrics
       key={traceMetric.name}
       {...searchQueryBuilderProviderProps}
-      enableAISearch={hasTranslateEndpoint}
+      enableAISearch={hasTranslateEndpoint && hasMetricsAISearch}
       aiSearchBadgeType="alpha"
     >
       <MetricsSearchBar
