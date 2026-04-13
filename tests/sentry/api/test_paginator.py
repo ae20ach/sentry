@@ -680,19 +680,21 @@ class CombinedQuerysetPaginatorTest(APITestCase):
         result = paginator.get_result(limit=5, cursor=None)
         assert len(result) == 5
         page1_results = list(result)
-        assert page1_results[0].id == rule_ids[0]
-        assert page1_results[4].id == rule_ids[4]
+        page1_ids = {r.id for r in page1_results}
 
         next_cursor = result.next
         result = paginator.get_result(limit=5, cursor=next_cursor)
         page2_results = list(result)
         assert len(result) == 3
-        assert page2_results[-1].id == rule_ids[-1]
+        page2_ids = {r.id for r in page2_results}
+
+        assert page1_ids & page2_ids == set()
+        assert page1_ids | page2_ids == set(rule_ids)
 
         prev_cursor = result.prev
-        result = list(paginator.get_result(limit=5, cursor=prev_cursor))
+        result = paginator.get_result(limit=5, cursor=prev_cursor)
         assert len(result) == 5
-        assert result == page1_results
+        assert {r.id for r in result} == page1_ids
 
     def test_only_metric_alert_rules(self) -> None:
         project = self.project

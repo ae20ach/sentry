@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, patch
 
+import pytest
 from django.db import IntegrityError
 from django.urls import reverse
 
@@ -794,6 +795,9 @@ class AssembleDownloadExploreTest(TestCase, SnubaTestCase, SpanTestCase, OurLogT
             content = f.read().strip()
         assert b"log.body,severity_text" in content
 
+    @pytest.mark.skip(
+        reason="test pollution: log messages from prior tests appear in the JSONL export results, causing set comparison to fail (5+ occurrences in shuffle runs)"
+    )
     @patch("sentry.data_export.models.ExportedData.email_success")
     def test_explore_logs_jsonl_format(self, emailer: MagicMock) -> None:
         logs = [
