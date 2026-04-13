@@ -16,12 +16,14 @@ import {useLocation} from 'sentry/utils/useLocation';
 import {useNavigate} from 'sentry/utils/useNavigate';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {useProjects} from 'sentry/utils/useProjects';
-import type {TraceMetric} from 'sentry/views/explore/metrics/metricQuery';
-import type {WritableAggregateField} from 'sentry/views/explore/queryParams/aggregateField';
 import {
-  useQueryParams,
-  useSetQueryParams,
-} from 'sentry/views/explore/queryParams/context';
+  encodeMetricQueryParams,
+  type BaseMetricQuery,
+  type TraceMetric,
+} from 'sentry/views/explore/metrics/metricQuery';
+import {useMultiMetricsQueryParams} from 'sentry/views/explore/metrics/multiMetricsQueryParams';
+import type {AggregateField} from 'sentry/views/explore/queryParams/aggregateField';
+import {useQueryParams} from 'sentry/views/explore/queryParams/context';
 import {isGroupBy} from 'sentry/views/explore/queryParams/groupBy';
 import {Mode} from 'sentry/views/explore/queryParams/mode';
 import {isVisualize} from 'sentry/views/explore/queryParams/visualize';
@@ -71,7 +73,7 @@ export function MetricsTabSeerComboBox({traceMetric}: MetricsTabSeerComboBoxProp
   const pageFilters = usePageFilters();
   const organization = useOrganization();
   const queryParams = useQueryParams();
-  const setQueryParams = useSetQueryParams();
+  const metricQueries = useMultiMetricsQueryParams();
   const {
     currentInputValueRef,
     query,
@@ -210,7 +212,7 @@ export function MetricsTabSeerComboBox({traceMetric}: MetricsTabSeerComboBoxProp
         }
       }
 
-      const aggregateFields: WritableAggregateField[] = [];
+      const aggregateFields: AggregateField[] = [];
       const iter = groupBys[Symbol.iterator]();
 
       for (const aggregateField of queryParams.aggregateFields) {
@@ -221,7 +223,7 @@ export function MetricsTabSeerComboBox({traceMetric}: MetricsTabSeerComboBoxProp
               aggregateFields.push({groupBy});
             }
           }
-          aggregateFields.push(aggregateField.serialize());
+          aggregateFields.push(aggregateField);
         } else if (isGroupBy(aggregateField)) {
           const {value: groupBy, done} = iter.next();
           if (!done) {
@@ -235,10 +237,23 @@ export function MetricsTabSeerComboBox({traceMetric}: MetricsTabSeerComboBoxProp
         aggregateFields.push({groupBy});
       }
 
-      // Update per-query state atomically (query, aggregateFields, mode)
-      setQueryParams({query: queryToUse, aggregateFields, mode});
+      // Build updated ReadableQueryParams for this metric
+      const newQueryParams = queryParams.replace({
+        query: queryToUse,
+        aggregateFields,
+        mode,
+      });
 
-      // Update global time range via navigation
+      // Build encoded metric queries, updating the current metric's query params
+      const newEncodedMetrics = metricQueries
+        .map((mq: BaseMetricQuery) => {
+          if (mq.queryParams === queryParams) {
+            return encodeMetricQueryParams({...mq, queryParams: newQueryParams});
+          }
+          return encodeMetricQueryParams(mq);
+        })
+        .filter(Boolean);
+
       const selection = {
         ...pageFilters.selection,
         datetime: {
@@ -266,12 +281,15 @@ export function MetricsTabSeerComboBox({traceMetric}: MetricsTabSeerComboBoxProp
         visualize_count: visualizations?.length ?? 0,
       });
 
-      // Navigate to update global time range params
+      // Single navigate with both metric params and datetime
+      // (Previously, setQueryParams and navigate were called separately,
+      // causing the second navigate to overwrite the first with stale location)
       navigate(
         {
           ...location,
           query: {
             ...location.query,
+            metric: newEncodedMetrics,
             start: selection.datetime.start,
             end: selection.datetime.end,
             statsPeriod: selection.datetime.period,
@@ -284,11 +302,11 @@ export function MetricsTabSeerComboBox({traceMetric}: MetricsTabSeerComboBoxProp
     [
       askSeerSuggestedQueryRef,
       location,
+      metricQueries,
       navigate,
       organization,
       pageFilters.selection,
-      queryParams.aggregateFields,
-      setQueryParams,
+      queryParams,
     ]
   );
 
