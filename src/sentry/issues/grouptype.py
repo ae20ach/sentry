@@ -19,7 +19,7 @@ from sentry.features.base import OrganizationFeature
 from sentry.ratelimits.sliding_windows import Quota
 from sentry.types.group import PriorityLevel
 from sentry.utils import metrics
-from sentry.workflow_engine.types import DetectorSettings, get_detector_settings
+from sentry.workflow_engine.types import DetectorSettings, DetectorType, get_detector_settings
 
 if TYPE_CHECKING:
     from sentry.models.organization import Organization
@@ -259,6 +259,9 @@ class GroupType:
     # Quota around many of these issue types can be created per project in a given time window
     creation_quota: Quota = Quota(3600, 60, 5)  # default 5 per hour, sliding window of 60 seconds
     notification_config: NotificationConfig = NotificationConfig()
+    detector_type: DetectorType | None = None
+    # Deprecated: use detector_type + detector_settings_registry instead.
+    # Kept as a fallback for tests that haven't migrated yet.
     detector_settings: DetectorSettings | None = None
     # Controls whether status change (i.e. resolved, regressed) workflow notifications are enabled.
     # Defaults to true to maintain the default workflow notification behavior as it exists for error group types.
