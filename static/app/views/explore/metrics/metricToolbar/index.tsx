@@ -26,12 +26,12 @@ import {
 } from 'sentry/views/explore/queryParams/visualize';
 
 interface MetricToolbarProps {
-  queryIndex: number;
+  queryLabel: string;
   traceMetric: TraceMetric;
   references?: Set<string>;
 }
 
-export function MetricToolbar({traceMetric, queryIndex, references}: MetricToolbarProps) {
+export function MetricToolbar({traceMetric, queryLabel, references}: MetricToolbarProps) {
   const organization = useOrganization();
   const metricQueries = useMultiMetricsQueryParams();
   const visualize = useMetricVisualize();
@@ -40,7 +40,12 @@ export function MetricToolbar({traceMetric, queryIndex, references}: MetricToolb
     setVisualize(visualize.replace({visible: !visualize.visible}));
   }, [setVisualize, visualize]);
   const setTraceMetric = useSetTraceMetric();
-  const canRemoveMetric = metricQueries.length > 1;
+
+  // We need at least one metric visualized, but equations should always
+  // be removable
+  const canRemoveMetric =
+    metricQueries.filter(q => isVisualizeFunction(q.queryParams.visualizes[0]!)).length >
+      1 || isVisualizeEquation(visualize);
 
   const handleExpressionChange = useCallback(
     (newExpression: Expression) => {
@@ -70,7 +75,7 @@ export function MetricToolbar({traceMetric, queryIndex, references}: MetricToolb
         paddingTop="md"
       >
         <VisualizeLabel
-          index={queryIndex}
+          label={queryLabel}
           visualize={visualize}
           onClick={toggleVisibility}
         />
@@ -119,7 +124,7 @@ export function MetricToolbar({traceMetric, queryIndex, references}: MetricToolb
       data-test-id="metric-toolbar"
     >
       <VisualizeLabel
-        index={queryIndex}
+        label={queryLabel}
         visualize={visualize}
         onClick={toggleVisibility}
       />
