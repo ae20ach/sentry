@@ -29,7 +29,9 @@ describe('BigNumberWidgetVisualization', () => {
         />
       );
 
-      expect(screen.getByText('Value is not a finite number.')).toBeInTheDocument();
+      expect(
+        screen.getByText('There was an error loading this widget.')
+      ).toBeInTheDocument();
     });
 
     it('Formats dates', () => {
