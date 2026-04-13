@@ -15,7 +15,6 @@ import {
 import {openModal} from 'sentry/actionCreators/modal';
 import {hasEveryAccess} from 'sentry/components/acl/access';
 import {ClippedBox} from 'sentry/components/clippedBox';
-import {useOrganizationRepositories} from 'sentry/components/events/autofix/preferences/hooks/useOrganizationRepositories';
 import {useProjectSeerPreferences} from 'sentry/components/events/autofix/preferences/hooks/useProjectSeerPreferences';
 import {useUpdateProjectSeerPreferences} from 'sentry/components/events/autofix/preferences/hooks/useUpdateProjectSeerPreferences';
 import type {SeerRepoDefinition} from 'sentry/components/events/autofix/types';
@@ -35,8 +34,10 @@ import {IconChevron, IconSearch} from 'sentry/icons';
 import {t, tct} from 'sentry/locale';
 import type {Repository} from 'sentry/types/integrations';
 import type {Project} from 'sentry/types/project';
+import {useFetchAllPages} from 'sentry/utils/api/apiFetch';
 import {makeDetailedProjectQueryKey} from 'sentry/utils/project/useDetailedProject';
-import {useQueryClient} from 'sentry/utils/queryClient';
+import {useInfiniteQuery, useQuery, useQueryClient} from 'sentry/utils/queryClient';
+import {organizationRepositoriesInfiniteOptions} from 'sentry/utils/repositories/repoQueryOptions';
 import {useApi} from 'sentry/utils/useApi';
 import {useNavigate} from 'sentry/utils/useNavigate';
 import {useOrganization} from 'sentry/utils/useOrganization';
@@ -202,8 +203,13 @@ function ProjectsWithoutRepos({
   onProjectSuccess: (projectId: string) => void;
   projects: Project[];
 }) {
-  const {data: repositories, isFetching: isFetchingRepositories} =
-    useOrganizationRepositories();
+  const organization = useOrganization();
+  const result = useInfiniteQuery({
+    ...organizationRepositoriesInfiniteOptions({organization}),
+    select: ({pages}) => pages.flatMap(page => page.json),
+  });
+  useFetchAllPages({result});
+  const {data: repositories, isFetching: isFetchingRepositories} = result;
 
   const [projectStates, setProjectStates] = useState<ProjectStateMap>({});
   const [successfullyConnectedProjects, setSuccessfullyConnectedProjects] = useState(
