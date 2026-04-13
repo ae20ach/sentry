@@ -40,6 +40,8 @@ pytest_plugins = ["sentry.testutils.pytest"]
 # https://github.com/pytest-dev/pytest/blob/master/src/_pytest/terminal.py
 
 
+_PYTHON_BASE_PREFIX = sys.base_prefix
+
 if sys.platform == "linux":
 
     def _open_files() -> frozenset[str]:
@@ -51,7 +53,12 @@ if sys.platform == "linux":
             except FileNotFoundError:
                 continue
             else:
-                if os.path.exists(path):
+                # Exclude Python stdlib .py source files. Background threads from
+                # live_server fixtures or the Python runtime itself (importlib,
+                # linecache, traceback) may open these; they are not test-code leaks.
+                if os.path.exists(path) and not (
+                    path.startswith(_PYTHON_BASE_PREFIX) and path.endswith(".py")
+                ):
                     ret.append(path)
         return frozenset(ret)
 
