@@ -2,28 +2,32 @@ import {useCallback} from 'react';
 import {css} from '@emotion/react';
 
 import type {ModalRenderProps} from 'sentry/actionCreators/modal';
-import {closeModal} from 'sentry/actionCreators/modal';
-import type {CommandPaletteActionWithKey} from 'sentry/components/commandPalette/types';
+import type {CMDKActionData} from 'sentry/components/commandPalette/ui/cmdk';
+import type {CollectionTreeNode} from 'sentry/components/commandPalette/ui/collection';
 import {CommandPalette} from 'sentry/components/commandPalette/ui/commandPalette';
 import type {Theme} from 'sentry/utils/theme';
 import {normalizeUrl} from 'sentry/utils/url/normalizeUrl';
 import {useNavigate} from 'sentry/utils/useNavigate';
 
-export default function CommandPaletteModal({Body}: ModalRenderProps) {
+export default function CommandPaletteModal({Body, closeModal}: ModalRenderProps) {
   const navigate = useNavigate();
 
   const handleSelect = useCallback(
-    (action: CommandPaletteActionWithKey) => {
+    (action: CollectionTreeNode<CMDKActionData>) => {
       if ('to' in action) {
         navigate(normalizeUrl(action.to));
       } else if ('onAction' in action) {
+        // When the action has children, the palette will push into them so the
+        // user can select a secondary action — keep the modal open. The
+        // callback already ran when the palette delegated this selection.
+        if (action.children.length > 0) {
+          return;
+        }
         action.onAction();
-      } else {
-        // @TODO: handle async actions
       }
       closeModal();
     },
-    [navigate]
+    [navigate, closeModal]
   );
 
   return (

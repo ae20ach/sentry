@@ -1,4 +1,4 @@
-import {Fragment, useCallback, useLayoutEffect, useMemo} from 'react';
+import {Fragment, useCallback, useLayoutEffect, useMemo, useRef} from 'react';
 import {preload} from 'react-dom';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -19,11 +19,9 @@ import {InnerWrap} from '@sentry/scraps/menuListItem';
 import type {MenuListItemProps} from '@sentry/scraps/menuListItem';
 import {Text} from '@sentry/scraps/text';
 
-import {useCommandPaletteActions} from 'sentry/components/commandPalette/context';
-import type {
-  CMDKQueryOptions,
-  CommandPaletteActionWithKey,
-} from 'sentry/components/commandPalette/types';
+import type {CMDKActionData} from 'sentry/components/commandPalette/ui/cmdk';
+import {CMDKCollection} from 'sentry/components/commandPalette/ui/cmdk';
+import type {CollectionTreeNode} from 'sentry/components/commandPalette/ui/collection';
 import {
   useCommandPaletteDispatch,
   useCommandPaletteState,
@@ -34,7 +32,6 @@ import {LoadingIndicator} from 'sentry/components/loadingIndicator';
 import {IconArrow, IconClose, IconSearch} from 'sentry/icons';
 import {IconDefaultsProvider} from 'sentry/icons/useIconDefaults';
 import {t} from 'sentry/locale';
-import {useQueries} from 'sentry/utils/queryClient';
 import {fzf} from 'sentry/utils/search/fzf';
 import type {Theme} from 'sentry/utils/theme';
 import {useDebouncedValue} from 'sentry/utils/useDebouncedValue';
@@ -62,17 +59,17 @@ type CommandPaletteActionMenuItem = MenuListItemProps & {
   hideCheck?: boolean;
 };
 
-type CommandPaletteActionWithListItemType = CommandPaletteActionWithKey & {
+type CMDKFlatItem = CollectionTreeNode<CMDKActionData> & {
   listItemType: 'action' | 'section';
 };
 
 interface CommandPaletteProps {
-  onAction: (action: CommandPaletteActionWithKey) => void;
+  onAction: (action: CollectionTreeNode<CMDKActionData>) => void;
 }
 
 export function CommandPalette(props: CommandPaletteProps) {
   const theme = useTheme();
-  const allActions = useCommandPaletteActions();
+  const store = CMDKCollection.useStore();
 
   const state = useCommandPaletteState();
   const dispatch = useCommandPaletteDispatch();
@@ -83,67 +80,24 @@ export function CommandPalette(props: CommandPaletteProps) {
     preload(errorIllustration, {as: 'image'});
   }
 
-  const root: CommandPaletteActionWithKey = useMemo(() => {
-    return {
-      ...state.action?.value.action,
-      key: 'virtual-root',
-      actions:
-        state.action?.value.action && 'actions' in state.action.value.action
-          ? [...state.action.value.action.actions]
-          : [...allActions],
+  const currentNodes = useMemo(() => {
+    const currentRootKey = state.action?.value.key ?? null;
+    const nodes = presortBySlotRef(store.tree(currentRootKey));
+    return nodes;
+  }, [store, state.action]);
 
-      display: {
-        label: state.action?.value.action?.display.label ?? '',
-        icon: state.action?.value.action?.display.icon ?? undefined,
-        ...state.action?.value.action?.display,
-      },
-    };
-  }, [state.action, allActions]);
-
-  const [resourceActions, queries] = useMemo(() => {
-    const actions = collectResourceActions(root, !!state.query);
-    return [actions, actions.map(({resource}) => resource(state.query))];
-  }, [root, state.query]);
-
-  const asyncQueries = useQueries({
-    // Queries needs to be stable
-    queries,
-  });
-
-  const asyncChildrenMap = useMemo(() => {
-    if (asyncQueries.some(query => query.isFetching)) {
-      return new Map<string, CommandPaletteActionWithKey[]>();
-    }
-
-    const map = new Map<string, CommandPaletteActionWithKey[]>();
-    resourceActions.forEach(({key}, i) => {
-      const data = asyncQueries[i]?.data;
-      if (data?.length) {
-        map.set(
-          key,
-          data.map(
-            (action, j) =>
-              ({...action, key: `${key}:async:${j}`}) as CommandPaletteActionWithKey
-          )
-        );
-      }
-    });
-    return map;
-  }, [resourceActions, asyncQueries]);
-
-  const actions = useMemo<CommandPaletteActionWithListItemType[]>(() => {
+  const actions = useMemo<CMDKFlatItem[]>(() => {
     if (!state.query) {
-      return flattenActions(root, null, asyncChildrenMap);
+      return flattenActions(currentNodes, null);
     }
 
     const scores = new Map<
-      CommandPaletteActionWithKey['key'],
-      {action: CommandPaletteActionWithKey; score: {matched: boolean; score: number}}
+      string,
+      {node: CollectionTreeNode<CMDKActionData>; score: {matched: boolean; score: number}}
     >();
-
-    scoreTree(root, scores, state.query.toLowerCase(), asyncChildrenMap);
-    return flattenActions(root, scores, asyncChildrenMap);
-  }, [root, state.query, asyncChildrenMap]);
+    scoreTree(currentNodes, scores, state.query.toLowerCase());
+    return flattenActions(currentNodes, scores);
+  }, [currentNodes, state.query]);
 
   const analytics = useCommandPaletteAnalytics(actions.length);
 
@@ -246,7 +200,7 @@ export function CommandPalette(props: CommandPaletteProps) {
   });
 
   const onActionSelection = useCallback(
-    (key: ReturnType<typeof treeState.collection.getFirstKey> | null) => {
+    (key: string | number | null) => {
       const action = actions.find(a => a.key === key);
       if (!action) {
         return;
@@ -254,9 +208,24 @@ export function CommandPalette(props: CommandPaletteProps) {
 
       const resultIndex = actions.indexOf(action);
 
-      if ('actions' in action) {
+      if (action.children.length > 0) {
         analytics.recordGroupAction(action, resultIndex);
-        dispatch({type: 'push action', action});
+        if ('onAction' in action) {
+          // Run the primary callback before drilling into the secondary actions.
+          // The modal only owns navigation and close behavior for leaf actions.
+          action.onAction();
+        }
+        dispatch({type: 'push action', key: action.key, label: action.display.label});
+        return;
+      }
+
+      if ('prompt' in action && action.prompt) {
+        dispatch({
+          type: 'push action',
+          key: action.key,
+          label: action.display.label,
+          prompt: action.prompt,
+        });
         return;
       }
 
@@ -264,14 +233,14 @@ export function CommandPalette(props: CommandPaletteProps) {
       dispatch({type: 'trigger action'});
       props.onAction(action);
     },
-    [actions, analytics, dispatch, props, treeState]
+    [actions, analytics, dispatch, props]
   );
+
+  const resultsListRef = useRef<HTMLDivElement>(null);
 
   const debouncedQuery = useDebouncedValue(state.query, 300);
 
-  const isLoading =
-    state.query.length > 0 &&
-    (debouncedQuery !== state.query || asyncQueries.some(query => query.isFetching));
+  const isLoading = state.query.length > 0 && debouncedQuery !== state.query;
 
   return (
     <Fragment>
@@ -325,14 +294,18 @@ export function CommandPalette(props: CommandPaletteProps) {
                   value={state.query}
                   aria-label={t('Search commands')}
                   placeholder={
-                    state.action?.value.action.display.label
-                      ? t('Search inside %s...', state.action.value.action.display.label)
-                      : t('Search for commands...')
+                    state.action?.value.prompt ??
+                    (state.action?.value.label
+                      ? t('Search inside %s...', state.action.value.label)
+                      : t('Search for commands...'))
                   }
                   {...mergeProps(collectionProps, {
                     onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
                       dispatch({type: 'set query', query: e.target.value});
                       treeState.selectionManager.setFocusedKey(null);
+                      if (resultsListRef.current) {
+                        resultsListRef.current.scrollTop = 0;
+                      }
                     },
                     onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
                       if (e.key === 'Backspace' && state.query.length === 0) {
@@ -385,9 +358,8 @@ export function CommandPalette(props: CommandPaletteProps) {
           }}
         </Flex>
       </Flex>
-      {treeState.collection.size === 0 &&
-      // Don't show no results if we're still fetching data
-      asyncQueries.every(query => !query.isFetching) ? (
+
+      {treeState.collection.size === 0 ? (
         <CommandPaletteNoResults />
       ) : (
         <ResultsList
@@ -398,6 +370,7 @@ export function CommandPalette(props: CommandPaletteProps) {
           overflow="auto"
         >
           <ListBox
+            scrollContainerRef={resultsListRef}
             listState={treeState}
             keyDownHandler={() => true}
             overlayIsOpen
@@ -414,205 +387,152 @@ export function CommandPalette(props: CommandPaletteProps) {
   );
 }
 
-function collectResourceActions(
-  root: CommandPaletteActionWithKey,
-  isSearching: boolean
-): Array<{key: string; resource: (query: string) => CMDKQueryOptions}> {
-  const result: Array<{key: string; resource: (query: string) => CMDKQueryOptions}> = [];
+/**
+ * Pre-sorts the root-level nodes by DOM position of their slot outlet element.
+ * Outlets are rendered in task → page → global order inside CommandPaletteProvider,
+ * so compareDocumentPosition gives the correct priority ordering for free.
+ * Nodes sharing the same outlet (same slot) retain their existing relative order.
+ * Nodes without a slot ref are not reordered relative to each other.
+ */
+function presortBySlotRef(
+  nodes: Array<CollectionTreeNode<CMDKActionData>>
+): Array<CollectionTreeNode<CMDKActionData>> {
+  return [...nodes].sort((a, b) => {
+    const aEl = a.ref?.current ?? null;
+    const bEl = b.ref?.current ?? null;
 
-  if (isSearching) {
-    function dfs(node: CommandPaletteActionWithKey) {
-      if ('resource' in node) {
-        result.push({key: node.key, resource: node.resource});
-      }
-      if ('actions' in node) {
-        for (const child of node.actions) {
-          dfs(child);
-        }
-      }
-    }
-    dfs(root);
-    return result;
-  }
+    if (aEl === bEl) return 0; // both null, or same outlet element — preserve order
 
-  // Browse mode mirrors the flattenActions no-query path: root's children + their children
-  for (const action of 'actions' in root ? root.actions : [root]) {
-    if ('resource' in action) {
-      result.push({key: action.key, resource: action.resource});
-    }
-    if ('actions' in action) {
-      for (const child of action.actions) {
-        if ('resource' in child) {
-          result.push({key: child.key, resource: child.resource});
-        }
-      }
-    }
-  }
-
-  return result;
+    if (!aEl) return 1; // a has no slot ref → sort after b
+    if (!bEl) return -1; // b has no slot ref → sort a before b
+    return aEl.compareDocumentPosition(bEl) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+  });
 }
 
-function score(
+function scoreNode(
   query: string,
-  action: CommandPaletteActionWithKey
+  node: CollectionTreeNode<CMDKActionData>
 ): {matched: boolean; score: number} {
-  const label = typeof action.display.label === 'string' ? action.display.label : '';
-  const details =
-    typeof action.display.details === 'string' ? action.display.details : '';
-  const keywords = action.keywords ?? [];
+  const label = node.display.label;
+  const details = node.display.details ?? '';
+  const keywords = node.keywords ?? [];
 
-  const candidates = [label, details, ...keywords].join(' ');
-  const result = fzf(candidates, query, false);
-  return {matched: result.end !== -1, score: result.score};
+  // Score each field independently and take the best result. This lets
+  // fzf's built-in exact-match bonus fire naturally (e.g. query === label)
+  // and avoids false cross-field subsequence matches from string concatenation.
+  let best = -Infinity;
+  let matched = false;
+  for (const candidate of [label, details, ...keywords]) {
+    if (!candidate) continue;
+    const result = fzf(candidate, query, false);
+    if (result.end !== -1 && result.score > best) {
+      best = result.score;
+      matched = true;
+    }
+  }
+  return {matched, score: matched ? best : 0};
 }
 
 function scoreTree(
-  root: CommandPaletteActionWithKey,
+  nodes: Array<CollectionTreeNode<CMDKActionData>>,
   scores: Map<
-    CommandPaletteActionWithKey['key'],
-    {action: CommandPaletteActionWithKey; score: {matched: boolean; score: number}}
+    string,
+    {node: CollectionTreeNode<CMDKActionData>; score: {matched: boolean; score: number}}
   >,
-  query: string,
-  asyncChildrenMap: Map<string, CommandPaletteActionWithKey[]>
+  query: string
 ): void {
-  function dfs(node: CommandPaletteActionWithKey) {
-    if ('actions' in node) {
-      for (const action of node.actions) {
-        dfs(action);
-      }
-    }
-
-    for (const child of asyncChildrenMap.get(node.key) ?? []) {
+  function dfs(node: CollectionTreeNode<CMDKActionData>) {
+    for (const child of node.children) {
       dfs(child);
     }
-
-    const scoreValue = score(query, node);
-    if (scoreValue.matched) {
-      scores.set(node.key, {action: node, score: scoreValue});
+    const s = scoreNode(query, node);
+    if (s.matched) {
+      scores.set(node.key, {node, score: s});
     }
   }
-
-  dfs(root);
+  for (const node of nodes) {
+    dfs(node);
+  }
 }
 
 function flattenActions(
-  root: CommandPaletteActionWithKey,
+  nodes: Array<CollectionTreeNode<CMDKActionData>>,
   scores: Map<
-    CommandPaletteActionWithKey['key'],
-    {action: CommandPaletteActionWithKey; score: {matched: boolean; score: number}}
-  > | null,
-  asyncChildrenMap: Map<string, CommandPaletteActionWithKey[]>
-): CommandPaletteActionWithListItemType[] {
-  const results: CommandPaletteActionWithListItemType[] = [];
-
+    string,
+    {node: CollectionTreeNode<CMDKActionData>; score: {matched: boolean; score: number}}
+  > | null
+): CMDKFlatItem[] {
+  // Browse mode: show each top-level node and its direct children.
   if (!scores) {
-    for (const action of 'actions' in root ? root.actions : [root]) {
-      results.push({
-        ...action,
-        listItemType: 'actions' in action ? 'section' : 'action',
-      });
-
-      const asyncChildren = asyncChildrenMap.get(action.key) ?? [];
-
-      if ('actions' in action) {
-        for (const child of [...action.actions, ...asyncChildren]) {
-          results.push({...child, listItemType: 'action'});
+    const results: CMDKFlatItem[] = [];
+    for (const node of nodes) {
+      const isGroup = node.children.length > 0;
+      // Skip non-group nodes that have no executable action — they are
+      // empty placeholders (e.g. a CMDKGroup whose children didn't render).
+      // Prompt/resource nodes are actionable leaf items even though they lack
+      // `to` or `onAction`, so only skip when none of the four action types apply.
+      if (!isGroup && !('to' in node) && !('onAction' in node)) {
+        const hasPromptOrResource =
+          ('prompt' in node && !!node.prompt) || ('resource' in node && !!node.resource);
+        if (!hasPromptOrResource) {
+          continue;
         }
-      } else {
-        for (const child of asyncChildren) {
+      }
+
+      results.push({...node, listItemType: isGroup ? 'section' : 'action'});
+      if (isGroup) {
+        for (const child of node.children) {
           results.push({...child, listItemType: 'action'});
         }
       }
     }
-
     return results;
   }
 
-  const groups: CommandPaletteActionWithListItemType[] = [];
+  // Search mode: DFS all nodes, collect as flat list, sort groups by max child
+  // score, then filter to only matched items.
+  const collected: CMDKFlatItem[] = [];
 
-  function dfs(node: CommandPaletteActionWithKey) {
-    if ('actions' in node) {
-      groups.push({...node, listItemType: 'section'});
-      for (const action of node.actions) {
-        dfs(action);
+  function dfs(node: CollectionTreeNode<CMDKActionData>) {
+    const isGroup = node.children.length > 0;
+    collected.push({...node, listItemType: isGroup ? 'section' : 'action'});
+    if (isGroup) {
+      for (const child of node.children) {
+        dfs(child);
       }
-    } else {
-      groups.push({...node, listItemType: 'action'});
-    }
-
-    for (const child of asyncChildrenMap.get(node.key) ?? []) {
-      dfs(child);
     }
   }
+  for (const node of nodes) {
+    dfs(node);
+  }
 
-  dfs(root);
-
-  groups.sort((a, b) => {
-    let aScore = 0;
-    let bScore = 0;
-    if ('actions' in a) {
-      aScore = Math.max(
-        0,
-        ...a.actions.map(action => scores?.get(action.key)?.score.score ?? 0),
-        ...(asyncChildrenMap.get(a.key) ?? []).map(
-          action => scores?.get(action.key)?.score.score ?? 0
-        )
-      );
-    }
-    if ('actions' in b) {
-      bScore = Math.max(
-        0,
-        ...b.actions.map(action => scores?.get(action.key)?.score.score ?? 0),
-        ...(asyncChildrenMap.get(b.key) ?? []).map(
-          action => scores?.get(action.key)?.score.score ?? 0
-        )
-      );
-    }
-    return bScore - aScore;
+  // Sort top-level groups to the front by their max-scoring child.
+  collected.sort((a, b) => {
+    const maxScore = (n: CMDKFlatItem) =>
+      n.children.length > 0
+        ? Math.max(0, ...n.children.map(c => scores.get(c.key)?.score.score ?? 0))
+        : 0;
+    return maxScore(b) - maxScore(a);
   });
 
-  const flattened = groups.flatMap((result): CommandPaletteActionWithListItemType[] => {
-    if (result.key === 'virtual-root') {
-      return [];
-    }
-    if ('actions' in result) {
-      const matchedStaticChildren = result.actions.filter(
-        action => scores?.get(action.key)?.score.matched
-      );
-      const matchedAsyncChildren = (asyncChildrenMap.get(result.key) ?? []).filter(
-        action => scores?.get(action.key)?.score.matched
-      );
-      const allMatchedChildren = [...matchedStaticChildren, ...matchedAsyncChildren];
-
-      if (!allMatchedChildren.length) {
-        return [];
-      }
-
+  const flattened = collected.flatMap((item): CMDKFlatItem[] => {
+    if (item.children.length > 0) {
+      const matched = item.children.filter(c => scores.get(c.key)?.score.matched);
+      if (!matched.length) return [];
       return [
-        // Suffix the section header key so that a group appearing here as a
-        // header AND as an action item inside its parent doesn't produce a
-        // React duplicate-key error (both entries would otherwise share the
-        // same key).
-        {...result, key: `${result.key}:header`, listItemType: 'section'},
-        ...allMatchedChildren
-          .sort((a, b) => {
-            if (!a || !b) {
-              return 0;
-            }
-            return (
-              (scores?.get(b.key)?.score.score ?? 0) -
-              (scores?.get(a.key)?.score.score ?? 0)
-            );
-          })
-          .map(action => ({
-            ...action,
-            listItemType: 'action' as const,
-          })),
+        // Suffix the header key so a group used as both a section header and
+        // an action item inside its parent doesn't produce duplicate React keys.
+        {...item, key: `${item.key}:header`, listItemType: 'section'},
+        ...matched
+          .sort(
+            (a, b) =>
+              (scores.get(b.key)?.score.score ?? 0) -
+              (scores.get(a.key)?.score.score ?? 0)
+          )
+          .map(c => ({...c, listItemType: 'action' as const})),
       ];
     }
-    return scores?.get(result.key)?.score.matched
-      ? [{...result, listItemType: 'action'}]
-      : [];
+    return scores.get(item.key)?.score.matched ? [{...item, listItemType: 'action'}] : [];
   });
 
   const seen = new Set<string>();
@@ -623,9 +543,7 @@ function flattenActions(
   });
 }
 
-function makeMenuItemFromAction(
-  action: CommandPaletteActionWithKey
-): CommandPaletteActionMenuItem {
+function makeMenuItemFromAction(action: CMDKFlatItem): CommandPaletteActionMenuItem {
   return {
     key: action.key,
     label: action.display.label,
@@ -643,7 +561,7 @@ function makeMenuItemFromAction(
         <IconDefaultsProvider size="sm">{action.display.icon}</IconDefaultsProvider>
       </Flex>
     ),
-    children: 'actions' in action ? action.actions.map(makeMenuItemFromAction) : [],
+    children: [],
     hideCheck: true,
   };
 }
