@@ -9,14 +9,22 @@ from google.protobuf.timestamp_pb2 import Timestamp
 from sentry_protos.snuba.v1.endpoint_trace_items_pb2 import ExportTraceItemsResponse
 from sentry_protos.snuba.v1.request_common_pb2 import TraceItemType
 from sentry_protos.snuba.v1.trace_item_pb2 import AnyValue, TraceItem
-
 from sentry.data_export.base import ExportError
+from sentry.search.eap.types import SupportedTraceItemType
+from sentry.search.eap.utils import can_expose_attribute
 from sentry.search.events.constants import TIMEOUT_ERROR_MESSAGE
 from sentry.snuba import discover
 from sentry.utils import metrics, snuba
 from sentry.utils.sdk import capture_exception
 from sentry.utils.snuba_rpc import SnubaRPCRateLimitExceeded
 
+
+TRACE_ITEM_EXPORT_TOP_LEVEL_PUBLIC_KEYS: dict[str, str] = {
+    "organization_id": "organization.id",
+    "project_id": "project.id",
+    "trace_id": "trace",
+    "item_id": "id",
+}
 
 # Adapted into decorator from 'src/sentry/api/endpoints/organization_events.py'
 def handle_snuba_errors(
@@ -106,7 +114,45 @@ def _ts_to_epoch(ts: Timestamp) -> float:
     return ts.seconds + ts.nanos / 1e9
 
 
-def trace_item_to_row(item: TraceItem) -> dict[str, Any]:
+def apply_public_names_to_trace_export_row(
+    row: dict[str, Any],
+    *,
+    rename_map: dict[str, str],
+    item_type: SupportedTraceItemType,
+) -> dict[str, Any]:
+    """
+    Rename known internal columns to EAP public aliases, keep extra/user attributes that are
+    exposable, and drop private or internal-only keys.
+    """
+    ordered_keys = [
+        *[k for k in TRACE_ITEM_EXPORT_TOP_LEVEL_PUBLIC_KEYS if k in row],
+        *[k for k in row if k not in TRACE_ITEM_EXPORT_TOP_LEVEL_PUBLIC_KEYS],
+    ]
+
+    out: dict[str, Any] = {}
+    for key in ordered_keys:
+        value = row[key]
+        if key in TRACE_ITEM_EXPORT_TOP_LEVEL_PUBLIC_KEYS:
+            new_key = TRACE_ITEM_EXPORT_TOP_LEVEL_PUBLIC_KEYS[key]
+        elif key in rename_map:
+            new_key = rename_map[key]
+        else:
+            if not can_expose_attribute(key, item_type, include_internal=False):
+                continue
+            new_key = key
+        if new_key not in out:
+            out[new_key] = value
+        elif out[new_key] is None and value is not None:
+            out[new_key] = value
+    return out
+
+
+def trace_item_to_row(
+    item: TraceItem,
+    *,
+    rename_mapping: dict[str, str],
+    item_type: SupportedTraceItemType,
+) -> dict[str, Any]:
     row: dict[str, Any] = {}
     for key, av in item.attributes.items():
         row[key] = None if av.WhichOneof("value") is None else anyvalue_to_python(av)
@@ -123,12 +169,15 @@ def trace_item_to_row(item: TraceItem) -> dict[str, Any]:
     row["server_sample_rate"] = item.server_sample_rate
     row["retention_days"] = item.retention_days
     row["downsampled_retention_days"] = item.downsampled_retention_days
-
-    return row
+    return apply_public_names_to_trace_export_row(
+        row, rename_map=rename_mapping, item_type=item_type
+    )
 
 
 def iter_export_trace_items_rows(
     resp: ExportTraceItemsResponse,
+    rename_mapping: dict[str, str],
+    item_type: SupportedTraceItemType,
 ) -> Iterator[dict[str, Any]]:
     for item in resp.trace_items:
-        yield trace_item_to_row(item)
+        yield trace_item_to_row(item, rename_mapping=rename_mapping, item_type=item_type)

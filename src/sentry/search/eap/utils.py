@@ -207,3 +207,27 @@ def is_sentry_convention_replacement_attribute(
 def translate_to_sentry_conventions(public_alias: str, item_type: SupportedTraceItemType) -> str:
     mapping = SENTRY_CONVENTIONS_REPLACEMENT_MAPPINGS.get(item_type, {})
     return mapping.get(public_alias, public_alias)
+
+
+def build_internal_to_public_export_map(
+    item_type: SupportedTraceItemType,
+) -> dict[str, str]:
+    """
+    Map Snuba internal attribute names (e.g. ``sentry.item_id``) to a single **primary**
+    public alias per internal name.
+    """
+    definitions = PUBLIC_ALIAS_TO_INTERNAL_MAPPING.get(item_type, {})
+    by_internal: dict[str, str] = {}
+    for resolved in definitions.values():
+        if resolved.private or resolved.secondary_alias:
+            continue
+        if not can_expose_attribute(resolved.public_alias, item_type, include_internal=False):
+            continue
+        internal = resolved.internal_name
+        if internal not in by_internal:
+            by_internal[internal] = resolved.public_alias
+        else:
+            # Stable tie-break when multiple public aliases share one internal (e.g. project.id vs project_id).
+            by_internal[internal] = min(by_internal[internal], resolved.public_alias)
+
+    return by_internal
