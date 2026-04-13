@@ -517,16 +517,22 @@ function flattenActions(
       if (!isGroup && !('to' in node) && !('onAction' in node)) {
         const hasPromptOrResource =
           ('prompt' in node && !!node.prompt) || ('resource' in node && !!node.resource);
-        if (!hasPromptOrResource) {
+        if (!hasPromptOrResource || isEmptyResourceNode(node)) {
           continue;
         }
       }
 
-      results.push({...node, listItemType: isGroup ? 'section' : 'action'});
       if (isGroup) {
-        for (const child of node.children) {
-          results.push({...child, listItemType: 'action'});
+        const children = node.children
+          .filter(child => !isEmptyResourceNode(child))
+          .map(child => ({...child, listItemType: 'action' as const}));
+        if (!children.length) {
+          continue;
         }
+        results.push({...node, listItemType: 'section'});
+        results.push(...children);
+      } else {
+        results.push({...node, listItemType: 'action'});
       }
     }
     return results;
@@ -560,7 +566,9 @@ function flattenActions(
 
   const flattened = collected.flatMap((item): CMDKFlatItem[] => {
     if (item.children.length > 0) {
-      const matched = item.children.filter(c => scores.get(c.key)?.score.matched);
+      const matched = item.children.filter(
+        c => scores.get(c.key)?.score.matched && !isEmptyResourceNode(c)
+      );
       if (!matched.length) return [];
       return [
         // Suffix the header key so a group used as both a section header and
@@ -575,6 +583,11 @@ function flattenActions(
           .map(c => ({...c, listItemType: 'action' as const})),
       ];
     }
+    // Skip resource nodes with no children — they are async group containers that
+    // returned 0 results and have no executable action of their own.
+    if (isEmptyResourceNode(item)) {
+      return [];
+    }
     return scores.get(item.key)?.score.matched ? [{...item, listItemType: 'action'}] : [];
   });
 
@@ -584,6 +597,16 @@ function flattenActions(
     seen.add(item.key);
     return true;
   });
+}
+
+function isEmptyResourceNode(node: CollectionTreeNode<CMDKActionData>): boolean {
+  return (
+    node.children.length === 0 &&
+    'resource' in node &&
+    !('to' in node) &&
+    !('onAction' in node) &&
+    !('prompt' in node && node.prompt)
+  );
 }
 
 function makeMenuItemFromAction(action: CMDKFlatItem): CommandPaletteActionMenuItem {

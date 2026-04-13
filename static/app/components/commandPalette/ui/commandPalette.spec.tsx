@@ -24,6 +24,7 @@ jest.mock('@tanstack/react-virtual', () => ({
 
 import {closeModal} from 'sentry/actionCreators/modal';
 import * as modalActions from 'sentry/actionCreators/modal';
+import type {CommandPaletteAction} from 'sentry/components/commandPalette/types';
 import {cmdkQueryOptions} from 'sentry/components/commandPalette/types';
 import {CommandPaletteProvider} from 'sentry/components/commandPalette/ui/cmdk';
 import {CMDKAction} from 'sentry/components/commandPalette/ui/cmdk';
@@ -832,6 +833,142 @@ describe('CommandPalette', () => {
       await screen.findByRole('option', {name: 'Direct Action'});
       expect(screen.getAllByRole('option', {name: 'Direct Action'})).toHaveLength(1);
       expect(screen.getAllByRole('option')).toHaveLength(1);
+    });
+  });
+
+  describe('resource action with 0 results', () => {
+    function emptyResource() {
+      return cmdkQueryOptions({
+        queryKey: ['test-empty-resource'] as const,
+        queryFn: (): CommandPaletteAction[] => [],
+      });
+    }
+
+    it('is omitted from browse mode at the top level', async () => {
+      render(
+        <CommandPaletteProvider>
+          <CMDKAction display={{label: 'Async Resource'}} resource={emptyResource}>
+            {data =>
+              data.map((_, i) => (
+                <CMDKAction key={i} to="/x/" display={{label: 'Result'}} />
+              ))
+            }
+          </CMDKAction>
+          <CMDKAction display={{label: 'Real Action'}} onAction={jest.fn()} />
+          <CommandPalette onAction={jest.fn()} />
+        </CommandPaletteProvider>
+      );
+
+      await screen.findByRole('option', {name: 'Real Action'});
+      expect(
+        screen.queryByRole('option', {name: 'Async Resource'})
+      ).not.toBeInTheDocument();
+    });
+
+    it('is omitted from browse mode when nested inside a group', async () => {
+      render(
+        <CommandPaletteProvider>
+          <CMDKAction display={{label: 'Group'}}>
+            <CMDKAction display={{label: 'Async Resource'}} resource={emptyResource}>
+              {data =>
+                data.map((_, i) => (
+                  <CMDKAction key={i} to="/x/" display={{label: 'Result'}} />
+                ))
+              }
+            </CMDKAction>
+            <CMDKAction display={{label: 'Real Action'}} onAction={jest.fn()} />
+          </CMDKAction>
+          <CommandPalette onAction={jest.fn()} />
+        </CommandPaletteProvider>
+      );
+
+      await screen.findByRole('option', {name: 'Real Action'});
+      expect(
+        screen.queryByRole('option', {name: 'Async Resource'})
+      ).not.toBeInTheDocument();
+    });
+
+    it('group whose only children are empty resource nodes is omitted entirely in browse mode', async () => {
+      // Regression: browse mode pushed the section header unconditionally before
+      // iterating children. If every child was an empty resource node and got
+      // skipped, an orphaned, non-selectable section header was left in the list.
+      render(
+        <CommandPaletteProvider>
+          <CMDKAction display={{label: 'All Empty Group'}}>
+            <CMDKAction display={{label: 'Async Resource'}} resource={emptyResource}>
+              {data =>
+                data.map((_, i) => (
+                  <CMDKAction key={i} to="/x/" display={{label: 'Result'}} />
+                ))
+              }
+            </CMDKAction>
+          </CMDKAction>
+          <CMDKAction display={{label: 'Real Action'}} onAction={jest.fn()} />
+          <CommandPalette onAction={jest.fn()} />
+        </CommandPaletteProvider>
+      );
+
+      await screen.findByRole('option', {name: 'Real Action'});
+      // Neither the section header nor any item for the all-empty group should appear.
+      expect(
+        screen.queryByRole('option', {name: 'All Empty Group'})
+      ).not.toBeInTheDocument();
+    });
+
+    it('is omitted from search mode when nested inside a group whose label matches the query', async () => {
+      render(
+        <CommandPaletteProvider>
+          <CMDKAction display={{label: 'Navigate'}}>
+            <CMDKAction display={{label: 'Async Resource'}} resource={emptyResource}>
+              {data =>
+                data.map((_, i) => (
+                  <CMDKAction key={i} to="/x/" display={{label: 'Result'}} />
+                ))
+              }
+            </CMDKAction>
+          </CMDKAction>
+          <CMDKAction display={{label: 'Other'}} onAction={jest.fn()} />
+          <CommandPalette onAction={jest.fn()} />
+        </CommandPaletteProvider>
+      );
+
+      const input = await screen.findByRole('textbox', {name: 'Search commands'});
+      await userEvent.type(input, 'navigate');
+
+      // Wait for search to take effect — 'Other' should be filtered out since it doesn't match
+      await waitFor(() => {
+        expect(screen.queryByRole('option', {name: 'Other'})).not.toBeInTheDocument();
+      });
+      expect(
+        screen.queryByRole('option', {name: 'Async Resource'})
+      ).not.toBeInTheDocument();
+    });
+
+    it('is omitted from search mode even when the label matches the query', async () => {
+      render(
+        <CommandPaletteProvider>
+          <CMDKAction display={{label: 'Async Resource'}} resource={emptyResource}>
+            {data =>
+              data.map((_, i) => (
+                <CMDKAction key={i} to="/x/" display={{label: 'Result'}} />
+              ))
+            }
+          </CMDKAction>
+          <CMDKAction display={{label: 'Other'}} onAction={jest.fn()} />
+          <CommandPalette onAction={jest.fn()} />
+        </CommandPaletteProvider>
+      );
+
+      const input = await screen.findByRole('textbox', {name: 'Search commands'});
+      await userEvent.type(input, 'async');
+
+      // Wait for search to take effect — 'Other' should be filtered out since it doesn't match
+      await waitFor(() => {
+        expect(screen.queryByRole('option', {name: 'Other'})).not.toBeInTheDocument();
+      });
+      expect(
+        screen.queryByRole('option', {name: 'Async Resource'})
+      ).not.toBeInTheDocument();
     });
   });
 });
