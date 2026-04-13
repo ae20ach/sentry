@@ -393,6 +393,8 @@ def register_temporary_features(manager: FeatureManager) -> None:
     manager.add("organizations:seer-project-settings-read-from-sentry", OrganizationFeature, FeatureHandlerStrategy.FLAGPOLE, api_expose=False)
     # Enable public RPC endpoint for local seer development
     manager.add("organizations:seer-public-rpc", OrganizationFeature, FeatureHandlerStrategy.FLAGPOLE, api_expose=False)
+    # Show Seer run ID in Slack notification footers
+    manager.add("organizations:seer-run-id-in-slack", OrganizationFeature, FeatureHandlerStrategy.FLAGPOLE, api_expose=False)
     # Organizations on the old usage-based (v0) Seer plan
     manager.add("organizations:seer-added", OrganizationFeature, FeatureHandlerStrategy.INTERNAL, api_expose=True)
     # Organizations on the new seat-based Seer plan
