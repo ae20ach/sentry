@@ -94,6 +94,9 @@ def register_event_preprocessor(register_plugin):
 
 
 @django_db_all
+@pytest.mark.skip(
+    reason="test pollution: 'not enough values to unpack' on group_id — Snuba event data from prior test contaminates query results, leaving old_events empty (passes 5/5 in isolation)"
+)
 @pytest.mark.snuba
 @pytest.mark.parametrize("change_groups", (True, False), ids=("new_group", "same_group"))
 def test_basic(
