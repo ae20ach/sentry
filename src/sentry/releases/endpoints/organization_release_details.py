@@ -35,7 +35,6 @@ from sentry.apidocs.parameters import GlobalParams, ReleaseParams, VisibilityPar
 from sentry.apidocs.utils import inline_sentry_response_serializer
 from sentry.models.activity import Activity
 from sentry.models.organization import Organization
-from sentry.models.project import Project
 from sentry.models.release import Release, ReleaseStatus
 from sentry.models.releases.exceptions import ReleaseCommitError, UnsafeReleaseDeletion
 from sentry.snuba.sessions import STATS_PERIODS
@@ -343,6 +342,21 @@ class OrganizationReleaseDetailsEndpoint(
         status_filter = request.GET.get("status", "open")
         query = request.GET.get("query")
 
+        # Validate project access if project_id is provided
+        validated_project = None
+        if project_id:
+            try:
+                projects = self.get_projects(
+                    request=request,
+                    organization=organization,
+                    project_ids=[int(project_id)],
+                )
+                if not projects:
+                    raise ParseError(detail="Invalid project")
+                validated_project = projects[0]
+            except ValueError:
+                raise ParseError(detail="Invalid project")
+
         if summary_stats_period not in STATS_PERIODS:
             raise ParseError(detail=get_stats_period_detail("summaryStatsPeriod", STATS_PERIODS))
         if health_stats_period and health_stats_period not in STATS_PERIODS:
@@ -356,20 +370,16 @@ class OrganizationReleaseDetailsEndpoint(
         if not self.has_release_permission(request, organization, release):
             raise ResourceDoesNotExist
 
-        if with_health and project_id:
-            try:
-                project = Project.objects.get_from_cache(id=int(project_id))
-            except (ValueError, Project.DoesNotExist):
-                raise ParseError(detail="Invalid project")
-            release._for_project_id = project.id
+        if with_health and validated_project:
+            release._for_project_id = validated_project.id
 
-        if project_id:
+        if validated_project:
             # Add sessions time bound to current project meta data
             environments = set(request.GET.getlist("environment")) or None
             current_project_meta.update(
                 {
                     **release_health.backend.get_release_sessions_time_bounds(
-                        project_id=int(project_id),
+                        project_id=validated_project.id,
                         release=release.version,
                         org_id=organization.id,
                         environments=environments,
@@ -394,7 +404,7 @@ class OrganizationReleaseDetailsEndpoint(
                         **self.get_first_and_last_releases(
                             org=organization,
                             environment=filter_params.get("environment"),
-                            project_id=[project_id],
+                            project_id=[validated_project.id],
                             sort=sort,
                         ),
                     }
