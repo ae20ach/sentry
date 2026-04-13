@@ -114,7 +114,7 @@ class TestOpsgenieMetricAlertHandler(MetricAlertHandlerBase):
 
         self.assert_alert_context(
             alert_context,
-            name=self.detector.name,
+            name=self.alert_rule.name,
             action_identifier_id=self.detector.id,
             threshold_type=AlertRuleThresholdType.ABOVE,
             detection_type=AlertRuleDetectionType.STATIC,
@@ -198,7 +198,7 @@ class TestOpsgenieMetricAlertHandler(MetricAlertHandlerBase):
 
         self.assert_alert_context(
             alert_context,
-            name=self.detector.name,
+            name=self.alert_rule.name,
             action_identifier_id=self.detector.id,
             threshold_type=AlertRuleThresholdType.BELOW,
             detection_type=AlertRuleDetectionType.STATIC,

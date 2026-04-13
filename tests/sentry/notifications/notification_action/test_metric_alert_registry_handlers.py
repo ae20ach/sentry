@@ -385,7 +385,7 @@ class TestBaseMetricAlertHandler(MetricAlertHandlerBase):
             DetectorPriorityLevel(self.group_event.occurrence.priority),
         )
         assert isinstance(alert_context, AlertContext)
-        assert alert_context.name == self.detector.name
+        assert alert_context.name == self.alert_rule.name
         assert alert_context.action_identifier_id == self.detector.id
         assert alert_context.threshold_type == AlertRuleThresholdType.ABOVE
         assert alert_context.comparison_delta is None
@@ -400,7 +400,7 @@ class TestBaseMetricAlertHandler(MetricAlertHandlerBase):
             DetectorPriorityLevel(self.group_event.occurrence.priority),
         )
         assert isinstance(alert_context, AlertContext)
-        assert alert_context.name == self.detector.name
+        assert alert_context.name == self.alert_rule.name
         assert alert_context.action_identifier_id == self.detector.id
         assert alert_context.threshold_type == AnomalyDetectionThresholdType.ABOVE_AND_BELOW
         assert alert_context.comparison_delta is None
@@ -461,7 +461,7 @@ class TestBaseMetricAlertHandler(MetricAlertHandlerBase):
         )
         self.assert_alert_context(
             alert_context,
-            name=self.detector.name,
+            name=self.alert_rule.name,
             action_identifier_id=self.detector.id,
             threshold_type=AlertRuleThresholdType.ABOVE,
             detection_type=AlertRuleDetectionType.STATIC,
@@ -546,7 +546,7 @@ class TestBaseMetricAlertHandler(MetricAlertHandlerBase):
         )
         self.assert_alert_context(
             alert_context,
-            name=self.detector.name,
+            name=self.alert_rule.name,
             action_identifier_id=self.detector.id,
             threshold_type=AlertRuleThresholdType.BELOW,
             detection_type=AlertRuleDetectionType.STATIC,
@@ -620,7 +620,7 @@ class TestBaseMetricAlertHandler(MetricAlertHandlerBase):
         )
         self.assert_alert_context(
             alert_context,
-            name=self.detector.name,
+            name=self.alert_rule.name,
             action_identifier_id=self.detector.id,
             threshold_type=AnomalyDetectionThresholdType.ABOVE_AND_BELOW,
             detection_type=AlertRuleDetectionType.STATIC,

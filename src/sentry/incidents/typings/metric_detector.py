@@ -18,6 +18,7 @@ from sentry.models.groupopenperiod import get_latest_open_period
 from sentry.notifications.models.notificationaction import ActionTarget
 from sentry.snuba.models import QuerySubscription, SnubaQuery
 from sentry.workflow_engine.models import Action, Condition, Detector
+from sentry.workflow_engine.models.alertrule_detector import AlertRuleDetector
 from sentry.workflow_engine.types import DetectorPriorityLevel
 
 if TYPE_CHECKING:
@@ -132,8 +133,23 @@ class AlertContext:
         except StopIteration:
             raise ValueError("No threshold type found for metric issues")
 
+        # Use the alert rule name if one exists, since the detector name may be
+        # the monitor name rather than the user-defined alert rule name.
+        name = detector.name
+        try:
+            alert_rule_id = AlertRuleDetector.objects.values_list("alert_rule_id", flat=True).get(
+                detector_id=detector.id
+            )
+            if alert_rule_id is not None:
+                alert_rule_name = AlertRule.objects.values_list("name", flat=True).get(
+                    id=alert_rule_id
+                )
+                name = alert_rule_name
+        except (AlertRuleDetector.DoesNotExist, AlertRule.DoesNotExist):
+            pass
+
         return cls(
-            name=detector.name,
+            name=name,
             action_identifier_id=detector.id,
             threshold_type=threshold_type,
             detection_type=AlertRuleDetectionType(detector.config.get("detection_type")),
