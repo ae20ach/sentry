@@ -236,7 +236,6 @@ export function TransactionSummaryCharts({
             end={eventView.end}
             statsPeriod={eventView.statsPeriod}
             projects={project ? [project] : []}
-            withBreakpoint
           />
         )}
         {display === DisplayModes.VITALS && (
