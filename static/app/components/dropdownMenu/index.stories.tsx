@@ -10,6 +10,14 @@ import * as Storybook from 'sentry/stories';
 export const documentation = import('!!type-loader!sentry/components/dropdownMenu');
 
 export default Storybook.story('DropdownMenu', story => {
+  const scmProviders = useMemo(
+    () =>
+      (providersQuery.data?.providers ?? [])
+        .filter(p => p.metadata.features.some(f => f.featureGate.includes('commits')))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [providersQuery.data]
+  );
+
   story('Default', () => {
     const items: MenuItemProps[] = [
       {
