@@ -71,6 +71,8 @@ class ExplorerChatRequest(TypedDict):
     is_context_engine_enabled: NotRequired[bool]
     max_iterations: NotRequired[int]
     user_auth_token: NotRequired[str | None]
+    model: NotRequired[str]
+    reasoning_effort: NotRequired[str]
 
 
 class ExplorerRunsRequest(TypedDict):

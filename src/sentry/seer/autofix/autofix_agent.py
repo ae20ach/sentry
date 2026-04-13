@@ -207,6 +207,8 @@ def get_autofix_explorer_client(
     group: Group,
     intelligence_level: Literal["low", "medium", "high"] = "low",
     enable_coding: bool = False,
+    model: str | None = None,
+    reasoning_effort: str | None = None,
 ) -> SeerExplorerClient:
     from sentry.seer.autofix.on_completion_hook import (
         AutofixOnCompletionHook,  # nested to avoid circular import
@@ -221,6 +223,8 @@ def get_autofix_explorer_client(
         intelligence_level=intelligence_level,
         on_completion_hook=AutofixOnCompletionHook,
         enable_coding=enable_coding,
+        model=model,
+        reasoning_effort=reasoning_effort,
     )
 
 
@@ -233,6 +237,8 @@ def trigger_autofix_explorer(
     intelligence_level: Literal["low", "medium", "high"] = "low",
     user_context: str | None = None,
     insert_index: int | None = None,
+    model: str | None = None,
+    reasoning_effort: str | None = None,
 ) -> int:
     """
     Start or continue an Explorer-based autofix run.
@@ -242,6 +248,8 @@ def trigger_autofix_explorer(
         step: Which autofix step to run
         run_id: Existing run ID to continue, or None for new run
         stopping_point: Where to stop the automated pipeline (only used for new runs)
+        model: Optional model override (e.g. "claude-sonnet-4-6")
+        reasoning_effort: Optional reasoning effort override (e.g. "medium")
 
     Returns:
         The run ID
@@ -262,6 +270,8 @@ def trigger_autofix_explorer(
         group,
         intelligence_level=intelligence_level,
         enable_coding=config.enable_coding,
+        model=model,
+        reasoning_effort=reasoning_effort,
     )
 
     prompt = build_step_prompt(step, group, user_context)

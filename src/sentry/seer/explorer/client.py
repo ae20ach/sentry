@@ -199,6 +199,8 @@ class SeerExplorerClient:
         enable_coding: bool = False,
         enable_code_mode_tools: bool = False,
         max_iterations: int | None = None,
+        model: str | None = None,
+        reasoning_effort: str | None = None,
     ):
         self.organization = organization
         self.user = user
@@ -211,6 +213,8 @@ class SeerExplorerClient:
         self.is_interactive = is_interactive
         self.enable_code_mode_tools = enable_code_mode_tools
         self.max_iterations = max_iterations
+        self.model = model
+        self.reasoning_effort = reasoning_effort
 
         if enable_coding and not organization.get_option("sentry:enable_seer_coding", True):
             raise SeerPermissionError("Seer coding is not enabled for this organization")
@@ -295,6 +299,12 @@ class SeerExplorerClient:
 
         if self.max_iterations is not None:
             chat_body["max_iterations"] = self.max_iterations
+
+        if self.model is not None:
+            chat_body["model"] = self.model
+
+        if self.reasoning_effort is not None:
+            chat_body["reasoning_effort"] = self.reasoning_effort
 
         if self.project:
             chat_body["project_id"] = self.project.id
