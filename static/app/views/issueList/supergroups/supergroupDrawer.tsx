@@ -51,6 +51,7 @@ import {
   useIssueSelectionSummary,
 } from 'sentry/views/issueList/issueSelectionContext';
 import {SupergroupFeedback} from 'sentry/views/issueList/supergroups/supergroupFeedback';
+import {SupergroupTagPreview} from 'sentry/views/issueList/supergroups/supergroupTagPreview';
 import type {SupergroupDetail} from 'sentry/views/issueList/supergroups/types';
 import type {IssueUpdateData} from 'sentry/views/issueList/types';
 
@@ -139,6 +140,8 @@ export function SupergroupDetailDrawer({
             )}
           </Stack>
         </Container>
+
+        <SupergroupTagPreview groupIds={supergroup.group_ids} />
 
         {supergroup.group_ids.length > 0 && (
           <Container padding="xl 2xl">
