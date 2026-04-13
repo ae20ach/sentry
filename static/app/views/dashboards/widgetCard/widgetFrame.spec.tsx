@@ -1,6 +1,13 @@
+import * as Sentry from '@sentry/react';
+
 import {render, screen, userEvent} from 'sentry-test/reactTestingLibrary';
 
 import {WidgetFrame} from 'sentry/views/dashboards/widgetCard/widgetFrame';
+
+jest.mock('@sentry/react', () => ({
+  ...jest.requireActual('@sentry/react'),
+  captureException: jest.fn(),
+}));
 
 describe('WidgetFrame', () => {
   describe('Layout', () => {
@@ -30,7 +37,18 @@ describe('WidgetFrame', () => {
 
       expect(screen.getByText('Uh Oh')).toBeInTheDocument();
 
-      expect(await screen.findByText(/cannot read properties/i)).toBeInTheDocument();
+      expect(
+        await screen.findByText('There was an error loading this widget.')
+      ).toBeInTheDocument();
+      expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(TypeError));
+    });
+
+    it('Shows a generic error message when error prop is set', () => {
+      render(<WidgetFrame title="EPS" error={new Error('Rate limit exceeded')} />);
+
+      expect(
+        screen.getByText('There was an error loading this widget.')
+      ).toBeInTheDocument();
     });
   });
 

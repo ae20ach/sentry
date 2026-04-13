@@ -1,7 +1,13 @@
+import * as Sentry from '@sentry/react';
 import {OrganizationFixture} from 'sentry-fixture/organization';
 import {PageFilterStateFixture} from 'sentry-fixture/pageFilters';
 
 import {render, screen} from 'sentry-test/reactTestingLibrary';
+
+jest.mock('@sentry/react', () => ({
+  ...jest.requireActual('@sentry/react'),
+  captureMessage: jest.fn(),
+}));
 
 import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
 import {DisplayType, WidgetType} from 'sentry/views/dashboards/types';
@@ -74,6 +80,38 @@ beforeEach(() => {
       sampleCount: undefined,
     })
   );
+});
+
+describe('VisualizationWidget error handling', () => {
+  it('captures a Sentry message when errorMessage is returned from the data loader', () => {
+    jest.mocked(WidgetCardDataLoader).mockImplementationOnce(({children}: any) =>
+      children({
+        timeseriesResults: undefined,
+        tableResults: undefined,
+        loading: false,
+        errorMessage: 'Internal server error',
+        confidence: undefined,
+        dataScanned: undefined,
+        isSampled: undefined,
+        sampleCount: undefined,
+      })
+    );
+
+    render(<VisualizationWidget widget={spansBreakdownWidget} selection={selection} />, {
+      organization: OrganizationFixture(),
+    });
+
+    expect(
+      screen.getByText('There was an error loading this widget.')
+    ).toBeInTheDocument();
+    expect(Sentry.captureMessage).toHaveBeenCalledWith('Dashboard widget query error', {
+      level: 'error',
+      extra: {
+        widget_title: spansBreakdownWidget.title,
+        error_message: 'Internal server error',
+      },
+    });
+  });
 });
 
 describe('VisualizationWidget breakdown series labels', () => {
