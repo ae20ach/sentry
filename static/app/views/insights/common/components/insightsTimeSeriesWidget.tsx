@@ -12,7 +12,6 @@ import type {PageFilters} from 'sentry/types/core';
 import {markDelayedData} from 'sentry/utils/timeSeries/markDelayedData';
 import type {MutableSearch} from 'sentry/utils/tokenizeSearch';
 import {useReleaseStats} from 'sentry/utils/useReleaseStats';
-import {MISSING_DATA_MESSAGE} from 'sentry/views/dashboards/widgets/common/settings';
 import type {
   LegendSelection,
   TimeSeries,
@@ -189,7 +188,7 @@ export function InsightsTimeSeriesWidget(props: InsightsTimeSeriesWidgetProps) {
           Title={Title}
           Visualization={
             <Container position="absolute" inset={0}>
-              <Widget.WidgetError error={props.error} />
+              <Widget.WidgetError />
             </Container>
           }
         />
@@ -206,7 +205,7 @@ export function InsightsTimeSeriesWidget(props: InsightsTimeSeriesWidgetProps) {
           Title={Title}
           Visualization={
             <Container position="absolute" inset={0}>
-              <Widget.WidgetError error={MISSING_DATA_MESSAGE} />
+              <Widget.WidgetError />
             </Container>
           }
         />

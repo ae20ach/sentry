@@ -185,7 +185,7 @@ export function ProjectStabilityScoreCard(props: Props) {
         }
         Visualization={
           <Container position="absolute" inset={0}>
-            <Widget.WidgetError error={error} />
+            <Widget.WidgetError />
           </Container>
         }
       />

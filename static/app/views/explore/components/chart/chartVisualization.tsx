@@ -98,7 +98,7 @@ export function ChartVisualization({
   if (chartInfo.timeseriesResult.error) {
     return (
       <Container position="absolute" inset={0}>
-        <Widget.WidgetError error={chartInfo.timeseriesResult.error} />
+        <Widget.WidgetError />
       </Container>
     );
   }
@@ -109,7 +109,7 @@ export function ChartVisualization({
     // proxying to RPC. Adding explicit handling with a "better" message
     return (
       <Container position="absolute" inset={0}>
-        <Widget.WidgetError error={t('No data')} />
+        <Widget.WidgetError />
       </Container>
     );
   }

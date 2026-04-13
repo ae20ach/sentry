@@ -101,7 +101,7 @@ export function ScreensBarChart({
           Title={Title}
           Visualization={
             <Container position="absolute" inset={0}>
-              <Widget.WidgetError error={error} />
+              <Widget.WidgetError />
             </Container>
           }
         />

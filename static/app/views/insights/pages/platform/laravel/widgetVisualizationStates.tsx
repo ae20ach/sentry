@@ -30,7 +30,7 @@ export function WidgetVisualizationStates<T extends WidgetVisualization>({
   if (error) {
     return (
       <Container position="absolute" inset={0}>
-        <Widget.WidgetError error={error} />
+        <Widget.WidgetError />
       </Container>
     );
   }
