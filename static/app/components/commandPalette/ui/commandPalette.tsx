@@ -514,6 +514,16 @@ function scoreTree(
   }
 }
 
+function markSubtreeSeen(
+  node: CollectionTreeNode<CMDKActionData>,
+  seen: Set<string>
+): void {
+  seen.add(node.key);
+  for (const child of node.children) {
+    markSubtreeSeen(child, seen);
+  }
+}
+
 function flattenActions(
   nodes: Array<CollectionTreeNode<CMDKActionData>>,
   scores: Map<
@@ -546,7 +556,9 @@ function flattenActions(
           continue;
         }
         results.push({...node, listItemType: 'section'});
-        results.push(...children);
+        const visibleChildren =
+          node.limit === undefined ? children : children.slice(0, node.limit);
+        results.push(...visibleChildren);
       } else {
         results.push({...node, listItemType: 'action'});
       }
@@ -580,25 +592,39 @@ function flattenActions(
     return maxScore(b) - maxScore(a);
   });
 
+  // Track processed keys so children beyond a group's limit cannot resurface as
+  // standalone flat items later in the traversal.
+  const seen = new Set<string>();
+
   const flattened = collected.flatMap((item): CMDKFlatItem[] => {
+    if (seen.has(item.key)) return [];
+    seen.add(item.key);
+
     if (item.children.length > 0) {
       const matched = item.children.filter(
         c => scores.get(c.key)?.score.matched && !isEmptyResourceNode(c)
       );
       if (!matched.length) return [];
+      const sortedMatches = matched.sort(
+        (a, b) =>
+          (scores.get(b.key)?.score.score ?? 0) - (scores.get(a.key)?.score.score ?? 0)
+      );
+      const limitedMatches =
+        item.limit === undefined ? sortedMatches : sortedMatches.slice(0, item.limit);
+      // Mark every child and their entire subtrees as seen — including those
+      // beyond the limit — so neither over-limit children nor any of their
+      // nested descendants can resurface as independent flat items later.
+      for (const child of item.children) {
+        markSubtreeSeen(child, seen);
+      }
       return [
         // Suffix the header key so a group used as both a section header and
         // an action item inside its parent doesn't produce duplicate React keys.
         {...item, key: `${item.key}:header`, listItemType: 'section'},
-        ...matched
-          .sort(
-            (a, b) =>
-              (scores.get(b.key)?.score.score ?? 0) -
-              (scores.get(a.key)?.score.score ?? 0)
-          )
-          .map(c => ({...c, listItemType: 'action' as const})),
+        ...limitedMatches.map(c => ({...c, listItemType: 'action' as const})),
       ];
     }
+
     // Skip resource nodes with no children — they are async group containers that
     // returned 0 results and have no executable action of their own.
     if (isEmptyResourceNode(item)) {
@@ -607,12 +633,7 @@ function flattenActions(
     return scores.get(item.key)?.score.matched ? [{...item, listItemType: 'action'}] : [];
   });
 
-  const seen = new Set<string>();
-  return flattened.filter(item => {
-    if (seen.has(item.key)) return false;
-    seen.add(item.key);
-    return true;
-  });
+  return flattened;
 }
 
 function isEmptyResourceNode(node: CollectionTreeNode<CMDKActionData>): boolean {

@@ -437,6 +437,257 @@ describe('CommandPalette', () => {
     });
   });
 
+  describe('resource limit', () => {
+    const makeActions = (count: number): CommandPaletteAction[] =>
+      Array.from({length: count}, (_, i) => ({
+        display: {label: `Action ${i + 1}`},
+        to: `/action-${i + 1}/`,
+      }));
+
+    it('limits async resource results to 4 by default', async () => {
+      const actions = makeActions(6);
+
+      render(
+        <GlobalActionsComponent>
+          <CMDKAction
+            display={{label: 'Async Group'}}
+            resource={() =>
+              cmdkQueryOptions({
+                queryKey: ['test-resource-default-limit'],
+                queryFn: () => actions,
+              })
+            }
+          >
+            {data =>
+              data.map(action =>
+                'to' in action ? (
+                  <CMDKAction
+                    key={action.display.label}
+                    display={action.display}
+                    to={action.to}
+                  />
+                ) : null
+              )
+            }
+          </CMDKAction>
+        </GlobalActionsComponent>
+      );
+
+      await screen.findByRole('option', {name: 'Action 1'});
+      const actionOptions = screen
+        .getAllByRole('option')
+        .filter(el => !el.hasAttribute('aria-disabled'));
+      expect(actionOptions).toHaveLength(4);
+      expect(screen.queryByRole('option', {name: 'Action 5'})).not.toBeInTheDocument();
+      expect(screen.queryByRole('option', {name: 'Action 6'})).not.toBeInTheDocument();
+    });
+
+    it('limits static children when limit prop is set', async () => {
+      render(
+        <GlobalActionsComponent>
+          <CMDKAction display={{label: 'Static Group'}} limit={2}>
+            <CMDKAction display={{label: 'Item 1'}} onAction={jest.fn()} />
+            <CMDKAction display={{label: 'Item 2'}} onAction={jest.fn()} />
+            <CMDKAction display={{label: 'Item 3'}} onAction={jest.fn()} />
+            <CMDKAction display={{label: 'Item 4'}} onAction={jest.fn()} />
+          </CMDKAction>
+        </GlobalActionsComponent>
+      );
+
+      await screen.findByRole('option', {name: 'Item 1'});
+      const actionOptions = screen
+        .getAllByRole('option')
+        .filter(el => !el.hasAttribute('aria-disabled'));
+      expect(actionOptions).toHaveLength(2);
+      expect(screen.queryByRole('option', {name: 'Item 3'})).not.toBeInTheDocument();
+      expect(screen.queryByRole('option', {name: 'Item 4'})).not.toBeInTheDocument();
+    });
+
+    it('does not limit static children when limit prop is not set', async () => {
+      render(
+        <GlobalActionsComponent>
+          <CMDKAction display={{label: 'Static Group'}}>
+            <CMDKAction display={{label: 'Item 1'}} onAction={jest.fn()} />
+            <CMDKAction display={{label: 'Item 2'}} onAction={jest.fn()} />
+            <CMDKAction display={{label: 'Item 3'}} onAction={jest.fn()} />
+            <CMDKAction display={{label: 'Item 4'}} onAction={jest.fn()} />
+            <CMDKAction display={{label: 'Item 5'}} onAction={jest.fn()} />
+          </CMDKAction>
+        </GlobalActionsComponent>
+      );
+
+      await screen.findByRole('option', {name: 'Item 5'});
+      const actionOptions = screen
+        .getAllByRole('option')
+        .filter(el => !el.hasAttribute('aria-disabled'));
+      expect(actionOptions).toHaveLength(5);
+    });
+
+    it('items beyond the limit are still searchable', async () => {
+      render(
+        <GlobalActionsComponent>
+          <CMDKAction display={{label: 'Static Group'}} limit={2}>
+            <CMDKAction display={{label: 'Alpha 1'}} onAction={jest.fn()} />
+            <CMDKAction display={{label: 'Alpha 2'}} onAction={jest.fn()} />
+            <CMDKAction display={{label: 'Beta 3'}} onAction={jest.fn()} />
+            <CMDKAction display={{label: 'Beta 4'}} onAction={jest.fn()} />
+          </CMDKAction>
+        </GlobalActionsComponent>
+      );
+
+      // Without a query, only the first 2 items should be visible
+      await screen.findByRole('option', {name: 'Alpha 1'});
+      expect(screen.queryByRole('option', {name: 'Beta 3'})).not.toBeInTheDocument();
+
+      // Searching for "Beta" should surface items 3 and 4 even though they are
+      // beyond the default limit — the limit must be applied after filtering,
+      // not before, so it never hides matching results from the user.
+      const input = screen.getByRole('textbox', {name: 'Search commands'});
+      await userEvent.type(input, 'Beta');
+
+      expect(await screen.findByRole('option', {name: 'Beta 3'})).toBeInTheDocument();
+      expect(screen.getByRole('option', {name: 'Beta 4'})).toBeInTheDocument();
+    });
+
+    it('limit is applied after search — only top matches up to the limit are shown', async () => {
+      render(
+        <GlobalActionsComponent>
+          <CMDKAction display={{label: 'Static Group'}} limit={2}>
+            <CMDKAction display={{label: 'Item 1'}} onAction={jest.fn()} />
+            <CMDKAction display={{label: 'Item 2'}} onAction={jest.fn()} />
+            <CMDKAction display={{label: 'Item 3'}} onAction={jest.fn()} />
+            <CMDKAction display={{label: 'Item 4'}} onAction={jest.fn()} />
+          </CMDKAction>
+        </GlobalActionsComponent>
+      );
+
+      const input = await screen.findByRole('textbox', {name: 'Search commands'});
+      await userEvent.type(input, 'Item');
+
+      expect(await screen.findByRole('option', {name: 'Item 1'})).toBeInTheDocument();
+      expect(screen.getByRole('option', {name: 'Item 2'})).toBeInTheDocument();
+      expect(screen.queryByRole('option', {name: 'Item 3'})).not.toBeInTheDocument();
+      expect(screen.queryByRole('option', {name: 'Item 4'})).not.toBeInTheDocument();
+    });
+
+    it('grandchildren do not resurface individually when their parent nested group matches the search query', async () => {
+      // Regression: the old seen-set only marked direct children of a group,
+      // so grandchildren (children of nested groups) still appeared as independent
+      // flat items in search results with no limit applied.
+      render(
+        <GlobalActionsComponent>
+          <CMDKAction display={{label: 'DSN'}}>
+            <CMDKAction display={{label: 'Project Keys'}} limit={2}>
+              <CMDKAction display={{label: 'Project Alpha'}} onAction={jest.fn()} />
+              <CMDKAction display={{label: 'Project Beta'}} onAction={jest.fn()} />
+              <CMDKAction display={{label: 'Project Gamma'}} onAction={jest.fn()} />
+              <CMDKAction display={{label: 'Project Delta'}} onAction={jest.fn()} />
+            </CMDKAction>
+          </CMDKAction>
+        </GlobalActionsComponent>
+      );
+
+      const input = await screen.findByRole('textbox', {name: 'Search commands'});
+      // "Project" matches both the nested group label "Project Keys" and all four items.
+      await userEvent.type(input, 'Project');
+
+      // "Project Keys" should appear as a flat action under "DSN" (click to drill in).
+      expect(
+        await screen.findByRole('option', {name: 'Project Keys'})
+      ).toBeInTheDocument();
+
+      // Individual project items must NOT surface as standalone options — they are
+      // grandchildren and should only be accessible by drilling into "Project Keys".
+      expect(
+        screen.queryByRole('option', {name: 'Project Alpha'})
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('option', {name: 'Project Beta'})
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('option', {name: 'Project Gamma'})
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('option', {name: 'Project Delta'})
+      ).not.toBeInTheDocument();
+    });
+
+    it('limit is applied after search for async resource results', async () => {
+      const actions = makeActions(6);
+
+      render(
+        <GlobalActionsComponent>
+          <CMDKAction
+            display={{label: 'Async Group'}}
+            limit={2}
+            resource={() =>
+              cmdkQueryOptions({
+                queryKey: ['test-resource-search-limit'],
+                queryFn: () => actions,
+              })
+            }
+          >
+            {data =>
+              data.map(action =>
+                'to' in action ? (
+                  <CMDKAction
+                    key={action.display.label}
+                    display={action.display}
+                    to={action.to}
+                  />
+                ) : null
+              )
+            }
+          </CMDKAction>
+        </GlobalActionsComponent>
+      );
+
+      const input = await screen.findByRole('textbox', {name: 'Search commands'});
+      await userEvent.type(input, 'Action');
+
+      expect(await screen.findByRole('option', {name: 'Action 1'})).toBeInTheDocument();
+      expect(screen.getByRole('option', {name: 'Action 2'})).toBeInTheDocument();
+      expect(screen.queryByRole('option', {name: 'Action 3'})).not.toBeInTheDocument();
+    });
+
+    it('respects a custom limit prop', async () => {
+      const actions = makeActions(6);
+
+      render(
+        <GlobalActionsComponent>
+          <CMDKAction
+            display={{label: 'Async Group'}}
+            limit={2}
+            resource={() =>
+              cmdkQueryOptions({
+                queryKey: ['test-resource-custom-limit'],
+                queryFn: () => actions,
+              })
+            }
+          >
+            {data =>
+              data.map(action =>
+                'to' in action ? (
+                  <CMDKAction
+                    key={action.display.label}
+                    display={action.display}
+                    to={action.to}
+                  />
+                ) : null
+              )
+            }
+          </CMDKAction>
+        </GlobalActionsComponent>
+      );
+
+      await screen.findByRole('option', {name: 'Action 1'});
+      const actionOptions = screen
+        .getAllByRole('option')
+        .filter(el => !el.hasAttribute('aria-disabled'));
+      expect(actionOptions).toHaveLength(2);
+    });
+  });
+
   describe('prompt actions', () => {
     function PromptAction() {
       return (
