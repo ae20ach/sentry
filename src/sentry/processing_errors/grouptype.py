@@ -31,9 +31,7 @@ from sentry.workflow_engine.types import (
     DetectorEvaluationResult,
     DetectorGroupKey,
     DetectorPriorityLevel,
-    DetectorSettings,
     DetectorType,
-    detector_settings_registry,
 )
 
 logger = logging.getLogger(__name__)
@@ -247,16 +245,6 @@ class SourcemapDetectorHandler(ProcessingErrorDetectorHandler):
     fingerprint_key = "sourcemap"
     issue_title = "Broken source maps detected"
     issue_subtitle = "Source maps are not configured correctly for this project"
-
-
-detector_settings_registry.register(
-    DetectorType.SOURCEMAP_CONFIGURATION,
-    DetectorSettings(
-        handler=SourcemapDetectorHandler,
-        validator=None,
-        config_schema={},
-    ),
-)
 
 
 @dataclass(frozen=True)
