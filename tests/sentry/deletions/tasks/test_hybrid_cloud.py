@@ -95,6 +95,9 @@ def saved_search_owner_id_field() -> HybridCloudForeignKey[int, int]:
     return cast(HybridCloudForeignKey[int, int], SavedSearch._meta.get_field("owner_id"))
 
 
+@pytest.mark.skip(
+    reason="test pollution: prior test leaves tombstone/outbox rows that cause schedule_hybrid_cloud_foreign_key_jobs to find work and update the watermark tid"
+)
 @django_db_all
 def test_no_work_is_no_op(
     task_runner: Callable[[], ContextManager[None]],
