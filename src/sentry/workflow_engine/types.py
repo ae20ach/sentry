@@ -114,6 +114,7 @@ class ActionInvocation:
     action: Action
     detector: Detector
     notification_uuid: str
+    workflow_name: str | None = None
 
 
 class WorkflowEvaluationSnapshot(TypedDict):

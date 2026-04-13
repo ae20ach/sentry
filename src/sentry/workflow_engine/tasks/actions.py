@@ -13,7 +13,7 @@ from sentry.tasks.base import instrumented_task, retry
 from sentry.taskworker import namespaces
 from sentry.utils import metrics
 from sentry.utils.exceptions import timeout_grouping_context
-from sentry.workflow_engine.models import Action
+from sentry.workflow_engine.models import Action, Workflow
 from sentry.workflow_engine.tasks.utils import (
     ProjectNotActiveError,
     build_workflow_event_data_from_activity,
@@ -148,11 +148,17 @@ def trigger_action(
         detector.project.organization, event_data.group.type
     )
 
+    workflow_name = Workflow.objects.values_list("name", flat=True).filter(id=workflow_id).first()
+
     if should_trigger_actions:
         # Set up a timeout grouping context because we want to make sure any Sentry timeout reporting
         # in this scope is grouped properly.
         with timeout_grouping_context(action.type):
-            action.trigger(event_data, notification_uuid=notification_uuid)
+            action.trigger(
+                event_data,
+                notification_uuid=notification_uuid,
+                workflow_name=workflow_name,
+            )
     else:
         logger.info(
             "workflow_engine.triggered_actions.dry-run",

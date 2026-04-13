@@ -385,7 +385,7 @@ class TestBaseMetricAlertHandler(MetricAlertHandlerBase):
             DetectorPriorityLevel(self.group_event.occurrence.priority),
         )
         assert isinstance(alert_context, AlertContext)
-        assert alert_context.name == self.alert_rule.name
+        assert alert_context.name == self.detector.name
         assert alert_context.action_identifier_id == self.detector.id
         assert alert_context.threshold_type == AlertRuleThresholdType.ABOVE
         assert alert_context.comparison_delta is None
@@ -400,7 +400,7 @@ class TestBaseMetricAlertHandler(MetricAlertHandlerBase):
             DetectorPriorityLevel(self.group_event.occurrence.priority),
         )
         assert isinstance(alert_context, AlertContext)
-        assert alert_context.name == self.alert_rule.name
+        assert alert_context.name == self.detector.name
         assert alert_context.action_identifier_id == self.detector.id
         assert alert_context.threshold_type == AnomalyDetectionThresholdType.ABOVE_AND_BELOW
         assert alert_context.comparison_delta is None
@@ -438,6 +438,7 @@ class TestBaseMetricAlertHandler(MetricAlertHandlerBase):
             action=self.action,
             detector=self.detector,
             notification_uuid=notification_uuid,
+            workflow_name=self.workflow.name,
         )
         self.handler.invoke_legacy_registry(invocation)
 
@@ -461,7 +462,7 @@ class TestBaseMetricAlertHandler(MetricAlertHandlerBase):
         )
         self.assert_alert_context(
             alert_context,
-            name=self.alert_rule.name,
+            name=self.workflow.name,
             action_identifier_id=self.detector.id,
             threshold_type=AlertRuleThresholdType.ABOVE,
             detection_type=AlertRuleDetectionType.STATIC,
@@ -522,6 +523,7 @@ class TestBaseMetricAlertHandler(MetricAlertHandlerBase):
             action=self.action,
             detector=self.detector,
             notification_uuid=notification_uuid,
+            workflow_name=self.workflow.name,
         )
         self.handler.invoke_legacy_registry(invocation)
 
@@ -546,7 +548,7 @@ class TestBaseMetricAlertHandler(MetricAlertHandlerBase):
         )
         self.assert_alert_context(
             alert_context,
-            name=self.alert_rule.name,
+            name=self.workflow.name,
             action_identifier_id=self.detector.id,
             threshold_type=AlertRuleThresholdType.BELOW,
             detection_type=AlertRuleDetectionType.STATIC,
@@ -596,6 +598,7 @@ class TestBaseMetricAlertHandler(MetricAlertHandlerBase):
             action=self.action,
             detector=self.detector,
             notification_uuid=notification_uuid,
+            workflow_name=self.workflow.name,
         )
         self.handler.invoke_legacy_registry(invocation)
 
@@ -620,7 +623,7 @@ class TestBaseMetricAlertHandler(MetricAlertHandlerBase):
         )
         self.assert_alert_context(
             alert_context,
-            name=self.alert_rule.name,
+            name=self.workflow.name,
             action_identifier_id=self.detector.id,
             threshold_type=AnomalyDetectionThresholdType.ABOVE_AND_BELOW,
             detection_type=AlertRuleDetectionType.STATIC,

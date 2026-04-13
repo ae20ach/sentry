@@ -163,6 +163,7 @@ class TestSlackMetricAlertHandlerInvokeRegistry(MetricAlertHandlerBase):
             action=self.action,
             detector=self.detector,
             notification_uuid=notification_uuid,
+            workflow_name=self.workflow.name,
         )
 
         self.handler.invoke_legacy_registry(invocation)
@@ -188,7 +189,7 @@ class TestSlackMetricAlertHandlerInvokeRegistry(MetricAlertHandlerBase):
 
         self.assert_alert_context(
             alert_context,
-            name=self.alert_rule.name,
+            name=self.workflow.name,
             action_identifier_id=self.detector.id,
             threshold_type=AlertRuleThresholdType.ABOVE,
             detection_type=AlertRuleDetectionType.STATIC,
@@ -241,6 +242,7 @@ class TestSlackMetricAlertHandlerInvokeRegistry(MetricAlertHandlerBase):
             action=self.action,
             detector=self.detector,
             notification_uuid=str(uuid.uuid4()),
+            workflow_name=self.workflow.name,
         )
 
         self.handler.invoke_legacy_registry(invocation)
@@ -266,7 +268,7 @@ class TestSlackMetricAlertHandlerInvokeRegistry(MetricAlertHandlerBase):
 
         self.assert_alert_context(
             alert_context,
-            name=self.alert_rule.name,
+            name=self.workflow.name,
             action_identifier_id=self.detector.id,
             threshold_type=AlertRuleThresholdType.BELOW,
             detection_type=AlertRuleDetectionType.STATIC,

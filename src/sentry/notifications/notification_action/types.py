@@ -394,9 +394,10 @@ class BaseMetricAlertHandler(ABC):
         evidence_data: MetricIssueEvidenceData,
         group_status: GroupStatus,
         detector_priority_level: DetectorPriorityLevel,
+        workflow_name: str | None = None,
     ) -> AlertContext:
         return AlertContext.from_workflow_engine_models(
-            detector, evidence_data, group_status, detector_priority_level
+            detector, evidence_data, group_status, detector_priority_level, workflow_name
         )
 
     @classmethod
@@ -488,7 +489,11 @@ class BaseMetricAlertHandler(ABC):
 
         notification_context = cls.build_notification_context(invocation.action)
         alert_context = cls.build_alert_context(
-            invocation.detector, evidence_data, invocation.event_data.group.status, priority
+            invocation.detector,
+            evidence_data,
+            invocation.event_data.group.status,
+            priority,
+            workflow_name=invocation.workflow_name,
         )
 
         metric_issue_context = cls.build_metric_issue_context(
