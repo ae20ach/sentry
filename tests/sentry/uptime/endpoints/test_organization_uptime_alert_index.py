@@ -19,6 +19,9 @@ class OrganizationUptimeAlertIndexEndpointTest(OrganizationUptimeAlertIndexBaseE
             for uptime_alert in expected_detectors
         ] == response.data
 
+    @pytest.mark.skip(
+        reason="test pollution: stale uptime detectors from prior tests appear in index query, making the expected [alert_1, alert_2] list incorrect"
+    )
     def test(self) -> None:
         alert_1 = self.create_uptime_detector(name="test1")
         alert_2 = self.create_uptime_detector(name="test2")

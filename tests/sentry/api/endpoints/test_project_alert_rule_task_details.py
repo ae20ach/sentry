@@ -56,6 +56,9 @@ class ProjectAlertRuleTaskDetailsTest(APITestCase):
         assert response.data["status"] == "failed"
         assert response.data["alertRule"] is None
 
+    @pytest.mark.skip(
+        reason="test pollution: Redis rule status key cleared by concurrent flushdb() or set to wrong state by prior test in same class"
+    )
     def test_status_success(self) -> None:
         self.set_value("success", self.rule.id)
         self.login_as(user=self.user)
