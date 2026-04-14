@@ -82,6 +82,12 @@ EXTRA_FILE_TO_TEST_MAPPING: dict[str, list[str]] = {
     ".github/CODEOWNERS": ["tests/sentry/api/test_api_owners.py"],
 }
 
+EXTRA_PATTERN_TO_TEST_MAPPING: list[tuple[re.Pattern[str], list[str]]] = [
+    # Filesystem-scanning tests can't be discovered via coverage.
+    # Any new task module must be registered in TASKWORKER_IMPORTS.
+    (re.compile(r"^src/sentry/.*tasks.*\.py$"), ["tests/sentry/taskworker/test_config.py"]),
+]
+
 EXCLUDED_TEST_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"^tests/(acceptance|apidocs|js|tools)/"),
 ]
@@ -211,6 +217,12 @@ def main() -> int:
             # Extra mapped files
             for f in changed:
                 affected_test_files.update(EXTRA_FILE_TO_TEST_MAPPING.get(f, []))
+
+            # Pattern-based extra mappings (e.g. new task files -> config tests)
+            for f in changed:
+                for pattern, extra_tests in EXTRA_PATTERN_TO_TEST_MAPPING:
+                    if pattern.search(f):
+                        affected_test_files.update(extra_tests)
 
             # Directly changed test files
             changed_tests = {
