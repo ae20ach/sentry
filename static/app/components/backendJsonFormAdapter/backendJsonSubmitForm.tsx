@@ -37,6 +37,17 @@ interface BackendJsonSubmitFormProps {
    */
   onSubmit: (values: Record<string, unknown>) => Promise<unknown> | void;
   /**
+   * Override the built-in async query options for specific fields. Map from
+   * field name to a factory that returns query options for a given search input.
+   * When provided for a field, this is used instead of the default URL-based
+   * async loading. Useful when the async endpoint requires a different query
+   * shape than the built-in `buildAsyncSelectQuery`.
+   */
+  customAsyncQueryOptions?: Record<
+    string,
+    (debouncedInput: string) => ReturnType<typeof queryOptions>
+  >;
+  /**
    * Current values of dynamic fields, passed as query params to async select endpoints.
    */
   dynamicFieldValues?: Record<string, unknown>;
@@ -158,6 +169,7 @@ export function BackendJsonSubmitForm({
   dynamicFieldValues,
   onAsyncOptionsFetched,
   onFieldChange,
+  customAsyncQueryOptions,
   footer,
 }: BackendJsonSubmitFormProps) {
   // Ref to avoid including the callback in queryKey (would cause refetches)
@@ -274,44 +286,50 @@ export function BackendJsonSubmitForm({
                       );
                     case 'select':
                     case 'choice': {
-                      if (field.url) {
+                      if (field.url || customAsyncQueryOptions?.[field.name]) {
                         // Async select: fetch options from URL as user types.
                         // Show static choices as initial options before any search.
                         const staticOptions = transformChoices(field.choices);
-                        const asyncQueryOptions = (debouncedInput: string) =>
-                          queryOptions({
-                            queryKey: [
-                              'backend-json-async-select',
-                              field.name,
-                              field.url,
-                              debouncedInput,
-                              dynamicFieldValues,
-                              JSON.stringify(onAsyncOptionsFetchedRef),
-                            ],
-                            queryFn: async (): Promise<
-                              Array<SelectValue<string | number>>
-                            > => {
-                              if (!debouncedInput) {
-                                return staticOptions;
-                              }
-                              const response = await API_CLIENT.requestPromise(
-                                field.url!,
-                                {
-                                  query: buildAsyncSelectQuery(
-                                    field.name,
-                                    debouncedInput,
-                                    dynamicFieldValues
-                                  ),
-                                }
-                              );
-                              // API may return non-array responses (e.g. error objects)
-                              const results = Array.isArray(response) ? response : [];
-                              if (results.length > 0) {
-                                onAsyncOptionsFetchedRef.current?.(field.name, results);
-                              }
-                              return results;
-                            },
-                          });
+                        const customQueryOptions = customAsyncQueryOptions?.[field.name];
+                        const asyncQueryOptions = customQueryOptions
+                          ? customQueryOptions
+                          : (debouncedInput: string) =>
+                              queryOptions({
+                                queryKey: [
+                                  'backend-json-async-select',
+                                  field.name,
+                                  field.url,
+                                  debouncedInput,
+                                  dynamicFieldValues,
+                                  JSON.stringify(onAsyncOptionsFetchedRef),
+                                ],
+                                queryFn: async (): Promise<
+                                  Array<SelectValue<string | number>>
+                                > => {
+                                  if (!debouncedInput) {
+                                    return staticOptions;
+                                  }
+                                  const response = await API_CLIENT.requestPromise(
+                                    field.url!,
+                                    {
+                                      query: buildAsyncSelectQuery(
+                                        field.name,
+                                        debouncedInput,
+                                        dynamicFieldValues
+                                      ),
+                                    }
+                                  );
+                                  // API may return non-array responses (e.g. error objects)
+                                  const results = Array.isArray(response) ? response : [];
+                                  if (results.length > 0) {
+                                    onAsyncOptionsFetchedRef.current?.(
+                                      field.name,
+                                      results
+                                    );
+                                  }
+                                  return results;
+                                },
+                              });
                         if (field.multiple) {
                           return (
                             <fieldApi.Layout.Stack
