@@ -82,10 +82,14 @@ from sentry.seer.autofix.coding_agent import (
 )
 from sentry.seer.autofix.utils import (
     AutofixTriggerSource,
+    bulk_read_preferences_from_sentry_db,
     get_project_seer_preferences,
     read_preference_from_sentry_db,
     resolve_repository_ids,
     write_preference_to_sentry_db,
+)
+from sentry.seer.autofix.utils import (
+    bulk_get_project_preferences as bulk_get_project_seer_preferences,
 )
 from sentry.seer.constants import SEER_SUPPORTED_SCM_PROVIDERS, SeerSCMProvider
 from sentry.seer.entrypoints.operator import SeerAutofixOperator, process_autofix_updates
@@ -270,13 +274,15 @@ class SeerRpcServiceEndpoint(Endpoint):
         except SnubaRPCRateLimitExceeded as e:
             sentry_sdk.capture_exception()
             raise Throttled(detail="Rate limit exceeded") from e
+        except APIException:
+            raise
         except Exception as e:
             if in_test_environment():
                 raise
             if settings.DEBUG:
                 raise Exception(f"Problem processing seer rpc endpoint {method_name}") from e
             sentry_sdk.capture_exception()
-            raise ValidationError from e
+            raise APIException from e
         return Response(data=result)
 
 
@@ -869,6 +875,44 @@ def check_repository_integrations_status(*, repository_integrations: list[dict[s
     return {"integration_ids": integration_ids}
 
 
+def get_project_preferences(*, organization_id: int, project_id: int) -> dict | None:
+    """Get Seer project preferences for a single project.
+
+    Raises Project.DoesNotExist if the project is not found or doesn't belong to the org.
+    Returns None if the project has no configured preferences.
+    """
+    project = Project.objects.get_from_cache(id=project_id)
+    if project.organization_id != organization_id:
+        raise Project.DoesNotExist
+
+    organization = Organization.objects.get_from_cache(id=organization_id)
+    if features.has("organizations:seer-project-settings-read-from-sentry", organization):
+        preference = read_preference_from_sentry_db(project)
+    else:
+        preference = get_project_seer_preferences(project_id).preference
+
+    if preference is None:
+        return None
+    return preference.dict()
+
+
+def bulk_get_project_preferences(*, organization_id: int, project_ids: list[int]) -> dict:
+    """Bulk get Seer project preferences.
+
+    Returns a dict keyed by stringified project ID. Values are preference dicts or None
+    for projects with no configured preferences.
+    """
+    organization = Organization.objects.get_from_cache(id=organization_id)
+    if features.has("organizations:seer-project-settings-read-from-sentry", organization):
+        preferences = bulk_read_preferences_from_sentry_db(organization_id, project_ids)
+        return {
+            str(project_id): preference.dict() if preference else None
+            for project_id, preference in preferences.items()
+        }
+    else:
+        return bulk_get_project_seer_preferences(organization_id, project_ids)
+
+
 seer_method_registry: dict[str, Callable] = {  # return type must be serialized
     # Common to Seer features
     "get_github_enterprise_integration_config": get_github_enterprise_integration_config,
@@ -885,6 +929,8 @@ seer_method_registry: dict[str, Callable] = {  # return type must be serialized
     "send_seer_webhook": send_seer_webhook,
     "get_attributes_for_span": get_attributes_for_span,
     "trigger_coding_agent_launch": trigger_coding_agent_launch,
+    "get_project_preferences": get_project_preferences,
+    "bulk_get_project_preferences": bulk_get_project_preferences,
     #
     # Bug prediction
     "has_repo_code_mappings": has_repo_code_mappings,

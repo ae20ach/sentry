@@ -10,7 +10,6 @@ import {Text} from '@sentry/scraps/text';
 
 import {addErrorMessage, addSuccessMessage} from 'sentry/actionCreators/indicator';
 import {updateOrganization} from 'sentry/actionCreators/organizations';
-import {organizationRepositoriesInfiniteOptions} from 'sentry/components/events/autofix/preferences/hooks/useOrganizationRepositories';
 import {useSeerSupportedProviderIds} from 'sentry/components/events/autofix/utils';
 import {useBulkUpdateRepositorySettings} from 'sentry/components/repositories/useBulkUpdateRepositorySettings';
 import {getRepositoryWithSettingsQueryKey} from 'sentry/components/repositories/useRepositoryWithSettings';
@@ -19,14 +18,16 @@ import {t, tct, tn} from 'sentry/locale';
 import {DEFAULT_CODE_REVIEW_TRIGGERS} from 'sentry/types/integrations';
 import type {Organization} from 'sentry/types/organization';
 import {useFetchAllPages} from 'sentry/utils/api/apiFetch';
+import {getSeerOnboardingCheckQueryOptions} from 'sentry/utils/getSeerOnboardingCheckQueryOptions';
 import {fetchMutation, useInfiniteQuery, useQueryClient} from 'sentry/utils/queryClient';
+import {organizationRepositoriesWithSettingsInfiniteOptions} from 'sentry/utils/repositories/repoQueryOptions';
 import {useOrganization} from 'sentry/utils/useOrganization';
 
 export function useCodeReviewOverviewSection() {
   const organization = useOrganization();
   const seerSupportedProviderIds = useSeerSupportedProviderIds();
 
-  const queryOptions = organizationRepositoriesInfiniteOptions({
+  const queryOptions = organizationRepositoriesWithSettingsInfiniteOptions({
     organization,
     query: {per_page: 100},
   });
@@ -92,6 +93,10 @@ export function CodeReviewOverviewSection({
       if (queryKey) {
         queryClient.invalidateQueries({queryKey});
       }
+      // Invalidate the onboarding check query to get the updated settings
+      queryClient.invalidateQueries({
+        queryKey: getSeerOnboardingCheckQueryOptions({organization}).queryKey,
+      });
       (mutations ?? []).forEach(mutation => {
         // Invalidate related queries
         queryClient.invalidateQueries({

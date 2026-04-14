@@ -36,7 +36,7 @@ _logger = logging.getLogger(__name__)
 DEFAULT_PERIOD = "14d"
 TOP_N = 5
 
-EXPLORE_CHART_SIZE: ChartSize = {"width": 1600, "height": 1200}
+EXPLORE_CHART_SIZE: ChartSize = {"width": 1200, "height": 400}
 
 
 class ExploreDatasetDefaults(TypedDict):
@@ -129,6 +129,10 @@ def _unfurl_explore(
         style = ChartType.SLACK_EXPLORE_LINE
         if group_bys:
             params.setlist("topEvents", [str(TOP_N)])
+            if not params.getlist("sort"):
+                # Default to descending by the first yAxis, matching Explore's
+                # defaultAggregateSortBys behavior
+                params.setlist("sort", [f"-{y_axes[0]}"])
 
         if not params.get("statsPeriod") and not params.get("start"):
             params["statsPeriod"] = DEFAULT_PERIOD
@@ -149,9 +153,8 @@ def _unfurl_explore(
 
         chart_data: dict[str, Any] = {
             "timeSeries": resp.data.get("timeSeries", []),
+            "type": _resolve_display_type(chart_type, y_axes),
         }
-        if chart_type is not None:
-            chart_data["type"] = chart_type
 
         try:
             url = charts.generate_chart(style, chart_data, size=EXPLORE_CHART_SIZE)
@@ -185,6 +188,28 @@ CHART_TYPE_TO_DISPLAY_TYPE = {
     2: "area",
 }
 
+# Aggregates that default to bar charts in Explore's determineDefaultChartType.
+# All other aggregates default to line.
+_BAR_AGGREGATES = {"count", "count_unique", "sum"}
+
+
+def _resolve_display_type(chart_type: int | None, y_axes: list[str]) -> str:
+    """Return the display type string for the chart.
+
+    Uses the explicit chartType from the URL when present, otherwise
+    mirrors the frontend's ``determineDefaultChartType`` logic which
+    maps count/count_unique/sum aggregates to bar and everything else
+    to line.
+    """
+    if chart_type is not None:
+        return CHART_TYPE_TO_DISPLAY_TYPE.get(chart_type, "line")
+
+    for y_axis in y_axes:
+        func_name = y_axis.split("(")[0] if "(" in y_axis else ""
+        if func_name in _BAR_AGGREGATES:
+            return "bar"
+    return "line"
+
 
 def map_explore_query_args(url: str, args: Mapping[str, str | None]) -> Mapping[str, Any]:
     """
@@ -202,7 +227,7 @@ def map_explore_query_args(url: str, args: Mapping[str, str | None]) -> Mapping[
     visualize_fields = raw_query.getlist("visualize") or raw_query.getlist("aggregateField")
     y_axes: list[str] = []
     group_bys: list[str] = []
-    chart_type: str | None = None
+    chart_type: int | None = None
     for field_json in visualize_fields:
         try:
             parsed = json.loads(field_json)
@@ -210,8 +235,8 @@ def map_explore_query_args(url: str, args: Mapping[str, str | None]) -> Mapping[
                 y_axes.extend(parsed["yAxes"])
             if "groupBy" in parsed and parsed["groupBy"]:
                 group_bys.append(parsed["groupBy"])
-            if chart_type is None and "chartType" in parsed:
-                chart_type = CHART_TYPE_TO_DISPLAY_TYPE.get(parsed["chartType"])
+            if chart_type is None and isinstance(parsed.get("chartType"), int):
+                chart_type = parsed["chartType"]
         except (json.JSONDecodeError, TypeError):
             continue
 
@@ -230,6 +255,12 @@ def map_explore_query_args(url: str, args: Mapping[str, str | None]) -> Mapping[
         values = raw_query.getlist(param)
         if values:
             query.setlist(param, values)
+
+    # Explore stores the aggregate sort as "aggregateSort" in the URL;
+    # the events-timeseries endpoint expects it as "sort".
+    aggregate_sort = raw_query.getlist("aggregateSort")
+    if aggregate_sort:
+        query.setlist("sort", aggregate_sort)
 
     return dict(**args, query=query, chart_type=chart_type, dataset=explore_dataset)
 

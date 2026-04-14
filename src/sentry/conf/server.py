@@ -783,6 +783,9 @@ SEER_RPC_SHARED_SECRET: list[str] | None = None
 # Shared secret used to sign cross-region RPC requests to the seer microservice.
 SEER_API_SHARED_SECRET: str = ""
 
+# TTL in seconds for ViewerContext JWT tokens.
+VIEWER_CONTEXT_JWT_TTL: int = 900
+
 # Sign requests to the SCM RPC endpoint
 # First element is used to sign requests; request is accepted if signed with any element in the list.
 SCM_RPC_SHARED_SECRET: list[str] | None = None
@@ -993,6 +996,7 @@ TASKWORKER_IMPORTS: tuple[str, ...] = (
     "sentry.tasks.seer.context_engine_index",
     "sentry.tasks.seer.lightweight_rca_cluster",
     "sentry.tasks.seer.night_shift.cron",
+    "sentry.tasks.seer.backfill_supergroups_lightweight",
     # Used for tests
     "sentry.taskworker.tasks.examples",
 )
