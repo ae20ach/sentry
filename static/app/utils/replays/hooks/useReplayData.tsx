@@ -107,7 +107,7 @@ export function useReplayData({
 
   // Fetch recording segments in parallel via useQueries.
   // We know the total count upfront (count_segments), so we can compute all
-  // cursors and fire requests concurrently.
+  // cursors and send requests concurrently.
   const enableAttachments =
     !replayQuery.error &&
     Boolean(replayId) &&
@@ -164,44 +164,44 @@ export function useReplayData({
     return clone.toISOString();
   }, [replayRecord?.finished_at]);
 
-  const errorsResult = useInfiniteQuery({
-    ...apiOptions.asInfinite<{data: RawReplayError[]}>()(
-      '/organizations/$organizationIdOrSlug/replays-events-meta/',
-      {
-        path: enableErrors ? {organizationIdOrSlug: orgSlug} : skipToken,
-        query: {
-          referrer: 'replay_details',
-          dataset: DiscoverDatasets.DISCOVER,
-          start: replayRecord?.started_at?.toISOString() ?? '',
-          end: finishedAt,
-          project: ALL_ACCESS_PROJECTS,
-          query: `replayId:[${replayRecord?.id ?? ''}]`,
-          per_page: errorsPerPage,
-        },
-        staleTime: Infinity,
-      }
-    ),
-  });
+  const errorsQueryOptions = apiOptions.asInfinite<{data: RawReplayError[]}>()(
+    '/organizations/$organizationIdOrSlug/replays-events-meta/',
+    {
+      path: enableErrors ? {organizationIdOrSlug: orgSlug} : skipToken,
+      query: {
+        referrer: 'replay_details',
+        dataset: DiscoverDatasets.DISCOVER,
+        start: replayRecord?.started_at?.toISOString() ?? '',
+        end: finishedAt,
+        project: ALL_ACCESS_PROJECTS,
+        query: `replayId:[${replayRecord?.id ?? ''}]`,
+        per_page: errorsPerPage,
+      },
+      staleTime: Infinity,
+    }
+  );
+
+  const platformErrorsQueryOptions = apiOptions.asInfinite<{data: RawReplayError[]}>()(
+    '/organizations/$organizationIdOrSlug/replays-events-meta/',
+    {
+      path: enableErrors ? {organizationIdOrSlug: orgSlug} : skipToken,
+      query: {
+        referrer: 'replay_details',
+        dataset: DiscoverDatasets.ISSUE_PLATFORM,
+        start: replayRecord?.started_at?.toISOString() ?? '',
+        end: finishedAt,
+        project: ALL_ACCESS_PROJECTS,
+        query: `replayId:[${replayRecord?.id ?? ''}]`,
+        per_page: errorsPerPage,
+      },
+      staleTime: Infinity,
+    }
+  );
+
+  const errorsResult = useInfiniteQuery(errorsQueryOptions);
   useFetchAllPages({result: errorsResult});
 
-  const platformErrorsResult = useInfiniteQuery({
-    ...apiOptions.asInfinite<{data: RawReplayError[]}>()(
-      '/organizations/$organizationIdOrSlug/replays-events-meta/',
-      {
-        path: enableErrors ? {organizationIdOrSlug: orgSlug} : skipToken,
-        query: {
-          referrer: 'replay_details',
-          dataset: DiscoverDatasets.ISSUE_PLATFORM,
-          start: replayRecord?.started_at?.toISOString() ?? '',
-          end: finishedAt,
-          project: ALL_ACCESS_PROJECTS,
-          query: `replayId:[${replayRecord?.id ?? ''}]`,
-          per_page: errorsPerPage,
-        },
-        staleTime: Infinity,
-      }
-    ),
-  });
+  const platformErrorsResult = useInfiniteQuery(platformErrorsQueryOptions);
   useFetchAllPages({result: platformErrorsResult});
 
   const {allErrors, feedbackEventIds} = useMemo(() => {
