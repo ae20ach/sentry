@@ -1,7 +1,11 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sentry.api.event_search import SearchFilter, SearchKey, SearchValue
-from sentry.search.eap.occurrences.search_executor import search_filters_to_query_string
+from sentry.search.eap.occurrences.search_executor import (
+    run_eap_group_search,
+    search_filters_to_query_string,
+)
+from sentry.testutils.cases import OccurrenceTestCase, SnubaTestCase, TestCase
 
 
 class TestSearchFiltersToQueryString:
@@ -264,3 +268,121 @@ class TestSearchFiltersToQueryString:
     def test_wildcard_in_tag(self):
         filters = [SearchFilter(SearchKey("tags[url]"), "=", SearchValue("*example*"))]
         assert search_filters_to_query_string(filters) == "tags[url]:*example*"
+
+
+class TestRunEapGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.now = datetime.now(timezone.utc)
+        self.start = self.now - timedelta(hours=1)
+        self.end = self.now + timedelta(hours=1)
+
+        self.group1 = self.create_group(project=self.project)
+        self.group2 = self.create_group(project=self.project)
+
+        # Store 3 error occurrences for group1, 1 warning for group2
+        for _ in range(3):
+            occ = self.create_eap_occurrence(
+                group_id=self.group1.id,
+                level="error",
+                timestamp=self.now - timedelta(minutes=5),
+            )
+            self.store_eap_items([occ])
+
+        occ = self.create_eap_occurrence(
+            group_id=self.group2.id,
+            level="warning",
+            timestamp=self.now - timedelta(minutes=10),
+        )
+        self.store_eap_items([occ])
+
+    def test_sort_and_filter(self) -> None:
+        """Freq sort returns groups ordered by count, and level filter narrows results."""
+        # Freq sort — group1 (3 events) should come before group2 (1 event)
+        result, _ = run_eap_group_search(
+            start=self.start,
+            end=self.end,
+            project_ids=[self.project.id],
+            environment_ids=None,
+            sort_field="times_seen",
+            organization=self.organization,
+            referrer="test",
+        )
+        group_ids = [gid for gid, _ in result]
+        assert group_ids[0] == self.group1.id
+        assert self.group2.id in group_ids
+
+        # Adding a level filter should exclude group2
+        result, _ = run_eap_group_search(
+            start=self.start,
+            end=self.end,
+            project_ids=[self.project.id],
+            environment_ids=None,
+            sort_field="last_seen",
+            organization=self.organization,
+            search_filters=[SearchFilter(SearchKey("level"), "=", SearchValue("error"))],
+            referrer="test",
+        )
+        group_ids = {gid for gid, _ in result}
+        assert group_ids == {self.group1.id}
+
+    def test_group_id_pre_filter(self) -> None:
+        """Pre-filtered group_ids are passed as extra_conditions, narrowing results."""
+        result, _ = run_eap_group_search(
+            start=self.start,
+            end=self.end,
+            project_ids=[self.project.id],
+            environment_ids=None,
+            sort_field="last_seen",
+            organization=self.organization,
+            group_ids=[self.group1.id],
+            referrer="test",
+        )
+        assert {gid for gid, _ in result} == {self.group1.id}
+
+    def test_environment_filter(self) -> None:
+        """Environment IDs are applied via SnubaParams to narrow results."""
+        env = self.create_environment(project=self.project, name="production")
+        occ = self.create_eap_occurrence(
+            group_id=self.group1.id,
+            level="error",
+            environment="production",
+            timestamp=self.now - timedelta(minutes=2),
+        )
+        self.store_eap_items([occ])
+
+        occ2 = self.create_eap_occurrence(
+            group_id=self.group2.id,
+            level="warning",
+            environment="staging",
+            timestamp=self.now - timedelta(minutes=2),
+        )
+        self.store_eap_items([occ2])
+
+        result, _ = run_eap_group_search(
+            start=self.start,
+            end=self.end,
+            project_ids=[self.project.id],
+            environment_ids=[env.id],
+            sort_field="last_seen",
+            organization=self.organization,
+            referrer="test",
+        )
+        group_ids = {gid for gid, _ in result}
+        assert self.group1.id in group_ids
+        assert self.group2.id not in group_ids
+
+    def test_unsupported_sort_returns_empty(self) -> None:
+        """Unsupported sort strategies (trends, recommended) return empty
+        so the caller can fall back to the legacy result."""
+        result, total = run_eap_group_search(
+            start=self.start,
+            end=self.end,
+            project_ids=[self.project.id],
+            environment_ids=None,
+            sort_field="trends",
+            organization=self.organization,
+            referrer="test",
+        )
+        assert result == []
+        assert total == 0

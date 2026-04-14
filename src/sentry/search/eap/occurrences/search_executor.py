@@ -1,8 +1,16 @@
 import logging
 from collections.abc import Sequence
 from datetime import datetime
+from typing import Any
 
 from sentry.api.event_search import SearchFilter
+from sentry.models.environment import Environment
+from sentry.models.organization import Organization
+from sentry.models.project import Project
+from sentry.search.eap.occurrences.query_utils import build_group_id_in_filter
+from sentry.search.eap.types import SearchResolverConfig
+from sentry.search.events.types import SnubaParams
+from sentry.snuba.occurrences_rpc import Occurrences
 from sentry.utils import metrics
 
 logger = logging.getLogger(__name__)
@@ -127,6 +135,112 @@ def _convert_error_unhandled(sf: SearchFilter) -> str | None:
         return "!error.handled:1"
     else:
         return "error.handled:1"
+
+
+# Maps legacy sort_field names (from PostgresSnubaQueryExecutor.sort_strategies values)
+# to (selected_columns, orderby) for EAP queries.
+#
+# Reference — legacy sort_strategies in executors.py:
+#   "date" → "last_seen"  → max(timestamp) * 1000
+#   "freq" → "times_seen" → count()
+#   "new"  → "first_seen" → min(coalesce(group_first_seen, timestamp)) * 1000
+#   "user" → "user_count" → uniq(tags[sentry:user])
+#   "trends" → "trends"   → complex ClickHouse expression (not supported)
+#   "recommended" → "recommended" → complex ClickHouse expression (not supported)
+#   "inbox" → ""           → Postgres only (not supported)
+EAP_SORT_STRATEGIES: dict[str, tuple[list[str], list[str]]] = {
+    "last_seen": (["group_id", "last_seen()"], ["-last_seen()"]),
+    "times_seen": (["group_id", "count()"], ["-count()"]),
+}
+
+
+def run_eap_group_search(
+    start: datetime,
+    end: datetime,
+    project_ids: Sequence[int],
+    environment_ids: Sequence[int] | None,
+    sort_field: str,
+    organization: Organization,
+    group_ids: Sequence[int] | None = None,
+    limit: int | None = None,
+    offset: int = 0,
+    search_filters: Sequence[SearchFilter] | None = None,
+    referrer: str = "",
+) -> tuple[list[tuple[int, Any]], int]:
+    """EAP equivalent of PostgresSnubaQueryExecutor.snuba_search().
+
+    Returns a tuple of:
+        * a list of (group_id, sort_score) tuples,
+        * total count (0 during double-reading; legacy provides the real total).
+
+    This matches the return signature of snuba_search() so it can be used
+    as the experimental branch in check_and_choose().
+    """
+    if sort_field not in EAP_SORT_STRATEGIES:
+        return ([], 0)
+
+    selected_columns, orderby = EAP_SORT_STRATEGIES[sort_field]
+    score_column = selected_columns[1]  # e.g. "last_seen()" or "count()"
+
+    projects = list(Project.objects.filter(id__in=project_ids))
+    if not projects:
+        return ([], 0)
+
+    environments: list[Environment] = []
+    if environment_ids:
+        environments = list(
+            Environment.objects.filter(organization_id=organization.id, id__in=environment_ids)
+        )
+
+    snuba_params = SnubaParams(
+        start=start,
+        end=end,
+        organization=organization,
+        projects=projects,
+        environments=environments,
+    )
+
+    query_string = search_filters_to_query_string(search_filters or [])
+
+    extra_conditions = None
+    if group_ids:
+        extra_conditions = build_group_id_in_filter(group_ids)
+
+    try:
+        result = Occurrences.run_table_query(
+            params=snuba_params,
+            query_string=query_string,
+            selected_columns=selected_columns,
+            orderby=orderby,
+            offset=offset,
+            limit=limit or 100,
+            referrer=referrer,
+            config=SearchResolverConfig(),
+            extra_conditions=extra_conditions,
+        )
+    except Exception:
+        logger.exception(
+            "eap.search_executor.run_table_query_failed",
+            extra={
+                "organization_id": organization.id,
+                "project_ids": project_ids,
+                "sort_field": sort_field,
+                "referrer": referrer,
+            },
+        )
+        return ([], 0)
+
+    tuples: list[tuple[int, Any]] = []
+    for row in result.get("data", []):
+        group_id = row.get("group_id")
+        score = row.get(score_column)
+        if group_id is not None:
+            tuples.append((int(group_id), score))
+
+    # The EAP RPC TraceItemTableResponse does not include a total count
+    # (unlike Snuba's totals=True). During double-reading the legacy result
+    # provides the real total, so we return 0 here.
+    return (tuples, 0)
 
 
 def _format_value(
