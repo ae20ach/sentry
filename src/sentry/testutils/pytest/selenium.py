@@ -456,6 +456,7 @@ def browser(request, live_server):
 
     yield driver
 
+    # dump console log to stdout, will be shown when test fails
     rep_call = getattr(request.node, "rep_call", None)
     if rep_call is not None and rep_call.failed:
         for entry in driver.get_log("browser"):
