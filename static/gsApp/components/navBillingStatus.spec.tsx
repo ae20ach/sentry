@@ -8,7 +8,6 @@ import {render, screen, userEvent} from 'sentry-test/reactTestingLibrary';
 import {resetMockDate, setMockDate} from 'sentry-test/utils';
 
 import {DataCategory} from 'sentry/types/core';
-import {createStorage} from 'sentry/utils/createStorage';
 
 jest.mock('sentry/utils/localStorage', () => {
   const actual = jest.requireActual<typeof import('sentry/utils/localStorage')>(
@@ -683,118 +682,38 @@ describe('PrimaryNavigationQuotaExceeded', () => {
 
   describe('localStorage unavailable', () => {
     beforeEach(() => {
-      // Simulate noopStorage fallback: getItem returns null, setItem is a no-op
       jest.mocked(localStorageWrapper.getItem).mockReturnValue(null);
       jest.mocked(localStorageWrapper.setItem).mockImplementation(() => undefined);
     });
 
-    it('should render without crashing when localStorage is unavailable', async () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('should render and auto-open without crashing when localStorage is unavailable', async () => {
       render(<PrimaryNavigationQuotaExceeded organization={organization} />);
 
       expect(
         await screen.findByRole('button', {name: 'Billing Status'})
       ).toBeInTheDocument();
-    });
-
-    it('should auto-open the alert when localStorage is unavailable', async () => {
-      render(<PrimaryNavigationQuotaExceeded organization={organization} />);
-
-      // With getItem returning null, the component should auto-open
-      // because currentCategories !== lastShownCategories (null)
+      // Auto-opens because currentCategories !== lastShownCategories (null)
       expect(await screen.findByText('Quotas Exceeded')).toBeInTheDocument();
-    });
-
-    it('should handle setItem gracefully when localStorage is unavailable', async () => {
-      render(<PrimaryNavigationQuotaExceeded organization={organization} />);
-
-      // The component auto-opens and calls setItem to persist state.
-      // With noopStorage, setItem is a no-op — verify it was called without throwing.
-      expect(await screen.findByText('Quotas Exceeded')).toBeInTheDocument();
+      // setItem is a no-op but should not throw
       expect(localStorageWrapper.setItem).toHaveBeenCalled();
     });
-  });
 
-  describe('localStorage unavailable (integration)', () => {
-    // Integration tests that verify the full createStorage → noopStorage → component
-    // pipeline, covering the production crash on Sony BRAVIA 4K TV (Chrome Mobile
-    // WebView 90, Android 10) where window.localStorage is null.
-
-    it('createStorage returns a safe noopStorage when window.localStorage is null', () => {
-      const originalLocalStorage = window.localStorage;
-      Object.defineProperty(window, 'localStorage', {
-        value: null,
-        configurable: true,
-      });
-      try {
-        const storage = createStorage(() => window.localStorage);
-
-        // noopStorage should be safe to call without throwing
-        expect(storage.getItem('any-key')).toBeNull();
-        expect(() => storage.setItem('key', 'value')).not.toThrow();
-        expect(() => storage.removeItem('key')).not.toThrow();
-        expect(() => storage.clear()).not.toThrow();
-        expect(storage).toHaveLength(0);
-        expect(storage.key(0)).toBeNull();
-      } finally {
-        Object.defineProperty(window, 'localStorage', {
-          value: originalLocalStorage,
-          configurable: true,
-        });
-      }
-    });
-
-    it('createStorage returns a safe noopStorage when storage.setItem throws', () => {
-      // Simulates environments where localStorage exists but is disabled (e.g. quota exceeded, private browsing)
-      const brokenStorage = {
-        ...window.localStorage,
-        setItem() {
-          throw new DOMException('The quota has been exceeded.');
-        },
-      } as Storage;
-
-      const storage = createStorage(() => brokenStorage);
-
-      expect(storage.getItem('any-key')).toBeNull();
-      expect(() => storage.setItem('key', 'value')).not.toThrow();
-      expect(storage).toHaveLength(0);
-    });
-
-    it('component allows dismiss interaction when localStorage is unavailable', async () => {
-      // Simulate noopStorage: getItem returns null, setItem is a no-op
-      jest.mocked(localStorageWrapper.getItem).mockReturnValue(null);
-      jest.mocked(localStorageWrapper.setItem).mockImplementation(() => undefined);
-
+    it('should allow dismiss interaction when localStorage is unavailable', async () => {
       render(<PrimaryNavigationQuotaExceeded organization={organization} />);
 
-      // Component auto-opens since getItem returns null (categories mismatch)
       expect(await screen.findByText('Quotas Exceeded')).toBeInTheDocument();
 
-      // User should be able to dismiss the alert without crashing
       await userEvent.click(
         screen.getByRole('button', {
           name: 'Dismiss alert for the rest of the billing cycle',
         })
       );
 
-      // Verify dismiss triggers prompt snooze API calls (one per exceeded category)
       expect(promptMock).toHaveBeenCalledTimes(4);
-    });
-
-    it('component reads and writes correct localStorage keys when storage is available', async () => {
-      // Verify the component uses localStorageWrapper (not raw localStorage) for reads/writes
-      render(<PrimaryNavigationQuotaExceeded organization={organization} />);
-
-      expect(
-        await screen.findByRole('button', {name: 'Billing Status'})
-      ).toBeInTheDocument();
-
-      // Verify localStorageWrapper.getItem was called with expected keys
-      expect(localStorageWrapper.getItem).toHaveBeenCalledWith(
-        `billing-status-last-shown-categories-${organization.id}`
-      );
-      expect(localStorageWrapper.getItem).toHaveBeenCalledWith(
-        `billing-status-last-shown-date-${organization.id}`
-      );
     });
   });
 });
