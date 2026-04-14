@@ -153,6 +153,11 @@ export type IssueEventParameters = {
     projectId?: string;
     wouldGroup?: string;
   };
+  'issue_details.sourcemap_configuration.viewed': {
+    platform: string | null;
+    project_id: string;
+    project_slug: string;
+  };
   'issue_details.streamline_ui_toggle': {
     enforced_streamline_ui: boolean;
     isEnabled: boolean;
@@ -383,6 +388,8 @@ export const issueEventMap: Record<IssueEventKey, string | null> = {
   'issues_stream.sort_changed': 'Changed Sort on Issues Stream',
   'issues_stream.paginate': 'Paginate Issues Stream',
   'issue.shared_publicly': 'Issue Shared Publicly',
+  'issue_details.sourcemap_configuration.viewed':
+    'Source Map Configuration: Issue Details Viewed',
   resolve_issue: 'Resolve Issue',
   'project_modal.created': 'Project Modal: Created',
   'quick_trace.connected_services': 'Quick Trace: Connected Services',
