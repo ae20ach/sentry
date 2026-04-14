@@ -1,4 +1,3 @@
-import type React from 'react';
 import {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import styled from '@emotion/styled';
 
@@ -165,7 +164,7 @@ function ConversationView({
   );
 
   const leftPanelContent = (
-    <LeftPanel>
+    <Flex direction="column" minHeight="0" height="100%" overflow="hidden">
       <StyledTabs
         value={activeTab}
         onChange={key => handleTabChange(key as ConversationTab)}
@@ -198,11 +197,11 @@ function ConversationView({
           </FullWidthTabPanels>
         </Flex>
       </StyledTabs>
-    </LeftPanel>
+    </Flex>
   );
 
   const rightPanelContent = (
-    <DetailsPanel>
+    <Container minHeight="0" height="100%" background="primary" overflowY="auto" overflowX="hidden">
       {selectedNode?.renderDetails({
         node: selectedNode,
         manager: null,
@@ -214,11 +213,11 @@ function ConversationView({
         hideNodeActions: true,
         initiallyCollapseAiIO: true,
       })}
-    </DetailsPanel>
+    </Container>
   );
 
   return (
-    <SplitPanelWrapper ref={containerRef}>
+    <Flex ref={containerRef} flex="1" minHeight="0" overflow="hidden">
       {containerWidth > 0 ? (
         <SplitPanel
           availableSize={containerWidth}
@@ -232,14 +231,14 @@ function ConversationView({
           sizeStorageKey={SPLIT_PANEL_STORAGE_KEY}
         />
       ) : null}
-    </SplitPanelWrapper>
+    </Flex>
   );
 }
 
 function ConversationViewSkeleton() {
   return (
     <Flex flex="1" minHeight="0" height="100%">
-      <LeftPanel>
+      <Flex direction="column" minHeight="0" height="100%" overflow="hidden">
         <Container borderBottom="primary" padding="md lg">
           <Flex gap="lg">
             <Placeholder height="14px" width="40px" />
@@ -280,8 +279,8 @@ function ConversationViewSkeleton() {
             </Flex>
           </Container>
         </Flex>
-      </LeftPanel>
-      <DetailsPanel>
+      </Flex>
+      <Container minHeight="0" height="100%" background="primary" overflowY="auto" overflowX="hidden">
         <Flex direction="column" gap="lg" padding="lg">
           <Flex direction="column" gap="sm">
             <Placeholder height="14px" width="180px" />
@@ -304,22 +303,7 @@ function ConversationViewSkeleton() {
             <Placeholder height="120px" width="100%" />
           </Flex>
         </Flex>
-      </DetailsPanel>
-    </Flex>
-  );
-}
-
-const SplitPanelWrapper = styled('div')`
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-`;
-
-function LeftPanel({children}: {children: React.ReactNode}) {
-  return (
-    <Flex direction="column" minHeight="0" height="100%" overflow="hidden">
-      {children}
+      </Container>
     </Flex>
   );
 }
@@ -339,17 +323,3 @@ const FullWidthTabPanels = styled(TabPanels)`
     width: 100%;
   }
 `;
-
-function DetailsPanel({children}: {children: React.ReactNode}) {
-  return (
-    <Container
-      minHeight="0"
-      height="100%"
-      background="primary"
-      overflowY="auto"
-      overflowX="hidden"
-    >
-      {children}
-    </Container>
-  );
-}
