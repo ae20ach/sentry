@@ -314,6 +314,14 @@ function NextStepTemplate({
           placeholder={placeholderPrompt}
           value={userContext}
           onChange={event => setUserContext(event.target.value)}
+          onKeyDown={event => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault();
+              if (!isProcessing && userContext.trim()) {
+                onClickNo(userContext);
+              }
+            }
+          }}
         />
         <Flex gap="md">
           <Button disabled={isProcessing} onClick={onClickYes}>
@@ -321,7 +329,7 @@ function NextStepTemplate({
           </Button>
           <Button
             priority="primary"
-            disabled={isProcessing}
+            disabled={isProcessing || !userContext.trim()}
             onClick={() => onClickNo(userContext)}
           >
             {labelRethink}
