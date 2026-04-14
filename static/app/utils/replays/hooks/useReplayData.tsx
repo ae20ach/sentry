@@ -98,15 +98,10 @@ export function useReplayData({
       }
     ),
     retry: false,
+    select: ({json}) => mapResponseToReplayRecord(json?.data),
   });
 
-  const replayRecord = useMemo(
-    () =>
-      replayQuery.data?.data
-        ? mapResponseToReplayRecord(replayQuery.data.data)
-        : undefined,
-    [replayQuery.data?.data]
-  );
+  const replayRecord = replayQuery.data;
 
   const projectSlug = useReplayProjectSlug({replayRecord});
 
