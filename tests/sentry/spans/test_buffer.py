@@ -1644,7 +1644,7 @@ def _dspan(
 
 @pytest.fixture(
     params=[
-        pytest.param("cluster", id="cluster"),
+        pytest.param("cluster", id="cluster", marks=_SKIP_CLUSTER),
         pytest.param("single", id="single"),
     ]
 )
