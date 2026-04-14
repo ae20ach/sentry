@@ -135,7 +135,11 @@ def _format_value(
     if isinstance(raw_value, (list, tuple)):
         parts = ", ".join(_format_single_value(v) for v in raw_value)
         return f"[{parts}]"
-    return _format_single_value(raw_value)
+    if isinstance(raw_value, datetime):
+        return raw_value.isoformat()
+    if isinstance(raw_value, (int, float)):
+        return str(raw_value)
+    return _format_string_value(str(raw_value))
 
 
 def _format_single_value(value: str | int | float | datetime) -> str:
@@ -143,9 +147,10 @@ def _format_single_value(value: str | int | float | datetime) -> str:
         return value.isoformat()
     if isinstance(value, (int, float)):
         return str(value)
+    return _format_string_value(str(value))
 
-    s = str(value)
 
+def _format_string_value(s: str) -> str:
     # Wildcard values pass through as-is for the SearchResolver to handle
     if "*" in s:
         return s
