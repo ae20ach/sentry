@@ -333,8 +333,7 @@ export function getOrderedAutofixSections(runState: ExplorerAutofixState | null)
     }
   }
 
-  for (let blockIndex = 0; blockIndex < blocks.length; blockIndex++) {
-    const block = blocks[blockIndex]!;
+  for (const [blockIndex, block] of blocks.entries()) {
     // Accumulate file patches globally — they need to be merged across all
     // blocks regardless of section boundaries so later patches win per file.
     if (block.merged_file_patches?.length) {

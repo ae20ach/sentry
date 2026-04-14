@@ -497,9 +497,11 @@ function useRetrySection({
         value={value}
         onChange={event => setValue(event.target.value)}
         onKeyDown={event => {
-          if (event.key === 'Enter' && !event.shiftKey && value.trim()) {
+          if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
-            handleRetry();
+            if (value.trim()) {
+              handleRetry();
+            }
           }
         }}
       />
