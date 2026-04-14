@@ -23,7 +23,6 @@ from sentry.search.eap.types import (
     SearchResolverConfig,
     SupportedTraceItemType,
 )
-from sentry.search.eap.utils import build_internal_to_public_export_map
 from sentry.search.events.types import SAMPLING_MODES, SnubaParams
 from sentry.snuba.ourlogs import OurLogs
 from sentry.snuba.referrer import Referrer
@@ -185,7 +184,6 @@ class TraceItemFullExportProcessor(ExploreProcessor):
         super().__init__(organization, explore_query, output_mode=output_mode)
         self.page_token = page_token
         self._last_emitted_item_id_hex: str | None = last_emitted_item_id_hex
-        self._rename_mapping = build_internal_to_public_export_map(self._supported_trace_item_type)
 
     @property
     def last_emitted_item_id_hex(self) -> str | None:
@@ -223,13 +221,7 @@ class TraceItemFullExportProcessor(ExploreProcessor):
             token.ParseFromString(self.page_token)
             request.page_token.CopyFrom(token)
         http_resp = export_logs_rpc(request)
-        rows = list(
-            iter_export_trace_items_rows(
-                http_resp,
-                self._rename_mapping,
-                self._supported_trace_item_type,
-            )
-        )
+        rows = list(iter_export_trace_items_rows(http_resp, self._supported_trace_item_type))
 
         if self._last_emitted_item_id_hex is not None:
             while rows and rows[0].get("id") == self._last_emitted_item_id_hex:
