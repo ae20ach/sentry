@@ -152,7 +152,7 @@ function MetricsQueryBuilderSection() {
   const addMetricQuery = useAddMetricQuery();
   const addEquationQuery = useAddMetricQuery({type: 'equation'});
   const hasEquations = canUseMetricsEquations(organization);
-  const references = useMetricReferences();
+  const referenceMap = useMetricReferences();
 
   if (canUseMetricsUIRefresh(organization)) {
     return null;
@@ -179,7 +179,7 @@ function MetricsQueryBuilderSection() {
               <MetricToolbar
                 traceMetric={metricQuery.metric}
                 queryLabel={metricQuery.label ?? ''}
-                references={references}
+                referenceMap={referenceMap}
               />
             </MetricsQueryParamsProvider>
           );
@@ -219,7 +219,7 @@ function MetricsTabBodySection() {
     areToolbarsLoading,
     isMetricOptionsEmpty,
   });
-  const references = useMetricReferences();
+  const referenceMap = useMetricReferences();
   const aggregateMetricQueries = useSortableMetricQueries({
     predicate: metricQuery =>
       !isVisualizeEquation(metricQuery.queryParams.visualizes[0]!),
@@ -247,7 +247,7 @@ function MetricsTabBodySection() {
             <SortableMetricPanelSection
               dataTestId="aggregate-metric-panels"
               sortableQueries={aggregateMetricQueries}
-              references={references}
+              referenceMap={referenceMap}
               isAnyDragging={isDragging}
             />
             {showSectionSeparator ? (
@@ -262,7 +262,7 @@ function MetricsTabBodySection() {
             <SortableMetricPanelSection
               dataTestId="equation-metric-panels"
               sortableQueries={equationMetricQueries}
-              references={references}
+              referenceMap={referenceMap}
               isAnyDragging={isDragging}
             />
             <Flex gap="sm" direction="row">
@@ -306,7 +306,7 @@ function MetricsTabBodySection() {
                     traceMetric={metricQuery.metric}
                     queryIndex={index}
                     queryLabel={metricQuery.label ?? ''}
-                    references={references}
+                    referenceMap={referenceMap}
                   />
                 </MetricsQueryParamsProvider>
               );
@@ -321,15 +321,15 @@ function MetricsTabBodySection() {
 interface SortableMetricPanelSectionProps {
   dataTestId: string;
   isAnyDragging: boolean;
-  references: Set<string>;
+  referenceMap: Record<string, string>;
   sortableQueries: ReturnType<typeof useSortableMetricQueries>;
 }
 
 function SortableMetricPanelSection({
   dataTestId,
   sortableQueries,
-  references,
   isAnyDragging,
+  referenceMap,
 }: SortableMetricPanelSectionProps) {
   const {sortableItems, sensors, onDragStart, onDragEnd, onDragCancel} = sortableQueries;
 
@@ -362,7 +362,7 @@ function SortableMetricPanelSection({
                   traceMetric={metricQuery.metric}
                   queryIndex={index}
                   queryLabel={metricQuery.label ?? ''}
-                  references={references}
+                  referenceMap={referenceMap}
                   isAnyDragging={isAnyDragging}
                   canDrag={sortableItems.length > 1}
                 />

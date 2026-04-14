@@ -3,12 +3,12 @@ import type {SyntheticListenerMap} from '@dnd-kit/core/dist/hooks/utilities';
 
 import {Flex, Grid} from '@sentry/scraps/layout';
 
-import {ArithmeticBuilder} from 'sentry/components/arithmeticBuilder';
 import type {Expression} from 'sentry/components/arithmeticBuilder/expression';
 import {DragReorderButton} from 'sentry/components/dnd/dragReorderButton';
 import {EQUATION_PREFIX} from 'sentry/utils/discover/fields';
 import {useBreakpoints} from 'sentry/utils/useBreakpoints';
 import {useOrganization} from 'sentry/utils/useOrganization';
+import {EquationBuilder} from 'sentry/views/explore/metrics/equationBuilder';
 import {type TraceMetric} from 'sentry/views/explore/metrics/metricQuery';
 import {canUseMetricsUIRefresh} from 'sentry/views/explore/metrics/metricsFlags';
 import {
@@ -32,13 +32,13 @@ interface MetricToolbarProps {
   queryLabel: string;
   traceMetric: TraceMetric;
   dragListeners?: SyntheticListenerMap;
-  references?: Set<string>;
+  referenceMap?: Record<string, string>;
 }
 
 export function MetricToolbar({
   traceMetric,
   queryLabel,
-  references,
+  referenceMap,
   dragListeners,
 }: MetricToolbarProps) {
   const organization = useOrganization();
@@ -60,10 +60,6 @@ export function MetricToolbar({
 
   const handleExpressionChange = useCallback(
     (newExpression: Expression) => {
-      const isValid = newExpression.isValid;
-      if (!isValid) {
-        return;
-      }
       setVisualize(visualize.replace({yAxis: `${EQUATION_PREFIX}${newExpression.text}`}));
     },
     [setVisualize, visualize]
@@ -115,13 +111,10 @@ export function MetricToolbar({
               )}
             </Fragment>
           ) : isVisualizeEquation(visualize) ? (
-            <ArithmeticBuilder
-              aggregations={[]}
+            <EquationBuilder
               expression={visualize.expression.text}
-              functionArguments={[]}
-              getFieldDefinition={() => null}
-              references={references}
-              setExpression={handleExpressionChange}
+              referenceMap={referenceMap}
+              handleExpressionChange={handleExpressionChange}
             />
           ) : null}
           {canRemoveMetric && <DeleteMetricButton />}
@@ -168,13 +161,10 @@ export function MetricToolbar({
           </Flex>
         </Fragment>
       ) : isVisualizeEquation(visualize) ? (
-        <ArithmeticBuilder
-          aggregations={[]}
+        <EquationBuilder
           expression={visualize.expression.text}
-          functionArguments={[]}
-          getFieldDefinition={() => null}
-          references={references}
-          setExpression={handleExpressionChange}
+          referenceMap={referenceMap}
+          handleExpressionChange={handleExpressionChange}
         />
       ) : null}
       {canRemoveMetric && <DeleteMetricButton />}

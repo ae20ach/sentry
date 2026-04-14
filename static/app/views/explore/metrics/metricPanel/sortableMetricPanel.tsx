@@ -11,7 +11,7 @@ interface SortableMetricPanelProps {
   queryLabel: string;
   sortableId: string;
   traceMetric: TraceMetric;
-  references?: Set<string>;
+  referenceMap?: Record<string, string>;
 }
 
 export function SortableMetricPanel({
@@ -19,7 +19,7 @@ export function SortableMetricPanel({
   traceMetric,
   queryIndex,
   queryLabel,
-  references,
+  referenceMap,
   isAnyDragging,
   canDrag,
 }: SortableMetricPanelProps) {
@@ -38,7 +38,7 @@ export function SortableMetricPanel({
       traceMetric={traceMetric}
       queryIndex={queryIndex}
       queryLabel={queryLabel}
-      references={references}
+      referenceMap={referenceMap}
       dragListeners={canDrag ? listeners : undefined}
       isAnyDragging={isAnyDragging}
       isDragging={isDragging}
