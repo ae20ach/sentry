@@ -1,4 +1,5 @@
 import {OrganizationFixture} from 'sentry-fixture/organization';
+import {ProjectFixture} from 'sentry-fixture/project';
 import {TimeSeriesFixture} from 'sentry-fixture/timeSeries';
 import {
   createTraceMetricFixtures,
@@ -6,6 +7,7 @@ import {
 } from 'sentry-fixture/tracemetrics';
 
 import {
+  act,
   render,
   screen,
   userEvent,
@@ -14,10 +16,12 @@ import {
 } from 'sentry-test/reactTestingLibrary';
 
 import type {DatePageFilterProps} from 'sentry/components/pageFilters/date/datePageFilter';
+import {PageFiltersStore} from 'sentry/components/pageFilters/store';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {EQUATION_PREFIX} from 'sentry/utils/discover/fields';
 import {MetricsTabContent} from 'sentry/views/explore/metrics/metricsTab';
 import {MultiMetricsQueryParamsProvider} from 'sentry/views/explore/metrics/multiMetricsQueryParams';
+import {TraceMetricKnownFieldKey} from 'sentry/views/explore/metrics/types';
 import {
   VisualizeEquation,
   VisualizeFunction,
@@ -64,34 +68,36 @@ describe('MetricsTabContent', () => {
     route: '/organizations/:orgId/explore/metrics/',
   };
 
-  beforeEach(() => {
-    MockApiClient.clearMockResponses();
-    trackAnalyticsMock.mockClear();
-    setupPageFilters();
-
-    const metricFixtures = createTraceMetricFixtures(organization, project, new Date());
-    setupTraceItemsMock(metricFixtures.detailedFixtures);
-    setupEventsMock(metricFixtures.detailedFixtures, [
+  function setupMetricQueryMocks(
+    metricFixtures: ReturnType<typeof createTraceMetricFixtures>['detailedFixtures'],
+    projectId: string
+  ) {
+    setupEventsMock(metricFixtures, [
       MockApiClient.matchQuery({
         dataset: 'tracemetrics',
         referrer: 'api.explore.metric-options',
+        project: [projectId],
       }),
     ]);
 
-    setupEventsMock(metricFixtures.detailedFixtures, [
+    setupEventsMock(metricFixtures, [
       MockApiClient.matchQuery({
         dataset: 'tracemetrics',
         referrer: 'api.explore.metric-aggregates-table',
+        project: [projectId],
       }),
     ]);
 
-    setupEventsMock(metricFixtures.detailedFixtures, [
+    setupEventsMock(metricFixtures, [
       MockApiClient.matchQuery({
         dataset: 'tracemetrics',
         referrer: 'api.explore.metric-samples-table',
+        project: [projectId],
       }),
     ]);
+  }
 
+  function setupSharedMocks() {
     MockApiClient.addMockResponse({
       url: `/organizations/${organization.slug}/events-timeseries/`,
       method: 'GET',
@@ -147,6 +153,17 @@ describe('MetricsTabContent', () => {
       method: 'GET',
       body: {},
     });
+  }
+
+  beforeEach(() => {
+    MockApiClient.clearMockResponses();
+    trackAnalyticsMock.mockClear();
+    setupPageFilters();
+
+    const metricFixtures = createTraceMetricFixtures(organization, project, new Date());
+    setupTraceItemsMock(metricFixtures.detailedFixtures);
+    setupMetricQueryMocks(metricFixtures.detailedFixtures, project.id);
+    setupSharedMocks();
   });
 
   it('should add a metric when Add Metric button is clicked', async () => {
@@ -197,6 +214,120 @@ describe('MetricsTabContent', () => {
     // copies the last metric as a starting point
     expect(within(toolbars[2]!).getByRole('button', {name: 'foo'})).toBeInTheDocument();
     expect(screen.getAllByTestId('metric-panel')).toHaveLength(3);
+  });
+
+  it('keeps the selected metric when the new project still has it', async () => {
+    const otherProject = ProjectFixture({
+      id: '2',
+      slug: 'other-project',
+      hasTraceMetrics: true,
+    });
+
+    MockApiClient.clearMockResponses();
+    trackAnalyticsMock.mockClear();
+    setupPageFilters();
+
+    const initialFixtures = createTraceMetricFixtures(organization, project, new Date());
+    setupTraceItemsMock(initialFixtures.detailedFixtures);
+    setupMetricQueryMocks(initialFixtures.detailedFixtures, project.id);
+    setupSharedMocks();
+
+    render(
+      <ProviderWrapper>
+        <MetricsTabContent datePageFilterProps={datePageFilterProps} />
+      </ProviderWrapper>,
+      {
+        initialRouterConfig,
+        organization,
+      }
+    );
+
+    const toolbars = screen.getAllByTestId('metric-toolbar');
+    await waitFor(() => {
+      expect(within(toolbars[0]!).getByRole('button', {name: 'bar'})).toBeInTheDocument();
+    });
+
+    const otherProjectFixtures = createTraceMetricFixtures(
+      organization,
+      otherProject,
+      new Date()
+    ).detailedFixtures;
+
+    MockApiClient.clearMockResponses();
+    setupMetricQueryMocks(otherProjectFixtures, otherProject.id);
+    setupSharedMocks();
+
+    act(() => PageFiltersStore.updateProjects([Number(otherProject.id)], []));
+
+    await waitFor(() => {
+      expect(
+        within(screen.getAllByTestId('metric-toolbar')[0]!).getByRole('button', {
+          name: 'bar',
+        })
+      ).toBeInTheDocument();
+    });
+  });
+
+  it('does not auto-rewrite metrics when multiple metric queries are selected', async () => {
+    const otherProject = ProjectFixture({
+      id: '2',
+      slug: 'other-project',
+      hasTraceMetrics: true,
+    });
+
+    MockApiClient.clearMockResponses();
+    trackAnalyticsMock.mockClear();
+    setupPageFilters();
+
+    const initialFixtures = createTraceMetricFixtures(organization, project, new Date());
+    setupTraceItemsMock(initialFixtures.detailedFixtures);
+    setupMetricQueryMocks(initialFixtures.detailedFixtures, project.id);
+    setupSharedMocks();
+
+    render(
+      <ProviderWrapper>
+        <MetricsTabContent datePageFilterProps={datePageFilterProps} />
+      </ProviderWrapper>,
+      {
+        initialRouterConfig,
+        organization,
+      }
+    );
+
+    let toolbars = screen.getAllByTestId('metric-toolbar');
+    await waitFor(() => {
+      expect(within(toolbars[0]!).getByRole('button', {name: 'bar'})).toBeInTheDocument();
+    });
+
+    const otherProjectFixtures = createTraceMetricFixtures(
+      organization,
+      otherProject,
+      new Date()
+    ).detailedFixtures.filter(
+      fixture => fixture[TraceMetricKnownFieldKey.METRIC_NAME] !== 'bar'
+    );
+
+    MockApiClient.clearMockResponses();
+    setupMetricQueryMocks(otherProjectFixtures, otherProject.id);
+    setupSharedMocks();
+
+    await userEvent.click(screen.getByRole('button', {name: 'Add Metric'}));
+
+    toolbars = screen.getAllByTestId('metric-toolbar');
+    await userEvent.click(within(toolbars[1]!).getByRole('button', {name: 'bar'}));
+    await userEvent.click(within(toolbars[1]!).getByRole('option', {name: 'foo'}));
+
+    act(() => PageFiltersStore.updateProjects([Number(otherProject.id)], []));
+
+    await waitFor(() => {
+      const updatedToolbars = screen.getAllByTestId('metric-toolbar');
+      expect(
+        within(updatedToolbars[0]!).getByRole('button', {name: 'bar'})
+      ).toBeInTheDocument();
+      expect(
+        within(updatedToolbars[1]!).getByRole('button', {name: 'foo'})
+      ).toBeInTheDocument();
+    });
   });
 
   it('should fire analytics for metadata', async () => {
