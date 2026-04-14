@@ -63,8 +63,7 @@ export function RootCauseCard({autofix, section, isLastStep = false}: AutofixCar
 
   const {retrySectionNode, handleRetry} = useRetrySection({
     step: 'root_cause',
-    isLastStep,
-    onSubmit: feedback => startStep('root_cause', runId, feedback, section.blockIndex),
+    onSubmit: value => startStep('root_cause', runId, value, section.blockIndex),
   });
 
   return (
@@ -72,7 +71,7 @@ export function RootCauseCard({autofix, section, isLastStep = false}: AutofixCar
       icon={<IconBug />}
       title={t('Root Cause')}
       trailingItems={
-        section.status === 'completed' && artifact?.data ? (
+        section.status === 'completed' && artifact?.data && !isLastStep ? (
           <RetryButton onClick={handleRetry} disabled={isPolling} />
         ) : undefined
       }
@@ -109,7 +108,9 @@ export function RootCauseCard({autofix, section, isLastStep = false}: AutofixCar
                       ))}
                     </Container>
                   </ArtifactDetails>
-                  <ArtifactDetails>{retrySectionNode}</ArtifactDetails>
+                  {isLastStep ? undefined : (
+                    <ArtifactDetails>{retrySectionNode}</ArtifactDetails>
+                  )}
                 </Fragment>
               ) : null}
             </Fragment>
@@ -148,8 +149,7 @@ export function SolutionCard({autofix, section, isLastStep = false}: AutofixCard
 
   const {retrySectionNode, handleRetry} = useRetrySection({
     step: 'solution',
-    isLastStep,
-    onSubmit: feedback => startStep('solution', runId, feedback, section.blockIndex),
+    onSubmit: value => startStep('solution', runId, value, section.blockIndex),
   });
 
   return (
@@ -157,7 +157,7 @@ export function SolutionCard({autofix, section, isLastStep = false}: AutofixCard
       icon={<IconList />}
       title={t('Plan')}
       trailingItems={
-        section.status === 'completed' && artifact?.data ? (
+        section.status === 'completed' && artifact?.data && !isLastStep ? (
           <RetryButton onClick={handleRetry} disabled={isPolling} />
         ) : undefined
       }
@@ -187,7 +187,9 @@ export function SolutionCard({autofix, section, isLastStep = false}: AutofixCard
                   ))}
                 </Container>
               </ArtifactDetails>
-              <ArtifactDetails>{retrySectionNode}</ArtifactDetails>
+              {isLastStep ? undefined : (
+                <ArtifactDetails>{retrySectionNode}</ArtifactDetails>
+              )}
             </Fragment>
           ) : null}
         </Fragment>
@@ -252,8 +254,7 @@ export function CodeChangesCard({
 
   const {retrySectionNode, handleRetry} = useRetrySection({
     step: 'code_changes',
-    isLastStep,
-    onSubmit: feedback => startStep('code_changes', runId, feedback, section.blockIndex),
+    onSubmit: value => startStep('code_changes', runId, value, section.blockIndex),
   });
 
   return (
@@ -261,7 +262,7 @@ export function CodeChangesCard({
       icon={<IconCode />}
       title={t('Code Changes')}
       trailingItems={
-        section.status === 'completed' && patchesByRepo.size > 0 ? (
+        section.status === 'completed' && patchesByRepo.size > 0 && !isLastStep ? (
           <RetryButton onClick={handleRetry} disabled={isPolling} />
         ) : undefined
       }
@@ -293,7 +294,9 @@ export function CodeChangesCard({
                   ))}
                 </ArtifactDetails>
               ))}
-              <ArtifactDetails>{retrySectionNode}</ArtifactDetails>
+              {isLastStep ? undefined : (
+                <ArtifactDetails>{retrySectionNode}</ArtifactDetails>
+              )}
             </Fragment>
           ) : (
             <ArtifactDetails>
@@ -442,16 +445,14 @@ export function CodingAgentCard({section}: AutofixCardProps) {
 function useRetrySection({
   onSubmit,
   step,
-  isLastStep,
 }: {
-  isLastStep: boolean;
-  onSubmit: (value: string) => void;
+  onSubmit: (value: string | undefined) => void;
   step: AutofixExplorerStep;
 }) {
   const [value, setValue] = useState('');
 
   const handleRetry = useCallback(() => {
-    onSubmit(value);
+    onSubmit(value || undefined);
   }, [onSubmit, value]);
 
   const placeholder =
@@ -470,13 +471,9 @@ function useRetrySection({
   const retrySectionNode = (
     <Fragment>
       <Text>
-        {isLastStep
-          ? t(
-              'Could this answer be improved? Seer will re-run this step with your feedback.'
-            )
-          : t(
-              'Could this answer be improved? Seer will re-run this step with your feedback. Your progress for the following steps will be lost.'
-            )}
+        {t(
+          'Could this answer be improved? Seer will re-run this step with your feedback. Your progress for the following steps will be lost.'
+        )}
       </Text>
       <TextArea
         autosize

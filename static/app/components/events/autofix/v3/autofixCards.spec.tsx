@@ -620,6 +620,103 @@ describe('CodingAgentCard', () => {
   });
 });
 
+describe('isLastStep', () => {
+  const autofixWithRun = {
+    ...mockAutofix,
+    runState: {run_id: 42} as any,
+    isPolling: false,
+  };
+
+  describe('RootCauseCard', () => {
+    const artifact = makeRootCauseArtifact({
+      one_line_description: 'Bug',
+      five_whys: ['why1'],
+      reproduction_steps: ['step1'],
+    });
+
+    it('shows retry button and textarea when isLastStep is false', () => {
+      render(
+        <RootCauseCard
+          autofix={autofixWithRun}
+          section={makeSection('root_cause', 'completed', [artifact])}
+          isLastStep={false}
+        />
+      );
+
+      expect(screen.getByRole('button', {name: 'Retry'})).toBeInTheDocument();
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
+    });
+
+    it('hides retry button and textarea when isLastStep is true', () => {
+      render(
+        <RootCauseCard
+          autofix={autofixWithRun}
+          section={makeSection('root_cause', 'completed', [artifact])}
+          isLastStep
+        />
+      );
+
+      expect(screen.queryByRole('button', {name: 'Retry'})).not.toBeInTheDocument();
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('SolutionCard', () => {
+    const artifact = makeSolutionArtifact({
+      one_line_summary: 'Fix the bug',
+      steps: [{title: 'Step 1', description: 'Do something'}],
+    });
+
+    it('shows retry button and textarea when isLastStep is false', () => {
+      render(
+        <SolutionCard
+          autofix={autofixWithRun}
+          section={makeSection('solution', 'completed', [artifact])}
+          isLastStep={false}
+        />
+      );
+
+      expect(screen.getByRole('button', {name: 'Retry'})).toBeInTheDocument();
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
+    });
+
+    it('hides retry button and textarea when isLastStep is true', () => {
+      render(
+        <SolutionCard
+          autofix={autofixWithRun}
+          section={makeSection('solution', 'completed', [artifact])}
+          isLastStep
+        />
+      );
+
+      expect(screen.queryByRole('button', {name: 'Retry'})).not.toBeInTheDocument();
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('CodeChangesCard', () => {
+    const section = makeSection('code_changes', 'completed', [
+      [makePatch('org/repo', 'src/app.py')],
+    ]);
+
+    it('shows retry button and textarea when isLastStep is false', () => {
+      render(
+        <CodeChangesCard autofix={autofixWithRun} section={section} isLastStep={false} />
+      );
+
+      expect(screen.getByRole('button', {name: 'Retry'})).toBeInTheDocument();
+      expect(screen.getByRole('textbox')).toBeInTheDocument();
+    });
+
+    it('hides retry button and textarea when isLastStep is true', () => {
+      render(<CodeChangesCard autofix={autofixWithRun} section={section} isLastStep />);
+
+      expect(screen.queryByRole('button', {name: 'Retry'})).not.toBeInTheDocument();
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
+  });
+});
+
 describe('Retry button', () => {
   const autofixWithRun = {
     ...mockAutofix,
