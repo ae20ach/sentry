@@ -7,8 +7,6 @@ import {AnimatePresence, motion} from 'framer-motion';
 
 import {Stack} from '@sentry/scraps/layout';
 
-import {testableTransition} from 'sentry/utils/testableTransition';
-
 // required to break import cycle
 // eslint-disable-next-line no-relative-import-paths/no-relative-import-paths
 import {Text} from '../text/text';
@@ -18,7 +16,8 @@ interface IndeterminateLoaderProps extends React.HTMLAttributes<HTMLDivElement> 
   variant?: 'vibrant' | 'monochrome';
 }
 
-const SQUIGGLE_TILE = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='1 0 16 8'%3E%3Cpath stroke='%23fff' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M17 6c-4 0-4-4-8-4S5 6 1 6'/%3E%3C/svg%3E")`;
+const SQUIGGLE_TILE =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='1 0 16 8'%3E%3Cpath stroke='%23fff' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M17 6c-4 0-4-4-8-4S5 6 1 6'/%3E%3C/svg%3E\")";
 
 const indeterminateSlow = keyframes`
   0% { left: -35%; right: 100%; }
@@ -131,7 +130,7 @@ export function IndeterminateLoader({
           initial={{opacity: 0}}
           animate={{opacity: 1}}
           exit={{opacity: 0}}
-          transition={testableTransition({duration: 0.3})}
+          transition={{duration: 0.3}}
         >
           <Text monospace variant="muted" size="lg">
             {currentMessage}
