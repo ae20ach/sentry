@@ -32,7 +32,10 @@ import {
   useQueryParamsMode,
   useQueryParamsSortBys,
 } from 'sentry/views/explore/queryParams/context';
-import {isVisualizeEquation} from 'sentry/views/explore/queryParams/visualize';
+import {
+  isVisualizeEquation,
+  isVisualizeFunction,
+} from 'sentry/views/explore/queryParams/visualize';
 
 const RESULT_LIMIT = 50;
 const TWO_MINUTE_DELAY = 120;
@@ -72,8 +75,19 @@ export function MetricPanel({
   const hasMetricsUIRefresh = canUseMetricsUIRefresh(organization);
   const fields = getTraceSamplesTableFields(TraceSamplesTableColumns);
 
+  const mode = useQueryParamsMode();
+  const sortBys = useQueryParamsSortBys();
+  const aggregateSortBys = useQueryParamsAggregateSortBys();
+  const [interval] = useChartInterval();
+  const topEvents = useTopEvents();
+  const visualize = useMetricVisualize();
+
+  const areQueriesDisabled = isVisualizeFunction(visualize)
+    ? Boolean(traceMetric.name) && !isMetricOptionsEmpty
+    : isVisualizeEquation(visualize) && !visualize.expression.text;
+
   const metricSamplesTableResult = useMetricSamplesTable({
-    disabled: !traceMetric?.name || isMetricOptionsEmpty,
+    disabled: areQueriesDisabled,
     limit: RESULT_LIMIT,
     traceMetric,
     fields,
@@ -81,17 +95,10 @@ export function MetricPanel({
   });
 
   const metricAggregatesTableResult = useMetricAggregatesTable({
-    enabled: Boolean(traceMetric.name) && !isMetricOptionsEmpty,
+    enabled: !areQueriesDisabled,
     limit: RESULT_LIMIT,
     traceMetric,
   });
-
-  const mode = useQueryParamsMode();
-  const sortBys = useQueryParamsSortBys();
-  const aggregateSortBys = useQueryParamsAggregateSortBys();
-  const [interval] = useChartInterval();
-  const topEvents = useTopEvents();
-  const visualize = useMetricVisualize();
 
   const {result: timeseriesResult} = useMetricTimeseries({
     traceMetric,
