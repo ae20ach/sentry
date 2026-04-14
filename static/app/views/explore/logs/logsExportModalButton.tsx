@@ -9,14 +9,16 @@ import {LogsExportModal} from 'sentry/views/explore/logs/logsExportModal';
 import type {OurLogsResponseItem} from 'sentry/views/explore/logs/types';
 
 type LogsExportModalButtonProps = {
+  downloadLocally: boolean;
   isLoading: boolean;
   queryInfo: LogsQueryInfo;
   tableData: OurLogsResponseItem[] | null | undefined;
+  threshold: number;
   error?: Error | null;
 };
 
 export function LogsExportModalButton(props: LogsExportModalButtonProps) {
-  const {isLoading, tableData, error, queryInfo} = props;
+  const {isLoading, tableData, error, queryInfo, downloadLocally, threshold} = props;
   const isDataEmpty = !tableData?.length;
   const isDataError = error !== null;
 
@@ -33,7 +35,15 @@ export function LogsExportModalButton(props: LogsExportModalButtonProps) {
       priority="default"
       icon={<IconDownload />}
       onClick={() => {
-        openModal(deps => <LogsExportModal {...deps} queryInfo={queryInfo} />);
+        openModal(deps => (
+          <LogsExportModal
+            {...deps}
+            queryInfo={queryInfo}
+            tableData={tableData}
+            downloadLocally={downloadLocally}
+            threshold={threshold}
+          />
+        ));
       }}
       tooltipProps={{
         title:

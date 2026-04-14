@@ -12,12 +12,20 @@ import {
 } from 'sentry/views/explore/queryParams/context';
 
 type LogsExportSwitchProps = {
+  downloadLocally: boolean;
   isLoading: boolean;
   tableData: OurLogsResponseItem[] | null | undefined;
+  threshold: number;
   error?: Error | null;
 };
 
-export function LogsExportSwitch({isLoading, tableData, error}: LogsExportSwitchProps) {
+export function LogsExportSwitch({
+  isLoading,
+  tableData,
+  error,
+  downloadLocally,
+  threshold,
+}: LogsExportSwitchProps) {
   const organization = useOrganization();
   const location = useLocation();
   const showModalExport =
@@ -51,6 +59,8 @@ export function LogsExportSwitch({isLoading, tableData, error}: LogsExportSwitch
       isLoading={isLoading}
       error={error}
       tableData={tableData}
+      downloadLocally={downloadLocally}
+      threshold={threshold}
     />
   );
 }

@@ -9,7 +9,10 @@ type LogsExportButtonProps = {
   isLoading: boolean;
   queryInfo: LogsQueryInfo;
   tableData: OurLogsResponseItem[] | null | undefined;
+  /** Passed through from LogsExportSwitch for the modal path only */
+  downloadLocally?: boolean;
   error?: Error | null;
+  threshold?: number;
 };
 
 export function LogsExportButton({

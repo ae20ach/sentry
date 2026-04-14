@@ -10,6 +10,7 @@ import type {ModalRenderProps} from 'sentry/actionCreators/modal';
 import type {LogsQueryInfo} from 'sentry/components/dataExport';
 import {ExportQueryType, useDataExport} from 'sentry/components/dataExport';
 import {t} from 'sentry/locale';
+import type {OurLogsResponseItem} from 'sentry/views/explore/logs/types';
 import {TraceItemDataset} from 'sentry/views/explore/types';
 
 const ROW_COUNT_VALUE_DEFAULT = 100;
@@ -30,7 +31,10 @@ const defaultExportModalValues: ExportModalFormValues = {
 };
 
 type LogsExportModalProps = ModalRenderProps & {
+  downloadLocally: boolean;
   queryInfo: LogsQueryInfo;
+  tableData: OurLogsResponseItem[] | null | undefined;
+  threshold: number;
 };
 
 export function LogsExportModal({
@@ -38,7 +42,10 @@ export function LogsExportModal({
   Footer,
   Header,
   closeModal,
+  downloadLocally,
   queryInfo,
+  tableData: _tableData,
+  threshold,
 }: LogsExportModalProps) {
   const payload = useMemo(
     () => ({
@@ -60,9 +67,7 @@ export function LogsExportModal({
     },
     onSubmit: async ({value}) => {
       try {
-        const {data, statusCode} = await mutation.mutateAsync({limit: value.rowCount});
-        // eslint-disable-next-line no-console -- TODO, Josh is testing :)
-        console.log({data, statusCode});
+        await mutation.mutateAsync({limit: value.rowCount});
       } finally {
         closeModal();
       }
@@ -74,11 +79,25 @@ export function LogsExportModal({
   return (
     <form.AppForm form={form}>
       <Header closeButton>
-        <Heading as="h2">{t('Export logs')}</Heading>
+        <Heading as="h2">{t('Logs Export')}</Heading>
       </Header>
       <Body>
         <Stack gap="lg">
-          <Text>{t("Hi! Let's export some logs!")}</Text>
+          <Text>
+            {t(
+              'Export the contents of your logs so you can look at them closely yourself.'
+            )}
+          </Text>
+          <Text variant="muted" size="sm">
+            {downloadLocally
+              ? t(
+                  'You can download these logs immediately in the format of your choosing.'
+                )
+              : t(
+                  "To export more than %s logs, we'll queue up an export that will be emailed to you soon.",
+                  threshold
+                )}
+          </Text>
           <form.AppField name="format">
             {field => (
               <field.Radio.Group
@@ -110,7 +129,12 @@ export function LogsExportModal({
           </form.AppField>
           <form.AppField name="allColumns">
             {field => (
-              <field.Layout.Row label={t('All Columns?')}>
+              <field.Layout.Row
+                label={t('All Columns?')}
+                hintText={t(
+                  "To download all log columns, we'll have to queue up an export."
+                )}
+              >
                 <field.Switch
                   checked={field.state.value ?? false}
                   onChange={field.handleChange}

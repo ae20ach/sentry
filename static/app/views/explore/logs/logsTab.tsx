@@ -52,6 +52,8 @@ import {useLogAnalytics} from 'sentry/views/explore/hooks/useAnalytics';
 import {
   HiddenColumnEditorLogFields,
   HiddenLogSearchFields,
+  QUERY_PAGE_LIMIT,
+  QUERY_PAGE_LIMIT_WITH_AUTO_REFRESH,
 } from 'sentry/views/explore/logs/constants';
 import {AutorefreshToggle} from 'sentry/views/explore/logs/logsAutoRefresh';
 import {LogsDownSamplingAlert} from 'sentry/views/explore/logs/logsDownsamplingAlert';
@@ -253,6 +255,10 @@ export function LogsTabContent({datePageFilterProps, tableExpando}: LogsTabProps
   const setFields = useSetQueryParamsFields();
   const tableData = useLogsPageDataQueryResult();
   const autorefreshEnabled = useLogsAutoRefreshEnabled();
+  const logsExportThreshold = autorefreshEnabled
+    ? QUERY_PAGE_LIMIT_WITH_AUTO_REFRESH
+    : QUERY_PAGE_LIMIT;
+  const logsExportDownloadLocally = !tableData.isPending && !tableData.hasNextPage;
 
   const [timeseriesIngestDelay, setTimeseriesIngestDelay] = useState<bigint>(
     getMaxIngestDelayTimestamp()
@@ -459,6 +465,8 @@ export function LogsTabContent({datePageFilterProps, tableExpando}: LogsTabProps
                 isLoading={tableData.isPending}
                 tableData={tableData.data}
                 error={tableData.error}
+                downloadLocally={logsExportDownloadLocally}
+                threshold={logsExportThreshold}
               />
             </OverChartButtonGroup>
           )}
