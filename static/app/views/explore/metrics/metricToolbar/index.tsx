@@ -51,6 +51,9 @@ export function MetricToolbar({
     setVisualize(visualize.replace({visible: !visualize.visible}));
   }, [setVisualize, visualize]);
   const setTraceMetric = useSetTraceMetric();
+  const aggregateMetricQueryCount = metricQueries.filter(q =>
+    isVisualizeFunction(q.queryParams.visualizes[0]!)
+  ).length;
 
   // We need at least one metric visualized, but equations should always
   // be removable.
@@ -98,7 +101,11 @@ export function MetricToolbar({
           {isVisualizeFunction(visualize) ? (
             <Fragment>
               <Flex minWidth={0}>
-                <MetricSelector traceMetric={traceMetric} onChange={setTraceMetric} />
+                <MetricSelector
+                  traceMetric={traceMetric}
+                  onChange={setTraceMetric}
+                  fallbackOnProjectChange={aggregateMetricQueryCount === 1}
+                />
               </Flex>
               <Flex gap="md" minWidth={0}>
                 <Flex flex="2 1 0" minWidth={0}>
@@ -153,7 +160,11 @@ export function MetricToolbar({
       {isVisualizeFunction(visualize) ? (
         <Fragment>
           <Flex minWidth={0}>
-            <MetricSelector traceMetric={traceMetric} onChange={setTraceMetric} />
+            <MetricSelector
+              traceMetric={traceMetric}
+              onChange={setTraceMetric}
+              fallbackOnProjectChange={aggregateMetricQueryCount === 1}
+            />
           </Flex>
           <Flex gap="md" minWidth={0}>
             <Flex flex="2 1 0" minWidth={0}>

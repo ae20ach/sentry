@@ -20,10 +20,12 @@ import {Text} from '@sentry/scraps/text';
 import {DateTime} from 'sentry/components/dateTime';
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
 import {Overlay, PositionWrapper} from 'sentry/components/overlay';
+import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
 import {DEFAULT_DEBOUNCE_DURATION} from 'sentry/constants';
 import {IconCheckmark, IconSearch} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {prettifyTagKey} from 'sentry/utils/fields';
+import {valueIsEqual} from 'sentry/utils/object/valueIsEqual';
 import {useDebouncedValue} from 'sentry/utils/useDebouncedValue';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {useOverlay} from 'sentry/utils/useOverlay';
@@ -96,14 +98,20 @@ interface MetricSelectOption {
 export function MetricSelector({
   traceMetric,
   onChange,
+  fallbackOnProjectChange = false,
 }: {
   onChange: (traceMetric: TraceMetric) => void;
   traceMetric: TraceMetric;
+  fallbackOnProjectChange?: boolean;
 }) {
   const triggerId = useId();
 
   const organization = useOrganization();
+  const {selection} = usePageFilters();
   const hasMetricUnitsUI = useHasMetricUnitsUI();
+  const previousProjectsRef = useRef(selection.projects);
+  const pendingProjectValidationRef = useRef(false);
+  const sawFetchForPendingProjectRef = useRef(false);
 
   const searchRef = useRef<HTMLInputElement>(null);
   const listElementRef = useRef<HTMLUListElement>(null);
@@ -151,16 +159,8 @@ export function MetricSelector({
   // Always show the selected metric at the top of the list so it's easy to
   // find when the dropdown is reopened. Filter it out of the API results to
   // avoid duplication.
-  const metricOptions = useMemo((): MetricSelectOption[] => {
-    const selectedMetricValue = traceMetric.name
-      ? makeMetricSelectValue(
-          hasMetricUnitsUI
-            ? traceMetric
-            : {name: traceMetric.name, type: traceMetric.type}
-        )
-      : null;
-
-    const apiOptions =
+  const apiMetricOptions = useMemo(
+    (): MetricSelectOption[] =>
       metricOptionsData?.data?.map(option => ({
         label: option[TraceMetricKnownFieldKey.METRIC_NAME],
         value: makeMetricSelectValue({
@@ -188,20 +188,33 @@ export function MetricSelector({
             metricUnit={option[TraceMetricKnownFieldKey.METRIC_UNIT] ?? NONE_UNIT}
           />
         ),
-      })) ?? [];
+      })) ?? [],
+    [metricOptionsData?.data, hasMetricUnitsUI]
+  );
+  const previousApiMetricOptionsRef = useRef(apiMetricOptions);
+
+  const metricOptions = useMemo((): MetricSelectOption[] => {
+    const selectedMetricValue = traceMetric.name
+      ? makeMetricSelectValue(
+          hasMetricUnitsUI
+            ? traceMetric
+            : {name: traceMetric.name, type: traceMetric.type}
+        )
+      : null;
 
     // Prefer the API version of the selected metric (it has count/lastSeen),
     // falling back to the bare optionFromTraceMetric when the API hasn't
     // returned it (e.g. filtered by search or still loading).
     const selectedOption = selectedMetricValue
-      ? (apiOptions.find(o => o.value === selectedMetricValue) ?? optionFromTraceMetric)
+      ? (apiMetricOptions.find(o => o.value === selectedMetricValue) ??
+        optionFromTraceMetric)
       : null;
 
     return [
       ...(selectedOption ? [selectedOption] : []),
-      ...apiOptions.filter(o => o.value !== selectedMetricValue),
+      ...apiMetricOptions.filter(o => o.value !== selectedMetricValue),
     ];
-  }, [metricOptionsData, optionFromTraceMetric, traceMetric, hasMetricUnitsUI]);
+  }, [apiMetricOptions, optionFromTraceMetric, traceMetric, hasMetricUnitsUI]);
 
   // Auto-select the first metric when no metric is currently selected.
   // This handles the initial load case where the URL has no metric param.
@@ -214,6 +227,69 @@ export function MetricSelector({
       });
     }
   }, [metricOptions, onChange, traceMetric.name, hasMetricUnitsUI]);
+
+  useEffect(() => {
+    const projectsChanged = !valueIsEqual(
+      previousProjectsRef.current,
+      selection.projects
+    );
+
+    if (projectsChanged) {
+      previousProjectsRef.current = selection.projects;
+      pendingProjectValidationRef.current = fallbackOnProjectChange;
+      sawFetchForPendingProjectRef.current = false;
+    }
+
+    if (!pendingProjectValidationRef.current) {
+      previousApiMetricOptionsRef.current = apiMetricOptions;
+      return;
+    }
+
+    if (isFetching) {
+      sawFetchForPendingProjectRef.current = true;
+      previousApiMetricOptionsRef.current = apiMetricOptions;
+      return;
+    }
+
+    const apiMetricOptionsChanged =
+      previousApiMetricOptionsRef.current !== apiMetricOptions;
+
+    if (!sawFetchForPendingProjectRef.current && !apiMetricOptionsChanged) {
+      previousApiMetricOptionsRef.current = apiMetricOptions;
+      return;
+    }
+
+    pendingProjectValidationRef.current = false;
+    previousApiMetricOptionsRef.current = apiMetricOptions;
+
+    if (!traceMetric.name) {
+      return;
+    }
+
+    const metricExists = apiMetricOptions.some(
+      option =>
+        option.metricName === traceMetric.name && option.metricType === traceMetric.type
+    );
+
+    if (metricExists || !apiMetricOptions[0]) {
+      return;
+    }
+
+    onChange({
+      name: apiMetricOptions[0].metricName,
+      type: apiMetricOptions[0].metricType,
+      unit: hasMetricUnitsUI ? apiMetricOptions[0].metricUnit : undefined,
+    });
+  }, [
+    apiMetricOptions,
+    fallbackOnProjectChange,
+    hasMetricUnitsUI,
+    isFetching,
+    onChange,
+    selection.projects,
+    traceMetric.name,
+    traceMetric.type,
+  ]);
 
   const traceMetricSelectValue = makeMetricSelectValue(
     hasMetricUnitsUI ? traceMetric : {name: traceMetric.name, type: traceMetric.type}
