@@ -1,7 +1,7 @@
-import {type LogsQueryInfo} from 'sentry/components/dataExport';
+import {type LogsQueryInfo} from 'sentry/components/useDataExport';
 import {ExploreExport} from 'sentry/views/explore/components/exploreExport';
 import {QUERY_PAGE_LIMIT} from 'sentry/views/explore/logs/constants';
-import {downloadLogsAsCsv} from 'sentry/views/explore/logs/logsExportCsv';
+import {downloadLogsAsCsv} from 'sentry/views/explore/logs/downloadLogsAsCsv';
 import type {OurLogsResponseItem} from 'sentry/views/explore/logs/types';
 import {TraceItemDataset} from 'sentry/views/explore/types';
 

@@ -6,20 +6,42 @@ import {defaultFormOptions, useScrapsForm} from '@sentry/scraps/form';
 import {Flex, Stack} from '@sentry/scraps/layout';
 import {Heading, Text} from '@sentry/scraps/text';
 
+import {addSuccessMessage} from 'sentry/actionCreators/indicator';
 import type {ModalRenderProps} from 'sentry/actionCreators/modal';
-import type {LogsQueryInfo} from 'sentry/components/dataExport';
-import {ExportQueryType, useDataExport} from 'sentry/components/dataExport';
+import {
+  ExportQueryType,
+  useDataExport,
+  type LogsQueryInfo,
+} from 'sentry/components/useDataExport';
 import {t} from 'sentry/locale';
+import {downloadFromHref} from 'sentry/utils/downloadFromHref';
+import {QUERY_PAGE_LIMIT} from 'sentry/views/explore/logs/constants';
+import {createLogDownloadFilename} from 'sentry/views/explore/logs/createLogDownloadFilename';
+import {downloadLogs} from 'sentry/views/explore/logs/downloadLogs';
 import type {OurLogsResponseItem} from 'sentry/views/explore/logs/types';
 import {TraceItemDataset} from 'sentry/views/explore/types';
 
 const ROW_COUNT_VALUE_DEFAULT = 100;
-const ROW_COUNT_VALUES = [ROW_COUNT_VALUE_DEFAULT, 500, 1_000, 5_000, 10_000] as const;
+
+/**
+ * Keep this in sync with data_export.py on the backend
+ * (TODO: Saraj is looking into updating this)
+ */
+const ROW_COUNT_VALUE_SYNC_LIMIT = QUERY_PAGE_LIMIT;
+
+const ROW_COUNT_VALUES = [
+  ROW_COUNT_VALUE_DEFAULT,
+  500,
+  ROW_COUNT_VALUE_SYNC_LIMIT,
+  10_000,
+  50_000,
+  100_000,
+] as const;
 
 const exportModalFormSchema = z.object({
   allColumns: z.boolean(),
   format: z.enum(['csv', 'json']),
-  rowCount: z.union(ROW_COUNT_VALUES.map(option => z.literal(option))),
+  limit: z.union(ROW_COUNT_VALUES.map(option => z.literal(option))),
 });
 
 type ExportModalFormValues = z.infer<typeof exportModalFormSchema>;
@@ -27,13 +49,13 @@ type ExportModalFormValues = z.infer<typeof exportModalFormSchema>;
 const defaultExportModalValues: ExportModalFormValues = {
   allColumns: false,
   format: 'csv',
-  rowCount: 100,
+  limit: 100,
 };
 
 type LogsExportModalProps = ModalRenderProps & {
   downloadLocally: boolean;
   queryInfo: LogsQueryInfo;
-  tableData: OurLogsResponseItem[] | null | undefined;
+  tableData: OurLogsResponseItem[];
   threshold: number;
 };
 
@@ -43,6 +65,7 @@ export function LogsExportModal({
   Header,
   closeModal,
   queryInfo,
+  tableData,
 }: LogsExportModalProps) {
   const payload = useMemo(
     () => ({
@@ -55,6 +78,11 @@ export function LogsExportModal({
     [queryInfo]
   );
   const {mutation} = useDataExport({payload});
+  const rowOptions = ROW_COUNT_VALUES.map(value => ({label: value, value}));
+  const rowOptionsAvailable =
+    tableData.length < QUERY_PAGE_LIMIT
+      ? rowOptions.filter(({value}) => value <= tableData.length)
+      : rowOptions;
 
   const form = useScrapsForm({
     ...defaultFormOptions,
@@ -63,19 +91,32 @@ export function LogsExportModal({
       onDynamic: exportModalFormSchema,
     },
     onSubmit: async ({value}) => {
-      try {
-        await mutation.mutateAsync({
-          limit: value.rowCount,
+      if (!value.allColumns && value.limit < ROW_COUNT_VALUE_SYNC_LIMIT) {
+        downloadLogs({
+          tableData,
+          fields: queryInfo.field,
+          filename: 'logs',
           format: value.format,
-          allColumns: value.allColumns,
+          limit: value.limit,
         });
-      } finally {
-        closeModal();
+        addSuccessMessage(t('Downloading file to your browser.'));
+        return;
+      }
+
+      // TODO: How should we type this?
+      const {data} = (await mutation.mutateAsync(value)) as {
+        data: {fileName: string | null; id: string};
+      };
+      if (data.fileName) {
+        const filename = createLogDownloadFilename(data.fileName, value.format);
+        downloadFromHref(
+          filename,
+          `/api/0/organizations/sentry/data-export/${data.id}/?download=true`
+        );
+        addSuccessMessage(t("Downloading '%s' to your browser.", filename));
       }
     },
   });
-
-  const rowOptions = ROW_COUNT_VALUES.map(value => ({label: value, value}));
 
   return (
     <form.AppForm form={form}>
@@ -86,7 +127,8 @@ export function LogsExportModal({
         <Stack gap="lg">
           <Text>
             {t(
-              'If you select more than 1000 rows or to export all columns of data your file will be sent to your email address.'
+              'If you select more than %s rows or to export all columns of data your file will be sent to your email address.',
+              ROW_COUNT_VALUE_SYNC_LIMIT
             )}
           </Text>
           <form.AppField name="format">
@@ -104,16 +146,16 @@ export function LogsExportModal({
               </field.Radio.Group>
             )}
           </form.AppField>
-          <form.AppField name="rowCount">
+          <form.AppField name="limit">
             {field => (
               <field.Layout.Stack label={t('Number of rows')}>
                 <field.Select
-                  disabled={rowOptions.length === 1}
-                  options={rowOptions}
+                  disabled={rowOptionsAvailable.length === 1}
+                  options={rowOptionsAvailable}
                   onChange={field.handleChange}
                   value={field.state.value}
                   // @ts-expect-error -- TODO: scraps & union-of-literal selects?
-                  defaultValue={rowOptions[0]!.value}
+                  defaultValue={rowOptionsAvailable[0].value}
                 />
               </field.Layout.Stack>
             )}
