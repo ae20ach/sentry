@@ -1,4 +1,12 @@
-import {Fragment, useEffect, useMemo, useRef, type ReactNode} from 'react';
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import styled from '@emotion/styled';
 
 import {Tag} from '@sentry/scraps/badge';
@@ -6,6 +14,7 @@ import {Button, LinkButton} from '@sentry/scraps/button';
 import {Disclosure} from '@sentry/scraps/disclosure';
 import {Container, Flex, type FlexProps} from '@sentry/scraps/layout';
 import {Text} from '@sentry/scraps/text';
+import {TextArea} from '@sentry/scraps/textarea';
 
 import {
   CodingAgentStatus,
@@ -20,6 +29,7 @@ import {
   isPullRequestsArtifact,
   isRootCauseArtifact,
   isSolutionArtifact,
+  type AutofixExplorerStep,
   type AutofixSection,
   type useExplorerAutofix,
 } from 'sentry/components/events/autofix/useExplorerAutofix';
@@ -39,9 +49,10 @@ import {FileDiffViewer} from 'sentry/views/seerExplorer/fileDiffViewer';
 interface AutofixCardProps {
   autofix: ReturnType<typeof useExplorerAutofix>;
   section: AutofixSection;
+  isLastStep?: boolean;
 }
 
-export function RootCauseCard({autofix, section}: AutofixCardProps) {
+export function RootCauseCard({autofix, section, isLastStep = false}: AutofixCardProps) {
   const artifact = useMemo(() => {
     const sectionArtifact = getAutofixArtifactFromSection(section);
     return isRootCauseArtifact(sectionArtifact) ? sectionArtifact : null;
@@ -50,16 +61,20 @@ export function RootCauseCard({autofix, section}: AutofixCardProps) {
   const {startStep, runState, isPolling} = autofix;
   const runId = runState?.run_id;
 
+  const onRetry = useCallback(
+    (userContext?: string) => {
+      startStep('root_cause', runId, userContext, section.blockIndex);
+    },
+    [startStep, runId, section.blockIndex]
+  );
+
   return (
     <ArtifactCard
       icon={<IconBug />}
       title={t('Root Cause')}
       trailingItems={
         section.status === 'completed' && artifact?.data ? (
-          <RetryButton
-            onClick={() => startStep('root_cause', runId, undefined, section.blockIndex)}
-            disabled={isPolling}
-          />
+          <RetryButton onClick={onRetry} disabled={isPolling} />
         ) : undefined
       }
     >
@@ -84,16 +99,25 @@ export function RootCauseCard({autofix, section}: AutofixCardProps) {
                 </Container>
               </ArtifactDetails>
               {artifact.data.reproduction_steps?.length ? (
-                <ArtifactDetails>
-                  <Text bold>{t('Reproduction Steps')}</Text>
-                  <Container as="ol" margin="0">
-                    {artifact.data?.reproduction_steps.map((step, index) => (
-                      <li key={index}>
-                        <Text>{step}</Text>
-                      </li>
-                    ))}
-                  </Container>
-                </ArtifactDetails>
+                <Fragment>
+                  <ArtifactDetails>
+                    <Text bold>{t('Reproduction Steps')}</Text>
+                    <Container as="ol" margin="0">
+                      {artifact.data?.reproduction_steps.map((step, index) => (
+                        <li key={index}>
+                          <Text>{step}</Text>
+                        </li>
+                      ))}
+                    </Container>
+                  </ArtifactDetails>
+                  <ArtifactDetails>
+                    <RetrySection
+                      step="root_cause"
+                      isLastStep={isLastStep}
+                      onSubmit={onRetry}
+                    />
+                  </ArtifactDetails>
+                </Fragment>
               ) : null}
             </Fragment>
           ) : null}
@@ -120,7 +144,7 @@ export function RootCauseCard({autofix, section}: AutofixCardProps) {
   );
 }
 
-export function SolutionCard({autofix, section}: AutofixCardProps) {
+export function SolutionCard({autofix, section, isLastStep = false}: AutofixCardProps) {
   const artifact = useMemo(() => {
     const sectionArtifact = getAutofixArtifactFromSection(section);
     return isSolutionArtifact(sectionArtifact) ? sectionArtifact : null;
@@ -151,21 +175,32 @@ export function SolutionCard({autofix, section}: AutofixCardProps) {
         <Fragment>
           <Text>{artifact.data.one_line_summary}</Text>
           {artifact.data.steps ? (
-            <ArtifactDetails>
-              <Text bold>{t('Steps to Resolve')}</Text>
-              <Container as="ol" margin="0">
-                {artifact.data.steps.map((step, index) => (
-                  <li key={index}>
-                    <Flex direction="column">
-                      <Text>{step.title}</Text>
-                      <Text size="sm" variant="muted">
-                        {step.description}
-                      </Text>
-                    </Flex>
-                  </li>
-                ))}
-              </Container>
-            </ArtifactDetails>
+            <Fragment>
+              <ArtifactDetails>
+                <Text bold>{t('Steps to Resolve')}</Text>
+                <Container as="ol" margin="0">
+                  {artifact.data.steps.map((step, index) => (
+                    <li key={index}>
+                      <Flex direction="column">
+                        <Text>{step.title}</Text>
+                        <Text size="sm" variant="muted">
+                          {step.description}
+                        </Text>
+                      </Flex>
+                    </li>
+                  ))}
+                </Container>
+              </ArtifactDetails>
+              <ArtifactDetails>
+                <RetrySection
+                  step="solution"
+                  isLastStep={isLastStep}
+                  onSubmit={feedback =>
+                    startStep('solution', runId, feedback, section.blockIndex)
+                  }
+                />
+              </ArtifactDetails>
+            </Fragment>
           ) : null}
         </Fragment>
       ) : (
@@ -190,7 +225,11 @@ export function SolutionCard({autofix, section}: AutofixCardProps) {
   );
 }
 
-export function CodeChangesCard({autofix, section}: AutofixCardProps) {
+export function CodeChangesCard({
+  autofix,
+  section,
+  isLastStep = false,
+}: AutofixCardProps) {
   const artifact = useMemo(() => {
     const sectionArtifact = getAutofixArtifactFromSection(section);
     return isCodeChangesArtifact(sectionArtifact) ? sectionArtifact : null;
@@ -265,6 +304,17 @@ export function CodeChangesCard({autofix, section}: AutofixCardProps) {
                   ))}
                 </ArtifactDetails>
               ))}
+              {patchesByRepo.size > 0 ? (
+                <ArtifactDetails>
+                  <RetrySection
+                    step="code_changes"
+                    isLastStep={isLastStep}
+                    onSubmit={feedback =>
+                      startStep('code_changes', runId, feedback, section.blockIndex)
+                    }
+                  />
+                </ArtifactDetails>
+              ) : null}
             </Fragment>
           ) : (
             <ArtifactDetails>
@@ -407,6 +457,58 @@ export function CodingAgentCard({section}: AutofixCardProps) {
         );
       })}
     </ArtifactCard>
+  );
+}
+
+function RetrySection({
+  onSubmit,
+  step,
+  isLastStep,
+}: {
+  isLastStep: boolean;
+  onSubmit: (value: string) => void;
+  step: AutofixExplorerStep;
+}) {
+  const [value, setValue] = useState('');
+
+  const placeholder =
+    step === 'root_cause'
+      ? t('Give Seer additional context to improve this root cause. Hit ENTER to submit.')
+      : step === 'solution'
+        ? t('Give Seer additional context to improve this plan. Hit ENTER to submit.')
+        : step === 'code_changes'
+          ? t(
+              'Give Seer additional context to improve this code change. Hit ENTER to submit.'
+            )
+          : t(
+              'Give Seer additional context to improve this answer. Hit ENTER to submit.'
+            );
+
+  return (
+    <Fragment>
+      <Text>
+        {isLastStep
+          ? t(
+              'Could this answer be improved? Seer will re-run this step with your feedback.'
+            )
+          : t(
+              'Could this answer be improved? Seer will re-run this step with your feedback. Your progress for the following steps will be lost.'
+            )}
+      </Text>
+      <TextArea
+        autosize
+        rows={1}
+        placeholder={placeholder}
+        value={value}
+        onChange={event => setValue(event.target.value)}
+        onKeyDown={event => {
+          if (event.key === 'Enter' && !event.shiftKey && value.trim()) {
+            event.preventDefault();
+            onSubmit(value);
+          }
+        }}
+      />
+    </Fragment>
   );
 }
 

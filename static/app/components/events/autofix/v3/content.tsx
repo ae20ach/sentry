@@ -71,18 +71,37 @@ interface SeerDrawerArtifactsProps {
 function SeerDrawerArtifacts({autofix, sections}: SeerDrawerArtifactsProps) {
   return (
     <Fragment>
-      {sections.map(section => {
+      {sections.map((section, index) => {
         if (isRootCauseSection(section)) {
-          return <RootCauseCard key={section.step} autofix={autofix} section={section} />;
+          return (
+            <RootCauseCard
+              key={section.step}
+              autofix={autofix}
+              section={section}
+              isLastStep={index === sections.length - 1}
+            />
+          );
         }
 
         if (isSolutionSection(section)) {
-          return <SolutionCard key={section.step} autofix={autofix} section={section} />;
+          return (
+            <SolutionCard
+              key={section.step}
+              autofix={autofix}
+              section={section}
+              isLastStep={index === sections.length - 1}
+            />
+          );
         }
 
         if (isCodeChangesSection(section)) {
           return (
-            <CodeChangesCard key={section.step} autofix={autofix} section={section} />
+            <CodeChangesCard
+              key={section.step}
+              autofix={autofix}
+              section={section}
+              isLastStep={index === sections.length - 1}
+            />
           );
         }
 
