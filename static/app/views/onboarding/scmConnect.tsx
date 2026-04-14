@@ -22,7 +22,7 @@ import {useScmPlatformDetection} from './components/useScmPlatformDetection';
 import {useScmProviders} from './components/useScmProviders';
 import {SCM_STEP_CONTENT_WIDTH} from './consts';
 
-export interface ScmConnectProps {
+interface ScmConnectProps {
   onComplete: () => void;
   onIntegrationChange: (integration: Integration | undefined) => void;
   onRepositoryChange: (repo: Repository | undefined) => void;

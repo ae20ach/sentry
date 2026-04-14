@@ -12,7 +12,7 @@ import {ScmVirtualizedMenuList} from './scmVirtualizedMenuList';
 import {useScmRepos} from './useScmRepos';
 import {useScmRepoSelection} from './useScmRepoSelection';
 
-export interface ScmRepoSelectorProps {
+interface ScmRepoSelectorProps {
   integration: Integration;
   onRepositoryChange: (repo: Repository | undefined) => void;
   selectedRepository: Repository | undefined;

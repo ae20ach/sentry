@@ -75,7 +75,7 @@ function shouldSuggestFramework(platformKey: PlatformKey): boolean {
 // Wider than SCM_STEP_CONTENT_WIDTH (506px) used by the footer.
 const PLATFORM_CONTENT_WIDTH = '564px';
 
-export interface ScmPlatformFeaturesProps {
+interface ScmPlatformFeaturesProps {
   onComplete: () => void;
   onFeaturesChange: (features: ProductSolution[]) => void;
   onPlatformChange: (platform: OnboardingSelectedSDK | undefined) => void;

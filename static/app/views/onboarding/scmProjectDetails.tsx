@@ -31,7 +31,7 @@ import {ScmStepHeader} from './components/scmStepHeader';
 
 const PROJECT_DETAILS_WIDTH = '285px';
 
-export interface ScmProjectDetailsProps {
+interface ScmProjectDetailsProps {
   onComplete: (
     platform?: OnboardingSelectedSDK,
     query?: Record<string, string[]>

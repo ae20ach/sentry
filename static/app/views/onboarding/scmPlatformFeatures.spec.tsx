@@ -67,7 +67,7 @@ describe('ScmPlatformFeatures', () => {
 
   function renderComponent(
     overrides?: Partial<typeof defaultProps>,
-    orgOverride?: Parameters<typeof render>[1]['organization']
+    orgOverride?: typeof organization
   ) {
     const props = {...defaultProps, ...overrides};
     return render(<ScmPlatformFeatures {...props} />, {
