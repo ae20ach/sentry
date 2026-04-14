@@ -61,12 +61,11 @@ export function RootCauseCard({autofix, section, isLastStep = false}: AutofixCar
   const {startStep, runState, isPolling} = autofix;
   const runId = runState?.run_id;
 
-  const onRetry = useCallback(
-    (userContext?: string) => {
-      startStep('root_cause', runId, userContext, section.blockIndex);
-    },
-    [startStep, runId, section.blockIndex]
-  );
+  const {retrySectionNode, handleRetry} = useRetrySection({
+    step: 'root_cause',
+    isLastStep,
+    onSubmit: feedback => startStep('root_cause', runId, feedback, section.blockIndex),
+  });
 
   return (
     <ArtifactCard
@@ -74,7 +73,7 @@ export function RootCauseCard({autofix, section, isLastStep = false}: AutofixCar
       title={t('Root Cause')}
       trailingItems={
         section.status === 'completed' && artifact?.data ? (
-          <RetryButton onClick={onRetry} disabled={isPolling} />
+          <RetryButton onClick={handleRetry} disabled={isPolling} />
         ) : undefined
       }
     >
@@ -110,13 +109,7 @@ export function RootCauseCard({autofix, section, isLastStep = false}: AutofixCar
                       ))}
                     </Container>
                   </ArtifactDetails>
-                  <ArtifactDetails>
-                    <RetrySection
-                      step="root_cause"
-                      isLastStep={isLastStep}
-                      onSubmit={onRetry}
-                    />
-                  </ArtifactDetails>
+                  <ArtifactDetails>{retrySectionNode}</ArtifactDetails>
                 </Fragment>
               ) : null}
             </Fragment>
@@ -153,16 +146,19 @@ export function SolutionCard({autofix, section, isLastStep = false}: AutofixCard
   const {runState, startStep, isPolling} = autofix;
   const runId = runState?.run_id;
 
+  const {retrySectionNode, handleRetry} = useRetrySection({
+    step: 'solution',
+    isLastStep,
+    onSubmit: feedback => startStep('solution', runId, feedback, section.blockIndex),
+  });
+
   return (
     <ArtifactCard
       icon={<IconList />}
       title={t('Plan')}
       trailingItems={
         section.status === 'completed' && artifact?.data ? (
-          <RetryButton
-            onClick={() => startStep('solution', runId, undefined, section.blockIndex)}
-            disabled={isPolling}
-          />
+          <RetryButton onClick={handleRetry} disabled={isPolling} />
         ) : undefined
       }
     >
@@ -191,15 +187,7 @@ export function SolutionCard({autofix, section, isLastStep = false}: AutofixCard
                   ))}
                 </Container>
               </ArtifactDetails>
-              <ArtifactDetails>
-                <RetrySection
-                  step="solution"
-                  isLastStep={isLastStep}
-                  onSubmit={feedback =>
-                    startStep('solution', runId, feedback, section.blockIndex)
-                  }
-                />
-              </ArtifactDetails>
+              <ArtifactDetails>{retrySectionNode}</ArtifactDetails>
             </Fragment>
           ) : null}
         </Fragment>
@@ -262,18 +250,19 @@ export function CodeChangesCard({
   const {runState, startStep, isPolling} = autofix;
   const runId = runState?.run_id;
 
+  const {retrySectionNode, handleRetry} = useRetrySection({
+    step: 'code_changes',
+    isLastStep,
+    onSubmit: feedback => startStep('code_changes', runId, feedback, section.blockIndex),
+  });
+
   return (
     <ArtifactCard
       icon={<IconCode />}
       title={t('Code Changes')}
       trailingItems={
         section.status === 'completed' && patchesByRepo.size > 0 ? (
-          <RetryButton
-            onClick={() =>
-              startStep('code_changes', runId, undefined, section.blockIndex)
-            }
-            disabled={isPolling}
-          />
+          <RetryButton onClick={handleRetry} disabled={isPolling} />
         ) : undefined
       }
     >
@@ -304,17 +293,7 @@ export function CodeChangesCard({
                   ))}
                 </ArtifactDetails>
               ))}
-              {patchesByRepo.size > 0 ? (
-                <ArtifactDetails>
-                  <RetrySection
-                    step="code_changes"
-                    isLastStep={isLastStep}
-                    onSubmit={feedback =>
-                      startStep('code_changes', runId, feedback, section.blockIndex)
-                    }
-                  />
-                </ArtifactDetails>
-              ) : null}
+              <ArtifactDetails>{retrySectionNode}</ArtifactDetails>
             </Fragment>
           ) : (
             <ArtifactDetails>
@@ -460,7 +439,7 @@ export function CodingAgentCard({section}: AutofixCardProps) {
   );
 }
 
-function RetrySection({
+function useRetrySection({
   onSubmit,
   step,
   isLastStep,
@@ -470,6 +449,10 @@ function RetrySection({
   step: AutofixExplorerStep;
 }) {
   const [value, setValue] = useState('');
+
+  const handleRetry = useCallback(() => {
+    onSubmit(value);
+  }, [onSubmit, value]);
 
   const placeholder =
     step === 'root_cause'
@@ -484,7 +467,7 @@ function RetrySection({
               'Give Seer additional context to improve this answer. Hit ENTER to submit.'
             );
 
-  return (
+  const retrySectionNode = (
     <Fragment>
       <Text>
         {isLastStep
@@ -504,12 +487,14 @@ function RetrySection({
         onKeyDown={event => {
           if (event.key === 'Enter' && !event.shiftKey && value.trim()) {
             event.preventDefault();
-            onSubmit(value);
+            handleRetry();
           }
         }}
       />
     </Fragment>
   );
+
+  return {retrySectionNode, handleRetry};
 }
 
 interface RetryButtonProps {
