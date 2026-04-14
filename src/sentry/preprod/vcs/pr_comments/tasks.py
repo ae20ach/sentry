@@ -137,7 +137,7 @@ def create_preprod_pr_comment_task(
             )
             return
 
-        existing_comment_id = find_existing_comment_id(all_for_pr, "build_distribution")
+        existing_comment_id = _find_existing_comment_id(all_for_pr)
         comment_body = format_pr_comment(installable_siblings, project=artifact.project)
 
         try:
@@ -173,30 +173,28 @@ def create_preprod_pr_comment_task(
             if isinstance(e, ApiError):
                 extra["status_code"] = e.code
             logger.exception("preprod.pr_comments.create.failed", extra=extra)
-            save_pr_comment_result(cc, "build_distribution", success=False, error=e)
+            _save_pr_comment_result(cc, success=False, error=e)
             api_error = e
         else:
-            save_pr_comment_result(cc, "build_distribution", success=True, comment_id=comment_id)
+            _save_pr_comment_result(cc, success=True, comment_id=comment_id)
 
     if api_error is not None:
         raise api_error
 
 
-def find_existing_comment_id(
+def _find_existing_comment_id(
     comparisons: Sequence[CommitComparison],
-    comment_type: str,
 ) -> str | None:
     for cc in comparisons:
         extras = cc.extras or {}
-        comment_id = extras.get("pr_comments", {}).get(comment_type, {}).get("comment_id")
+        comment_id = extras.get("pr_comments", {}).get("build_distribution", {}).get("comment_id")
         if comment_id:
             return str(comment_id)
     return None
 
 
-def save_pr_comment_result(
+def _save_pr_comment_result(
     commit_comparison: CommitComparison,
-    comment_type: str,
     success: bool,
     comment_id: str | None = None,
     error: Exception | None = None,
@@ -211,7 +209,7 @@ def save_pr_comment_result(
     # Preserve the existing comment_id on failure so retries use
     # update_comment instead of creating a duplicate.
     if not comment_id:
-        existing = extras.get("pr_comments", {}).get(comment_type, {})
+        existing = extras.get("pr_comments", {}).get("build_distribution", {})
         comment_id = existing.get("comment_id")
 
     result: dict[str, Any] = {"success": success}
@@ -221,7 +219,7 @@ def save_pr_comment_result(
         result["error_type"] = _get_error_type(error)
 
     pr_comments = extras.setdefault("pr_comments", {})
-    pr_comments[comment_type] = result
+    pr_comments["build_distribution"] = result
     commit_comparison.extras = extras
     commit_comparison.save(update_fields=["extras"])
 

@@ -21,7 +21,6 @@ from sentry.preprod.snapshots.manifest import (
     SnapshotManifest,
 )
 from sentry.preprod.snapshots.models import PreprodSnapshotComparison, PreprodSnapshotMetrics
-from sentry.preprod.vcs.pr_comments.snapshot_tasks import create_preprod_snapshot_pr_comment_task
 from sentry.preprod.vcs.status_checks.snapshots.tasks import (
     create_preprod_snapshot_status_check_task,
 )
@@ -740,12 +739,6 @@ def compare_snapshots(
                 "caller": "compare_completion",
             },
         )
-        create_preprod_snapshot_pr_comment_task.apply_async(
-            kwargs={
-                "preprod_artifact_id": head_artifact_id,
-                "caller": "compare_completion",
-            },
-        )
 
         logger.info(
             "Snapshot comparison complete",
@@ -783,12 +776,6 @@ def compare_snapshots(
                 )
 
         create_preprod_snapshot_status_check_task.apply_async(
-            kwargs={
-                "preprod_artifact_id": head_artifact_id,
-                "caller": "compare_failure",
-            },
-        )
-        create_preprod_snapshot_pr_comment_task.apply_async(
             kwargs={
                 "preprod_artifact_id": head_artifact_id,
                 "caller": "compare_failure",
