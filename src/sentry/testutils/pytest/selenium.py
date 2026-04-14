@@ -456,11 +456,12 @@ def browser(request, live_server):
 
     yield driver
 
-    # dump console log to stdout, will be shown when test fails
-    for entry in driver.get_log("browser"):
-        sys.stderr.write("[browser console] ")
-        sys.stderr.write(repr(entry))
-        sys.stderr.write("\n")
+    rep_call = getattr(request.node, "rep_call", None)
+    if rep_call is not None and rep_call.failed:
+        for entry in driver.get_log("browser"):
+            sys.stderr.write("[browser console] ")
+            sys.stderr.write(repr(entry))
+            sys.stderr.write("\n")
     # Teardown Selenium.
     try:
         driver.quit()
@@ -472,10 +473,11 @@ def browser(request, live_server):
 def pytest_runtest_makereport(item, call):
     outcome = yield
     report = outcome.get_result()
+    setattr(item, f"rep_{report.when}", report)
     summary: MutableSequence[str] = []
     extra = getattr(report, "extra", [])
     driver = getattr(item, "_driver", None)
-    if driver is not None:
+    if driver is not None and report.failed and report.when == "call":
         _gather_url(item, report, driver, summary, extra)
         _gather_screenshot(item, report, driver, summary, extra)
         _gather_html(item, report, driver, summary, extra)
