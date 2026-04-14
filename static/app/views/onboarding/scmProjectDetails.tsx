@@ -7,11 +7,12 @@ import {Container, Flex, Stack} from '@sentry/scraps/layout';
 import {Text} from '@sentry/scraps/text';
 
 import {addErrorMessage} from 'sentry/actionCreators/indicator';
-import {useOnboardingContext} from 'sentry/components/onboarding/onboardingContext';
+import type {ProductSolution} from 'sentry/components/onboarding/gettingStartedDoc/types';
 import {useCreateProjectAndRules} from 'sentry/components/onboarding/useCreateProjectAndRules';
 import {TeamSelector} from 'sentry/components/teamSelector';
 import {IconGroup, IconProject, IconSiren} from 'sentry/icons';
 import {t} from 'sentry/locale';
+import type {OnboardingSelectedSDK} from 'sentry/types/onboarding';
 import type {Team} from 'sentry/types/organization';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {slugify} from 'sentry/utils/slugify';
@@ -27,14 +28,26 @@ import {
 import {ScmAlertFrequency} from './components/scmAlertFrequency';
 import {ScmStepFooter} from './components/scmStepFooter';
 import {ScmStepHeader} from './components/scmStepHeader';
-import type {StepProps} from './types';
 
 const PROJECT_DETAILS_WIDTH = '285px';
 
-export function ScmProjectDetails({onComplete}: StepProps) {
+export interface ScmProjectDetailsProps {
+  onComplete: (
+    platform?: OnboardingSelectedSDK,
+    query?: Record<string, string[]>
+  ) => void;
+  onProjectCreated: (slug: string) => void;
+  selectedFeatures: ProductSolution[] | undefined;
+  selectedPlatform: OnboardingSelectedSDK | undefined;
+}
+
+export function ScmProjectDetails({
+  onComplete,
+  onProjectCreated,
+  selectedFeatures,
+  selectedPlatform,
+}: ScmProjectDetailsProps) {
   const organization = useOrganization();
-  const {selectedPlatform, selectedFeatures, setCreatedProjectSlug} =
-    useOnboardingContext();
   const {teams} = useTeams();
   const createProjectAndRules = useCreateProjectAndRules();
   useEffect(() => {
@@ -115,7 +128,7 @@ export function ScmProjectDetails({onComplete}: StepProps) {
       // Store the project slug separately so onboarding.tsx can find
       // the project via useRecentCreatedProject without corrupting
       // selectedPlatform.key (which the platform features step needs).
-      setCreatedProjectSlug(project.slug);
+      onProjectCreated(project.slug);
 
       trackAnalytics('onboarding.scm_project_details_create_succeeded', {
         organization,

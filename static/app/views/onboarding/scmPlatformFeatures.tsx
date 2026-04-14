@@ -11,13 +11,13 @@ import {closeModal, openConsoleModal, openModal} from 'sentry/actionCreators/mod
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
 import {SupportedLanguages} from 'sentry/components/onboarding/frameworkSuggestionModal';
 import {ProductSolution} from 'sentry/components/onboarding/gettingStartedDoc/types';
-import {useOnboardingContext} from 'sentry/components/onboarding/onboardingContext';
 import {
   getDisabledProducts,
   platformProductAvailability,
 } from 'sentry/components/onboarding/productSelection';
 import {platforms} from 'sentry/data/platforms';
 import {t} from 'sentry/locale';
+import type {Repository} from 'sentry/types/integrations';
 import type {OnboardingSelectedSDK} from 'sentry/types/onboarding';
 import type {PlatformIntegration, PlatformKey} from 'sentry/types/project';
 import {trackAnalytics} from 'sentry/utils/analytics';
@@ -34,7 +34,6 @@ import {
   useScmPlatformDetection,
   type DetectedPlatform,
 } from './components/useScmPlatformDetection';
-import type {StepProps} from './types';
 
 interface ResolvedPlatform extends DetectedPlatform {
   info: PlatformIntegration;
@@ -76,15 +75,24 @@ function shouldSuggestFramework(platformKey: PlatformKey): boolean {
 // Wider than SCM_STEP_CONTENT_WIDTH (506px) used by the footer.
 const PLATFORM_CONTENT_WIDTH = '564px';
 
-export function ScmPlatformFeatures({onComplete}: StepProps) {
+export interface ScmPlatformFeaturesProps {
+  onComplete: () => void;
+  onFeaturesChange: (features: ProductSolution[]) => void;
+  onPlatformChange: (platform: OnboardingSelectedSDK | undefined) => void;
+  selectedFeatures: ProductSolution[] | undefined;
+  selectedPlatform: OnboardingSelectedSDK | undefined;
+  selectedRepository: Repository | undefined;
+}
+
+export function ScmPlatformFeatures({
+  onComplete,
+  onFeaturesChange,
+  onPlatformChange,
+  selectedFeatures,
+  selectedPlatform,
+  selectedRepository,
+}: ScmPlatformFeaturesProps) {
   const organization = useOrganization();
-  const {
-    selectedRepository,
-    selectedPlatform,
-    setSelectedPlatform,
-    selectedFeatures,
-    setSelectedFeatures,
-  } = useOnboardingContext();
 
   const [showManualPicker, setShowManualPicker] = useState(false);
 
@@ -96,10 +104,10 @@ export function ScmPlatformFeatures({onComplete}: StepProps) {
     (platformKey: PlatformKey) => {
       const info = getPlatformInfo(platformKey);
       if (info) {
-        setSelectedPlatform(toSelectedSdk(info));
+        onPlatformChange(toSelectedSdk(info));
       }
     },
-    [setSelectedPlatform]
+    [onPlatformChange]
   );
 
   const hasScmConnected = !!selectedRepository;
@@ -178,7 +186,7 @@ export function ScmPlatformFeatures({onComplete}: StepProps) {
         }
       }
 
-      setSelectedFeatures(Array.from(newFeatures));
+      onFeaturesChange(Array.from(newFeatures));
 
       trackAnalytics('onboarding.scm_platform_feature_toggled', {
         organization,
@@ -189,7 +197,7 @@ export function ScmPlatformFeatures({onComplete}: StepProps) {
     },
     [
       currentFeatures,
-      setSelectedFeatures,
+      onFeaturesChange,
       disabledProducts,
       availableFeatures,
       organization,
@@ -199,10 +207,10 @@ export function ScmPlatformFeatures({onComplete}: StepProps) {
 
   const applyPlatformSelection = useCallback(
     (sdk: OnboardingSelectedSDK) => {
-      setSelectedPlatform(sdk);
-      setSelectedFeatures([ProductSolution.ERROR_MONITORING]);
+      onPlatformChange(sdk);
+      onFeaturesChange([ProductSolution.ERROR_MONITORING]);
     },
-    [setSelectedPlatform, setSelectedFeatures]
+    [onPlatformChange, onFeaturesChange]
   );
 
   const handleManualPlatformSelect = useCallback(
@@ -270,7 +278,7 @@ export function ScmPlatformFeatures({onComplete}: StepProps) {
       }
 
       setPlatform(platformKey);
-      setSelectedFeatures([ProductSolution.ERROR_MONITORING]);
+      onFeaturesChange([ProductSolution.ERROR_MONITORING]);
 
       trackAnalytics('onboarding.scm_platform_selected', {
         organization,
@@ -281,7 +289,7 @@ export function ScmPlatformFeatures({onComplete}: StepProps) {
     [
       selectedPlatform?.key,
       setPlatform,
-      setSelectedFeatures,
+      onFeaturesChange,
       applyPlatformSelection,
       organization,
     ]
@@ -293,7 +301,7 @@ export function ScmPlatformFeatures({onComplete}: StepProps) {
         return;
       }
       setPlatform(platformKey);
-      setSelectedFeatures([ProductSolution.ERROR_MONITORING]);
+      onFeaturesChange([ProductSolution.ERROR_MONITORING]);
 
       trackAnalytics('onboarding.scm_platform_selected', {
         organization,
@@ -301,7 +309,7 @@ export function ScmPlatformFeatures({onComplete}: StepProps) {
         source: 'detected',
       });
     },
-    [selectedPlatform?.key, setPlatform, setSelectedFeatures, organization]
+    [selectedPlatform?.key, setPlatform, onFeaturesChange, organization]
   );
 
   function handleChangePlatformClick() {
@@ -317,7 +325,7 @@ export function ScmPlatformFeatures({onComplete}: StepProps) {
     setShowManualPicker(false);
     if (detectedPlatformKey) {
       setPlatform(detectedPlatformKey);
-      setSelectedFeatures([ProductSolution.ERROR_MONITORING]);
+      onFeaturesChange([ProductSolution.ERROR_MONITORING]);
     }
   }
 
@@ -327,7 +335,7 @@ export function ScmPlatformFeatures({onComplete}: StepProps) {
       setPlatform(currentPlatformKey);
     }
     if (!selectedFeatures) {
-      setSelectedFeatures(currentFeatures);
+      onFeaturesChange(currentFeatures);
     }
     onComplete();
   }

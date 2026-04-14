@@ -19,6 +19,7 @@ import {categoryList} from 'sentry/data/platformPickerCategories';
 import {allPlatforms as platforms} from 'sentry/data/platforms';
 import {IconArrow} from 'sentry/icons';
 import {t} from 'sentry/locale';
+import type {Repository} from 'sentry/types/integrations';
 import type {OnboardingSelectedSDK} from 'sentry/types/onboarding';
 import type {PlatformKey} from 'sentry/types/project';
 import {defined} from 'sentry/utils';
@@ -67,6 +68,73 @@ const legacyOnboardingSteps: StepDescriptor[] = [
   },
 ];
 
+// Adapter wrappers that read from OnboardingContext and pass props to the
+// decoupled SCM step components. This keeps the step components reusable
+// across onboarding and the future project creation flow.
+
+function ScmConnectAdapter({onComplete}: StepProps) {
+  const {
+    selectedIntegration,
+    setSelectedIntegration,
+    selectedRepository,
+    setSelectedRepository,
+    clearDerivedState,
+  } = useOnboardingContext();
+
+  const handleRepositoryChange = useCallback(
+    (repo: Repository | undefined) => {
+      clearDerivedState();
+      setSelectedRepository(repo);
+    },
+    [clearDerivedState, setSelectedRepository]
+  );
+
+  return (
+    <ScmConnect
+      selectedIntegration={selectedIntegration}
+      selectedRepository={selectedRepository}
+      onIntegrationChange={setSelectedIntegration}
+      onRepositoryChange={handleRepositoryChange}
+      onComplete={onComplete}
+    />
+  );
+}
+
+function ScmPlatformFeaturesAdapter({onComplete}: StepProps) {
+  const {
+    selectedRepository,
+    selectedPlatform,
+    setSelectedPlatform,
+    selectedFeatures,
+    setSelectedFeatures,
+  } = useOnboardingContext();
+
+  return (
+    <ScmPlatformFeatures
+      selectedRepository={selectedRepository}
+      selectedPlatform={selectedPlatform}
+      selectedFeatures={selectedFeatures}
+      onPlatformChange={setSelectedPlatform}
+      onFeaturesChange={setSelectedFeatures}
+      onComplete={onComplete}
+    />
+  );
+}
+
+function ScmProjectDetailsAdapter({onComplete}: StepProps) {
+  const {selectedPlatform, selectedFeatures, setCreatedProjectSlug} =
+    useOnboardingContext();
+
+  return (
+    <ScmProjectDetails
+      selectedPlatform={selectedPlatform}
+      selectedFeatures={selectedFeatures}
+      onProjectCreated={setCreatedProjectSlug}
+      onComplete={onComplete}
+    />
+  );
+}
+
 const scmOnboardingSteps: StepDescriptor[] = [
   {
     id: OnboardingStepId.WELCOME,
@@ -77,19 +145,19 @@ const scmOnboardingSteps: StepDescriptor[] = [
   {
     id: OnboardingStepId.SCM_CONNECT,
     title: t('Connect repository'),
-    Component: ScmConnect,
+    Component: ScmConnectAdapter,
     cornerVariant: 'top-left',
   },
   {
     id: OnboardingStepId.SCM_PLATFORM_FEATURES,
     title: t('Platform & features'),
-    Component: ScmPlatformFeatures,
+    Component: ScmPlatformFeaturesAdapter,
     cornerVariant: 'top-left',
   },
   {
     id: OnboardingStepId.SCM_PROJECT_DETAILS,
     title: t('Project details'),
-    Component: ScmProjectDetails,
+    Component: ScmProjectDetailsAdapter,
     cornerVariant: 'top-left',
   },
   {

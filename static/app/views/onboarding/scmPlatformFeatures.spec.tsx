@@ -6,12 +6,9 @@ import {render, screen, userEvent, waitFor} from 'sentry-test/reactTestingLibrar
 
 import {openConsoleModal, openModal} from 'sentry/actionCreators/modal';
 import {ProductSolution} from 'sentry/components/onboarding/gettingStartedDoc/types';
-import {
-  OnboardingContextProvider,
-  type OnboardingSessionState,
-} from 'sentry/components/onboarding/onboardingContext';
+import type {Repository} from 'sentry/types/integrations';
+import type {OnboardingSelectedSDK} from 'sentry/types/onboarding';
 import * as analytics from 'sentry/utils/analytics';
-import {sessionStorageWrapper} from 'sentry/utils/sessionStorage';
 
 import {ScmPlatformFeatures} from './scmPlatformFeatures';
 
@@ -49,29 +46,37 @@ jest.mock('sentry/data/platforms', () => {
   };
 });
 
-function makeOnboardingWrapper(initialState?: OnboardingSessionState) {
-  return function OnboardingWrapper({children}: {children?: React.ReactNode}) {
-    return (
-      <OnboardingContextProvider initialValue={initialState}>
-        {children}
-      </OnboardingContextProvider>
-    );
-  };
-}
-
 const mockRepository = RepositoryFixture({
   id: '42',
   provider: {id: 'integrations:github', name: 'GitHub'},
 });
+
+const defaultProps = {
+  onComplete: jest.fn(),
+  onPlatformChange: jest.fn(),
+  onFeaturesChange: jest.fn(),
+  selectedPlatform: undefined as OnboardingSelectedSDK | undefined,
+  selectedFeatures: undefined as ProductSolution[] | undefined,
+  selectedRepository: undefined as Repository | undefined,
+};
 
 describe('ScmPlatformFeatures', () => {
   const organization = OrganizationFixture({
     features: ['performance-view', 'session-replay', 'profiling-view'],
   });
 
+  function renderComponent(
+    overrides?: Partial<typeof defaultProps>,
+    orgOverride?: Parameters<typeof render>[1]['organization']
+  ) {
+    const props = {...defaultProps, ...overrides};
+    return render(<ScmPlatformFeatures {...props} />, {
+      organization: orgOverride ?? organization,
+    });
+  }
+
   beforeEach(() => {
     jest.clearAllMocks();
-    sessionStorageWrapper.clear();
   });
 
   afterEach(() => {
@@ -93,19 +98,7 @@ describe('ScmPlatformFeatures', () => {
       },
     });
 
-    render(
-      <ScmPlatformFeatures
-        onComplete={jest.fn()}
-        stepIndex={2}
-        genSkipOnboardingLink={() => null}
-      />,
-      {
-        organization,
-        additionalWrapper: makeOnboardingWrapper({
-          selectedRepository: mockRepository,
-        }),
-      }
-    );
+    renderComponent({selectedRepository: mockRepository});
 
     expect(await screen.findByText('Next.js')).toBeInTheDocument();
     expect(screen.getByText('Django')).toBeInTheDocument();
@@ -126,19 +119,7 @@ describe('ScmPlatformFeatures', () => {
       },
     });
 
-    render(
-      <ScmPlatformFeatures
-        onComplete={jest.fn()}
-        stepIndex={2}
-        genSkipOnboardingLink={() => null}
-      />,
-      {
-        organization,
-        additionalWrapper: makeOnboardingWrapper({
-          selectedRepository: mockRepository,
-        }),
-      }
-    );
+    renderComponent({selectedRepository: mockRepository});
 
     expect(await screen.findByText('What do you want to set up?')).toBeInTheDocument();
   });
@@ -158,19 +139,7 @@ describe('ScmPlatformFeatures', () => {
       },
     });
 
-    render(
-      <ScmPlatformFeatures
-        onComplete={jest.fn()}
-        stepIndex={2}
-        genSkipOnboardingLink={() => null}
-      />,
-      {
-        organization,
-        additionalWrapper: makeOnboardingWrapper({
-          selectedRepository: mockRepository,
-        }),
-      }
-    );
+    renderComponent({selectedRepository: mockRepository});
 
     const changeButton = await screen.findByRole('button', {
       name: "Doesn't look right? Change platform",
@@ -187,19 +156,7 @@ describe('ScmPlatformFeatures', () => {
       body: {detail: 'Internal Error'},
     });
 
-    render(
-      <ScmPlatformFeatures
-        onComplete={jest.fn()}
-        stepIndex={2}
-        genSkipOnboardingLink={() => null}
-      />,
-      {
-        organization,
-        additionalWrapper: makeOnboardingWrapper({
-          selectedRepository: mockRepository,
-        }),
-      }
-    );
+    renderComponent({selectedRepository: mockRepository});
 
     expect(
       await screen.findByRole('heading', {name: 'Select a platform'})
@@ -208,17 +165,7 @@ describe('ScmPlatformFeatures', () => {
   });
 
   it('renders manual picker when no repository in context', async () => {
-    render(
-      <ScmPlatformFeatures
-        onComplete={jest.fn()}
-        stepIndex={2}
-        genSkipOnboardingLink={() => null}
-      />,
-      {
-        organization,
-        additionalWrapper: makeOnboardingWrapper(),
-      }
-    );
+    renderComponent();
 
     expect(
       await screen.findByRole('heading', {name: 'Select a platform'})
@@ -227,17 +174,7 @@ describe('ScmPlatformFeatures', () => {
   });
 
   it('continue button is disabled when no platform selected', async () => {
-    render(
-      <ScmPlatformFeatures
-        onComplete={jest.fn()}
-        stepIndex={2}
-        genSkipOnboardingLink={() => null}
-      />,
-      {
-        organization,
-        additionalWrapper: makeOnboardingWrapper(),
-      }
-    );
+    renderComponent();
 
     // Wait for the component to fully settle (CompactSelect triggers async popper updates)
     await screen.findByRole('heading', {name: 'Select a platform'});
@@ -253,19 +190,7 @@ describe('ScmPlatformFeatures', () => {
       },
     });
 
-    render(
-      <ScmPlatformFeatures
-        onComplete={jest.fn()}
-        stepIndex={2}
-        genSkipOnboardingLink={() => null}
-      />,
-      {
-        organization,
-        additionalWrapper: makeOnboardingWrapper({
-          selectedRepository: mockRepository,
-        }),
-      }
-    );
+    renderComponent({selectedRepository: mockRepository});
 
     // Wait for auto-select of first detected platform
     await waitFor(() => {
@@ -284,20 +209,13 @@ describe('ScmPlatformFeatures', () => {
       body: {platforms: [pythonPlatform]},
     });
 
-    render(
-      <ScmPlatformFeatures
-        onComplete={jest.fn()}
-        stepIndex={2}
-        genSkipOnboardingLink={() => null}
-      />,
-      {
-        organization,
-        additionalWrapper: makeOnboardingWrapper({
-          selectedRepository: mockRepository,
-          selectedFeatures: [ProductSolution.ERROR_MONITORING],
-        }),
-      }
-    );
+    const onFeaturesChange = jest.fn();
+
+    renderComponent({
+      selectedRepository: mockRepository,
+      selectedFeatures: [ProductSolution.ERROR_MONITORING],
+      onFeaturesChange,
+    });
 
     // Wait for feature cards to appear
     await screen.findByText('What do you want to set up?');
@@ -309,24 +227,20 @@ describe('ScmPlatformFeatures', () => {
     // Enable profiling — tracing should auto-enable
     await userEvent.click(screen.getByRole('checkbox', {name: /Profiling/}));
 
-    expect(screen.getByRole('checkbox', {name: /Profiling/})).toBeChecked();
-    expect(screen.getByRole('checkbox', {name: /Tracing/})).toBeChecked();
+    // The component calls onFeaturesChange with both profiling and tracing enabled
+    expect(onFeaturesChange).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        ProductSolution.ERROR_MONITORING,
+        ProductSolution.PROFILING,
+        ProductSolution.PERFORMANCE_MONITORING,
+      ])
+    );
   });
 
   it('shows framework suggestion modal when selecting a base language', async () => {
     const mockOpenModal = openModal as jest.Mock;
 
-    render(
-      <ScmPlatformFeatures
-        onComplete={jest.fn()}
-        stepIndex={2}
-        genSkipOnboardingLink={() => null}
-      />,
-      {
-        organization,
-        additionalWrapper: makeOnboardingWrapper(),
-      }
-    );
+    renderComponent();
 
     await screen.findByRole('heading', {name: 'Select a platform'});
 
@@ -342,19 +256,12 @@ describe('ScmPlatformFeatures', () => {
   it('opens console modal when selecting a disabled gaming platform', async () => {
     const mockOpenConsoleModal = openConsoleModal as jest.Mock;
 
-    render(
-      <ScmPlatformFeatures
-        onComplete={jest.fn()}
-        stepIndex={2}
-        genSkipOnboardingLink={() => null}
-      />,
-      {
-        // No enabledConsolePlatforms — all console platforms are blocked
-        organization: OrganizationFixture({
-          features: ['performance-view', 'session-replay', 'profiling-view'],
-        }),
-        additionalWrapper: makeOnboardingWrapper(),
-      }
+    renderComponent(
+      {},
+      // No enabledConsolePlatforms — all console platforms are blocked
+      OrganizationFixture({
+        features: ['performance-view', 'session-replay', 'profiling-view'],
+      })
     );
 
     await screen.findByRole('heading', {name: 'Select a platform'});
@@ -379,32 +286,25 @@ describe('ScmPlatformFeatures', () => {
       body: {platforms: [pythonPlatform]},
     });
 
-    render(
-      <ScmPlatformFeatures
-        onComplete={jest.fn()}
-        stepIndex={2}
-        genSkipOnboardingLink={() => null}
-      />,
-      {
-        organization,
-        additionalWrapper: makeOnboardingWrapper({
-          selectedRepository: mockRepository,
-          selectedPlatform: {
-            key: 'python',
-            name: 'Python',
-            language: 'python',
-            type: 'language',
-            link: 'https://docs.sentry.io/platforms/python/',
-            category: 'popular',
-          },
-          selectedFeatures: [
-            ProductSolution.ERROR_MONITORING,
-            ProductSolution.PERFORMANCE_MONITORING,
-            ProductSolution.PROFILING,
-          ],
-        }),
-      }
-    );
+    const onFeaturesChange = jest.fn();
+
+    renderComponent({
+      selectedRepository: mockRepository,
+      selectedPlatform: {
+        key: 'python',
+        name: 'Python',
+        language: 'python',
+        type: 'language',
+        link: 'https://docs.sentry.io/platforms/python/',
+        category: 'popular',
+      },
+      selectedFeatures: [
+        ProductSolution.ERROR_MONITORING,
+        ProductSolution.PERFORMANCE_MONITORING,
+        ProductSolution.PROFILING,
+      ],
+      onFeaturesChange,
+    });
 
     // Wait for feature cards to appear
     await screen.findByText('What do you want to set up?');
@@ -416,8 +316,8 @@ describe('ScmPlatformFeatures', () => {
     // Disable tracing — profiling should auto-disable
     await userEvent.click(screen.getByRole('checkbox', {name: /Tracing/}));
 
-    expect(screen.getByRole('checkbox', {name: /Tracing/})).not.toBeChecked();
-    expect(screen.getByRole('checkbox', {name: /Profiling/})).not.toBeChecked();
+    // The component calls onFeaturesChange with both tracing and profiling removed
+    expect(onFeaturesChange).toHaveBeenCalledWith([ProductSolution.ERROR_MONITORING]);
   });
 
   describe('analytics', () => {
@@ -428,17 +328,7 @@ describe('ScmPlatformFeatures', () => {
     });
 
     it('fires step viewed event on mount', async () => {
-      render(
-        <ScmPlatformFeatures
-          onComplete={jest.fn()}
-          stepIndex={2}
-          genSkipOnboardingLink={() => null}
-        />,
-        {
-          organization,
-          additionalWrapper: makeOnboardingWrapper(),
-        }
-      );
+      renderComponent();
 
       await screen.findByRole('heading', {name: 'Select a platform'});
 
@@ -463,19 +353,7 @@ describe('ScmPlatformFeatures', () => {
         },
       });
 
-      render(
-        <ScmPlatformFeatures
-          onComplete={jest.fn()}
-          stepIndex={2}
-          genSkipOnboardingLink={() => null}
-        />,
-        {
-          organization,
-          additionalWrapper: makeOnboardingWrapper({
-            selectedRepository: mockRepository,
-          }),
-        }
-      );
+      renderComponent({selectedRepository: mockRepository});
 
       // Wait for detected platforms, then click the second one
       const djangoCard = await screen.findByRole('radio', {name: /Django/});
@@ -498,20 +376,10 @@ describe('ScmPlatformFeatures', () => {
         },
       });
 
-      render(
-        <ScmPlatformFeatures
-          onComplete={jest.fn()}
-          stepIndex={2}
-          genSkipOnboardingLink={() => null}
-        />,
-        {
-          organization,
-          additionalWrapper: makeOnboardingWrapper({
-            selectedRepository: mockRepository,
-            selectedFeatures: [ProductSolution.ERROR_MONITORING],
-          }),
-        }
-      );
+      renderComponent({
+        selectedRepository: mockRepository,
+        selectedFeatures: [ProductSolution.ERROR_MONITORING],
+      });
 
       await screen.findByText('What do you want to set up?');
 
@@ -533,19 +401,7 @@ describe('ScmPlatformFeatures', () => {
         body: {platforms: [DetectedPlatformFixture()]},
       });
 
-      render(
-        <ScmPlatformFeatures
-          onComplete={jest.fn()}
-          stepIndex={2}
-          genSkipOnboardingLink={() => null}
-        />,
-        {
-          organization,
-          additionalWrapper: makeOnboardingWrapper({
-            selectedRepository: mockRepository,
-          }),
-        }
-      );
+      renderComponent({selectedRepository: mockRepository});
 
       const changeButton = await screen.findByRole('button', {
         name: "Doesn't look right? Change platform",

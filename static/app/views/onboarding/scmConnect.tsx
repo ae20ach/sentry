@@ -7,10 +7,9 @@ import {Container, Flex, Stack} from '@sentry/scraps/layout';
 import {Text} from '@sentry/scraps/text';
 
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
-import {useOnboardingContext} from 'sentry/components/onboarding/onboardingContext';
 import {IconCheckmark} from 'sentry/icons';
 import {t} from 'sentry/locale';
-import type {Integration} from 'sentry/types/integrations';
+import type {Integration, Repository} from 'sentry/types/integrations';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {useOrganization} from 'sentry/utils/useOrganization';
 
@@ -22,16 +21,23 @@ import {ScmStepHeader} from './components/scmStepHeader';
 import {useScmPlatformDetection} from './components/useScmPlatformDetection';
 import {useScmProviders} from './components/useScmProviders';
 import {SCM_STEP_CONTENT_WIDTH} from './consts';
-import type {StepProps} from './types';
 
-export function ScmConnect({onComplete}: StepProps) {
+export interface ScmConnectProps {
+  onComplete: () => void;
+  onIntegrationChange: (integration: Integration | undefined) => void;
+  onRepositoryChange: (repo: Repository | undefined) => void;
+  selectedIntegration: Integration | undefined;
+  selectedRepository: Repository | undefined;
+}
+
+export function ScmConnect({
+  onComplete,
+  onIntegrationChange,
+  onRepositoryChange,
+  selectedIntegration,
+  selectedRepository,
+}: ScmConnectProps) {
   const organization = useOrganization();
-  const {
-    selectedIntegration,
-    setSelectedIntegration,
-    selectedRepository,
-    setSelectedRepository,
-  } = useOnboardingContext();
   const {
     scmProviders,
     isPending,
@@ -53,11 +59,11 @@ export function ScmConnect({onComplete}: StepProps) {
 
   const handleInstall = useCallback(
     (data: Integration) => {
-      setSelectedIntegration(data);
-      setSelectedRepository(undefined);
+      onIntegrationChange(data);
+      onRepositoryChange(undefined);
       refetchIntegrations();
     },
-    [setSelectedIntegration, setSelectedRepository, refetchIntegrations]
+    [onIntegrationChange, onRepositoryChange, refetchIntegrations]
   );
 
   return (
@@ -93,7 +99,11 @@ export function ScmConnect({onComplete}: StepProps) {
                 )}
               </Tag>
             </Container>
-            <ScmRepoSelector integration={effectiveIntegration} />
+            <ScmRepoSelector
+              integration={effectiveIntegration}
+              selectedRepository={selectedRepository}
+              onRepositoryChange={onRepositoryChange}
+            />
             <AnimatePresence>
               {selectedRepository ? (
                 <MotionScmBenefitsCard
@@ -141,7 +151,7 @@ export function ScmConnect({onComplete}: StepProps) {
               }}
               onClick={() => {
                 if (effectiveIntegration && !selectedIntegration) {
-                  setSelectedIntegration(effectiveIntegration);
+                  onIntegrationChange(effectiveIntegration);
                 }
                 onComplete();
               }}
