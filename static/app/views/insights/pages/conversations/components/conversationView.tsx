@@ -1,5 +1,5 @@
 import type React from 'react';
-import {memo, useCallback, useEffect, useMemo, useState} from 'react';
+import {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import styled from '@emotion/styled';
 
 import {Container, Flex} from '@sentry/scraps/layout';
@@ -7,8 +7,10 @@ import {TabList, TabPanels, Tabs} from '@sentry/scraps/tabs';
 
 import {EmptyMessage} from 'sentry/components/emptyMessage';
 import {Placeholder} from 'sentry/components/placeholder';
+import {SplitPanel} from 'sentry/components/splitPanel';
 import {t} from 'sentry/locale';
 import {trackAnalytics} from 'sentry/utils/analytics';
+import {useDimensions} from 'sentry/utils/useDimensions';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {AISpanList} from 'sentry/views/insights/pages/agents/components/aiSpanList';
 import {getDefaultSelectedNode} from 'sentry/views/insights/pages/agents/utils/getDefaultSelectedNode';
@@ -106,6 +108,11 @@ export const ConversationViewContent = memo(function ConversationViewContent({
   );
 });
 
+const LEFT_PANEL_MIN_WIDTH = 400;
+const RIGHT_PANEL_MIN_WIDTH = 350;
+const DIVIDER_WIDTH = 16;
+const SPLIT_PANEL_STORAGE_KEY = 'conversation-detail-split-panel-size';
+
 function ConversationView({
   nodes,
   nodeTraceMap,
@@ -123,6 +130,8 @@ function ConversationView({
 }) {
   const organization = useOrganization();
   const [activeTab, setActiveTab] = useState<ConversationTab>('messages');
+  const containerRef = useRef<HTMLDivElement>(null);
+  const {width: containerWidth} = useDimensions({elementRef: containerRef});
 
   const handleTabChange = useCallback(
     (newTab: ConversationTab) => {
@@ -150,56 +159,80 @@ function ConversationView({
     return <EmptyMessage>{t('No AI spans found in this conversation')}</EmptyMessage>;
   }
 
-  return (
-    <Flex flex="1" minHeight="0" overflow="hidden">
-      <LeftPanel>
-        <StyledTabs
-          value={activeTab}
-          onChange={key => handleTabChange(key as ConversationTab)}
-        >
-          <Container borderBottom="primary">
-            <TabList>
-              <TabList.Item key="messages">{t('Chat')}</TabList.Item>
-              <TabList.Item key="trace">{t('Spans')}</TabList.Item>
-            </TabList>
-          </Container>
-          <Flex flex="1" minHeight="0" width="100%" overflowX="hidden" overflowY="auto">
-            <FullWidthTabPanels>
-              <TabPanels.Item key="messages">
-                <MessagesPanel
+  const defaultLeftWidth = Math.max(
+    LEFT_PANEL_MIN_WIDTH,
+    (containerWidth - DIVIDER_WIDTH) * 0.6
+  );
+
+  const leftPanelContent = (
+    <LeftPanel>
+      <StyledTabs
+        value={activeTab}
+        onChange={key => handleTabChange(key as ConversationTab)}
+      >
+        <Container borderBottom="primary">
+          <TabList>
+            <TabList.Item key="messages">{t('Chat')}</TabList.Item>
+            <TabList.Item key="trace">{t('Spans')}</TabList.Item>
+          </TabList>
+        </Container>
+        <Flex flex="1" minHeight="0" width="100%" overflowX="hidden" overflowY="auto">
+          <FullWidthTabPanels>
+            <TabPanels.Item key="messages">
+              <MessagesPanel
+                nodes={nodes}
+                selectedNodeId={selectedNode?.id ?? null}
+                onSelectNode={onSelectNode}
+              />
+            </TabPanels.Item>
+            <TabPanels.Item key="trace">
+              <Container padding="md lg md lg">
+                <AISpanList
                   nodes={nodes}
-                  selectedNodeId={selectedNode?.id ?? null}
+                  selectedNodeKey={selectedNode?.id ?? nodes[0]?.id ?? ''}
                   onSelectNode={onSelectNode}
+                  compressGaps
                 />
-              </TabPanels.Item>
-              <TabPanels.Item key="trace">
-                <Container padding="md lg md lg">
-                  <AISpanList
-                    nodes={nodes}
-                    selectedNodeKey={selectedNode?.id ?? nodes[0]?.id ?? ''}
-                    onSelectNode={onSelectNode}
-                    compressGaps
-                  />
-                </Container>
-              </TabPanels.Item>
-            </FullWidthTabPanels>
-          </Flex>
-        </StyledTabs>
-      </LeftPanel>
-      <DetailsPanel>
-        {selectedNode?.renderDetails({
-          node: selectedNode,
-          manager: null,
-          onParentClick: () => {},
-          onTabScrollToNode: () => {},
-          organization,
-          replay: null,
-          traceId: nodeTraceMap.get(selectedNode.id) ?? '',
-          hideNodeActions: true,
-          initiallyCollapseAiIO: true,
-        })}
-      </DetailsPanel>
-    </Flex>
+              </Container>
+            </TabPanels.Item>
+          </FullWidthTabPanels>
+        </Flex>
+      </StyledTabs>
+    </LeftPanel>
+  );
+
+  const rightPanelContent = (
+    <DetailsPanel>
+      {selectedNode?.renderDetails({
+        node: selectedNode,
+        manager: null,
+        onParentClick: () => {},
+        onTabScrollToNode: () => {},
+        organization,
+        replay: null,
+        traceId: nodeTraceMap.get(selectedNode.id) ?? '',
+        hideNodeActions: true,
+        initiallyCollapseAiIO: true,
+      })}
+    </DetailsPanel>
+  );
+
+  return (
+    <SplitPanelWrapper ref={containerRef}>
+      {containerWidth > 0 ? (
+        <SplitPanel
+          availableSize={containerWidth}
+          left={{
+            content: leftPanelContent,
+            default: defaultLeftWidth,
+            min: LEFT_PANEL_MIN_WIDTH,
+            max: containerWidth - RIGHT_PANEL_MIN_WIDTH - DIVIDER_WIDTH,
+          }}
+          right={rightPanelContent}
+          sizeStorageKey={SPLIT_PANEL_STORAGE_KEY}
+        />
+      ) : null}
+    </SplitPanelWrapper>
   );
 }
 
@@ -214,12 +247,10 @@ function ConversationViewSkeleton() {
           </Flex>
         </Container>
         <Flex direction="column" flex="1" gap="md" padding="lg" background="secondary">
-          {/* User message skeleton */}
           <Flex direction="column" gap="sm" padding="sm md">
             <Placeholder height="12px" width="120px" />
             <Placeholder height="12px" width="80%" />
           </Flex>
-          {/* Assistant message skeleton */}
           <Container background="primary" radius="md" border="primary" padding="sm md">
             <Flex direction="column" gap="sm">
               <Flex align="center" gap="sm">
@@ -234,12 +265,10 @@ function ConversationViewSkeleton() {
               <Placeholder height="12px" width="60%" />
             </Flex>
           </Container>
-          {/* Another user message */}
           <Flex direction="column" gap="sm" padding="sm md">
             <Placeholder height="12px" width="120px" />
             <Placeholder height="12px" width="60%" />
           </Flex>
-          {/* Another assistant message */}
           <Container background="primary" radius="md" border="primary" padding="sm md">
             <Flex direction="column" gap="sm">
               <Flex align="center" gap="sm">
@@ -280,16 +309,16 @@ function ConversationViewSkeleton() {
   );
 }
 
+const SplitPanelWrapper = styled('div')`
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+`;
+
 function LeftPanel({children}: {children: React.ReactNode}) {
   return (
-    <Flex
-      direction="column"
-      flex={1}
-      minWidth="400px"
-      minHeight="0"
-      borderRight="primary"
-      overflow="hidden"
-    >
+    <Flex direction="column" minHeight="0" height="100%" overflow="hidden">
       {children}
     </Flex>
   );
@@ -314,9 +343,8 @@ const FullWidthTabPanels = styled(TabPanels)`
 function DetailsPanel({children}: {children: React.ReactNode}) {
   return (
     <Container
-      width="500px"
-      minWidth="500px"
       minHeight="0"
+      height="100%"
       background="primary"
       overflowY="auto"
       overflowX="hidden"
