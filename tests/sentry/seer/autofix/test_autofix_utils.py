@@ -1613,16 +1613,15 @@ class TestCleanupSeerRepositoryPreferences(TestCase):
         }
 
     @patch("sentry.seer.autofix.utils.make_remove_repository_request")
-    def test_cleanup_api_error(self, mock_request: MagicMock) -> None:
-        """Test handling of Seer API errors."""
+    def test_cleanup_api_error_does_not_raise(self, mock_request: MagicMock) -> None:
+        """Test that Seer API errors are logged but not propagated."""
         mock_request.return_value.status = 500
 
-        with pytest.raises(SeerApiError):
-            cleanup_seer_repository_preferences(
-                organization_id=self.organization.id,
-                repo_external_id=self.repo_external_id,
-                repo_provider=self.repo_provider,
-            )
+        cleanup_seer_repository_preferences(
+            organization_id=self.organization.id,
+            repo_external_id=self.repo_external_id,
+            repo_provider=self.repo_provider,
+        )
 
     @patch("sentry.seer.autofix.utils.make_remove_repository_request")
     def test_cleanup_organization_not_found(self, mock_request: MagicMock) -> None:
@@ -1668,12 +1667,11 @@ class TestCleanupSeerRepositoryPreferences(TestCase):
         assert body["repositories"][1] == {"repo_provider": "github", "repo_external_id": "456"}
 
     @patch("sentry.seer.autofix.utils.make_bulk_remove_repositories_request")
-    def test_bulk_cleanup_api_error(self, mock_request: MagicMock) -> None:
-        """Test handling of Seer API errors."""
+    def test_bulk_cleanup_api_error_does_not_raise(self, mock_request: MagicMock) -> None:
+        """Test that Seer API errors are logged but not propagated."""
         mock_request.return_value.status = 500
 
-        with pytest.raises(SeerApiError):
-            bulk_cleanup_seer_repository_preferences(
-                organization_id=self.organization.id,
-                repos=[{"repo_external_id": "123", "repo_provider": "github"}],
-            )
+        bulk_cleanup_seer_repository_preferences(
+            organization_id=self.organization.id,
+            repos=[{"repo_external_id": "123", "repo_provider": "github"}],
+        )

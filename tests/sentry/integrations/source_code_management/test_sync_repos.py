@@ -70,7 +70,8 @@ class SyncReposForOrgTestCase(IntegrationTestCase):
             assert entries.count() == 2
 
     @responses.activate
-    def test_disables_removed_repos(self, _: MagicMock) -> None:
+    @patch("sentry.integrations.services.repository.impl.bulk_cleanup_seer_repository_preferences")
+    def test_disables_removed_repos(self, mock_seer_cleanup: MagicMock, _: MagicMock) -> None:
         with assume_test_silo_mode(SiloMode.CELL):
             repo = Repository.objects.create(
                 organization_id=self.organization.id,

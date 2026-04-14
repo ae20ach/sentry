@@ -1298,7 +1298,6 @@ def cleanup_seer_repository_preferences(
                 "error": str(e),
             },
         )
-        raise
 
 
 def bulk_cleanup_seer_repository_preferences(
@@ -1337,4 +1336,3 @@ def bulk_cleanup_seer_repository_preferences(
                 "error": str(e),
             },
         )
-        raise

@@ -59,7 +59,8 @@ class SyncReposOnInstallChangeTestCase(IntegrationTestCase):
             )
             assert entries.count() == 2
 
-    def test_repos_removed(self, _: MagicMock) -> None:
+    @patch("sentry.integrations.services.repository.impl.bulk_cleanup_seer_repository_preferences")
+    def test_repos_removed(self, mock_seer_cleanup: MagicMock, _: MagicMock) -> None:
         with assume_test_silo_mode(SiloMode.CELL):
             repo = Repository.objects.create(
                 organization_id=self.organization.id,
@@ -89,7 +90,8 @@ class SyncReposOnInstallChangeTestCase(IntegrationTestCase):
                 event=audit_log.get_event_id("REPO_DISABLED"),
             ).exists()
 
-    def test_mixed_add_and_remove(self, _: MagicMock) -> None:
+    @patch("sentry.integrations.services.repository.impl.bulk_cleanup_seer_repository_preferences")
+    def test_mixed_add_and_remove(self, mock_seer_cleanup: MagicMock, _: MagicMock) -> None:
         with assume_test_silo_mode(SiloMode.CELL):
             old_repo = Repository.objects.create(
                 organization_id=self.organization.id,

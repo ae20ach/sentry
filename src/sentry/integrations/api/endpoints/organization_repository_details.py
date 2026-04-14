@@ -103,8 +103,8 @@ class OrganizationRepositoryDetailsEndpoint(OrganizationEndpoint):
                         transaction.on_commit(
                             lambda: cleanup_seer_repository_preferences(
                                 organization_id=repo.organization_id,
-                                repo_external_id=repo.external_id,
-                                repo_provider=repo.provider,
+                                repo_external_id=repo.external_id,  # type: ignore[arg-type]
+                                repo_provider=repo.provider,  # type: ignore[arg-type]
                             ),
                             using=router.db_for_write(Repository),
                         )
