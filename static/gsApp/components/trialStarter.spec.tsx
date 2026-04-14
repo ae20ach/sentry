@@ -6,6 +6,25 @@ import {TeamFixture} from 'sentry-fixture/team';
 import {SubscriptionFixture} from 'getsentry-test/fixtures/subscription';
 import {act, render, screen} from 'sentry-test/reactTestingLibrary';
 
+jest.mock('sentry/utils/localStorage', () => {
+  const actual = jest.requireActual<typeof import('sentry/utils/localStorage')>(
+    'sentry/utils/localStorage'
+  );
+  return {
+    ...actual,
+    localStorageWrapper: {
+      ...actual.localStorageWrapper,
+      removeItem: jest.fn((...args: Parameters<Storage['removeItem']>) =>
+        actual.localStorageWrapper.removeItem(...args)
+      ),
+    },
+  };
+});
+
+const {localStorageWrapper} = jest.requireMock<
+  typeof import('sentry/utils/localStorage')
+>('sentry/utils/localStorage');
+
 import TrialStarter from 'getsentry/components/trialStarter';
 import {SubscriptionStore} from 'getsentry/stores/subscriptionStore';
 
@@ -105,5 +124,57 @@ describe('TrialStarter', () => {
     expect(startedCall.trialStarting).toBe(false);
     expect(startedCall.trialStarted).toBe(false);
     expect(startedCall.trialFailed).toBe(true);
+  });
+
+  it('starts a trial successfully when localStorage is unavailable', async () => {
+    // Simulate noopStorage: removeItem is a no-op (e.g., Android WebView without DOM Storage)
+    jest.mocked(localStorageWrapper.removeItem).mockImplementation(() => null);
+
+    const handleTrialStarted = jest.fn();
+    // eslint-disable-next-line no-empty-pattern
+    const renderer = jest.fn(({}: RendererProps) => <div>render text</div>);
+    MockApiClient.addMockResponse({
+      url: `/organizations/${org.slug}/`,
+      body: org,
+    });
+    MockApiClient.addMockResponse({
+      url: `/organizations/${org.slug}/projects/`,
+      body: [ProjectFixture()],
+    });
+    MockApiClient.addMockResponse({
+      url: `/organizations/${org.slug}/teams/`,
+      body: [TeamFixture()],
+    });
+
+    render(
+      <TrialStarter
+        organization={org}
+        source="test-abc"
+        onTrialStarted={handleTrialStarted}
+      >
+        {renderer}
+      </TrialStarter>
+    );
+
+    MockApiClient.addMockResponse({
+      url: `/customers/${org.slug}/`,
+      method: 'PUT',
+    });
+    MockApiClient.addMockResponse({
+      url: `/customers/${org.slug}/`,
+      method: 'GET',
+      body: sub,
+    });
+
+    await act(() => renderer.mock.calls.at(-1)![0].startTrial());
+
+    expect(handleTrialStarted).toHaveBeenCalled();
+    expect(localStorageWrapper.removeItem).toHaveBeenCalledWith(
+      'sidebar-new-seen:customizable-dashboards'
+    );
+
+    const startedCall = renderer.mock.calls.at(-1)![0];
+    expect(startedCall.trialStarted).toBe(true);
+    expect(startedCall.trialFailed).toBe(false);
   });
 });

@@ -2,6 +2,7 @@ import {useState} from 'react';
 
 import {fetchOrganizationDetails} from 'sentry/actionCreators/organization';
 import type {Organization} from 'sentry/types/organization';
+import {localStorageWrapper} from 'sentry/utils/localStorage';
 import {useApi} from 'sentry/utils/useApi';
 
 import {withSubscription} from 'getsentry/components/withSubscription';
@@ -69,7 +70,7 @@ function TrialStarter(props: Props) {
 
     // we showed the "new" icon for the upsell that wasn't the actual dashboard
     // we should clear this so folks can see "new" for the actual dashboard
-    localStorage.removeItem('sidebar-new-seen:customizable-dashboards');
+    localStorageWrapper.removeItem('sidebar-new-seen:customizable-dashboards');
   };
 
   const {subscription, children} = props;
