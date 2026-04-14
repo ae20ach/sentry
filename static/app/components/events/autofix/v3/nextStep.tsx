@@ -371,9 +371,10 @@ function NextStepTemplate({
           <Button priority="primary" disabled={isProcessing} onClick={onClickYes}>
             {labelYes}
           </Button>
-          {codingAgentOptions?.length ? (
+          {codingAgentIntegrations === undefined ? null : (
             <DropdownMenu
               items={codingAgentOptions}
+              isDisabled={false}
               trigger={(triggerProps, isOpen) => (
                 <Button
                   {...triggerProps}
@@ -396,7 +397,7 @@ function NextStepTemplate({
                 </DropdownMenuFooter>
               }
             />
-          ) : null}
+          )}
         </ButtonBar>
       </Flex>
     </Flex>

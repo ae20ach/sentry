@@ -13,6 +13,7 @@ from sentry.grouping.context import GroupingContext
 from sentry.grouping.parameterization import (
     ParameterizationRegex,
     Parameterizer,
+    _log_example_data,
     experimental_parameterizer,
     is_valid_ip,
     parameterizer,
@@ -60,8 +61,9 @@ standard_cases = [
         "traceparent: 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
         "traceparent: <traceparent>",
     ),
-    ("ip - too many initial characters", "12345:6:789", "<int>:<int>:<int>"),
-    ("ip - too many final characters", "123:4:56789", "<int>:<int>:<int>"),
+    ("ip - too few segments", "12:31:99", "<int>:<int>:<int>"),
+    ("ip - too many initial characters", "12345::6:789", "<int>::<int>:<int>"),
+    ("ip - too many final characters", "123:4::56789", "<int>:<int>::<int>"),
     ("traceparent - aws", "1-67891233-abcdef012345678912345678", "<traceparent>"),
     (
         "traceparent - aws, but not word boundary",
@@ -708,3 +710,42 @@ def test_replacement_callback_false_positive_triggers_individual_regex_fallback(
             )
             == 0
         )
+
+        # We also only counted the false positive once, even though we hit it both during the main
+        # combo-regex parameterization and during fallback
+        assert (
+            count_matching_calls(
+                mock_metrics_incr, "grouping.parameterization_false_positive", tags={"key": "ip"}
+            )
+            == 1
+        )
+
+
+@patch("sentry.grouping.parameterization.logger")
+def test_example_data_logging(mock_logger: MagicMock) -> None:
+    for i in range(15):
+        _log_example_data("dog_fact_1", extra={"input_str": "dogs are great", "num": i}, limit=10)
+
+    for i in range(105):
+        _log_example_data("dog_fact_2", extra={"input_str": "all dogs are good dogs", "num": i})
+
+    # In the first loop, we specified a limit of 10, so the logger was called 10 times, even though
+    # we called the helper 15 times
+    assert (
+        count_matching_calls(
+            mock_logger.info,
+            "grouping.parameterization.dog_fact_1",
+            extra={"input_str": "dogs are great", "num": ANY},
+        )
+        == 10
+    )
+    # In the second loop, we didn't specify a limit, so the logger was called 100 times (the
+    # default limit), even though we called the helper 105 times
+    assert (
+        count_matching_calls(
+            mock_logger.info,
+            "grouping.parameterization.dog_fact_2",
+            extra={"input_str": "all dogs are good dogs", "num": ANY},
+        )
+        == 100
+    )

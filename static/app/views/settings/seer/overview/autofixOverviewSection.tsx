@@ -161,9 +161,7 @@ function AgentNameForm({
   const preferredAgent = useFetchPreferredAgent({organization});
   const codingAgentSelectOptions = useFetchAgentOptions({organization});
   const codingAgentMutationOptions = getPreferredAgentMutationOptions({organization});
-  const bulkMutateSelectedAgent = useBulkMutateSelectedAgent({
-    projects: projects.filter(p => !projectsIdsWithPreferredAgent.has(p.id)),
-  });
+  const bulkMutateSelectedAgent = useBulkMutateSelectedAgent();
 
   const preferredAgentLabel = codingAgentSelectOptions.data?.find(
     o => o.value === preferredAgent.data
@@ -184,9 +182,25 @@ function AgentNameForm({
         <Stack gap="md">
           <field.Layout.Row
             label={t('Default Preferred Coding Agent')}
-            hintText={t(
-              'For new projects, select which coding agent to use when proposing code changes.'
-            )}
+            hintText={
+              <Text>
+                {tct(
+                  'For new projects, select which coding agent to use when proposing code changes. [manageLink:Manage Coding Agent Integrations]',
+                  {
+                    manageLink: (
+                      <Link
+                        to={{
+                          pathname: `/settings/${organization.slug}/integrations/`,
+                          query: {category: 'coding agent'},
+                        }}
+                      >
+                        {t('Manage Coding Agent Integrations')}
+                      </Link>
+                    ),
+                  }
+                )}
+              </Text>
+            }
           >
             <Container flexGrow={1}>
               {preferredAgent.isPending || codingAgentSelectOptions.isPending ? (
@@ -225,7 +239,10 @@ function AgentNameForm({
               onClick={async () => {
                 if (preferredAgent.data) {
                   setIsBulkMutatingAgent(true);
-                  await bulkMutateSelectedAgent(preferredAgent.data);
+                  await bulkMutateSelectedAgent(
+                    projects.filter(p => !projectsIdsWithPreferredAgent.has(p.id)),
+                    preferredAgent.data
+                  );
                   setIsBulkMutatingAgent(false);
                 } else {
                   addErrorMessage(t('No coding agent integration found'));

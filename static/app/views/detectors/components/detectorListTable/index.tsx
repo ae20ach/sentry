@@ -139,7 +139,7 @@ export function DetectorListTable({
   );
 
   const elementRef = useRef<HTMLDivElement>(null);
-  const {width: containerWidth} = useDimensions<HTMLDivElement>({elementRef});
+  const {width: containerWidth} = useDimensions({elementRef});
   const timelineWidth = useDebouncedValue(containerWidth, 1000);
   const timeWindowConfig = useTimeWindowConfig({timelineWidth});
 
@@ -452,7 +452,6 @@ const DetectorListSimpleTable = styled(SimpleTable)<{
   isVisualizationExpanded: boolean;
 }>`
   grid-template-columns: 1fr;
-  margin-bottom: ${p => p.theme.space.xl};
 
   [data-column-name='type'],
   [data-column-name='last-issue'],

@@ -13,18 +13,15 @@ from sentry.integrations.source_code_management.metrics import (
     SCMIntegrationInteractionEvent,
     SCMIntegrationInteractionType,
 )
+from sentry.integrations.source_code_management.repo_audit import log_repo_change
 from sentry.organizations.services.organization import organization_service
 from sentry.organizations.services.organization.model import RpcOrganization
-from sentry.plugins.providers.integration_repository import (
-    RepoExistsError,
-    RepositoryInputConfig,
-    get_integration_repository_provider,
-)
+from sentry.plugins.providers.integration_repository import get_integration_repository_provider
 from sentry.silo.base import SiloMode
 from sentry.tasks.base import instrumented_task, retry
 from sentry.taskworker.namespaces import integrations_control_tasks
 
-from .link_all_repos import get_repo_config
+from .link_all_repos import GitHubRepoInputConfig, get_repo_config
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +33,7 @@ logger = logging.getLogger(__name__)
     processing_deadline_duration=120,
     silo_mode=SiloMode.CONTROL,
 )
-@retry(exclude=(RepoExistsError, KeyError))
+@retry(exclude=(KeyError,))
 def sync_repos_on_install_change(
     integration_id: int,
     action: str,
@@ -82,7 +79,7 @@ def sync_repos_on_install_change(
             )
             continue
 
-        if not features.has("organizations:github-repo-auto-sync", rpc_org):
+        if not features.has("organizations:github-repo-auto-sync-webhook", rpc_org):
             continue
 
         with SCMIntegrationInteractionEvent(
@@ -110,7 +107,7 @@ def _sync_repos_for_org(
 ) -> None:
     if repos_added:
         integration_repo_provider = get_integration_repository_provider(integration)
-        repo_configs: list[RepositoryInputConfig] = []
+        repo_configs: list[GitHubRepoInputConfig] = []
         for repo in repos_added:
             try:
                 repo_configs.append(get_repo_config(repo, integration.id))
@@ -119,18 +116,59 @@ def _sync_repos_for_org(
                 continue
 
         if repo_configs:
-            try:
+            created_repos, reactivated_repos, _missing_repos = (
                 integration_repo_provider.create_repositories(
                     configs=repo_configs, organization=rpc_org
                 )
-            except RepoExistsError:
-                pass
+            )
+
+            for created_repo in created_repos:
+                log_repo_change(
+                    event_name="REPO_ADDED",
+                    organization_id=rpc_org.id,
+                    repo=created_repo,
+                    source="GitHub webhook",
+                    provider=integration.provider,
+                )
+
+            for reactivated_repo in reactivated_repos:
+                log_repo_change(
+                    event_name="REPO_ENABLED",
+                    organization_id=rpc_org.id,
+                    repo=reactivated_repo,
+                    source="GitHub webhook",
+                    provider=integration.provider,
+                )
 
     if repos_removed:
+        # Look up repos before disabling to get their IDs and names
         external_ids = [str(repo["id"]) for repo in repos_removed]
+        existing_repos = repository_service.get_repositories(
+            organization_id=rpc_org.id,
+            integration_id=integration.id,
+            providers=[provider],
+        )
+        repo_by_eid = {
+            r.external_id: r
+            for r in existing_repos
+            if r.external_id and r.status == ObjectStatus.ACTIVE
+        }
+
         repository_service.disable_repositories_by_external_ids(
             organization_id=rpc_org.id,
             integration_id=integration.id,
             provider=provider,
             external_ids=external_ids,
         )
+
+        for repo in repos_removed:
+            eid = str(repo["id"])
+            sentry_repo = repo_by_eid.get(eid)
+            if sentry_repo:
+                log_repo_change(
+                    event_name="REPO_DISABLED",
+                    organization_id=rpc_org.id,
+                    repo=sentry_repo,
+                    source="GitHub webhook",
+                    provider=integration.provider,
+                )
