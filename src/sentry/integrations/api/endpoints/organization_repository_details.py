@@ -100,10 +100,13 @@ class OrganizationRepositoryDetailsEndpoint(OrganizationEndpoint):
                     repository_cascade_delete_on_hide.apply_async(kwargs={"repo_id": repo.id})
 
                     if repo.external_id and repo.provider:
-                        cleanup_seer_repository_preferences(
-                            organization_id=repo.organization_id,
-                            repo_external_id=repo.external_id,
-                            repo_provider=repo.provider,
+                        transaction.on_commit(
+                            lambda: cleanup_seer_repository_preferences(
+                                organization_id=repo.organization_id,
+                                repo_external_id=repo.external_id,
+                                repo_provider=repo.provider,
+                            ),
+                            using=router.db_for_write(Repository),
                         )
 
         return Response(serialize(repo, request.user))

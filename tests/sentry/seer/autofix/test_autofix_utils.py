@@ -1,5 +1,5 @@
 from typing import Any
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import orjson
 import pytest
@@ -11,8 +11,10 @@ from sentry.seer.autofix.utils import (
     AutofixState,
     AutofixTriggerSource,
     CodingAgentStatus,
+    bulk_cleanup_seer_repository_preferences,
     bulk_read_preferences_from_sentry_db,
     bulk_write_preferences_to_sentry_db,
+    cleanup_seer_repository_preferences,
     deduplicate_repositories,
     get_autofix_prompt,
     get_coding_agent_prompt,
@@ -1582,3 +1584,96 @@ class TestGetOrgDefaultSeerAutomationHandoff(TestCase):
         )
         stopping_point, _ = get_org_default_seer_automation_handoff(self.organization)
         assert stopping_point == SEER_AUTOMATED_RUN_STOPPING_POINT_DEFAULT
+
+
+class TestCleanupSeerRepositoryPreferences(TestCase):
+    def setUp(self) -> None:
+        self.organization = self.create_organization()
+        self.project = self.create_project(organization=self.organization)
+        self.repo_external_id = "12345"
+        self.repo_provider = "github"
+
+    @patch("sentry.seer.autofix.utils.make_remove_repository_request")
+    def test_cleanup_success(self, mock_request: MagicMock) -> None:
+        """Test successful cleanup of Seer repository preferences."""
+        mock_request.return_value.status = 200
+
+        cleanup_seer_repository_preferences(
+            organization_id=self.organization.id,
+            repo_external_id=self.repo_external_id,
+            repo_provider=self.repo_provider,
+        )
+
+        mock_request.assert_called_once()
+        body = mock_request.call_args[0][0]
+        assert body == {
+            "organization_id": self.organization.id,
+            "repo_provider": self.repo_provider,
+            "repo_external_id": self.repo_external_id,
+        }
+
+    @patch("sentry.seer.autofix.utils.make_remove_repository_request")
+    def test_cleanup_api_error(self, mock_request: MagicMock) -> None:
+        """Test handling of Seer API errors."""
+        mock_request.return_value.status = 500
+
+        with pytest.raises(SeerApiError):
+            cleanup_seer_repository_preferences(
+                organization_id=self.organization.id,
+                repo_external_id=self.repo_external_id,
+                repo_provider=self.repo_provider,
+            )
+
+    @patch("sentry.seer.autofix.utils.make_remove_repository_request")
+    def test_cleanup_organization_not_found(self, mock_request: MagicMock) -> None:
+        """Test handling when organization doesn't exist."""
+        mock_request.return_value.status = 200
+
+        nonexistent_organization_id = 99999
+
+        cleanup_seer_repository_preferences(
+            organization_id=nonexistent_organization_id,
+            repo_external_id=self.repo_external_id,
+            repo_provider=self.repo_provider,
+        )
+
+        mock_request.assert_called_once()
+        body = mock_request.call_args[0][0]
+        assert body == {
+            "organization_id": nonexistent_organization_id,
+            "repo_provider": self.repo_provider,
+            "repo_external_id": self.repo_external_id,
+        }
+
+    @patch("sentry.seer.autofix.utils.make_bulk_remove_repositories_request")
+    def test_bulk_cleanup_success(self, mock_request: MagicMock) -> None:
+        """Test successful bulk cleanup of Seer repository preferences."""
+        mock_request.return_value.status = 200
+
+        repos = [
+            {"repo_external_id": "123", "repo_provider": "github"},
+            {"repo_external_id": "456", "repo_provider": "github"},
+        ]
+
+        bulk_cleanup_seer_repository_preferences(
+            organization_id=self.organization.id,
+            repos=repos,
+        )
+
+        mock_request.assert_called_once()
+        body = mock_request.call_args[0][0]
+        assert body["organization_id"] == self.organization.id
+        assert len(body["repositories"]) == 2
+        assert body["repositories"][0] == {"repo_provider": "github", "repo_external_id": "123"}
+        assert body["repositories"][1] == {"repo_provider": "github", "repo_external_id": "456"}
+
+    @patch("sentry.seer.autofix.utils.make_bulk_remove_repositories_request")
+    def test_bulk_cleanup_api_error(self, mock_request: MagicMock) -> None:
+        """Test handling of Seer API errors."""
+        mock_request.return_value.status = 500
+
+        with pytest.raises(SeerApiError):
+            bulk_cleanup_seer_repository_preferences(
+                organization_id=self.organization.id,
+                repos=[{"repo_external_id": "123", "repo_provider": "github"}],
+            )
