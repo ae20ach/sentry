@@ -373,9 +373,9 @@ function ConversationViewSkeleton() {
 type PanelDividerProps = {
   'data-is-held': boolean;
   'data-slide-direction': 'leftright' | 'updown';
-  icon?: React.ReactNode;
   onDoubleClick: React.MouseEventHandler<HTMLElement>;
   onMouseDown: React.MouseEventHandler<HTMLElement>;
+  icon?: React.ReactNode;
 } & React.DOMAttributes<HTMLDivElement>;
 
 const PanelBorderDivider = styled(
