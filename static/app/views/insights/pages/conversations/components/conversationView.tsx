@@ -370,11 +370,17 @@ function ConversationViewSkeleton() {
   );
 }
 
+type PanelDividerProps = {
+  'data-is-held': boolean;
+  'data-slide-direction': 'leftright' | 'updown';
+  icon?: React.ReactNode;
+  onDoubleClick: React.MouseEventHandler<HTMLElement>;
+  onMouseDown: React.MouseEventHandler<HTMLElement>;
+} & React.DOMAttributes<HTMLDivElement>;
+
 const PanelBorderDivider = styled(
-  ({icon: _icon, ...props}: {icon?: React.ReactNode} & Record<string, unknown>) => (
-    <div {...props} />
-  )
-)`
+  ({icon: _icon, ...props}: PanelDividerProps) => <div {...props} />
+)<PanelDividerProps>`
   width: 5px;
   height: 100%;
   cursor: ew-resize;
@@ -394,14 +400,14 @@ const PanelBorderDivider = styled(
   &:hover::after {
     left: 1px;
     width: 3px;
-    background: ${p => p.theme.tokens.border.focus};
+    background: ${p => p.theme.tokens.focus.default};
     border-radius: 2px;
   }
 
   &[data-is-held='true']::after {
     left: 1px;
     width: 3px;
-    background: ${p => p.theme.tokens.border.focus};
+    background: ${p => p.theme.tokens.focus.default};
     border-radius: 2px;
   }
 `;
