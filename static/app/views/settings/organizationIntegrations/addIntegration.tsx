@@ -42,7 +42,11 @@ export interface AddIntegrationParams {
  * prefix.
  */
 const API_PIPELINE_FEATURE_FLAGS = {
+  aws_lambda: 'integration-api-pipeline-aws-lambda',
+  bitbucket: 'integration-api-pipeline-bitbucket',
   github: 'integration-api-pipeline-github',
+  gitlab: 'integration-api-pipeline-gitlab',
+  slack: 'integration-api-pipeline-slack',
 } as const satisfies Partial<Record<ProvidersByType['integration'], string>>;
 
 type ApiPipelineProvider = keyof typeof API_PIPELINE_FEATURE_FLAGS;
@@ -209,6 +213,7 @@ export function useAddIntegration(params: AddIntegrationParams) {
       openPipelineModal({
         type: 'integration',
         provider: pipelineProvider,
+        initialData: urlParams,
         onComplete: (data: IntegrationWithConfig) => {
           trackIntegrationAnalytics('integrations.installation_complete', {
             integration: provider.key,

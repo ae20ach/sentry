@@ -435,7 +435,7 @@ class InstallationRepositoriesEventWebhookTest(APITestCase):
         )
         sha1, sha256 = self._compute_signatures(body)
 
-        with self.feature("organizations:github-repo-auto-sync"), self.tasks():
+        with self.feature("organizations:github-repo-auto-sync-webhook"), self.tasks():
             response = self.client.post(
                 path=self.url,
                 data=body,
@@ -455,7 +455,8 @@ class InstallationRepositoriesEventWebhookTest(APITestCase):
         assert repos[0].provider == "integrations:github"
         assert repos[1].name == "getsentry/snuba"
 
-    def test_end_to_end_repos_removed(self) -> None:
+    @patch("sentry.integrations.services.repository.impl.bulk_cleanup_seer_repository_preferences")
+    def test_end_to_end_repos_removed(self, mock_seer_cleanup: MagicMock) -> None:
         """Full end-to-end: webhook URL → handler → task → Repository disabled."""
         future_expires = datetime.now().replace(microsecond=0) + timedelta(minutes=5)
         integration = self.create_integration(
@@ -482,7 +483,7 @@ class InstallationRepositoriesEventWebhookTest(APITestCase):
         )
         sha1, sha256 = self._compute_signatures(body)
 
-        with self.feature("organizations:github-repo-auto-sync"), self.tasks():
+        with self.feature("organizations:github-repo-auto-sync-webhook"), self.tasks():
             response = self.client.post(
                 path=self.url,
                 data=body,

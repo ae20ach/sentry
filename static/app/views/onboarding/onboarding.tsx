@@ -24,6 +24,7 @@ import type {PlatformKey} from 'sentry/types/project';
 import {defined} from 'sentry/utils';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {normalizeUrl} from 'sentry/utils/url/normalizeUrl';
+import {useExperiment} from 'sentry/utils/useExperiment';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useNavigate} from 'sentry/utils/useNavigate';
 import {useOrganization} from 'sentry/utils/useOrganization';
@@ -116,7 +117,9 @@ interface ContainerVariableProps {
 
 function ContainerVariable(props: PropsWithChildren<ContainerVariableProps>) {
   const newWelcomeUIStep = props.hasNewWelcomeUI && props.id === OnboardingStepId.WELCOME;
-  const Component = newWelcomeUIStep ? ContainerNewWelcomeUI : Container;
+  const Component = newWelcomeUIStep
+    ? OnboardingContainerNewWelcomeUI
+    : OnboardingContainer;
 
   return (
     <Component hasFooter={props.hasFooter || newWelcomeUIStep}>
@@ -163,7 +166,10 @@ export function OnboardingWithoutContext() {
     onboardingContext.createdProjectSlug ?? onboardingContext.selectedPlatform?.key;
 
   const hasNewWelcomeUI = useHasNewWelcomeUI();
-  const hasScmOnboarding = organization.features.includes('onboarding-scm');
+  const {inExperiment: hasScmOnboarding} = useExperiment({
+    feature: 'onboarding-scm-experiment',
+  });
+
   const onboardingSteps = hasScmOnboarding ? scmOnboardingSteps : legacyOnboardingSteps;
 
   const stepObj = onboardingSteps.find(({id}) => stepId === id);
@@ -289,7 +295,7 @@ export function OnboardingWithoutContext() {
           onboardingContext.setSelectedPlatform(undefined);
           activateSidebar({
             userClicked: false,
-            source: `targeted_onboarding_select_platform_skip`,
+            source: 'targeted_onboarding_select_platform_skip',
           });
         }}
         to={normalizeUrl(
@@ -400,7 +406,7 @@ function Onboarding() {
   );
 }
 
-const ContainerNewWelcomeUI = styled('div')<{hasFooter: boolean}>`
+const OnboardingContainerNewWelcomeUI = styled('div')<{hasFooter: boolean}>`
   flex-grow: 1;
   display: flex;
   flex-direction: column;
@@ -419,7 +425,7 @@ const ContainerNewWelcomeUI = styled('div')<{hasFooter: boolean}>`
   }
 `;
 
-const Container = styled('div')<{hasFooter: boolean}>`
+const OnboardingContainer = styled('div')<{hasFooter: boolean}>`
   flex-grow: 1;
   display: flex;
   flex-direction: column;

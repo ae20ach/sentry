@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Literal
 from pydantic import BaseModel
 from rest_framework.exceptions import PermissionDenied
 
-from sentry import analytics
+from sentry import analytics, features
 from sentry.analytics.events.autofix_events import (
     AiAutofixAgentHandoffEvent,
     AiAutofixCodeChangesCompletedEvent,
@@ -25,6 +25,7 @@ from sentry.analytics.events.autofix_events import (
     AiAutofixTriageStartedEvent,
 )
 from sentry.constants import ENABLE_SEER_CODING_DEFAULT
+from sentry.integrations.services.integration import integration_service
 from sentry.seer.autofix.artifact_schemas import (
     ImpactAssessmentArtifact,
     RootCauseArtifact,
@@ -43,6 +44,7 @@ from sentry.seer.autofix.utils import (
     AutofixStoppingPoint,
     get_autofix_state,
     get_project_seer_preferences,
+    read_preference_from_sentry_db,
 )
 from sentry.seer.entrypoints.operator import SeerAutofixOperator, process_autofix_updates
 from sentry.seer.explorer.client import SeerExplorerClient
@@ -448,6 +450,30 @@ def _get_relevant_repo(
     return repo_definitions[0]
 
 
+def _resolve_coding_agent_name(
+    organization_id: int, integration_id: int | None, provider: str | None
+) -> str | None:
+    """Resolve a human-readable coding agent name for analytics."""
+    if provider:
+        return provider
+    if integration_id is not None:
+        try:
+            integration = integration_service.get_integration(
+                integration_id=integration_id,
+            )
+            if integration:
+                return integration.provider
+        except Exception:
+            logger.exception(
+                "autofix.resolve_coding_agent_name.error",
+                extra={
+                    "organization_id": organization_id,
+                    "integration_id": integration_id,
+                },
+            )
+    return None
+
+
 def trigger_coding_agent_handoff(
     group: Group,
     run_id: int,
@@ -479,21 +505,28 @@ def trigger_coding_agent_handoff(
 
     auto_create_pr = False
     repo_definitions: list[SeerRepoDefinition] = []
-    try:
-        preference_response = get_project_seer_preferences(group.project_id)
-        if preference_response and preference_response.preference:
-            repo_definitions = list(preference_response.preference.repositories)
-            if preference_response.preference.automation_handoff:
-                auto_create_pr = preference_response.preference.automation_handoff.auto_create_pr
-    except Exception:
-        logger.exception(
-            "autofix.coding_agent_handoff.get_preferences_error",
-            extra={
-                "organization_id": group.organization.id,
-                "run_id": run_id,
-                "project_id": group.project_id,
-            },
-        )
+    if features.has("organizations:seer-project-settings-read-from-sentry", group.organization):
+        preference = read_preference_from_sentry_db(group.project)
+        if preference:
+            repo_definitions = preference.repositories
+            if preference.automation_handoff:
+                auto_create_pr = preference.automation_handoff.auto_create_pr
+    else:
+        try:
+            preference = get_project_seer_preferences(group.project_id).preference
+            if preference:
+                repo_definitions = preference.repositories
+                if preference.automation_handoff:
+                    auto_create_pr = preference.automation_handoff.auto_create_pr
+        except Exception:
+            logger.exception(
+                "autofix.coding_agent_handoff.get_preferences_error",
+                extra={
+                    "organization_id": group.organization.id,
+                    "run_id": run_id,
+                    "project_id": group.project_id,
+                },
+            )
 
     if not repo_definitions:
         return {
@@ -542,18 +575,26 @@ def trigger_coding_agent_handoff(
         auto_create_pr=auto_create_pr,
     )
 
+    coding_agent_name = _resolve_coding_agent_name(group.organization.id, integration_id, provider)
+
     analytics.record(
         AiAutofixAgentHandoffEvent(
             organization_id=group.organization.id,
             project_id=group.project_id,
             group_id=group.id,
             referrer=referrer.value,
+            coding_agent=coding_agent_name,
+            initiator="automation.explorer",
         )
     )
 
     metrics.incr(
         "autofix.explorer.trigger",
-        tags={"step": "coding_agent_handoff", "referrer": referrer.value},
+        tags={
+            "step": "coding_agent_handoff",
+            "referrer": referrer.value,
+            "coding_agent": coding_agent_name or "unknown",
+        },
     )
 
     return coding_agents

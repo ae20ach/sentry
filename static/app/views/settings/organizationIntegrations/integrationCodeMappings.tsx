@@ -17,14 +17,9 @@ import {PanelHeader} from 'sentry/components/panels/panelHeader';
 import {PanelItem} from 'sentry/components/panels/panelItem';
 import {IconAdd} from 'sentry/icons';
 import {t, tct} from 'sentry/locale';
-import type {
-  Integration,
-  Repository,
-  RepositoryProjectPathConfig,
-} from 'sentry/types/integrations';
+import type {Integration, RepositoryProjectPathConfig} from 'sentry/types/integrations';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {useFetchAllPages} from 'sentry/utils/api/apiFetch';
-import {apiOptions} from 'sentry/utils/api/apiOptions';
 import {getApiUrl} from 'sentry/utils/api/getApiUrl';
 import {getIntegrationIcon} from 'sentry/utils/integrationUtil';
 import {
@@ -34,6 +29,7 @@ import {
   useQueryClient,
   type ApiQueryKey,
 } from 'sentry/utils/queryClient';
+import {organizationRepositoriesInfiniteOptions} from 'sentry/utils/repositories/repoQueryOptions';
 import type {RequestError} from 'sentry/utils/requestError/requestError';
 import {useRouteAnalyticsEventNames} from 'sentry/utils/routeAnalytics/useRouteAnalyticsEventNames';
 import {useRouteAnalyticsParams} from 'sentry/utils/routeAnalytics/useRouteAnalyticsParams';
@@ -79,7 +75,7 @@ function makePathConfigQueryKey({
   cursor?: string | string[] | null;
 }): ApiQueryKey {
   return [
-    getApiUrl(`/organizations/$organizationIdOrSlug/code-mappings/`, {
+    getApiUrl('/organizations/$organizationIdOrSlug/code-mappings/', {
       path: {organizationIdOrSlug: orgSlug},
     }),
     {query: {integrationId, cursor}},
@@ -163,14 +159,11 @@ export function IntegrationCodeMappings({integration}: {integration: Integration
   );
 
   const repositoriesQuery = useInfiniteQuery({
-    ...apiOptions.asInfinite<Repository[]>()(
-      '/organizations/$organizationIdOrSlug/repos/',
-      {
-        path: {organizationIdOrSlug: organization.slug},
-        query: {status: 'active', per_page: 100},
-        staleTime: 10_000,
-      }
-    ),
+    ...organizationRepositoriesInfiniteOptions({
+      organization,
+      query: {status: 'active', per_page: 100},
+      staleTime: 10_000,
+    }),
     select: data => data.pages.flatMap(page => page.json),
   });
   useFetchAllPages({result: repositoriesQuery});
@@ -266,7 +259,7 @@ export function IntegrationCodeMappings({integration}: {integration: Integration
     <Fragment>
       <TextBlock>
         {tct(
-          `Code Mappings are used to map stack trace file paths to source code file paths. These mappings are the basis for features like Stack Trace Linking. To learn more, [link: read the docs].`,
+          'Code Mappings are used to map stack trace file paths to source code file paths. These mappings are the basis for features like Stack Trace Linking. To learn more, [link: read the docs].',
           {
             link: (
               <ExternalLink
