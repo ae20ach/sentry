@@ -138,7 +138,12 @@ function useMetricAggregatesTableImp({
   }, [fields, query, selection, sortBys, traceMetric]);
 
   const result = useSpansQuery({
-    enabled: enabled && fields.length > 0,
+    enabled:
+      enabled && fields.length > 0 && isEquation.current
+        ? visualizes.every(
+            visualize => isVisualizeEquation(visualize) && visualize.expression.text
+          )
+        : Boolean(traceMetric.name),
     eventView,
     initialData: [],
     limit,
