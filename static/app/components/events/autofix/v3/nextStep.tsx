@@ -314,9 +314,12 @@ function NextStepTemplate({
           placeholder={placeholderPrompt}
           value={userContext}
           onChange={event => setUserContext(event.target.value)}
-          onKeyDown={event => {
-            if (event.key === 'Enter' && !event.shiftKey) {
-              event.preventDefault();
+          onKeyDown={e => {
+            if (e.nativeEvent.isComposing) {
+              return;
+            }
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
               if (!isProcessing && userContext.trim()) {
                 onClickNo(userContext);
               }
