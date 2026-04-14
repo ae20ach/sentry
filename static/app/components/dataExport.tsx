@@ -9,6 +9,7 @@ import {t} from 'sentry/locale';
 import {fetchMutationWithStatus, useMutation} from 'sentry/utils/queryClient';
 import {RequestError} from 'sentry/utils/requestError/requestError';
 import {useOrganization} from 'sentry/utils/useOrganization';
+import type {OurLogFieldKey} from 'sentry/views/explore/logs/types';
 
 // NOTE: Coordinate with other ExportQueryType (src/sentry/data_export/base.py)
 export enum ExportQueryType {
@@ -17,7 +18,19 @@ export enum ExportQueryType {
   EXPLORE = 'Explore',
 }
 
-export type DataExportPayload = {
+export interface LogsQueryInfo {
+  dataset: 'logs';
+  field: OurLogFieldKey[];
+  project: number[];
+  query: string;
+  sort: string[];
+  end?: string;
+  environment?: string[];
+  start?: string;
+  statsPeriod?: string;
+}
+
+type DataExportPayload = {
   queryInfo: any;
   queryType: ExportQueryType; // TODO(ts): Formalize different possible payloads
 };
@@ -58,7 +71,7 @@ export function useDataExport({
   const organization = useOrganization();
 
   const mutation = useMutation({
-    mutationFn: async (invokeOptions?: DataExportInvokeOptions) => {
+    mutationFn: (invokeOptions?: DataExportInvokeOptions) => {
       const data: Record<string, unknown> = {
         query_type: payload.queryType,
         query_info: payload.queryInfo,
@@ -118,7 +131,7 @@ export function useDataExport({
 
   const isExportWorking = mutation.isPending || mutation.isSuccess;
 
-  return {isExportWorking, runExport};
+  return {isExportWorking, mutation, runExport};
 }
 
 export function DataExport({

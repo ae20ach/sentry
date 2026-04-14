@@ -13,6 +13,7 @@ import {FieldMeta} from '@sentry/scraps/form/field/meta';
 import {FieldLayout} from '@sentry/scraps/form/layout';
 import {FieldGroup} from '@sentry/scraps/form/layout/fieldGroup';
 
+import {CheckboxField} from 'sentry/components/forms/fields/checkboxField';
 import {RequestError} from 'sentry/utils/requestError/requestError';
 
 import {InputField} from './field/inputField';
@@ -42,6 +43,7 @@ export const defaultFormOptions = formOptions({
 
 const fieldComponents = {
   Base: BaseField,
+  Checkbox: CheckboxField,
   Input: InputField,
   Number: NumberField,
   Password: PasswordField,

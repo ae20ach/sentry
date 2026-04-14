@@ -80,36 +80,20 @@ interface RadioItemProps {
   children: React.ReactNode;
   value: string;
   description?: React.ReactNode;
-  /**
-   * When set, this option is not selectable (e.g. coming soon). Group-level
-   * `disabled` still applies on top of this.
-   */
-  disabled?: boolean;
 }
 
-function RadioItem({
-  children,
-  value,
-  description,
-  disabled: itemDisabled,
-}: RadioItemProps) {
+function RadioItem({children, value, description}: RadioItemProps) {
   const {selectedValue, onChange, ...fieldProps} = useRadioContext();
   const descriptionId = useId();
-  const disabled = Boolean(itemDisabled || fieldProps.disabled);
 
   return (
     <Flex as="label" gap="sm" align="start" margin="0">
       <Radio
         {...fieldProps}
-        disabled={disabled}
         aria-describedby={description ? descriptionId : undefined}
         value={value}
         checked={selectedValue === value}
-        onChange={() => {
-          if (!disabled) {
-            onChange(value);
-          }
-        }}
+        onChange={() => onChange(value)}
       />
       <Flex direction="column" gap="xs" paddingTop="xs">
         <Text>{children}</Text>
