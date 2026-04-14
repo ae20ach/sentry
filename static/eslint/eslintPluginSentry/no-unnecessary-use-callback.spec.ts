@@ -140,6 +140,39 @@ ruleTester.run('no-unnecessary-use-callback', noUnnecessaryUseCallback, {
         <CodeBlock onCopy={fn} />
       `,
     },
+    {
+      name: 'bug: shadowed callee inside arrow',
+      code: `
+        const fn = useCallback(() => {}, []);
+        (() => {
+          const fn = () => {};
+          return <button onClick={() => fn()} />;
+        })();
+      `,
+    },
+    {
+      name: 'bug: shadowed identifier on direct prop',
+      code: `
+        const fn = useCallback(() => {}, []);
+        (() => {
+          const fn = () => {};
+          return <button onClick={fn} />;
+        })();
+      `,
+    },
+    {
+      name: 'bug: same binding name two hooks map collision when B is declared before A',
+      code: `
+        function B() {
+          const fn = useCallback(() => {}, []);
+          return <button onClick={fn} />;
+        }
+        function A() {
+          const fn = useCallback(() => {}, []);
+          return <Memo onClick={fn} />;
+        }
+      `,
+    },
   ],
 
   invalid: [
@@ -430,6 +463,23 @@ ruleTester.run('no-unnecessary-use-callback', noUnnecessaryUseCallback, {
       `,
             },
           ],
+        },
+      ],
+    },
+    {
+      name: 'bug: aliased useCallback import should still be tracked',
+      code: `
+        import {useCallback as uc} from 'react';
+        const fn = uc(() => {}, []);
+        <button onClick={fn} />
+      `,
+      errors: [
+        {
+          messageId: 'unnecessaryUseCallback',
+          data: {
+            name: 'fn',
+            usages: 'passed to intrinsic element <button> in line 4',
+          },
         },
       ],
     },
