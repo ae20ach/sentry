@@ -36,7 +36,9 @@ type DataExportPayload = {
 };
 
 type DataExportInvokeOptions = {
-  limit?: number;
+  allColumns: boolean;
+  format: 'csv' | 'json';
+  limit: number;
 };
 
 interface DataExportProps {

@@ -42,10 +42,7 @@ export function LogsExportModal({
   Footer,
   Header,
   closeModal,
-  downloadLocally,
   queryInfo,
-  tableData: _tableData,
-  threshold,
 }: LogsExportModalProps) {
   const payload = useMemo(
     () => ({
@@ -67,7 +64,11 @@ export function LogsExportModal({
     },
     onSubmit: async ({value}) => {
       try {
-        await mutation.mutateAsync({limit: value.rowCount});
+        await mutation.mutateAsync({
+          limit: value.rowCount,
+          format: value.format,
+          allColumns: value.allColumns,
+        });
       } finally {
         closeModal();
       }
@@ -85,18 +86,8 @@ export function LogsExportModal({
         <Stack gap="lg">
           <Text>
             {t(
-              'Export the contents of your logs so you can look at them closely yourself.'
+              'If you select more than 1000 rows or to export all columns of data your file will be sent to your email address.'
             )}
-          </Text>
-          <Text variant="muted" size="sm">
-            {downloadLocally
-              ? t(
-                  'You can download these logs immediately in the format of your choosing.'
-                )
-              : t(
-                  "To export more than %s logs, we'll queue up an export that will be emailed to you soon.",
-                  threshold
-                )}
           </Text>
           <form.AppField name="format">
             {field => (
@@ -106,10 +97,10 @@ export function LogsExportModal({
                   field.handleChange(value as ExportModalFormValues['format'])
                 }
               >
-                <field.Layout.Row label={t('Format')} required>
+                <field.Layout.Stack label={t('Format')}>
                   <field.Radio.Item value="csv">{t('CSV')}</field.Radio.Item>
                   <field.Radio.Item value="json">{t('JSON')}</field.Radio.Item>
-                </field.Layout.Row>
+                </field.Layout.Stack>
               </field.Radio.Group>
             )}
           </form.AppField>
@@ -129,17 +120,12 @@ export function LogsExportModal({
           </form.AppField>
           <form.AppField name="allColumns">
             {field => (
-              <field.Layout.Row
-                label={t('All Columns?')}
-                hintText={t(
-                  "To download all log columns, we'll have to queue up an export."
-                )}
-              >
+              <field.Layout.Stack label={t('All columns')}>
                 <field.Switch
                   checked={field.state.value ?? false}
                   onChange={field.handleChange}
                 />
-              </field.Layout.Row>
+              </field.Layout.Stack>
             )}
           </form.AppField>
         </Stack>
