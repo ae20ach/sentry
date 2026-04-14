@@ -140,7 +140,7 @@ class TestSearchFiltersToQueryString:
         )
 
 
-class TestRunEapGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
+class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
     def setUp(self) -> None:
         super().setUp()
         self.now = datetime.now(timezone.utc)
@@ -193,8 +193,8 @@ class TestRunEapGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
             search_filters=[SearchFilter(SearchKey("level"), "=", SearchValue("error"))],
             referrer="test",
         )
-        group_ids = {gid for gid, _ in result}
-        assert group_ids == {self.group1.id}
+        result_group_ids = {gid for gid, _ in result}
+        assert result_group_ids == {self.group1.id}
 
     def test_group_id_pre_filter(self) -> None:
         """Pre-filtered group_ids are passed as extra_conditions, narrowing results."""
