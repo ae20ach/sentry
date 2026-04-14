@@ -13,16 +13,22 @@ jest.mock('sentry/utils/localStorage', () => {
   const actual = jest.requireActual<typeof import('sentry/utils/localStorage')>(
     'sentry/utils/localStorage'
   );
+  const wrapper = actual.localStorageWrapper;
   return {
     ...actual,
     localStorageWrapper: {
-      ...actual.localStorageWrapper,
       getItem: jest.fn((...args: Parameters<Storage['getItem']>) =>
-        actual.localStorageWrapper.getItem(...args)
+        wrapper.getItem(...args)
       ),
       setItem: jest.fn((...args: Parameters<Storage['setItem']>) =>
-        actual.localStorageWrapper.setItem(...args)
+        wrapper.setItem(...args)
       ),
+      removeItem: jest.fn((...args: Parameters<Storage['removeItem']>) =>
+        wrapper.removeItem(...args)
+      ),
+      clear: jest.fn(() => wrapper.clear()),
+      key: jest.fn((index: number) => wrapper.key(index)),
+      length: wrapper.length,
     },
   };
 });
