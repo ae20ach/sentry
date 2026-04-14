@@ -195,11 +195,9 @@ class DisableRepositoriesByExternalIdsTest(TestCase):
         assert repo.status == ObjectStatus.DISABLED
 
         assert not SeerProjectRepository.objects.filter(repository_id=repo.id).exists()
-        mock_cleanup.apply_async.assert_called_once_with(
-            kwargs={
-                "organization_id": self.organization.id,
-                "repos": [{"repo_external_id": "100", "repo_provider": self.provider}],
-            }
+        mock_cleanup.assert_called_once_with(
+            organization_id=self.organization.id,
+            repos=[{"repo_external_id": "100", "repo_provider": self.provider}],
         )
 
 
@@ -257,11 +255,9 @@ class DisableRepositoriesForIntegrationTest(TestCase):
         assert repo.status == ObjectStatus.DISABLED
 
         assert not SeerProjectRepository.objects.filter(repository_id=repo.id).exists()
-        mock_cleanup.apply_async.assert_called_once_with(
-            kwargs={
-                "organization_id": self.organization.id,
-                "repos": [{"repo_external_id": "100", "repo_provider": self.provider}],
-            }
+        mock_cleanup.assert_called_once_with(
+            organization_id=self.organization.id,
+            repos=[{"repo_external_id": "100", "repo_provider": self.provider}],
         )
 
 
@@ -295,7 +291,7 @@ class DisassociateOrganizationIntegrationTest(TestCase):
 
         repo.refresh_from_db()
         assert repo.integration_id is None
-        mock_cleanup.apply_async.assert_called_once()
+        mock_cleanup.assert_called_once()
 
     @with_feature("organizations:seer-project-settings-dual-write")
     @patch("sentry.integrations.services.repository.impl.bulk_cleanup_seer_repository_preferences")
@@ -320,11 +316,9 @@ class DisassociateOrganizationIntegrationTest(TestCase):
         repo.refresh_from_db()
         assert repo.integration_id is None
         assert not SeerProjectRepository.objects.filter(repository_id=repo.id).exists()
-        mock_cleanup.apply_async.assert_called_once_with(
-            kwargs={
-                "organization_id": self.organization.id,
-                "repos": [{"repo_external_id": "100", "repo_provider": self.provider}],
-            }
+        mock_cleanup.assert_called_once_with(
+            organization_id=self.organization.id,
+            repos=[{"repo_external_id": "100", "repo_provider": self.provider}],
         )
 
     @patch("sentry.integrations.services.repository.impl.bulk_cleanup_seer_repository_preferences")
@@ -356,5 +350,5 @@ class DisassociateOrganizationIntegrationTest(TestCase):
         repo.refresh_from_db()
         assert repo.integration_id == self.integration.id
 
-        # Task should not have been dispatched
-        mock_cleanup.apply_async.assert_not_called()
+        # Cleanup should not have been called
+        mock_cleanup.assert_not_called()

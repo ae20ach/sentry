@@ -1,21 +1,12 @@
 from __future__ import annotations
 
-import logging
-
-from sentry.seer.models import SeerApiError
-from sentry.seer.signed_seer_api import (
-    BulkRemoveRepositoriesRequest,
-    RemoveRepositoryRequest,
-    RepoIdentifier,
-    SeerViewerContext,
-    make_bulk_remove_repositories_request,
-    make_remove_repository_request,
+from sentry.seer.autofix.utils import (
+    bulk_cleanup_seer_repository_preferences,
+    cleanup_seer_repository_preferences,
 )
 from sentry.silo.base import SiloMode
 from sentry.tasks.base import instrumented_task
 from sentry.taskworker.namespaces import seer_tasks
-
-logger = logging.getLogger(__name__)
 
 
 @instrumented_task(
@@ -24,46 +15,15 @@ logger = logging.getLogger(__name__)
     processing_deadline_duration=60 * 5,
     silo_mode=SiloMode.CELL,
 )
-def cleanup_seer_repository_preferences(
+def cleanup_seer_repository_preferences_task(
     organization_id: int, repo_external_id: str, repo_provider: str
 ) -> None:
-    """
-    Clean up Seer preferences for a deleted repository.
-
-    This task removes a repository from Seer project preferences when the repository
-    is deleted from an organization's integration.
-    """
-    # Call Seer API to remove repository from project preferences
-    body = RemoveRepositoryRequest(
+    """Task wrapper for cleaning up Seer preferences for a single repository."""
+    cleanup_seer_repository_preferences(
         organization_id=organization_id,
-        repo_provider=repo_provider,
         repo_external_id=repo_external_id,
+        repo_provider=repo_provider,
     )
-
-    viewer_context = SeerViewerContext(organization_id=organization_id)
-    try:
-        response = make_remove_repository_request(body, viewer_context=viewer_context)
-        if response.status >= 400:
-            raise SeerApiError("Seer request failed", response.status)
-        logger.info(
-            "cleanup_seer_repository_preferences.success",
-            extra={
-                "organization_id": organization_id,
-                "repo_external_id": repo_external_id,
-                "repo_provider": repo_provider,
-            },
-        )
-    except Exception as e:
-        logger.exception(
-            "cleanup_seer_repository_preferences.failed",
-            extra={
-                "organization_id": organization_id,
-                "repo_external_id": repo_external_id,
-                "repo_provider": repo_provider,
-                "error": str(e),
-            },
-        )
-        raise
 
 
 @instrumented_task(
@@ -72,43 +32,8 @@ def cleanup_seer_repository_preferences(
     processing_deadline_duration=60 * 10,
     silo_mode=SiloMode.CELL,
 )
-def bulk_cleanup_seer_repository_preferences(
+def bulk_cleanup_seer_repository_preferences_task(
     organization_id: int, repos: list[dict[str, str]]
 ) -> None:
-    """
-    Removes multiple repositories from Seer project preferences when the repository
-    is deleted from an organization's integration.
-    """
-    body = BulkRemoveRepositoriesRequest(
-        organization_id=organization_id,
-        repositories=[
-            RepoIdentifier(
-                repo_provider=repo["repo_provider"],
-                repo_external_id=repo["repo_external_id"],
-            )
-            for repo in repos
-        ],
-    )
-
-    viewer_context = SeerViewerContext(organization_id=organization_id)
-    try:
-        response = make_bulk_remove_repositories_request(body, viewer_context=viewer_context)
-        if response.status >= 400:
-            raise SeerApiError("Seer request failed", response.status)
-        logger.info(
-            "bulk_cleanup_seer_repository_preferences.success",
-            extra={
-                "organization_id": organization_id,
-                "repo_count": len(repos),
-            },
-        )
-    except Exception as e:
-        logger.exception(
-            "bulk_cleanup_seer_repository_preferences.failed",
-            extra={
-                "organization_id": organization_id,
-                "repo_count": len(repos),
-                "error": str(e),
-            },
-        )
-        raise
+    """Task wrapper for removing multiple repositories from Seer project preferences."""
+    bulk_cleanup_seer_repository_preferences(organization_id=organization_id, repos=repos)

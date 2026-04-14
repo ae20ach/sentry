@@ -50,7 +50,15 @@ from sentry.seer.models.project_repository import (
     SeerProjectRepository,
     SeerProjectRepositoryBranchOverride,
 )
-from sentry.seer.signed_seer_api import SeerViewerContext, make_signed_seer_api_request
+from sentry.seer.signed_seer_api import (
+    BulkRemoveRepositoriesRequest,
+    RemoveRepositoryRequest,
+    RepoIdentifier,
+    SeerViewerContext,
+    make_bulk_remove_repositories_request,
+    make_remove_repository_request,
+    make_signed_seer_api_request,
+)
 from sentry.utils.cache import cache
 from sentry.utils.outcomes import Outcome, track_outcome
 
@@ -1255,3 +1263,78 @@ def update_coding_agent_state(
                 "response": response.data.decode("utf-8"),
             },
         )
+
+
+def cleanup_seer_repository_preferences(
+    organization_id: int, repo_external_id: str, repo_provider: str
+) -> None:
+    """Remove a single repository from Seer project preferences via the Seer API."""
+    body = RemoveRepositoryRequest(
+        organization_id=organization_id,
+        repo_provider=repo_provider,
+        repo_external_id=repo_external_id,
+    )
+
+    viewer_context = SeerViewerContext(organization_id=organization_id)
+    try:
+        response = make_remove_repository_request(body, viewer_context=viewer_context)
+        if response.status >= 400:
+            raise SeerApiError("Seer request failed", response.status)
+        logger.info(
+            "cleanup_seer_repository_preferences.success",
+            extra={
+                "organization_id": organization_id,
+                "repo_external_id": repo_external_id,
+                "repo_provider": repo_provider,
+            },
+        )
+    except Exception as e:
+        logger.exception(
+            "cleanup_seer_repository_preferences.failed",
+            extra={
+                "organization_id": organization_id,
+                "repo_external_id": repo_external_id,
+                "repo_provider": repo_provider,
+                "error": str(e),
+            },
+        )
+        raise
+
+
+def bulk_cleanup_seer_repository_preferences(
+    organization_id: int, repos: list[dict[str, str]]
+) -> None:
+    """Remove multiple repositories from Seer project preferences via the Seer API."""
+    body = BulkRemoveRepositoriesRequest(
+        organization_id=organization_id,
+        repositories=[
+            RepoIdentifier(
+                repo_provider=repo["repo_provider"],
+                repo_external_id=repo["repo_external_id"],
+            )
+            for repo in repos
+        ],
+    )
+
+    viewer_context = SeerViewerContext(organization_id=organization_id)
+    try:
+        response = make_bulk_remove_repositories_request(body, viewer_context=viewer_context)
+        if response.status >= 400:
+            raise SeerApiError("Seer request failed", response.status)
+        logger.info(
+            "bulk_cleanup_seer_repository_preferences.success",
+            extra={
+                "organization_id": organization_id,
+                "repo_count": len(repos),
+            },
+        )
+    except Exception as e:
+        logger.exception(
+            "bulk_cleanup_seer_repository_preferences.failed",
+            extra={
+                "organization_id": organization_id,
+                "repo_count": len(repos),
+                "error": str(e),
+            },
+        )
+        raise

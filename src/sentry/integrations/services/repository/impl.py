@@ -15,8 +15,8 @@ from sentry.integrations.services.repository.serial import serialize_repository
 from sentry.models.organization import Organization
 from sentry.models.projectcodeowners import ProjectCodeOwners
 from sentry.models.repository import Repository
+from sentry.seer.autofix.utils import bulk_cleanup_seer_repository_preferences
 from sentry.seer.models.project_repository import SeerProjectRepository
-from sentry.tasks.seer.cleanup import bulk_cleanup_seer_repository_preferences
 from sentry.users.services.user.model import RpcUser
 
 
@@ -157,11 +157,9 @@ class DatabaseBackedRepositoryService(RepositoryService):
         ]
         if repos_to_clean:
             transaction.on_commit(
-                lambda: bulk_cleanup_seer_repository_preferences.apply_async(
-                    kwargs={
-                        "organization_id": organization_id,
-                        "repos": repos_to_clean,
-                    }
+                lambda: bulk_cleanup_seer_repository_preferences(
+                    organization_id=organization_id,
+                    repos=repos_to_clean,
                 ),
                 using=router.db_for_write(Repository),
             )
