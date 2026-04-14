@@ -1,3 +1,4 @@
+import type React from 'react';
 import {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import styled from '@emotion/styled';
 
@@ -109,7 +110,7 @@ export const ConversationViewContent = memo(function ConversationViewContent({
 
 const LEFT_PANEL_MIN_WIDTH = 400;
 const RIGHT_PANEL_MIN_WIDTH = 350;
-const DIVIDER_WIDTH = 16;
+const DIVIDER_WIDTH = 5;
 const SPLIT_PANEL_STORAGE_KEY = 'conversation-detail-split-panel-size';
 
 function ConversationView({
@@ -155,7 +156,11 @@ function ConversationView({
   }
 
   if (nodes.length === 0) {
-    return <EmptyMessage>{t('No AI spans found in this conversation')}</EmptyMessage>;
+    return (
+      <EmptyMessage>
+        {t('No AI spans found in this conversation')}
+      </EmptyMessage>
+    );
   }
 
   const defaultLeftWidth = Math.max(
@@ -164,7 +169,12 @@ function ConversationView({
   );
 
   const leftPanelContent = (
-    <Flex direction="column" minHeight="0" height="100%" overflow="hidden">
+    <Flex
+      direction="column"
+      minHeight="0"
+      height="100%"
+      overflow="hidden"
+    >
       <StyledTabs
         value={activeTab}
         onChange={key => handleTabChange(key as ConversationTab)}
@@ -175,7 +185,13 @@ function ConversationView({
             <TabList.Item key="trace">{t('Spans')}</TabList.Item>
           </TabList>
         </Container>
-        <Flex flex="1" minHeight="0" width="100%" overflowX="hidden" overflowY="auto">
+        <Flex
+          flex="1"
+          minHeight="0"
+          width="100%"
+          overflowX="hidden"
+          overflowY="auto"
+        >
           <FullWidthTabPanels>
             <TabPanels.Item key="messages">
               <MessagesPanel
@@ -188,7 +204,9 @@ function ConversationView({
               <Container padding="md lg md lg">
                 <AISpanList
                   nodes={nodes}
-                  selectedNodeKey={selectedNode?.id ?? nodes[0]?.id ?? ''}
+                  selectedNodeKey={
+                    selectedNode?.id ?? nodes[0]?.id ?? ''
+                  }
                   onSelectNode={onSelectNode}
                   compressGaps
                 />
@@ -201,7 +219,13 @@ function ConversationView({
   );
 
   const rightPanelContent = (
-    <Container minHeight="0" height="100%" background="primary" overflowY="auto" overflowX="hidden">
+    <Container
+      minHeight="0"
+      height="100%"
+      background="primary"
+      overflowY="auto"
+      overflowX="hidden"
+    >
       {selectedNode?.renderDetails({
         node: selectedNode,
         manager: null,
@@ -225,10 +249,14 @@ function ConversationView({
             content: leftPanelContent,
             default: defaultLeftWidth,
             min: LEFT_PANEL_MIN_WIDTH,
-            max: containerWidth - RIGHT_PANEL_MIN_WIDTH - DIVIDER_WIDTH,
+            max:
+              containerWidth -
+              RIGHT_PANEL_MIN_WIDTH -
+              DIVIDER_WIDTH,
           }}
           right={rightPanelContent}
           sizeStorageKey={SPLIT_PANEL_STORAGE_KEY}
+          SplitDivider={PanelBorderDivider}
         />
       ) : null}
     </Flex>
@@ -238,25 +266,46 @@ function ConversationView({
 function ConversationViewSkeleton() {
   return (
     <Flex flex="1" minHeight="0" height="100%">
-      <Flex direction="column" minHeight="0" height="100%" overflow="hidden">
+      <Flex
+        direction="column"
+        minHeight="0"
+        height="100%"
+        overflow="hidden"
+        flex="3"
+      >
         <Container borderBottom="primary" padding="md lg">
           <Flex gap="lg">
             <Placeholder height="14px" width="40px" />
             <Placeholder height="14px" width="40px" />
           </Flex>
         </Container>
-        <Flex direction="column" flex="1" gap="md" padding="lg" background="secondary">
+        <Flex
+          direction="column"
+          flex="1"
+          gap="md"
+          padding="lg"
+          background="secondary"
+        >
           <Flex direction="column" gap="sm" padding="sm md">
             <Placeholder height="12px" width="120px" />
             <Placeholder height="12px" width="80%" />
           </Flex>
-          <Container background="primary" radius="md" border="primary" padding="sm md">
+          <Container
+            background="primary"
+            radius="md"
+            border="primary"
+            padding="sm md"
+          >
             <Flex direction="column" gap="sm">
               <Flex align="center" gap="sm">
                 <Placeholder height="12px" width="100px" />
                 <Placeholder height="12px" width="40px" />
               </Flex>
-              <Container background="tertiary" radius="sm" padding="xs sm">
+              <Container
+                background="tertiary"
+                radius="sm"
+                padding="xs sm"
+              >
                 <Placeholder height="12px" width="150px" />
               </Container>
               <Placeholder height="12px" width="90%" />
@@ -268,7 +317,12 @@ function ConversationViewSkeleton() {
             <Placeholder height="12px" width="120px" />
             <Placeholder height="12px" width="60%" />
           </Flex>
-          <Container background="primary" radius="md" border="primary" padding="sm md">
+          <Container
+            background="primary"
+            radius="md"
+            border="primary"
+            padding="sm md"
+          >
             <Flex direction="column" gap="sm">
               <Flex align="center" gap="sm">
                 <Placeholder height="12px" width="80px" />
@@ -280,7 +334,15 @@ function ConversationViewSkeleton() {
           </Container>
         </Flex>
       </Flex>
-      <Container minHeight="0" height="100%" background="primary" overflowY="auto" overflowX="hidden">
+      <Container borderLeft="primary" />
+      <Container
+        minHeight="0"
+        height="100%"
+        background="primary"
+        overflowY="auto"
+        overflowX="hidden"
+        flex="2"
+      >
         <Flex direction="column" gap="lg" padding="lg">
           <Flex direction="column" gap="sm">
             <Placeholder height="14px" width="180px" />
@@ -307,6 +369,42 @@ function ConversationViewSkeleton() {
     </Flex>
   );
 }
+
+const PanelBorderDivider = styled(
+  ({icon: _icon, ...props}: {icon?: React.ReactNode} & Record<string, unknown>) => (
+    <div {...props} />
+  )
+)`
+  width: 5px;
+  height: 100%;
+  cursor: ew-resize;
+  position: relative;
+  flex-shrink: 0;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 2px;
+    width: 1px;
+    background: ${p => p.theme.tokens.border.primary};
+  }
+
+  &:hover::after {
+    left: 1px;
+    width: 3px;
+    background: ${p => p.theme.tokens.border.focus};
+    border-radius: 2px;
+  }
+
+  &[data-is-held='true']::after {
+    left: 1px;
+    width: 3px;
+    background: ${p => p.theme.tokens.border.focus};
+    border-radius: 2px;
+  }
+`;
 
 const StyledTabs = styled(Tabs)`
   min-height: 0;
