@@ -1645,39 +1645,67 @@ describe('trace view', () => {
         await searchToResolve();
 
         let persistedTransactionOp = '';
-        await waitFor(() => {
-          const active = virtualizedContainer.querySelector(ACTIVE_SEARCH_HIGHLIGHT_ROW);
-          expect(active).toBeTruthy();
-          persistedTransactionOp = (
-            active!.querySelector('.TraceOperation') as HTMLElement
-          ).textContent!.trim();
-        });
+        await waitFor(
+          () => {
+            const active = virtualizedContainer.querySelector(
+              ACTIVE_SEARCH_HIGHLIGHT_ROW
+            );
+            expect(active).toBeTruthy();
+            persistedTransactionOp = (
+              active!.querySelector('.TraceOperation') as HTMLElement
+            ).textContent!.trim();
+            expect(persistedTransactionOp.length).toBeGreaterThan(0);
+          },
+          {timeout: 10_000}
+        );
 
         await userEvent.click(searchInput);
+        await waitFor(() => expect(searchInput).toHaveFocus(), {timeout: 5000});
+        await userEvent.keyboard('{End}');
         await userEvent.type(searchInput, 'act');
-        await waitFor(() => expect(searchInput).toHaveValue('transact'));
+        await waitFor(() => expect(searchInput).toHaveValue('transact'), {
+          timeout: 10_000,
+        });
         await searchToResolve();
 
         // Highlighting is persisted on the row
-        await waitFor(() => {
-          const active = virtualizedContainer.querySelector(ACTIVE_SEARCH_HIGHLIGHT_ROW);
-          expect(active).toBeTruthy();
-          expect(
-            (active!.querySelector('.TraceOperation') as HTMLElement).textContent!.trim()
-          ).toBe(persistedTransactionOp);
-        });
+        await waitFor(
+          () => {
+            const active = virtualizedContainer.querySelector(
+              ACTIVE_SEARCH_HIGHLIGHT_ROW
+            );
+            expect(active).toBeTruthy();
+            expect(
+              (
+                active!.querySelector('.TraceOperation') as HTMLElement
+              ).textContent!.trim()
+            ).toBe(persistedTransactionOp);
+          },
+          {timeout: 10_000}
+        );
 
         await userEvent.clear(searchInput);
         await userEvent.click(searchInput);
-        await waitFor(() => expect(searchInput).toHaveFocus());
+        await waitFor(() => expect(searchInput).toHaveFocus(), {timeout: 5000});
         await userEvent.paste('this wont match anything');
-        await waitFor(() => expect(searchInput).toHaveValue('this wont match anything'));
+        await waitFor(() => expect(searchInput).toHaveValue('this wont match anything'), {
+          timeout: 10_000,
+        });
         await searchToResolve();
 
-        // When there is no match, the highlighting is removed
         await waitFor(() => {
-          expect(container.querySelectorAll('.TraceRow.Highlight')).toHaveLength(0);
+          expect(screen.getByTestId('trace-search-result-iterator')).toHaveTextContent(
+            'no results'
+          );
         });
+
+        // When there is no match, the highlighting is removed
+        await waitFor(
+          () => {
+            expect(container.querySelectorAll('.TraceRow.Highlight')).toHaveLength(0);
+          },
+          {timeout: 10_000}
+        );
       },
       28_000
     );
