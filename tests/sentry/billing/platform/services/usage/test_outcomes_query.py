@@ -13,6 +13,8 @@ from snuba_sdk import Column, Function, Op
 
 from sentry.billing.platform.services.usage._outcomes_query import (
     _BILLABLE_OUTCOMES,
+    _DAILY_GRANULARITY,
+    _REFERRER,
     _build_query,
     _build_response,
     _over_quota_condition,
@@ -363,3 +365,148 @@ class TestQueryOutcomesUsage:
         assert len(response.days) == 1
         assert response.days[0].date == Date(year=2025, month=3, day=15)
         assert response.days[0].usage[0].data.accepted == 200
+
+
+class TestDailyTableCompatibility:
+    """Validate that the billing query is compatible with the outcomes_daily table.
+
+    A planned snuba change routes queries whose referrer starts with "billing."
+    to the outcomes_daily storage (13-month retention) instead of outcomes_hourly
+    (90-day retention). These tests ensure the billing query stays compatible:
+    the referrer prefix matches, the granularity aligns with daily aggregation,
+    and every column the query touches exists in the daily table schema.
+    """
+
+    # Columns present in snuba's outcomes_daily storage
+    # (from snuba/datasets/configuration/outcomes/storages/daily.yaml)
+    DAILY_TABLE_COLUMNS = {
+        "org_id",
+        "project_id",
+        "key_id",
+        "timestamp",
+        "outcome",
+        "reason",
+        "quantity",
+        "category",
+        "times_seen",
+    }
+
+    def test_referrer_starts_with_billing_prefix(self):
+        """Snuba routes referrers matching 'billing.*' to the daily table."""
+        assert _REFERRER.startswith("billing."), (
+            f"Referrer {_REFERRER!r} must start with 'billing.' for daily table routing"
+        )
+
+    def test_referrer_exact_value(self):
+        """Guard against accidental referrer renames that would break routing."""
+        assert _REFERRER == "billing.usage_service.clickhouse"
+
+    def test_granularity_matches_daily_table(self):
+        """Daily table aggregates at 86400s (1 day). Query granularity must match."""
+        assert _DAILY_GRANULARITY == 86400
+
+    def test_query_granularity_is_daily(self):
+        start = datetime(2025, 3, 1, tzinfo=timezone.utc)
+        end = datetime(2025, 3, 31, tzinfo=timezone.utc)
+        snuba_request = _build_query(org_id=1, start=start, end=end, categories=[])
+        assert snuba_request.query.granularity.granularity == 86400
+
+    def test_query_where_columns_exist_in_daily_table(self):
+        """All columns referenced in WHERE clauses must exist in the daily table."""
+        start = datetime(2025, 3, 1, tzinfo=timezone.utc)
+        end = datetime(2025, 3, 31, tzinfo=timezone.utc)
+        snuba_request = _build_query(org_id=1, start=start, end=end, categories=[1])
+
+        where_columns = set()
+        for condition in snuba_request.query.where:
+            if hasattr(condition, "lhs") and isinstance(condition.lhs, Column):
+                where_columns.add(condition.lhs.name)
+
+        assert where_columns, "Expected at least one WHERE column"
+        missing = where_columns - self.DAILY_TABLE_COLUMNS
+        assert not missing, f"WHERE columns missing from daily table: {missing}"
+
+    def test_query_groupby_columns_exist_in_daily_table(self):
+        """All GROUP BY columns must exist in the daily table."""
+        start = datetime(2025, 3, 1, tzinfo=timezone.utc)
+        end = datetime(2025, 3, 31, tzinfo=timezone.utc)
+        snuba_request = _build_query(org_id=1, start=start, end=end, categories=[])
+
+        groupby_columns = set()
+        for col in snuba_request.query.groupby:
+            if isinstance(col, Column):
+                groupby_columns.add(col.name)
+
+        # "time" is a virtual column produced by Granularity, not a physical column
+        physical_groupby = groupby_columns - {"time"}
+        missing = physical_groupby - self.DAILY_TABLE_COLUMNS
+        assert not missing, f"GROUP BY columns missing from daily table: {missing}"
+
+    def test_query_select_columns_exist_in_daily_table(self):
+        """All raw columns referenced in SELECT (and inside aggregate functions)
+        must exist in the daily table."""
+        start = datetime(2025, 3, 1, tzinfo=timezone.utc)
+        end = datetime(2025, 3, 31, tzinfo=timezone.utc)
+        snuba_request = _build_query(org_id=1, start=start, end=end, categories=[])
+
+        referenced_columns: set[str] = set()
+
+        def _extract_columns(node: Column | Function) -> None:
+            if isinstance(node, Column):
+                referenced_columns.add(node.name)
+            elif isinstance(node, Function):
+                for param in node.parameters:
+                    if isinstance(param, (Column, Function)):
+                        _extract_columns(param)
+
+        for item in snuba_request.query.select:
+            _extract_columns(item)
+
+        # "time" is a virtual column produced by Granularity
+        physical_columns = referenced_columns - {"time"}
+        missing = physical_columns - self.DAILY_TABLE_COLUMNS
+        assert not missing, f"SELECT columns missing from daily table: {missing}"
+
+    def test_all_referenced_columns_exist_in_daily_table(self):
+        """Comprehensive check: union of WHERE + GROUP BY + SELECT columns
+        must be a subset of the daily table schema."""
+        start = datetime(2025, 3, 1, tzinfo=timezone.utc)
+        end = datetime(2025, 3, 31, tzinfo=timezone.utc)
+        snuba_request = _build_query(
+            org_id=1, start=start, end=end, categories=[1], total_outcomes=_BILLABLE_OUTCOMES
+        )
+
+        all_columns: set[str] = set()
+
+        def _extract_columns(node: Column | Function) -> None:
+            if isinstance(node, Column):
+                all_columns.add(node.name)
+            elif isinstance(node, Function):
+                for param in node.parameters:
+                    if isinstance(param, (Column, Function)):
+                        _extract_columns(param)
+
+        # SELECT columns
+        for item in snuba_request.query.select:
+            _extract_columns(item)
+
+        # WHERE columns
+        for condition in snuba_request.query.where:
+            if hasattr(condition, "lhs") and isinstance(condition.lhs, Column):
+                all_columns.add(condition.lhs.name)
+
+        # GROUP BY columns
+        for col in snuba_request.query.groupby:
+            if isinstance(col, Column):
+                all_columns.add(col.name)
+
+        # "time" is virtual (from Granularity), not a physical column
+        physical_columns = all_columns - {"time"}
+
+        expected_used = {"org_id", "timestamp", "category", "outcome", "reason", "quantity"}
+        assert physical_columns == expected_used, (
+            f"Expected columns {expected_used}, got {physical_columns}"
+        )
+
+        missing = physical_columns - self.DAILY_TABLE_COLUMNS
+        assert not missing, f"Columns missing from daily table: {missing}"
