@@ -224,9 +224,7 @@ function ProjectSeerGeneralForm({project}: {project: Project}) {
     [project.slug, queryClient, organization.slug]
   );
 
-  const hasCursorIntegration = Boolean(
-    organization.features.includes('integrations-cursor') && cursorIntegration
-  );
+  const hasCursorIntegration = Boolean(cursorIntegration);
 
   const hasClaudeIntegration = Boolean(
     organization.features.includes('integrations-claude-code') && claudeIntegration

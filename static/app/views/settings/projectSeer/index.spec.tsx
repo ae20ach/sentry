@@ -449,9 +449,7 @@ describe('ProjectSeer', () => {
   });
 
   it('can enable automation handoff to Cursor when Cursor integration is available', async () => {
-    const orgWithCursorFeature = OrganizationFixture({
-      features: ['integrations-cursor'],
-    });
+    const orgWithCursorFeature = OrganizationFixture();
 
     const initialProject: Project = {
       ...project,
@@ -707,9 +705,7 @@ describe('ProjectSeer', () => {
     it('renders and loads initial value when cursor_handoff is selected', async () => {
       MockApiClient.clearMockResponses();
 
-      const orgWithCursorFeature = OrganizationFixture({
-        features: ['integrations-cursor'],
-      });
+      const orgWithCursorFeature = OrganizationFixture();
 
       const initialProject: Project = {
         ...project,
@@ -786,9 +782,7 @@ describe('ProjectSeer', () => {
     it('calls update mutation when toggled', async () => {
       MockApiClient.clearMockResponses();
 
-      const orgWithCursorFeature = OrganizationFixture({
-        features: ['integrations-cursor'],
-      });
+      const orgWithCursorFeature = OrganizationFixture();
 
       const initialProject: Project = {
         ...project,
@@ -894,9 +888,7 @@ describe('ProjectSeer', () => {
     it('shows integration selector when multiple cursor integrations exist', async () => {
       MockApiClient.clearMockResponses();
 
-      const orgWithCursorFeature = OrganizationFixture({
-        features: ['integrations-cursor'],
-      });
+      const orgWithCursorFeature = OrganizationFixture();
 
       const initialProject: Project = {
         ...project,
@@ -984,9 +976,7 @@ describe('ProjectSeer', () => {
     it('calls update mutation when switching integration', async () => {
       MockApiClient.clearMockResponses();
 
-      const orgWithCursorFeature = OrganizationFixture({
-        features: ['integrations-cursor'],
-      });
+      const orgWithCursorFeature = OrganizationFixture();
 
       const initialProject: Project = {
         ...project,
@@ -1108,7 +1098,7 @@ describe('ProjectSeer', () => {
       MockApiClient.clearMockResponses();
 
       const orgWithBothFeatures = OrganizationFixture({
-        features: ['integrations-cursor', 'integrations-claude-code'],
+        features: ['integrations-claude-code'],
       });
 
       const initialProject: Project = {
@@ -1189,9 +1179,7 @@ describe('ProjectSeer', () => {
     it('does not show integration selector with single cursor integration', async () => {
       MockApiClient.clearMockResponses();
 
-      const orgWithCursorFeature = OrganizationFixture({
-        features: ['integrations-cursor'],
-      });
+      const orgWithCursorFeature = OrganizationFixture();
 
       const initialProject: Project = {
         ...project,

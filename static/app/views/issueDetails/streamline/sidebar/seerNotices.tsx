@@ -115,9 +115,6 @@ export function SeerNotices({groupId, hasGithubIntegration, project}: SeerNotice
   const cursorIntegration = codingAgentIntegrations?.integrations.find(
     integration => integration.provider === 'cursor'
   );
-  const hasCursorFeatureFlagEnabled = Boolean(
-    organization.features.includes('integrations-cursor')
-  );
   const isCursorHandoffConfigured = Boolean(preference?.automation_handoff);
 
   const unreadableRepos = repos.filter(repo => repo.is_readable === false);
@@ -155,9 +152,7 @@ export function SeerNotices({groupId, hasGithubIntegration, project}: SeerNotice
   );
 
   const needsCursorIntegration =
-    hasCursorFeatureFlagEnabled &&
-    (!isCursorHandoffConfigured || !cursorIntegration) &&
-    !cursorStepSkipped;
+    (!isCursorHandoffConfigured || !cursorIntegration) && !cursorStepSkipped;
 
   // Calculate incomplete steps
   const stepConditions = [
@@ -425,7 +420,7 @@ export function SeerNotices({groupId, hasGithubIntegration, project}: SeerNotice
               )}
 
               {/* Step 5: Cursor Integration */}
-              {hasCursorFeatureFlagEnabled && (
+              {
                 <GuidedSteps.Step
                   key="cursor-integration"
                   stepKey="cursor-integration"
@@ -523,7 +518,7 @@ export function SeerNotices({groupId, hasGithubIntegration, project}: SeerNotice
                     )}
                   </CustomStepButtons>
                 </GuidedSteps.Step>
-              )}
+              }
             </StyledGuidedSteps>
             <StepsDivider />
           </motion.div>

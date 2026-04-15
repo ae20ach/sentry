@@ -24,10 +24,10 @@ interface CodingAgentIntegrationCtaProps {
 interface AgentConfig {
   displayName: string;
   docsUrl: string;
-  featureFlag: string;
   pluginId: string;
   provider: string;
   target: SeerAutomationHandoffConfiguration['target'];
+  featureFlag?: string;
   headingName?: string;
 }
 
@@ -51,7 +51,9 @@ export function makeCodingAgentIntegrationCta(config: AgentConfig) {
       i => i.provider === config.provider
     );
 
-    const hasFeatureFlag = organization.features.includes(config.featureFlag);
+    const hasFeatureFlag = config.featureFlag
+      ? organization.features.includes(config.featureFlag)
+      : true;
     const hasIntegration = Boolean(integration);
     const isAutomationEnabled =
       project.seerScannerAutomation !== false &&
