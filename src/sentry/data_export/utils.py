@@ -11,6 +11,7 @@ from sentry_protos.snuba.v1.trace_item_pb2 import AnyValue, TraceItem
 from sentry.data_export.base import ExportError
 from sentry.search.eap.types import SupportedTraceItemType
 from sentry.search.eap.utils import (
+    INTERNAL_TO_PUBLIC_ALIAS_MAPPINGS,
     can_expose_attribute,
     translate_internal_to_public_alias,
 )
@@ -22,7 +23,7 @@ from sentry.utils.snuba_rpc import SnubaRPCRateLimitExceeded
 
 
 
-def eap_scalar_type_from_anyvalue_which(
+def eap_storage_scalar_type_from_protobuf(
     which: str | None,
 ) -> Literal["string", "number", "boolean"] | None:
     if which is None:
@@ -134,11 +135,23 @@ def _merge_trace_export_cell(out: dict[str, Any], new_key: str, value: Any) -> N
 
 def _export_column_name_for_scalar_trace_attribute(
     internal_key: str,
-    eap_type: Literal["string", "number", "boolean"],
+    eap_storage_type: Literal["string", "number", "boolean"],
     item_type: SupportedTraceItemType,
 ) -> str:
+    # eap_storage_type is not same as search_type used in translate_internal_to_public_alias
+    per_type = INTERNAL_TO_PUBLIC_ALIAS_MAPPINGS.get(item_type)
+    if per_type is not None:
+        for typ in ("string", "number", "boolean"):
+            if internal_key in per_type.get(typ, {}):
+                public_alias, public_name, _ = translate_internal_to_public_alias(
+                    internal_key, typ, item_type
+                )
+                if public_alias is not None and public_name is not None:
+                    return public_name
+                break
+    # column_to_alias still needs a type; use storage type.
     public_alias, public_name, _ = translate_internal_to_public_alias(
-        internal_key, eap_type, item_type
+        internal_key, eap_storage_type, item_type
     )
     if public_alias is not None and public_name is not None:
         return public_name
@@ -161,12 +174,12 @@ def trace_item_to_row(
             continue
         which = av.WhichOneof("value")
         value = None if which is None else anyvalue_to_python(av)
-        eap_type = eap_scalar_type_from_anyvalue_which(which)
-        if eap_type is None:
+        eap_storage_type = eap_storage_scalar_type_from_protobuf(which)
+        if eap_storage_type is None:
             new_key = internal_key
         else:
             new_key = _export_column_name_for_scalar_trace_attribute(
-                internal_key, eap_type, item_type
+                internal_key, eap_storage_type, item_type
             )
         _merge_trace_export_cell(row, new_key, value)
 
