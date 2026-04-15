@@ -1798,12 +1798,14 @@ describe('trace view', () => {
         }
       );
 
-      const {container} = render(<TraceView />, {
+      render(<TraceView />, {
         initialRouterConfig,
       });
 
-      // Awaits for the placeholder rendering rows to be removed
-      await within(container).findByText(/transaction-op-0/i);
+      const virtualizedContainer = getVirtualizedContainer();
+      await within(virtualizedContainer).findAllByText(/transaction-op-/i, undefined, {
+        timeout: 5000,
+      });
 
       const searchInput = await screen.findByPlaceholderText('Search in trace');
       await userEvent.type(searchInput, 'op-0');
