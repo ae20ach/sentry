@@ -39,8 +39,6 @@ from sentry.models.organizationmember import OrganizationMember
 EDIT_FEATURE = "organizations:dashboards-edit"
 READ_FEATURE = "organizations:dashboards-basic"
 REVISIONS_FEATURE = "organizations:dashboards-revisions"
-DASHBOARD_REVISION_SNAPSHOT_SCHEMA_VERSION = 1
-DASHBOARD_REVISION_RETENTION_LIMIT = 10
 
 
 def _take_dashboard_snapshot(
@@ -61,32 +59,6 @@ def _take_dashboard_snapshot(
     if not features.has(REVISIONS_FEATURE, organization, actor=user):
         return None
     return serialize(dashboard, user)
-
-
-def _save_dashboard_revision(
-    dashboard: Dashboard,
-    user: Any,
-    snapshot: dict[str, Any],
-) -> None:
-    """
-    Create a DashboardRevision for the given snapshot and prune any revisions
-    beyond the retention limit. Must be called inside a transaction.atomic block.
-    """
-    revision = DashboardRevision.objects.create(
-        dashboard=dashboard,
-        created_by_id=user.id if user.is_authenticated else None,
-        title=dashboard.title,
-        snapshot=snapshot,
-        snapshot_schema_version=DASHBOARD_REVISION_SNAPSHOT_SCHEMA_VERSION,
-    )
-    old_revision_ids = list(
-        DashboardRevision.objects.filter(dashboard=dashboard)
-        .exclude(id=revision.id)
-        .order_by("-date_added")
-        .values_list("id", flat=True)[DASHBOARD_REVISION_RETENTION_LIMIT - 1 :]
-    )
-    if old_revision_ids:
-        DashboardRevision.objects.filter(id__in=old_revision_ids).delete()
 
 
 class OrganizationDashboardBase(OrganizationEndpoint):
@@ -263,7 +235,7 @@ class OrganizationDashboardDetailsEndpoint(OrganizationDashboardBase):
         try:
             with transaction.atomic(router.db_for_write(DashboardTombstone)):
                 if snapshot is not None:
-                    _save_dashboard_revision(dashboard, request.user, snapshot)
+                    DashboardRevision.create_for_dashboard(dashboard, request.user, snapshot)
                 serializer.save()
                 if tombstone:
                     DashboardTombstone.objects.get_or_create(
