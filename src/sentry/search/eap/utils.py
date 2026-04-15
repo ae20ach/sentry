@@ -16,6 +16,9 @@ from sentry.search.eap.ourlogs.attributes import (
     OURLOG_ATTRIBUTE_DEFINITIONS,
 )
 from sentry.search.eap.ourlogs.definitions import OURLOG_DEFINITIONS
+from sentry.search.eap.preprod_size.attributes import (
+    PREPROD_SIZE_INTERNAL_TO_PUBLIC_ALIAS_MAPPINGS,
+)
 from sentry.search.eap.profile_functions.attributes import (
     PROFILE_FUNCTIONS_ATTRIBUTE_DEFINITIONS,
     PROFILE_FUNCTIONS_INTERNAL_TO_PUBLIC_ALIAS_MAPPINGS,
@@ -69,6 +72,7 @@ INTERNAL_TO_PUBLIC_ALIAS_MAPPINGS: dict[
     SupportedTraceItemType.LOGS: LOGS_INTERNAL_TO_PUBLIC_ALIAS_MAPPINGS,
     SupportedTraceItemType.TRACEMETRICS: TRACE_METRICS_INTERNAL_TO_PUBLIC_ALIAS_MAPPINGS,
     SupportedTraceItemType.PROFILE_FUNCTIONS: PROFILE_FUNCTIONS_INTERNAL_TO_PUBLIC_ALIAS_MAPPINGS,
+    SupportedTraceItemType.PREPROD: PREPROD_SIZE_INTERNAL_TO_PUBLIC_ALIAS_MAPPINGS,
 }
 
 PUBLIC_ALIAS_TO_INTERNAL_MAPPING: dict[SupportedTraceItemType, dict[str, ResolvedAttribute]] = {
@@ -125,10 +129,10 @@ TRACE_ITEM_TYPE_DEFINITIONS: dict[SupportedTraceItemType, ColumnDefinitions] = {
 
 def translate_internal_to_public_alias(
     internal_alias: str,
-    type: Literal["string", "number", "boolean"],
+    search_type: Literal["string", "number", "boolean"],
     item_type: SupportedTraceItemType,
 ) -> tuple[str | None, str | None, AttributeSource]:
-    mapping = INTERNAL_TO_PUBLIC_ALIAS_MAPPINGS.get(item_type, {}).get(type, {})
+    mapping = INTERNAL_TO_PUBLIC_ALIAS_MAPPINGS.get(item_type, {}).get(search_type, {})
     public_alias = mapping.get(internal_alias)
     if public_alias is not None:
         return public_alias, public_alias, {"source_type": AttributeSourceType.SENTRY}
@@ -138,7 +142,7 @@ def translate_internal_to_public_alias(
         # if there is a known public alias with this exact name, it means we need to wrap
         # it in the explicitly typed tags syntax in order for it to reference the correct column
         return (
-            f"tags[{internal_alias},{type}]",
+            f"tags[{internal_alias},{search_type}]",
             internal_alias,
             {"source_type": AttributeSourceType.SENTRY},
         )
@@ -148,7 +152,7 @@ def translate_internal_to_public_alias(
         if definitions.column_to_alias is not None:
             column = definitions.column_to_alias(internal_alias)
             if column is not None:
-                if type == "string":
+                if search_type == "string":
                     return (
                         column,
                         column,
@@ -158,7 +162,7 @@ def translate_internal_to_public_alias(
                         },
                     )
                 return (
-                    f"tags[{column},{type}]",
+                    f"tags[{column},{search_type}]",
                     column,
                     {
                         "source_type": AttributeSourceType.SENTRY,

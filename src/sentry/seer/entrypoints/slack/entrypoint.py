@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, TypedDict
 
 from sentry import features
 from sentry.constants import ENABLE_SEER_ENHANCED_ALERTS_DEFAULT, ObjectStatus
+from sentry.integrations.services.integration.service import integration_service
 from sentry.locks import locks
 from sentry.models.organization import Organization
 from sentry.notifications.platform.templates.seer import (
@@ -33,6 +34,7 @@ from sentry.seer.entrypoints.types import (
 from sentry.seer.explorer.client_utils import has_seer_explorer_access_with_detail
 from sentry.sentry_apps.metrics import SentryAppEventType
 from sentry.utils import metrics
+from sentry.utils.cache import cache
 from sentry.utils.locking import UnableToAcquireLock
 
 logger = logging.getLogger(__name__)
@@ -40,6 +42,12 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from sentry.integrations.slack.requests.action import SlackActionRequest
     from sentry.models.group import Group
+
+
+class EntrypointSetupError(Exception):
+    """Raised when entrypoint construction fails during mention processing."""
+
+    pass
 
 
 class SlackThreadDetails(TypedDict):
@@ -60,7 +68,46 @@ class SlackExplorerCachePayload(TypedDict):
     organization_id: int
     integration_id: int
     thread: SlackThreadDetails
-    message_ts: str
+
+
+MISSING_SCOPE_FOOTER_CACHE_TIMEOUT = 60 * 60
+
+
+def _get_missing_scope_settings_url(
+    *,
+    integration_id: int,
+    organization_id: int,
+    channel_id: str,
+    thread_ts: str,
+) -> str | None:
+    """
+    Returns a settings URL if the integration is missing history scopes for the channel,
+    and we haven't already shown the footer for this thread. Returns None otherwise.
+    """
+    from sentry.integrations.slack.integration import SlackIntegration
+
+    integration = integration_service.get_integration(
+        integration_id=integration_id,
+        organization_id=organization_id,
+        status=ObjectStatus.ACTIVE,
+    )
+    if not integration:
+        return None
+
+    install = SlackIntegration(model=integration, organization_id=organization_id)
+    if install.has_history_scope(channel_id):
+        return None
+
+    try:
+        org = Organization.objects.get(id=organization_id)
+    except Organization.DoesNotExist:
+        return None
+
+    cache_key = f"seer:explorer:scope_footer:{integration_id}:{channel_id}:{thread_ts}"
+    if not cache.add(cache_key, True, timeout=MISSING_SCOPE_FOOTER_CACHE_TIMEOUT):
+        return None
+
+    return org.absolute_url(f"/settings/{org.slug}/integrations/slack/")
 
 
 class SlackAutofixEntrypoint(
@@ -339,22 +386,19 @@ class SlackExplorerEntrypoint(
         integration_id: int,
         organization_id: int,
         channel_id: str,
-        message_ts: str,
-        thread_ts: str | None,
+        thread_ts: str,
         slack_user_id: str,
     ):
         from sentry.integrations.services.integration import integration_service
         from sentry.integrations.slack.integration import SlackIntegration
-        from sentry.integrations.types import IntegrationProviderSlug
 
         integration = integration_service.get_integration(
             integration_id=integration_id,
             organization_id=organization_id,
-            provider=IntegrationProviderSlug.SLACK.value,
             status=ObjectStatus.ACTIVE,
         )
         if not integration:
-            raise ValueError(f"Slack integration {integration_id} not found")
+            raise EntrypointSetupError(f"Slack integration {integration_id} not found")
 
         ois = integration_service.get_organization_integrations(
             integration_id=integration_id,
@@ -363,22 +407,22 @@ class SlackExplorerEntrypoint(
             limit=1,
         )
         if not ois:
-            raise ValueError(
+            raise EntrypointSetupError(
                 f"Slack integration {integration_id} is not active for org {organization_id}"
             )
 
         self.channel_id = channel_id
-        self.message_ts = message_ts
-        self.thread_ts = thread_ts or message_ts
+        self.thread_ts = thread_ts
         self.thread = SlackThreadDetails(thread_ts=self.thread_ts, channel_id=channel_id)
         self.organization_id = organization_id
+        self.integration = integration
         self.install = SlackIntegration(model=integration, organization_id=organization_id)
         self.slack_user_id = slack_user_id
 
     @staticmethod
     def has_access(organization: Organization) -> bool:
         has_seer_slack_feature_flag = features.has(
-            "organizations:seer-slack-workflows", organization
+            "organizations:seer-slack-explorer", organization
         )
         has_explorer_access, _ = has_seer_explorer_access_with_detail(organization, None)
         return has_seer_slack_feature_flag and has_explorer_access
@@ -399,7 +443,6 @@ class SlackExplorerEntrypoint(
             thread=self.thread,
             organization_id=self.organization_id,
             integration_id=self.install.model.id,
-            message_ts=self.message_ts,
         )
 
     @staticmethod
@@ -409,20 +452,29 @@ class SlackExplorerEntrypoint(
         run_id: int,
     ) -> None:
         organization_id = cache_payload["organization_id"]
+        integration_id = cache_payload["integration_id"]
+        thread = cache_payload["thread"]
 
         if not summary:
             data: SeerExplorerError | SeerExplorerResponse = SeerExplorerError(
                 error_message="Seer was unable to generate a response."
             )
         else:
+            missing_scope_url = _get_missing_scope_settings_url(
+                integration_id=integration_id,
+                organization_id=organization_id,
+                channel_id=thread["channel_id"],
+                thread_ts=thread["thread_ts"],
+            )
             data = SeerExplorerResponse(
                 run_id=run_id,
                 organization_id=organization_id,
                 summary=summary,
+                missing_scope_settings_url=missing_scope_url,
             )
         schedule_all_thread_updates(
-            threads=[cache_payload["thread"]],
-            integration_id=cache_payload["integration_id"],
+            threads=[thread],
+            integration_id=integration_id,
             organization_id=organization_id,
             data=data,
         )

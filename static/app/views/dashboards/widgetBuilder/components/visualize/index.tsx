@@ -1,7 +1,7 @@
 import {Fragment, useMemo, useState, type ReactNode} from 'react';
 import {closestCenter, DndContext, DragOverlay} from '@dnd-kit/core';
 import {arrayMove, SortableContext, verticalListSortingStrategy} from '@dnd-kit/sortable';
-import {css} from '@emotion/react';
+import {css, useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
 import cloneDeep from 'lodash/cloneDeep';
 
@@ -45,6 +45,7 @@ import {
   type LinkedDashboard,
 } from 'sentry/views/dashboards/types';
 import {usesTimeSeriesData} from 'sentry/views/dashboards/utils';
+import {correctDragOverlayOffset} from 'sentry/views/dashboards/widgetBuilder/components/common/draggableUtils';
 import {SectionHeader} from 'sentry/views/dashboards/widgetBuilder/components/common/sectionHeader';
 import {SortableVisualizeFieldWrapper} from 'sentry/views/dashboards/widgetBuilder/components/common/sortableFieldWrapper';
 import {ExploreArithmeticBuilder} from 'sentry/views/dashboards/widgetBuilder/components/exploreArithmeticBuilder';
@@ -169,11 +170,30 @@ export function getColumnOptions(
   filterOutIncompatibleResults?: boolean
 ) {
   const fieldValues = Object.values(fieldOptions);
+
   if (
     selectedField.kind !== FieldValueKind.FUNCTION ||
     dataset === WidgetType.SPANS ||
     dataset === WidgetType.LOGS
   ) {
+    // For SPANS/LOGS functions, check for dropdown parameters before returning
+    // generic columns. Functions like performance_score and opportunity_score
+    // define restricted dropdown options that must be respected.
+    if (
+      selectedField.kind === FieldValueKind.FUNCTION &&
+      (dataset === WidgetType.SPANS || dataset === WidgetType.LOGS)
+    ) {
+      const fnData = fieldValues.find(
+        option => option.value.meta.name === selectedField.function[0]
+      )?.value;
+      if (
+        fnData?.kind === FieldValueKind.FUNCTION &&
+        fnData.meta.parameters.length > 0 &&
+        fnData.meta.parameters[0]?.kind === 'dropdown'
+      ) {
+        return fnData.meta.parameters[0].options;
+      }
+    }
     return formatColumnOptions(dataset, fieldValues, columnFilterMethod, selectedField)
       .filter(option => (filterOutIncompatibleResults ? !option.disabled : true))
       .sort(_sortFn);
@@ -279,6 +299,7 @@ interface VisualizeProps {
 export function Visualize({error, setError}: VisualizeProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const organization = useOrganization();
+  const theme = useTheme();
   const {state, dispatch} = useWidgetBuilderContext();
   const tags = useTags();
   const {customMeasurements} = useCustomMeasurements();
@@ -1063,7 +1084,11 @@ export function Visualize({error, setError}: VisualizeProps) {
               })}
             </Stack>
           </SortableContext>
-          <DragOverlay dropAnimation={null}>
+          <DragOverlay
+            dropAnimation={null}
+            zIndex={theme.zIndex.modal}
+            modifiers={[correctDragOverlayOffset]}
+          >
             {activeId && (
               <VisualizeGhostField
                 activeId={Number(activeId)}

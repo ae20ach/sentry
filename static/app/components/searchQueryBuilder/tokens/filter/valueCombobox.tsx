@@ -399,9 +399,11 @@ function useFilterSuggestions({
   const isDebouncing = baseQueryKey !== queryKey;
 
   // TODO(malwilley): Display error states
+  // eslint-disable-next-line @tanstack/query/exhaustive-deps
   const {data, isFetching} = useQuery({
     queryKey,
-    queryFn: ctx => getTagValues(...ctx.queryKey[1]),
+    queryFn: ctx =>
+      getTagValues({tag: ctx.queryKey[1][0], searchQuery: ctx.queryKey[1][1]}),
     placeholderData: keepPreviousData,
     enabled: shouldFetchValues,
   });
@@ -749,7 +751,7 @@ export function SearchQueryBuilderValueCombobox({
   );
 
   const updateFilterValue = useCallback(
-    (value: string) => {
+    (value: string, op?: TermOperator) => {
       if (token.filter === FilterType.HAS) {
         const suggested = getSuggestedFilterKey(value);
         if (suggested) {
@@ -793,6 +795,7 @@ export function SearchQueryBuilderValueCombobox({
             type: 'UPDATE_TOKEN_VALUE',
             token,
             value: newValue,
+            op,
           });
 
           if (newValue && newValue !== '""' && !ctrlKeyPressed) {
@@ -809,6 +812,7 @@ export function SearchQueryBuilderValueCombobox({
             getFilterValueType(token, fieldDefinition),
             replaceCommaSeparatedValue(inputValue, selectionIndex, escapeTagValue(value))
           ),
+          op,
         });
 
         if (!ctrlKeyPressed) {
@@ -819,6 +823,7 @@ export function SearchQueryBuilderValueCombobox({
           type: 'UPDATE_TOKEN_VALUE',
           token,
           value: cleanedValue,
+          op,
         });
         onCommit();
       }
@@ -860,7 +865,17 @@ export function SearchQueryBuilderValueCombobox({
         return;
       }
 
-      updateFilterValue(value);
+      // When selecting from dropdown with no existing value, switch from "contains" to "is"
+      let newOp: TermOperator | undefined;
+      if (
+        token.operator === TermOperator.CONTAINS &&
+        token.value.type === Token.VALUE_TEXT &&
+        !token.value.value
+      ) {
+        newOp = token.negated ? TermOperator.NOT_EQUAL : TermOperator.DEFAULT;
+      }
+
+      updateFilterValue(value, newOp);
       trackAnalytics('search.value_autocompleted', {
         ...analyticsData,
         filter_value: value,

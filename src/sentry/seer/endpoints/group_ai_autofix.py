@@ -116,7 +116,7 @@ class ExplorerAutofixRequestSerializer(CamelSnakeSerializer):
     intelligence_level = serializers.ChoiceField(
         required=False,
         choices=["low", "medium", "high"],
-        default="low",
+        default="medium",
         help_text="The intelligence level to use.",
     )
     user_context = serializers.CharField(
@@ -128,6 +128,10 @@ class ExplorerAutofixRequestSerializer(CamelSnakeSerializer):
     repo_name = serializers.CharField(
         required=False,
         help_text="Optional repository name for which to create the pull request. Do not pass a repository name to create pull requests in all relevant repositories.",
+    )
+    insert_index = serializers.IntegerField(
+        required=False,
+        help_text="Block index to insert at. When provided, truncates blocks after this point for retry-from-step.",
     )
 
     def validate(self, data: dict[str, Any]) -> dict[str, Any]:
@@ -289,6 +293,7 @@ class GroupAutofixEndpoint(GroupAiEndpoint):
                 run_id=run_id,
                 intelligence_level=data["intelligence_level"],
                 user_context=data.get("user_context"),
+                insert_index=data.get("insert_index"),
             )
             return Response({"run_id": run_id}, status=status.HTTP_202_ACCEPTED)
         except SeerPermissionError as e:

@@ -17,6 +17,7 @@ from sentry.api.paginator import GenericOffsetPaginator
 from sentry.api.serializers.rest_framework import OrganizationAIConversationsSerializer
 from sentry.api.utils import handle_query_errors
 from sentry.models.organization import Organization
+from sentry.search.eap.occurrences.query_utils import build_escaped_term_filter
 from sentry.search.eap.resolver import SearchResolver
 from sentry.search.eap.types import EAPResponse, SearchResolverConfig
 from sentry.search.events.constants import NON_FAILURE_STATUS
@@ -61,6 +62,9 @@ def _compute_timestamp_ms(finish_ts: float) -> int:
     return int(finish_ts * 1000) if finish_ts else 0
 
 
+FILTERED = "[Filtered]"
+
+
 def _parse_messages(messages: str | list | None) -> list | None:
     if not messages:
         return None
@@ -92,6 +96,8 @@ def _extract_content_from_parts(msg: dict) -> str | None:
 
 def _extract_first_user_message(messages: str | list | None) -> str | None:
     """Extract first user message, handling both old (content) and new (parts) formats."""
+    if isinstance(messages, str) and messages == FILTERED:
+        return FILTERED
     parsed = _parse_messages(messages)
     if not parsed:
         return None
@@ -134,6 +140,8 @@ def _get_last_output(row: dict) -> str | None:
     # 1. Check new format first (gen_ai.output.messages)
     output_messages = row.get("gen_ai.output.messages")
     if output_messages:
+        if output_messages == FILTERED:
+            return FILTERED
         # Extract text from the last assistant message
         parsed = _parse_messages(output_messages)
         if parsed:
@@ -341,7 +349,7 @@ class OrganizationAIConversationsEndpoint(OrganizationEventsEndpointBase):
     ) -> TableQuery:
         return TableQuery(
             name="aggregations",
-            query_string=f"gen_ai.conversation.id:[{','.join(conversation_ids)}]",
+            query_string=build_escaped_term_filter("gen_ai.conversation.id", conversation_ids),
             selected_columns=[
                 "gen_ai.conversation.id",
                 "failure_count()",
@@ -365,7 +373,7 @@ class OrganizationAIConversationsEndpoint(OrganizationEventsEndpointBase):
     ) -> TableQuery:
         return TableQuery(
             name="enrichment",
-            query_string=f"gen_ai.conversation.id:[{','.join(conversation_ids)}] has:gen_ai.operation.type",
+            query_string=f"{build_escaped_term_filter('gen_ai.conversation.id', conversation_ids)} has:gen_ai.operation.type",
             selected_columns=[
                 "gen_ai.conversation.id",
                 "gen_ai.operation.type",
@@ -392,7 +400,7 @@ class OrganizationAIConversationsEndpoint(OrganizationEventsEndpointBase):
     ) -> TableQuery:
         return TableQuery(
             name="first_last_io",
-            query_string=f"gen_ai.conversation.id:[{','.join(conversation_ids)}] gen_ai.operation.type:ai_client",
+            query_string=f"{build_escaped_term_filter('gen_ai.conversation.id', conversation_ids)} gen_ai.operation.type:ai_client",
             selected_columns=[
                 "gen_ai.conversation.id",
                 "gen_ai.input.messages",

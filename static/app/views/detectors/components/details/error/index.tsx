@@ -1,3 +1,5 @@
+import {Fragment} from 'react';
+
 import {ExternalLink, Link} from '@sentry/scraps/link';
 import {Text} from '@sentry/scraps/text';
 
@@ -5,7 +7,7 @@ import {DatePageFilter} from 'sentry/components/pageFilters/date/datePageFilter'
 import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
 import {Placeholder} from 'sentry/components/placeholder';
 import {DetailLayout} from 'sentry/components/workflowEngine/layout/detail';
-import {Section} from 'sentry/components/workflowEngine/ui/section';
+import {DetailSection} from 'sentry/components/workflowEngine/ui/detailSection';
 import {t, tct, tn} from 'sentry/locale';
 import type {Project} from 'sentry/types/project';
 import type {Detector} from 'sentry/types/workflowEngine/detectors';
@@ -19,6 +21,8 @@ import {DetectorDetailsDefaultHeaderContent} from 'sentry/views/detectors/compon
 import {DetectorDetailsOngoingIssues} from 'sentry/views/detectors/components/details/common/ongoingIssues';
 import {MonitorFeedbackButton} from 'sentry/views/detectors/components/monitorFeedbackButton';
 import {useCanEditDetectorWorkflowConnections} from 'sentry/views/detectors/utils/useCanEditDetector';
+import {TopBar} from 'sentry/views/navigation/topBar';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 type ErrorDetectorDetailsProps = {
   detector: Detector;
@@ -53,18 +57,18 @@ function ResolveSection({project}: {project: Project}) {
 
   if (isPending || !detailedProject) {
     return (
-      <Section title={t('Resolve')}>
+      <DetailSection title={t('Resolve')}>
         <Placeholder height="1em" />
-      </Section>
+      </DetailSection>
     );
   }
 
   const resolveAgeHours = detailedProject.resolveAge;
 
   return (
-    <Section title={t('Resolve')}>
+    <DetailSection title={t('Resolve')}>
       <p>{formatResolveAge(resolveAgeHours)}</p>
-    </Section>
+    </DetailSection>
   );
 }
 
@@ -72,16 +76,27 @@ export function ErrorDetectorDetails({detector, project}: ErrorDetectorDetailsPr
   const organization = useOrganization();
   const canEdit = useCanEditDetectorWorkflowConnections({projectId: project.id});
   const {selection} = usePageFilters();
+  const hasPageFrameFeature = useHasPageFrameFeature();
 
   return (
     <DetailLayout>
-      <DetailLayout.Header>
-        <DetectorDetailsDefaultHeaderContent detector={detector} project={project} />
-        <DetailLayout.Actions>
+      {hasPageFrameFeature ? (
+        <Fragment>
+          <DetectorDetailsDefaultHeaderContent detector={detector} project={project} />
+          <TopBar.Slot name="actions">
+            <EditDetectorAction detector={detector} canEdit={canEdit} />
+          </TopBar.Slot>
           <MonitorFeedbackButton />
-          <EditDetectorAction detector={detector} canEdit={canEdit} />
-        </DetailLayout.Actions>
-      </DetailLayout.Header>
+        </Fragment>
+      ) : (
+        <DetailLayout.Header>
+          <DetectorDetailsDefaultHeaderContent detector={detector} project={project} />
+          <DetailLayout.Actions>
+            <MonitorFeedbackButton />
+            <EditDetectorAction detector={detector} canEdit={canEdit} />
+          </DetailLayout.Actions>
+        </DetailLayout.Header>
+      )}
       <DetailLayout.Body>
         <DetailLayout.Main>
           <DisabledAlert
@@ -96,7 +111,7 @@ export function ErrorDetectorDetails({detector, project}: ErrorDetectorDetailsPr
           <DetectorDetailsAutomations detector={detector} />
         </DetailLayout.Main>
         <DetailLayout.Sidebar>
-          <Section title={t('Detect')}>
+          <DetailSection title={t('Detect')}>
             <Text as="p">
               {tct(
                 'All events have a fingerprint. Events with the same fingerprint are grouped together into an issue. To learn more about issue grouping, [link:read the docs].',
@@ -107,8 +122,8 @@ export function ErrorDetectorDetails({detector, project}: ErrorDetectorDetailsPr
                 }
               )}
             </Text>
-          </Section>
-          <Section title={t('Assign')}>
+          </DetailSection>
+          <DetailSection title={t('Assign')}>
             <Text as="p">
               {tct(
                 'Sentry will attempt to automatically assign new issues based on [link:Ownership Rules].',
@@ -121,8 +136,8 @@ export function ErrorDetectorDetails({detector, project}: ErrorDetectorDetailsPr
                 }
               )}
             </Text>
-          </Section>
-          <Section title={t('Prioritize')}>
+          </DetailSection>
+          <DetailSection title={t('Prioritize')}>
             <Text as="p">
               {tct(
                 'New error issues are prioritized based on log level. [link:Learn more about Issue Priority].',
@@ -133,7 +148,7 @@ export function ErrorDetectorDetails({detector, project}: ErrorDetectorDetailsPr
                 }
               )}
             </Text>
-          </Section>
+          </DetailSection>
           <ResolveSection project={project} />
           <DetectorExtraDetails>
             <DetectorExtraDetails.DateCreated detector={detector} />

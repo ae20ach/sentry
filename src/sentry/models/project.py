@@ -150,6 +150,7 @@ GETTING_STARTED_DOCS_PLATFORMS = [
     "python-fastapi",
     "python-flask",
     "python-gcpfunctions",
+    "python-litestar",
     "python-pylons",
     "python-pymongo",
     "python-pyramid",
@@ -278,7 +279,7 @@ class Project(Model):
         # This Project has sent transactions
         has_transactions: bool
 
-        # This Project has filters
+        # has_alert_filters is DEPRECATED
         has_alert_filters: bool
 
         # This Project has sessions
@@ -443,14 +444,11 @@ class Project(Model):
     ) -> Any:
         return self.option_manager.get_value(self, key, default, validate)
 
-    def update_option(self, key: str, value: Any, reload_cache: bool = True) -> bool:
+    def update_option(self, key: str, value: Any) -> bool:
         """
         Updates a project option for this project.
-        :param reload_cache: Invalidate the project config and reload the
-        cache. Do not call this with `False` unless you know for sure that
-        it's fine to keep the cached project config.
         """
-        return self.option_manager.set_value(self, key, value, reload_cache=reload_cache)
+        return self.option_manager.set_value(self, key, value)
 
     def delete_option(self, key: str) -> None:
         self.option_manager.unset_value(self, key)
@@ -880,7 +878,9 @@ class Project(Model):
     def write_relocation_import(
         self, scope: ImportScope, flags: ImportFlags
     ) -> tuple[int, ImportKind] | None:
-        from sentry.receivers.project_detectors import disable_default_detector_creation
+        from sentry.workflow_engine.receivers.project_detectors import (
+            disable_default_detector_creation,
+        )
 
         with disable_default_detector_creation():
             return super().write_relocation_import(scope, flags)

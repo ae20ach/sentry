@@ -1,11 +1,12 @@
 import {useEffect, useMemo} from 'react';
 
+import {ALL_ACCESS_PROJECTS} from 'sentry/components/pageFilters/constants';
 import {normalizeDateTimeParams} from 'sentry/components/pageFilters/parse';
 import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
 import {getApiUrl} from 'sentry/utils/api/getApiUrl';
 import {useInfiniteApiQuery} from 'sentry/utils/queryClient';
 import {useOrganization} from 'sentry/utils/useOrganization';
-import {getGenAiOperationTypeFromSpanOp} from 'sentry/views/insights/pages/agents/utils/query';
+import {getGenAiOperationTypeFromSpanName} from 'sentry/views/insights/pages/agents/utils/query';
 import type {AITraceSpanNode} from 'sentry/views/insights/pages/agents/utils/types';
 import {SpanFields} from 'sentry/views/insights/types';
 import {EAPSpanNodeDetails} from 'sentry/views/performance/newTraceDetails/traceDrawer/details/span';
@@ -29,8 +30,7 @@ interface ConversationApiSpan {
   'precise.start_ts': number;
   project: string;
   'project.id': number;
-  'span.description': string;
-  'span.op': string;
+  'span.name': string;
   'span.status': string;
   span_id: string;
   trace: string;
@@ -44,9 +44,12 @@ interface ConversationApiSpan {
   'gen_ai.response.model'?: string;
   'gen_ai.response.object'?: string;
   'gen_ai.response.text'?: string;
+  'gen_ai.tool.call.arguments'?: string;
+  'gen_ai.tool.input'?: string;
   'gen_ai.tool.name'?: string;
   'gen_ai.usage.total_tokens'?: number;
-  'span.name'?: string;
+  'span.description'?: string;
+  'span.op'?: string;
   'user.email'?: string;
   'user.id'?: string;
   'user.ip'?: string;
@@ -57,7 +60,7 @@ function isGenAiSpan(span: ConversationApiSpan): boolean {
   if (span['gen_ai.operation.type']) {
     return true;
   }
-  return span['span.op']?.startsWith('gen_ai.') ?? false;
+  return span['span.name']?.startsWith('gen_ai.') ?? false;
 }
 
 interface UseConversationResult {
@@ -77,7 +80,7 @@ function createNodeFromApiSpan(
 ): AITraceSpanNode {
   const operationType =
     apiSpan['gen_ai.operation.type'] ||
-    getGenAiOperationTypeFromSpanOp(apiSpan['span.op']);
+    getGenAiOperationTypeFromSpanName(apiSpan['span.name']);
 
   const duration = apiSpan['precise.finish_ts'] - apiSpan['precise.start_ts'];
   const value: TraceTree.EAPSpan = {
@@ -86,8 +89,8 @@ function createNodeFromApiSpan(
     event_id: apiSpan.span_id,
     event_type: 'span',
     is_transaction: false,
-    op: apiSpan['span.op'],
-    description: apiSpan['span.description'] || apiSpan['span.name'],
+    op: apiSpan['span.name'],
+    description: apiSpan['span.name'],
     start_timestamp: apiSpan['precise.start_ts'],
     end_timestamp: apiSpan['precise.finish_ts'],
     project_id: apiSpan['project.id'],
@@ -98,7 +101,7 @@ function createNodeFromApiSpan(
     sdk_name: '',
     transaction: '',
     transaction_id: '',
-    name: apiSpan['span.description'] || apiSpan['span.name'] || '',
+    name: apiSpan['span.name'] || '',
     errors: [],
     occurrences: [],
     additional_attributes: {
@@ -113,6 +116,8 @@ function createNodeFromApiSpan(
       [SpanFields.GEN_AI_RESPONSE_MODEL]: apiSpan['gen_ai.response.model'] ?? '',
       [SpanFields.GEN_AI_AGENT_NAME]: apiSpan['gen_ai.agent.name'] ?? '',
       [SpanFields.GEN_AI_TOOL_NAME]: apiSpan['gen_ai.tool.name'] ?? '',
+      'gen_ai.tool.call.arguments': apiSpan['gen_ai.tool.call.arguments'] ?? '',
+      'gen_ai.tool.input': apiSpan['gen_ai.tool.input'] ?? '',
       [SpanFields.GEN_AI_USAGE_TOTAL_TOKENS]: apiSpan['gen_ai.usage.total_tokens'] ?? 0,
       [SpanFields.GEN_AI_COST_TOTAL_TOKENS]: apiSpan['gen_ai.cost.total_tokens'] ?? 0,
       [SpanFields.SPAN_STATUS]: apiSpan['span.status'],
@@ -193,10 +198,12 @@ export function useConversation(
   const hasConversationTimestamps =
     conversation.startTimestamp !== undefined && conversation.endTimestamp !== undefined;
 
+  // When conversation timestamps are provided (e.g. from a shared link),
+  // search across all projects and environments so the conversation is found
+  // regardless of which project/environment the page filter is currently set to.
   const queryParams = hasConversationTimestamps
     ? {
-        project: selection.projects,
-        environment: selection.environments,
+        project: [ALL_ACCESS_PROJECTS],
         start: new Date(conversation.startTimestamp! - ONE_HOUR_MS).toISOString(),
         end: new Date(conversation.endTimestamp! + ONE_HOUR_MS).toISOString(),
         per_page: 1000,

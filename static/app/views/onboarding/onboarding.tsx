@@ -23,8 +23,8 @@ import type {OnboardingSelectedSDK} from 'sentry/types/onboarding';
 import type {PlatformKey} from 'sentry/types/project';
 import {defined} from 'sentry/utils';
 import {trackAnalytics} from 'sentry/utils/analytics';
-import {testableTransition} from 'sentry/utils/testableTransition';
 import {normalizeUrl} from 'sentry/utils/url/normalizeUrl';
+import {useExperiment} from 'sentry/utils/useExperiment';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useNavigate} from 'sentry/utils/useNavigate';
 import {useOrganization} from 'sentry/utils/useOrganization';
@@ -117,7 +117,9 @@ interface ContainerVariableProps {
 
 function ContainerVariable(props: PropsWithChildren<ContainerVariableProps>) {
   const newWelcomeUIStep = props.hasNewWelcomeUI && props.id === OnboardingStepId.WELCOME;
-  const Component = newWelcomeUIStep ? ContainerNewWelcomeUI : Container;
+  const Component = newWelcomeUIStep
+    ? OnboardingContainerNewWelcomeUI
+    : OnboardingContainer;
 
   return (
     <Component hasFooter={props.hasFooter || newWelcomeUIStep}>
@@ -143,9 +145,9 @@ function OnboardingStepVariable(props: PropsWithChildren<OnboardingStepVariableP
       animate="animate"
       exit="exit"
       variants={{animate: {}}}
-      transition={testableTransition({
+      transition={{
         staggerChildren: 0.2,
-      })}
+      }}
       key={props.id}
       data-test-id={`onboarding-step-${props.id}`}
     >
@@ -164,7 +166,10 @@ export function OnboardingWithoutContext() {
     onboardingContext.createdProjectSlug ?? onboardingContext.selectedPlatform?.key;
 
   const hasNewWelcomeUI = useHasNewWelcomeUI();
-  const hasScmOnboarding = organization.features.includes('onboarding-scm');
+  const {inExperiment: hasScmOnboarding} = useExperiment({
+    feature: 'onboarding-scm-experiment',
+  });
+
   const onboardingSteps = hasScmOnboarding ? scmOnboardingSteps : legacyOnboardingSteps;
 
   const stepObj = onboardingSteps.find(({id}) => stepId === id);
@@ -255,28 +260,25 @@ export function OnboardingWithoutContext() {
     isRecentCreatedProjectActive: isProjectActive,
   });
 
-  const goNextStep = useCallback(
-    (
-      step: StepDescriptor,
-      platform?: OnboardingSelectedSDK,
-      query?: Record<string, string[]>
-    ) => {
-      const currentStepIndex = onboardingSteps.findIndex(s => s.id === step.id);
-      const nextStep = onboardingSteps[currentStepIndex + 1]!;
+  const goNextStep = (
+    step: StepDescriptor,
+    platform?: OnboardingSelectedSDK,
+    query?: Record<string, string[]>
+  ) => {
+    const currentStepIndex = onboardingSteps.findIndex(s => s.id === step.id);
+    const nextStep = onboardingSteps[currentStepIndex + 1]!;
 
-      if (
-        nextStep.id === OnboardingStepId.SETUP_DOCS &&
-        !platform &&
-        !onboardingContext.selectedPlatform
-      ) {
-        return;
-      }
+    if (
+      nextStep.id === OnboardingStepId.SETUP_DOCS &&
+      !platform &&
+      !onboardingContext.selectedPlatform
+    ) {
+      return;
+    }
 
-      const pathname = `/onboarding/${organization.slug}/${nextStep.id}/`;
-      navigate(query ? normalizeUrl({pathname, query}) : normalizeUrl(pathname));
-    },
-    [organization.slug, navigate, onboardingSteps, onboardingContext.selectedPlatform]
-  );
+    const pathname = `/onboarding/${organization.slug}/${nextStep.id}/`;
+    navigate(query ? normalizeUrl({pathname, query}) : normalizeUrl(pathname));
+  };
 
   const genSkipOnboardingLink = () => {
     const source = `targeted-onboarding-${stepId}`;
@@ -290,7 +292,7 @@ export function OnboardingWithoutContext() {
           onboardingContext.setSelectedPlatform(undefined);
           activateSidebar({
             userClicked: false,
-            source: `targeted_onboarding_select_platform_skip`,
+            source: 'targeted_onboarding_select_platform_skip',
           });
         }}
         to={normalizeUrl(
@@ -351,12 +353,11 @@ export function OnboardingWithoutContext() {
           <BackMotionDiv
             initial="initial"
             animate="visible"
-            transition={testableTransition()}
             variants={{
               initial: {opacity: 0, visibility: 'hidden'},
               visible: {
                 opacity: 1,
-                transition: testableTransition({delay: 1}),
+                transition: {delay: 1},
                 transitionEnd: {
                   visibility: 'visible',
                 },
@@ -402,7 +403,7 @@ function Onboarding() {
   );
 }
 
-const ContainerNewWelcomeUI = styled('div')<{hasFooter: boolean}>`
+const OnboardingContainerNewWelcomeUI = styled('div')<{hasFooter: boolean}>`
   flex-grow: 1;
   display: flex;
   flex-direction: column;
@@ -421,7 +422,7 @@ const ContainerNewWelcomeUI = styled('div')<{hasFooter: boolean}>`
   }
 `;
 
-const Container = styled('div')<{hasFooter: boolean}>`
+const OnboardingContainer = styled('div')<{hasFooter: boolean}>`
   flex-grow: 1;
   display: flex;
   flex-direction: column;

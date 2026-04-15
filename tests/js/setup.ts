@@ -3,15 +3,11 @@
 import '@testing-library/jest-dom';
 
 import {webcrypto} from 'node:crypto';
-import {
-  // @ts-expect-error structuredClone is available in Node 17+ but types don't like it
-  structuredClone as nodeStructuredClone,
-  TextDecoder,
-  TextEncoder,
-} from 'node:util';
+import {TextDecoder, TextEncoder} from 'node:util';
 
 import {type ReactElement} from 'react';
 import {configure as configureRtl} from '@testing-library/react'; // eslint-disable-line no-restricted-imports
+import {MotionGlobalConfig} from 'framer-motion';
 import {enableFetchMocks} from 'jest-fetch-mock';
 import {ConfigFixture} from 'sentry-fixture/config';
 
@@ -40,6 +36,12 @@ enableFetchMocks();
 // framer-motion SVG components fail
 // See https://github.com/jsdom/jsdom/issues/1330
 SVGElement.prototype.getTotalLength ??= () => 1;
+
+/**
+ * Skip all framer-motion animations in tests so components render immediately
+ * without waiting for animation frames or transitions.
+ */
+MotionGlobalConfig.skipAnimations = true;
 
 /**
  * React Testing Library configuration to override the default test id attribute
@@ -204,7 +206,7 @@ DANGEROUS_SET_TEST_HISTORY({
 beforeEach(closeModal);
 
 jest.mock('echarts-for-react/lib/core', function echartsMockFactory() {
-  // We need to do this because `jest.mock` gets hoisted by babel and `React` is not
+  // We need to do this because `jest.mock` gets hoisted before imports and `React` is not
   // guaranteed to be in scope
   const ReactActual = require('react');
 
@@ -356,6 +358,7 @@ Object.defineProperty(window, 'matchMedia', {
 window.IntersectionObserver = class IntersectionObserver {
   root = null;
   rootMargin = '';
+  scrollMargin = '';
   thresholds = [];
   takeRecords = jest.fn();
 
@@ -377,8 +380,12 @@ Object.defineProperty(global.self, 'crypto', {
   },
 });
 
-if (typeof globalThis.structuredClone === 'undefined') {
-  globalThis.structuredClone = nodeStructuredClone;
+if (typeof globalThis.structuredClone !== 'function') {
+  const nodeUtil = require('node:util') as {
+    structuredClone?: typeof globalThis.structuredClone;
+  };
+  globalThis.structuredClone =
+    nodeUtil.structuredClone ?? ((value: unknown) => JSON.parse(JSON.stringify(value)));
 }
 
 if (typeof globalThis.setImmediate === 'undefined') {
@@ -389,7 +396,7 @@ if (typeof globalThis.setImmediate === 'undefined') {
 }
 
 /**
- * it.knownFlake — wraps a known-flaky test for stress-testing in CI.
+ * it.isKnownFlake — wraps a known-flaky test for stress-testing in CI.
  *
  * When RERUN_KNOWN_FLAKY_TESTS is "true" (set by the "Frontend: Rerun Flaky
  * Tests" PR label), the test runs 50x inside a describe block. Otherwise it
@@ -398,7 +405,7 @@ if (typeof globalThis.setImmediate === 'undefined') {
 const FLAKY_RERUN_COUNT = 50;
 
 /* eslint-disable jest/valid-title */
-it.knownFlake = function knownFlake(
+it.isKnownFlake = function isKnownFlake(
   name: string,
   fn: jest.ProvidesCallback,
   timeout?: number

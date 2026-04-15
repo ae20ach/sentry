@@ -3,6 +3,7 @@ import styled from '@emotion/styled';
 import type {Location} from 'history';
 
 import {Alert} from '@sentry/scraps/alert';
+import {Stack} from '@sentry/scraps/layout';
 import {TabList, Tabs} from '@sentry/scraps/tabs';
 
 import Feature from 'sentry/components/acl/feature';
@@ -40,6 +41,8 @@ import {useMaxPickableDays} from 'sentry/utils/useMaxPickableDays';
 import {useNavigate} from 'sentry/utils/useNavigate';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {useProjects} from 'sentry/utils/useProjects';
+import {TopBar} from 'sentry/views/navigation/topBar';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 import {LandingAggregateFlamegraph} from 'sentry/views/profiling/landingAggregateFlamegraph';
 import {Onboarding} from 'sentry/views/profiling/onboarding';
 
@@ -108,32 +111,29 @@ export default function ProfilingContent() {
 
   const tab = decodeTab(location.query.tab);
 
-  const onTabChange = useCallback(
-    (newTab: 'flamegraph' | 'transactions') => {
-      // make sure to reset the state of the tabs
-      dispatchDataState({
-        dataKey: 'flamegraphData',
-        dataState: 'pending',
-      });
-      dispatchDataState({
-        dataKey: 'transactionsTableData',
-        dataState: 'pending',
-      });
+  const onTabChange = (newTab: 'flamegraph' | 'transactions') => {
+    // make sure to reset the state of the tabs
+    dispatchDataState({
+      dataKey: 'flamegraphData',
+      dataState: 'pending',
+    });
+    dispatchDataState({
+      dataKey: 'transactionsTableData',
+      dataState: 'pending',
+    });
 
-      trackAnalytics('profiling_views.landing.tab_change', {
-        organization,
+    trackAnalytics('profiling_views.landing.tab_change', {
+      organization,
+      tab: newTab,
+    });
+    navigate({
+      ...location,
+      query: {
+        ...location.query,
         tab: newTab,
-      });
-      navigate({
-        ...location,
-        query: {
-          ...location.query,
-          tab: newTab,
-        },
-      });
-    },
-    [dispatchDataState, location, navigate, organization]
-  );
+      },
+    });
+  };
 
   const maxPickableDays = useMaxPickableDays({
     dataCategories: [DataCategory.PROFILE_DURATION, DataCategory.PROFILE_DURATION_UI],
@@ -157,7 +157,7 @@ export default function ProfilingContent() {
             : undefined
         }
       >
-        <Layout.Page>
+        <Stack flex={1}>
           <ProfilingBetaAlertBanner organization={organization} />
           <Feature features="continuous-profiling-beta-ui">
             <ContinuousProfilingBetaAlertBanner organization={organization} />
@@ -243,7 +243,7 @@ export default function ProfilingContent() {
               )}
             </LayoutMain>
           </LayoutBody>
-        </Layout.Page>
+        </Stack>
       </PageFiltersContainer>
     </SentryDocumentTitle>
   );
@@ -375,6 +375,7 @@ function shouldShowProfilingOnboardingPanel(selection: PageFilters, projects: Pr
 }
 
 function ProfilingContentPageHeader() {
+  const hasPageFrameFeature = useHasPageFrameFeature();
   return (
     <StyledLayoutHeader unified>
       <StyledHeaderContent unified>
@@ -387,7 +388,13 @@ function ProfilingContentPageHeader() {
             )}
           />
         </Layout.Title>
-        <FeedbackButton />
+        {hasPageFrameFeature ? (
+          <TopBar.Slot name="feedback">
+            <FeedbackButton>{null}</FeedbackButton>
+          </TopBar.Slot>
+        ) : (
+          <FeedbackButton />
+        )}
       </StyledHeaderContent>
     </StyledLayoutHeader>
   );
@@ -396,7 +403,6 @@ function ProfilingContentPageHeader() {
 const ALL_FIELDS = [
   'transaction',
   'project.id',
-  'last_seen()',
   'p50()',
   'p75()',
   'p95()',

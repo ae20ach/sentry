@@ -1,6 +1,6 @@
 import {Fragment} from 'react';
 
-import {Flex, Grid} from '@sentry/scraps/layout';
+import {Flex, Grid, Stack} from '@sentry/scraps/layout';
 
 import {AnalyticsArea} from 'sentry/components/analyticsArea';
 import {HookOrDefault} from 'sentry/components/hookOrDefault';
@@ -30,6 +30,8 @@ import {
   useQueryParamsTitle,
 } from 'sentry/views/explore/queryParams/context';
 import {TraceItemDataset} from 'sentry/views/explore/types';
+import {TopBar} from 'sentry/views/navigation/topBar';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 import {ReplaysFilters} from 'sentry/views/replays/list/filters';
 import {ReplayIndexContainer} from 'sentry/views/replays/list/replayIndexContainer';
 import {ReplayIndexTimestampPrefPicker} from 'sentry/views/replays/list/replayIndexTimestampPrefPicker';
@@ -48,6 +50,7 @@ function ReplaysHeader() {
   const title = useQueryParamsTitle();
   const organization = useOrganization();
   const {data: savedQuery} = useGetSavedQuery(pageId);
+  const hasPageFrameFeature = useHasPageFrameFeature();
 
   const hasSavedQueryTitle =
     defined(pageId) && defined(savedQuery) && savedQuery.name.length > 0;
@@ -62,7 +65,10 @@ function ReplaysHeader() {
           />
         ) : null}
         {title && defined(pageId) ? (
-          <ExploreBreadcrumb traceItemDataset={TraceItemDataset.REPLAYS} />
+          <ExploreBreadcrumb
+            traceItemDataset={TraceItemDataset.REPLAYS}
+            savedQueryName={savedQuery?.name}
+          />
         ) : null}
 
         <Layout.Title>
@@ -81,9 +87,15 @@ function ReplaysHeader() {
           )}
         </Layout.Title>
       </Layout.HeaderContent>
-      <Layout.HeaderActions>
-        <ReplayIndexTimestampPrefPicker />
-      </Layout.HeaderActions>
+      {hasPageFrameFeature ? (
+        <TopBar.Slot name="actions">
+          <ReplayIndexTimestampPrefPicker />
+        </TopBar.Slot>
+      ) : (
+        <Layout.HeaderActions>
+          <ReplayIndexTimestampPrefPicker />
+        </Layout.HeaderActions>
+      )}
     </Layout.Header>
   );
 }
@@ -115,7 +127,7 @@ export default function ReplaysListContainer() {
       <SentryDocumentTitle title="Session Replay" orgSlug={organization.slug}>
         <ReplayPreferencesContextProvider prefsStrategy={LocalStorageReplayPreferences}>
           <ReplayQueryParamsProvider>
-            <Layout.Page>
+            <Stack flex={1}>
               <ReplaysHeader />
               <PageFiltersContainer>
                 <Layout.Body>
@@ -140,7 +152,7 @@ export default function ReplaysListContainer() {
                   </Layout.Main>
                 </Layout.Body>
               </PageFiltersContainer>
-            </Layout.Page>
+            </Stack>
           </ReplayQueryParamsProvider>
         </ReplayPreferencesContextProvider>
       </SentryDocumentTitle>

@@ -1,4 +1,4 @@
-import {Fragment, useCallback, useEffect} from 'react';
+import {Fragment, useEffect} from 'react';
 
 import {Badge} from '@sentry/scraps/badge';
 import {Button} from '@sentry/scraps/button';
@@ -56,7 +56,7 @@ export function ExploreTables(props: ExploreTablesProps) {
   const {attributes: stringTags} = useSpanItemAttributes({}, 'string');
   const {attributes: booleanTags} = useSpanItemAttributes({}, 'boolean');
 
-  const openColumnEditor = useCallback(() => {
+  const openColumnEditor = () => {
     openModal(
       modalProps => (
         <ColumnEditorModal
@@ -70,9 +70,9 @@ export function ExploreTables(props: ExploreTablesProps) {
       ),
       {closeEvents: 'escape-key'}
     );
-  }, [booleanTags, fields, numberTags, setFields, stringTags]);
+  };
 
-  const openAggregateColumnEditor = useCallback(() => {
+  const openAggregateColumnEditor = () => {
     openModal(
       modalProps => (
         <AggregateColumnEditorModal
@@ -86,7 +86,7 @@ export function ExploreTables(props: ExploreTablesProps) {
       ),
       {closeEvents: 'escape-key'}
     );
-  }, [aggregateFields, booleanTags, numberTags, setAggregateFields, stringTags]);
+  };
 
   useEffect(() => {
     if (
@@ -108,6 +108,7 @@ export function ExploreTables(props: ExploreTablesProps) {
             <TabList.Item key={Mode.AGGREGATE}>{t('Aggregates')}</TabList.Item>
             <TabList.Item
               key={Tab.ATTRIBUTE_BREAKDOWNS}
+              textValue={t('Attribute Breakdowns')}
               disabled={defined(crossEvents) && crossEvents.length > 0}
             >
               {t('Attribute Breakdowns')}

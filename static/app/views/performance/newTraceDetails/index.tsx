@@ -2,9 +2,8 @@ import {useEffect, useMemo, useRef} from 'react';
 import styled from '@emotion/styled';
 import * as Sentry from '@sentry/react';
 
-import {Flex, type FlexProps} from '@sentry/scraps/layout';
+import {Flex, Stack, type FlexProps} from '@sentry/scraps/layout';
 
-import * as Layout from 'sentry/components/layouts/thirds';
 import {NoProjectMessage} from 'sentry/components/noProjectMessage';
 import {SentryDocumentTitle} from 'sentry/components/sentryDocumentTitle';
 import {t} from 'sentry/locale';
@@ -121,7 +120,11 @@ function TraceViewImpl({traceSlug}: {traceSlug: string}) {
   const trace = useTrace({
     traceSlug,
     timestamp: queryParams.timestamp,
-    additionalAttributes: ['thread.id', 'tags[performance.timeOrigin,number]'],
+    additionalAttributes: [
+      'thread.id',
+      'tags[performance.timeOrigin,number]',
+      'gen_ai.operation.type',
+    ],
   });
   const tree = useTraceTree({traceSlug, trace, replay: null});
 
@@ -138,7 +141,6 @@ function TraceViewImpl({traceSlug}: {traceSlug: string}) {
     logs: logsData,
     traceId: traceSlug,
   });
-  const traceInnerLayoutRef = useRef<HTMLDivElement>(null);
 
   const {tabOptions, currentTab, onTabChange} = useTraceLayoutTabs({
     tree,
@@ -152,7 +154,7 @@ function TraceViewImpl({traceSlug}: {traceSlug: string}) {
       orgSlug={organization.slug}
     >
       <NoProjectMessage organization={organization}>
-        <LayoutPageWithHiddenFooter>
+        <LayoutPageWithHiddenFooter flex={1}>
           <TraceMetaDataHeader
             rootEventResults={rootEventResults}
             tree={tree}
@@ -163,7 +165,7 @@ function TraceViewImpl({traceSlug}: {traceSlug: string}) {
             logs={logsData}
             metrics={metricsData}
           />
-          <TraceInnerLayout ref={traceInnerLayoutRef}>
+          <TraceInnerLayout>
             <ErrorsOnlyWarnings
               tree={tree}
               traceSlug={traceSlug}
@@ -200,9 +202,7 @@ function TraceViewImpl({traceSlug}: {traceSlug: string}) {
             {currentTab === TraceLayoutTabKeys.PROFILES ? (
               <TraceProfiles tree={tree} />
             ) : null}
-            {currentTab === TraceLayoutTabKeys.LOGS ? (
-              <TraceViewLogsSection scrollContainer={traceInnerLayoutRef} />
-            ) : null}
+            {currentTab === TraceLayoutTabKeys.LOGS ? <TraceViewLogsSection /> : null}
             {currentTab === TraceLayoutTabKeys.METRICS ? (
               <TraceViewMetricsProviderWrapper traceSlug={traceSlug}>
                 <TraceViewMetricsSection />
@@ -221,7 +221,9 @@ function TraceViewImpl({traceSlug}: {traceSlug: string}) {
   );
 }
 
-const LayoutPageWithHiddenFooter = styled(Layout.Page)`
+// @TODO(JonasBadalic): Remove this component once the page-frame feature is GA'd
+// When that feature is enabled, the footer is no longer rendered at the bottom of the page.
+const LayoutPageWithHiddenFooter = styled(Stack)`
   ~ footer {
     display: none;
   }

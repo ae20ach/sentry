@@ -12,6 +12,7 @@ from sentry.preprod.models import (
     PreprodComparisonApproval,
 )
 from sentry.preprod.snapshots.models import PreprodSnapshotComparison, PreprodSnapshotMetrics
+from sentry.preprod.snapshots.utils import build_changes_map
 from sentry.preprod.url_utils import get_preprod_artifact_url
 from sentry.preprod.vcs.status_checks.size.tasks import (
     GITHUB_STATUS_CHECK_STATUS_MAPPING,
@@ -109,24 +110,6 @@ def create_preprod_snapshot_status_check_task(
 
     all_artifacts = list(preprod_artifact.get_sibling_artifacts_for_commit())
 
-    client, repository = get_status_check_client(preprod_artifact.project, commit_comparison)
-    if not client or not repository:
-        return
-
-    provider = get_status_check_provider(
-        client,
-        commit_comparison.provider,
-        preprod_artifact.project.organization_id,
-        preprod_artifact.project.organization.slug,
-        repository.integration_id,
-    )
-    if not provider:
-        logger.info(
-            "preprod.snapshot_status_checks.create.not_supported_provider",
-            extra={"provider": commit_comparison.provider},
-        )
-        return
-
     artifact_ids = [a.id for a in all_artifacts]
     snapshot_metrics_qs = PreprodSnapshotMetrics.objects.filter(
         preprod_artifact_id__in=artifact_ids,
@@ -163,6 +146,50 @@ def create_preprod_snapshot_status_check_task(
     base_artifact_map = PreprodArtifact.get_base_artifacts_for_commit(all_artifacts)
 
     is_solo = not base_artifact_map
+
+    if not is_solo:
+        changes_map = build_changes_map(
+            all_artifacts,
+            snapshot_metrics_map,
+            comparisons_map,
+            fail_on_added=fail_on_added,
+            fail_on_removed=fail_on_removed,
+        )
+        for artifact in all_artifacts:
+            if changes_map.get(artifact.id, False) and artifact.id not in approvals_map:
+                # exists()+create() instead of get_or_create: no unique constraint
+                # on this model, so duplicates from races are harmless (cleaned
+                # up by filter().delete()), while get_or_create would crash with
+                # MultipleObjectsReturned if duplicates already exist.
+                if not PreprodComparisonApproval.objects.filter(
+                    preprod_artifact=artifact,
+                    preprod_feature_type=PreprodComparisonApproval.FeatureType.SNAPSHOTS,
+                    approval_status=PreprodComparisonApproval.ApprovalStatus.NEEDS_APPROVAL,
+                ).exists():
+                    PreprodComparisonApproval.objects.create(
+                        preprod_artifact=artifact,
+                        preprod_feature_type=PreprodComparisonApproval.FeatureType.SNAPSHOTS,
+                        approval_status=PreprodComparisonApproval.ApprovalStatus.NEEDS_APPROVAL,
+                    )
+
+    client, repository = get_status_check_client(preprod_artifact.project, commit_comparison)
+    if not client or not repository:
+        return
+
+    provider = get_status_check_provider(
+        client,
+        commit_comparison.provider,
+        preprod_artifact.project.organization_id,
+        preprod_artifact.project.organization.slug,
+        repository.integration_id,
+    )
+    if not provider:
+        logger.info(
+            "preprod.snapshot_status_checks.create.not_supported_provider",
+            extra={"provider": commit_comparison.provider},
+        )
+        return
+
     approve_action_identifier: str | None = None
 
     if is_solo:
@@ -198,13 +225,6 @@ def create_preprod_snapshot_status_check_task(
                 snapshot_metrics_map,
             )
     else:
-        changes_map = _build_changes_map(
-            all_artifacts,
-            snapshot_metrics_map,
-            comparisons_map,
-            fail_on_added=fail_on_added,
-            fail_on_removed=fail_on_removed,
-        )
         status = _compute_snapshot_status(
             all_artifacts,
             snapshot_metrics_map,
@@ -212,6 +232,7 @@ def create_preprod_snapshot_status_check_task(
             approvals_map,
             changes_map,
         )
+
         title, subtitle, summary = format_snapshot_status_check_messages(
             all_artifacts,
             snapshot_metrics_map,
@@ -219,8 +240,13 @@ def create_preprod_snapshot_status_check_task(
             status,
             base_artifact_map,
             changes_map,
+            approvals_map=approvals_map,
         )
-        if any(changes_map.values()):
+        has_unapproved_changes = any(
+            has_changes and artifact_id not in approvals_map
+            for artifact_id, has_changes in changes_map.items()
+        )
+        if has_unapproved_changes:
             approve_action_identifier = APPROVE_SNAPSHOT_ACTION_IDENTIFIER
 
     completed_at: datetime | None = None
@@ -292,40 +318,6 @@ def create_preprod_snapshot_status_check_task(
             "organization_slug": preprod_artifact.project.organization.slug,
         },
     )
-
-
-def _comparison_has_changes(
-    comparison: PreprodSnapshotComparison,
-    fail_on_added: bool = False,
-    fail_on_removed: bool = True,
-) -> bool:
-    return (
-        comparison.images_changed > 0
-        or comparison.images_renamed > 0
-        or (fail_on_added and comparison.images_added > 0)
-        or (fail_on_removed and comparison.images_removed > 0)
-    )
-
-
-def _build_changes_map(
-    artifacts: list[PreprodArtifact],
-    snapshot_metrics_map: dict[int, PreprodSnapshotMetrics],
-    comparisons_map: dict[int, PreprodSnapshotComparison],
-    fail_on_added: bool = False,
-    fail_on_removed: bool = True,
-) -> dict[int, bool]:
-    changes_map: dict[int, bool] = {}
-    for artifact in artifacts:
-        metrics = snapshot_metrics_map.get(artifact.id)
-        if not metrics:
-            continue
-        comparison = comparisons_map.get(metrics.id)
-        if not comparison or comparison.state != PreprodSnapshotComparison.State.SUCCESS:
-            continue
-        changes_map[artifact.id] = _comparison_has_changes(
-            comparison, fail_on_added, fail_on_removed
-        )
-    return changes_map
 
 
 def _compute_snapshot_status(
