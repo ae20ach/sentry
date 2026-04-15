@@ -170,7 +170,15 @@ export function OnboardingWithoutContext() {
     feature: 'onboarding-scm-experiment',
   });
 
-  const onboardingSteps = hasScmOnboarding ? scmOnboardingSteps : legacyOnboardingSteps;
+  const hasProjectDetailsStep = organization.features.includes(
+    'onboarding-scm-project-details'
+  );
+
+  const scmSteps = hasProjectDetailsStep
+    ? scmOnboardingSteps
+    : scmOnboardingSteps.filter(s => s.id !== OnboardingStepId.SCM_PROJECT_DETAILS);
+
+  const onboardingSteps = hasScmOnboarding ? scmSteps : legacyOnboardingSteps;
 
   const stepObj = onboardingSteps.find(({id}) => stepId === id);
   const stepIndex = onboardingSteps.findIndex(({id}) => stepId === id);

@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
+import * as Sentry from '@sentry/react';
 import {LayoutGroup, motion} from 'framer-motion';
 import {PlatformIcon} from 'platformicons';
 
@@ -7,6 +8,7 @@ import {Container, Flex, Grid, Stack} from '@sentry/scraps/layout';
 import {Select} from '@sentry/scraps/select';
 import {Heading} from '@sentry/scraps/text';
 
+import {addErrorMessage} from 'sentry/actionCreators/indicator';
 import {closeModal, openConsoleModal, openModal} from 'sentry/actionCreators/modal';
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
 import {SupportedLanguages} from 'sentry/components/onboarding/frameworkSuggestionModal';
@@ -16,13 +18,16 @@ import {
   getDisabledProducts,
   platformProductAvailability,
 } from 'sentry/components/onboarding/productSelection';
+import {useCreateProject} from 'sentry/components/onboarding/useCreateProject';
 import {platforms} from 'sentry/data/platforms';
 import {t} from 'sentry/locale';
 import type {OnboardingSelectedSDK} from 'sentry/types/onboarding';
+import type {Team} from 'sentry/types/organization';
 import type {PlatformIntegration, PlatformKey} from 'sentry/types/project';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {isDisabledGamingPlatform} from 'sentry/utils/platform';
 import {useOrganization} from 'sentry/utils/useOrganization';
+import {useTeams} from 'sentry/utils/useTeams';
 import {ScmFeatureSelectionCards} from 'sentry/views/onboarding/components/scmFeatureSelectionCards';
 import {ScmPlatformCard} from 'sentry/views/onboarding/components/scmPlatformCard';
 
@@ -84,7 +89,14 @@ export function ScmPlatformFeatures({onComplete}: StepProps) {
     setSelectedPlatform,
     selectedFeatures,
     setSelectedFeatures,
+    setCreatedProjectSlug,
   } = useOnboardingContext();
+
+  const {teams} = useTeams();
+  const createProject = useCreateProject();
+  const hasProjectDetailsStep = organization.features.includes(
+    'onboarding-scm-project-details'
+  );
 
   const [showManualPicker, setShowManualPicker] = useState(false);
 
@@ -306,7 +318,7 @@ export function ScmPlatformFeatures({onComplete}: StepProps) {
     }
   }
 
-  function handleContinue() {
+  async function handleContinue() {
     // Persist derived defaults to context if user accepted them
     if (currentPlatformKey && !selectedPlatform?.key) {
       setPlatform(currentPlatformKey);
@@ -314,6 +326,38 @@ export function ScmPlatformFeatures({onComplete}: StepProps) {
     if (!selectedFeatures) {
       setSelectedFeatures(currentFeatures);
     }
+
+    if (!hasProjectDetailsStep) {
+      // Auto-create project with defaults when SCM_PROJECT_DETAILS step is skipped
+      const platform =
+        selectedPlatform ??
+        (currentPlatformKey
+          ? toSelectedSdk(getPlatformInfo(currentPlatformKey)!)
+          : undefined);
+      if (!platform) {
+        return;
+      }
+
+      const firstAdminTeam = teams.find((team: Team) =>
+        team.access.includes('team:admin')
+      );
+
+      try {
+        const project = await createProject.mutateAsync({
+          name: platform.key,
+          platform,
+          default_rules: true,
+          firstTeamSlug: firstAdminTeam?.slug,
+        });
+        setCreatedProjectSlug(project.slug);
+        onComplete(undefined, {product: currentFeatures});
+      } catch (error) {
+        addErrorMessage(t('Failed to create project'));
+        Sentry.captureException(error);
+      }
+      return;
+    }
+
     onComplete();
   }
 
@@ -459,7 +503,8 @@ export function ScmPlatformFeatures({onComplete}: StepProps) {
                 features: currentFeatures,
               }}
               onClick={handleContinue}
-              disabled={!currentPlatformKey}
+              disabled={!currentPlatformKey || createProject.isPending}
+              busy={createProject.isPending}
             >
               {t('Continue')}
             </Button>
