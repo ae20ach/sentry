@@ -3,6 +3,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 from urllib.parse import urlencode
 
+import orjson
 import responses
 from django.db import router, transaction
 from django.http import HttpRequest, HttpResponse
@@ -11,13 +12,16 @@ from django.urls import reverse
 from rest_framework import status
 
 from sentry.hybridcloud.models.outbox import outbox_context
+from sentry.integrations.messaging.metrics import SeerSlackHaltReason
 from sentry.integrations.middleware.hybrid_cloud.parser import create_async_request_payload
 from sentry.integrations.models.organization_integration import OrganizationIntegration
 from sentry.integrations.slack.message_builder.routing import encode_action_id
 from sentry.integrations.slack.message_builder.types import SlackAction
+from sentry.integrations.slack.requests.event import SeerResolutionResult
 from sentry.integrations.slack.utils.auth import _encode_data
 from sentry.integrations.slack.views import SALT
 from sentry.middleware.integrations.parsers.slack import SlackRequestParser
+from sentry.models.organizationmapping import OrganizationMapping
 from sentry.testutils.cases import TestCase
 from sentry.testutils.outbox import assert_no_webhook_payloads
 from sentry.testutils.silo import assume_test_silo_mode_of, control_silo_test, create_test_cells
@@ -344,3 +348,116 @@ class SlackRequestParserTest(TestCase):
         assert len(organization_ids) == 2
         assert self.organization.id in organization_ids
         assert other_organization.id in organization_ids
+
+
+@control_silo_test(cells=create_test_cells("us"))
+class SlackRequestParserSeerEventRoutingTest(TestCase):
+    """Tests for _maybe_get_response_from_event_request cell routing."""
+
+    factory = RequestFactory()
+
+    def setUp(self) -> None:
+        self.user = self.create_user()
+        self.organization = self.create_organization(owner=self.user)
+        self.integration = self.create_integration(
+            organization=self.organization, external_id="TXXXXXXX1", provider="slack"
+        )
+
+    def get_response(self, request: HttpRequest) -> HttpResponse:
+        return HttpResponse(status=200, content="passthrough")
+
+    def _make_event_request(self, event_type: str = "app_mention"):
+        data = {
+            "type": "event_callback",
+            "team_id": self.integration.external_id,
+            "api_app_id": "AXXXXXXXX1",
+            "event_id": "E1",
+            "event": {
+                "type": event_type,
+                "channel": "C1234567890",
+                "user": "U1234567890",
+                "text": "hello",
+                "ts": "1234567890.123456",
+            },
+        }
+        return self.factory.post(
+            reverse("sentry-integration-slack-event"),
+            data=orjson.dumps(data),
+            content_type="application/json",
+        )
+
+    def test_returns_none_for_non_event_endpoint(self):
+        data = urlencode({"team_id": self.integration.external_id}).encode("utf-8")
+        request = self.factory.post(
+            path=reverse("sentry-integration-slack-commands"),
+            data=data,
+            content_type="application/x-www-form-urlencoded",
+        )
+        parser = SlackRequestParser(request, self.get_response)
+        assert parser._maybe_get_response_from_event_request() is None
+
+    @patch(
+        "sentry.integrations.slack.requests.base.SlackRequest._check_signing_secret",
+        return_value=True,
+    )
+    def test_returns_none_for_non_seer_event(self, mock_signing):
+        request = self._make_event_request(event_type="link_shared")
+        parser = SlackRequestParser(request, self.get_response)
+        assert parser._maybe_get_response_from_event_request() is None
+
+    @patch(
+        "sentry.integrations.slack.requests.base.SlackRequest._check_signing_secret",
+        return_value=True,
+    )
+    @patch(
+        "sentry.integrations.slack.requests.event.SlackEventRequest.resolve_seer_organization",
+    )
+    def test_routes_seer_event_to_correct_cell(self, mock_resolve, mock_signing):
+        mock_resolve.return_value = SeerResolutionResult(
+            organization_id=self.organization.id, error_reason=None
+        )
+        mapping = OrganizationMapping.objects.get(organization_id=self.organization.id)
+        assert mapping.cell_name == "us"
+
+        cell_response = HttpResponse(status=200, content="cell_response")
+        request = self._make_event_request(event_type="app_mention")
+        parser = SlackRequestParser(request, self.get_response)
+
+        with patch.object(
+            parser, "get_response_from_cell_silo", return_value=cell_response
+        ) as mock_cell:
+            result = parser._maybe_get_response_from_event_request()
+
+        assert result is not None
+        assert result.status_code == 200
+        mock_cell.assert_called_once()
+        cell_arg = mock_cell.call_args[1]["cell"]
+        assert cell_arg.name == "us"
+
+    @patch(
+        "sentry.integrations.slack.requests.base.SlackRequest._check_signing_secret",
+        return_value=True,
+    )
+    @patch(
+        "sentry.integrations.slack.requests.event.SlackEventRequest.resolve_seer_organization",
+    )
+    def test_returns_none_on_org_resolution_error(self, mock_resolve, mock_signing):
+        mock_resolve.return_value = SeerResolutionResult(
+            organization_id=None, error_reason=SeerSlackHaltReason.NO_VALID_ORGANIZATION
+        )
+        request = self._make_event_request(event_type="app_mention")
+        parser = SlackRequestParser(request, self.get_response)
+        assert parser._maybe_get_response_from_event_request() is None
+
+    @patch(
+        "sentry.integrations.slack.requests.base.SlackRequest._check_signing_secret",
+        return_value=True,
+    )
+    @patch(
+        "sentry.integrations.slack.requests.event.SlackEventRequest.resolve_seer_organization",
+    )
+    def test_returns_none_on_missing_org_mapping(self, mock_resolve, mock_signing):
+        mock_resolve.return_value = SeerResolutionResult(organization_id=99999, error_reason=None)
+        request = self._make_event_request(event_type="app_mention")
+        parser = SlackRequestParser(request, self.get_response)
+        assert parser._maybe_get_response_from_event_request() is None

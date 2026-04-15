@@ -303,24 +303,24 @@ class SlackRequestParser(BaseRequestParser):
         if not slack_request.is_seer_explorer_request:
             return None
 
-        organization, error_reason = slack_request.resolve_seer_organization()
-        if not organization or error_reason:
+        organization_id, error_reason = slack_request.resolve_seer_organization()
+        if not organization_id or error_reason:
             logger.info(
                 "slack.control.seer_event.organization.not_found",
                 extra={
-                    "organization_id": organization.id,
+                    "organization_id": organization_id,
                     "error_reason": error_reason,
                 },
             )
             return None
 
         try:
-            mapping = OrganizationMapping.objects.get(organization_id=organization.id)
+            mapping = OrganizationMapping.objects.get(organization_id=organization_id)
         except OrganizationMapping.DoesNotExist:
             logger.info(
                 "slack.control.seer_event.organization.mapping.not_found",
                 extra={
-                    "organization_id": organization.id,
+                    "organization_id": organization_id,
                 },
             )
             return None
@@ -331,7 +331,7 @@ class SlackRequestParser(BaseRequestParser):
             logger.info(
                 "slack.control.seer_event.organization.cell.not_found",
                 extra={
-                    "organization_id": organization.id,
+                    "organization_id": organization_id,
                     "cell_name": mapping.cell_name,
                 },
             )

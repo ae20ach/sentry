@@ -80,7 +80,7 @@ class AppMentionEventTest(BaseEventTest):
     def test_app_mention_no_integration(self, mock_apply_async, mock_record):
         """When the integration has no org integrations, we should not dispatch."""
         with patch(
-            "sentry.integrations.slack.webhooks.event.integration_service.get_organization_integrations",
+            "sentry.integrations.slack.requests.event.integration_service.get_organization_integrations",
             return_value=[],
         ):
             with self.feature(SEER_EXPLORER_FEATURES):
@@ -100,7 +100,7 @@ class AppMentionEventTest(BaseEventTest):
         assert_halt_metric(mock_record, SeerSlackHaltReason.NO_VALID_ORGANIZATION)
 
     @patch("sentry.integrations.utils.metrics.EventLifecycle.record_event")
-    @patch("sentry.integrations.slack.webhooks.event.send_identity_link_prompt")
+    @patch("sentry.integrations.slack.requests.event.send_identity_link_prompt")
     @patch("sentry.seer.entrypoints.slack.tasks.process_mention_for_slack.apply_async")
     def test_app_mention_no_identity_prompt_linkage(
         self, mock_apply_async, mock_send_link, mock_record

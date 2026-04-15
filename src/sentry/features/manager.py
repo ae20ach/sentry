@@ -14,7 +14,6 @@ from django.conf import settings
 
 from sentry import options
 from sentry.options.rollout import in_random_rollout
-from sentry.organizations.services.organization.model import RpcOrganization
 from sentry.users.services.user.model import RpcUser
 from sentry.utils import metrics
 from sentry.utils.flag import record_feature_flag
@@ -29,6 +28,7 @@ if TYPE_CHECKING:
     from sentry.features.handler import FeatureHandler
     from sentry.models.organization import Organization
     from sentry.models.project import Project
+    from sentry.organizations.services.organization.model import RpcOrganization
     from sentry.users.models.user import User
 
 
