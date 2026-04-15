@@ -1826,6 +1826,7 @@ function dispatchJestScrollUpdate(container: HTMLElement) {
     return;
   }
 
+  // since we do not tightly control how browsers handle event dispatching, dispatch it async
   window.requestAnimationFrame(() => {
     container.dispatchEvent(new CustomEvent('scroll'));
   });
