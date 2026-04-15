@@ -70,7 +70,7 @@ function useAiSpanWaiter(project: Project) {
 
   const request = useSpans(
     {
-      search: 'span.name:"gen_ai.*"',
+      search: 'span.op:"gen_ai.*"',
       fields: ['id'],
       limit: 1,
       enabled: !!project,

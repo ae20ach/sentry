@@ -8,7 +8,7 @@ export function McpResourceDurationWidget() {
     <GroupedDurationWidget
       groupBy={SpanFields.MCP_RESOURCE_URI}
       referrer={MCPReferrer.MCP_RESOURCE_DURATION_WIDGET}
-      query={`span.name:mcp.server has:${SpanFields.MCP_RESOURCE_URI}`}
+      query={`span.op:mcp.server has:${SpanFields.MCP_RESOURCE_URI}`}
       title={t('Slowest Resources')}
     />
   );

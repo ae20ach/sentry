@@ -36,7 +36,8 @@ describe('useConversation', () => {
           'precise.start_ts': 1000.0,
           project: 'test-project',
           'project.id': 1,
-          'span.name': 'gen_ai.generate',
+          'span.description': 'AI generation',
+          'span.op': 'gen_ai.generate',
           'span.status': 'ok',
           span_id: 'span-1',
           trace: 'trace-1',
@@ -80,7 +81,8 @@ describe('useConversation', () => {
           'precise.start_ts': 1000.0,
           project: 'test-project',
           'project.id': 1,
-          'span.name': 'gen_ai.generate',
+          'span.description': 'AI generation',
+          'span.op': 'gen_ai.generate',
           'span.status': 'ok',
           span_id: 'span-output',
           trace: 'trace-output',
@@ -121,7 +123,8 @@ describe('useConversation', () => {
           'precise.start_ts': 1000.0,
           project: 'test-project',
           'project.id': 1,
-          'span.name': 'gen_ai.generate',
+          'span.description': 'AI generation',
+          'span.op': 'gen_ai.generate',
           'span.status': 'ok',
           span_id: 'span-2',
           trace: 'trace-2',
@@ -158,7 +161,8 @@ describe('useConversation', () => {
           'precise.start_ts': 1000.0,
           project: 'test-project',
           'project.id': 1,
-          'span.name': 'gen_ai.generate',
+          'span.description': 'AI generation',
+          'span.op': 'gen_ai.generate',
           'span.status': 'ok',
           span_id: 'span-3',
           trace: 'trace-3',
@@ -197,7 +201,8 @@ describe('useConversation', () => {
           'precise.start_ts': 1000.0,
           project: 'test-project',
           'project.id': 1,
-          'span.name': 'gen_ai.generate',
+          'span.description': 'AI generation',
+          'span.op': 'gen_ai.generate',
           'span.status': 'ok',
           span_id: 'span-ts',
           trace: 'trace-ts',
@@ -242,18 +247,20 @@ describe('useConversation', () => {
     expect(queryArg).not.toHaveProperty('environment');
   });
 
-  it('uses span.name for description and name fields', async () => {
+  it('falls back to span.name when span.description is empty', async () => {
     MockApiClient.addMockResponse({
-      url: `/organizations/${organization.slug}/ai-conversations/conv-name/`,
+      url: `/organizations/${organization.slug}/ai-conversations/conv-name-fallback/`,
       body: [
         {
-          'gen_ai.conversation.id': 'conv-name',
+          'gen_ai.conversation.id': 'conv-name-fallback',
           parent_span: 'parent-1',
           'precise.finish_ts': 1000.5,
           'precise.start_ts': 1000.0,
           project: 'test-project',
           'project.id': 1,
+          'span.description': '',
           'span.name': 'My AI Agent',
+          'span.op': 'gen_ai.generate',
           'span.status': 'ok',
           span_id: 'span-name',
           trace: 'trace-name',
@@ -263,7 +270,7 @@ describe('useConversation', () => {
     });
 
     const {result} = renderHookWithProviders(
-      () => useConversation({conversationId: 'conv-name'}),
+      () => useConversation({conversationId: 'conv-name-fallback'}),
       {organization}
     );
 
@@ -278,6 +285,44 @@ describe('useConversation', () => {
     expect(value?.name).toBe('My AI Agent');
   });
 
+  it('prefers span.description over span.name when both exist', async () => {
+    MockApiClient.addMockResponse({
+      url: `/organizations/${organization.slug}/ai-conversations/conv-both/`,
+      body: [
+        {
+          'gen_ai.conversation.id': 'conv-both',
+          parent_span: 'parent-1',
+          'precise.finish_ts': 1000.5,
+          'precise.start_ts': 1000.0,
+          project: 'test-project',
+          'project.id': 1,
+          'span.description': 'AI generation',
+          'span.name': 'My AI Agent',
+          'span.op': 'gen_ai.generate',
+          'span.status': 'ok',
+          span_id: 'span-both',
+          trace: 'trace-both',
+          'gen_ai.operation.type': 'ai_client',
+        },
+      ],
+    });
+
+    const {result} = renderHookWithProviders(
+      () => useConversation({conversationId: 'conv-both'}),
+      {organization}
+    );
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.nodes).toHaveLength(1);
+    const node = result.current.nodes[0];
+    const value = node?.value as {description?: string; name?: string};
+    expect(value?.description).toBe('AI generation');
+    expect(value?.name).toBe('AI generation');
+  });
+
   it('sorts nodes by start timestamp for AI spans list', async () => {
     MockApiClient.addMockResponse({
       url: `/organizations/${organization.slug}/ai-conversations/conv-sort/`,
@@ -289,7 +334,8 @@ describe('useConversation', () => {
           'precise.start_ts': 1001.0,
           project: 'test-project',
           'project.id': 1,
-          'span.name': 'Second by start, first by end',
+          'span.description': 'Second by start, first by end',
+          'span.op': 'gen_ai.generate',
           'span.status': 'ok',
           span_id: 'span-b',
           trace: 'trace-sort',
@@ -302,7 +348,8 @@ describe('useConversation', () => {
           'precise.start_ts': 1000.0,
           project: 'test-project',
           'project.id': 1,
-          'span.name': 'First by start, second by end',
+          'span.description': 'First by start, second by end',
+          'span.op': 'gen_ai.generate',
           'span.status': 'ok',
           span_id: 'span-a',
           trace: 'trace-sort',
@@ -337,7 +384,8 @@ describe('useConversation', () => {
           'precise.start_ts': 1000.0,
           project: 'test-project',
           'project.id': 1,
-          'span.name': 'gen_ai.generate',
+          'span.description': 'AI generation',
+          'span.op': 'gen_ai.generate',
           'span.status': 'ok',
           span_id: 'span-ai',
           trace: 'trace-1',
@@ -350,7 +398,8 @@ describe('useConversation', () => {
           'precise.start_ts': 1001.0,
           project: 'test-project',
           'project.id': 1,
-          'span.name': 'http.client',
+          'span.description': 'HTTP request',
+          'span.op': 'http.client',
           'span.status': 'ok',
           span_id: 'span-http',
           trace: 'trace-1',
