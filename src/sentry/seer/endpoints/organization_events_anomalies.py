@@ -33,6 +33,8 @@ class OrganizationEventsAnomaliesEndpoint(OrganizationEventsEndpointBase):
     publish_status = {
         "POST": ApiPublishStatus.EXPERIMENTAL,
     }
+    # This POST previews anomaly-detection config used while authoring metric
+    # alerts/detectors, so it intentionally follows alert-write permissions.
     permission_classes = (OrganizationAlertRulePermission,)
 
     @extend_schema(
