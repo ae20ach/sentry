@@ -11,14 +11,13 @@ from sentry.search.eap.occurrences.query_utils import build_group_id_in_filter
 from sentry.search.eap.types import SearchResolverConfig
 from sentry.search.events.types import SnubaParams
 from sentry.snuba.occurrences_rpc import Occurrences
-from sentry.utils import metrics
 
 logger = logging.getLogger(__name__)
 
 
 # Filters that must be skipped because they have no EAP equivalent.
 # These would silently become dynamic tag lookups in the EAP SearchResolver
-# (resolver.py:1026-1060) and produce incorrect results.
+# and produce incorrect results.
 # TODO: these are potentially gaps between existing issue feed search behavior and EAP search behavior. May need to adddress.
 SKIP_FILTERS: frozenset[str] = frozenset(
     {
@@ -60,7 +59,8 @@ AGGREGATION_FIELD_TO_EAP_FUNCTION: dict[str, str] = {
 def search_filters_to_query_string(
     search_filters: Sequence[SearchFilter],
 ) -> str:
-    """Convert Snuba-relevant SearchFilter objects to an EAP query string.
+    """
+    Convert Snuba-relevant SearchFilter objects to an EAP query string.
 
     Expects filters that have already been stripped of postgres-only fields
     (status, assigned_to, bookmarked_by, etc.) by the caller.
@@ -85,10 +85,6 @@ def _convert_single_filter(sf: SearchFilter) -> str | None:
         return _convert_aggregation_filter(sf)
 
     if key in SKIP_FILTERS:
-        metrics.incr(
-            "eap.search_executor.filter_skipped",
-            tags={"key": key},
-        )
         return None
 
     # error.unhandled requires special inversion logic.
@@ -126,34 +122,7 @@ def _convert_single_filter(sf: SearchFilter) -> str | None:
     return None
 
 
-def _convert_error_unhandled(sf: SearchFilter) -> str | None:
-    """Convert error.unhandled filter to the EAP error.handled attribute.
-
-    error.unhandled:1 (or true)  → !error.handled:1
-    error.unhandled:0 (or false) → error.handled:1
-    !error.unhandled:1           → error.handled:1
-    """
-    raw_value = sf.value.raw_value
-    op = sf.operator
-
-    # Determine if the user is looking for unhandled errors
-    is_looking_for_unhandled = (op == "=" and raw_value in ("1", 1, True, "true")) or (
-        op == "!=" and raw_value in ("0", 0, False, "false")
-    )
-
-    if is_looking_for_unhandled:
-        return "!error.handled:1"
-    else:
-        return "error.handled:1"
-
-
 def _convert_aggregation_filter(sf: SearchFilter) -> str | None:
-    """Convert a legacy aggregation field filter to EAP function syntax.
-
-    e.g. times_seen:>100 → count():>100
-         last_seen:>2024-01-01 → last_seen():>2024-01-01T00:00:00+00:00
-         user_count:>5 → count_unique(user):>5
-    """
     eap_function = AGGREGATION_FIELD_TO_EAP_FUNCTION[sf.key.name]
     formatted_value = _format_value(sf.value.raw_value)
 
@@ -167,6 +136,54 @@ def _convert_aggregation_filter(sf: SearchFilter) -> str | None:
     return None
 
 
+def _convert_error_unhandled(sf: SearchFilter) -> str | None:
+    raw_value = sf.value.raw_value
+    op = sf.operator
+
+    is_looking_for_unhandled = (op == "=" and raw_value in ("1", 1, True, "true")) or (
+        op == "!=" and raw_value in ("0", 0, False, "false")
+    )
+
+    if is_looking_for_unhandled:
+        return "!error.handled:1"
+    else:
+        return "error.handled:1"
+
+
+def _format_value(
+    raw_value: str | int | float | datetime | Sequence[str] | Sequence[float],
+) -> str:
+    if isinstance(raw_value, (list, tuple)):
+        parts = ", ".join(_format_single_value(v) for v in raw_value)
+        return f"[{parts}]"
+    if isinstance(raw_value, datetime):
+        return raw_value.isoformat()
+    if isinstance(raw_value, (int, float)):
+        return str(raw_value)
+    return _format_string_value(str(raw_value))
+
+
+def _format_single_value(value: str | int | float | datetime) -> str:
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, (int, float)):
+        return str(value)
+    return _format_string_value(str(value))
+
+
+def _format_string_value(s: str) -> str:
+    # Wildcard values pass through as-is for the SearchResolver to handle
+    if "*" in s:
+        return s
+
+    # Quote strings containing spaces or special characters
+    if " " in s or '"' in s or "," in s or "(" in s or ")" in s:
+        escaped = s.replace("\\", "\\\\").replace('"', '\\"')
+        return f'"{escaped}"'
+
+    return s
+
+
 # Maps legacy sort_field names (from PostgresSnubaQueryExecutor.sort_strategies values)
 # to (selected_columns, orderby) for EAP queries.
 #
@@ -177,7 +194,7 @@ def _convert_aggregation_filter(sf: SearchFilter) -> str | None:
 #   "user" → "user_count" → uniq(tags[sentry:user])
 #   "trends" → "trends"   → complex ClickHouse expression (not supported)
 #   "recommended" → "recommended" → complex ClickHouse expression (not supported)
-#   "inbox" → ""           → Postgres only (not supported)
+#   "inbox" → ""          → Postgres only (not supported)
 EAP_SORT_STRATEGIES: dict[str, tuple[list[str], list[str]]] = {
     "last_seen": (["group_id", "last_seen()"], ["-last_seen()"]),
     "times_seen": (["group_id", "count()"], ["-count()"]),
@@ -199,14 +216,12 @@ def run_eap_group_search(
     search_filters: Sequence[SearchFilter] | None = None,
     referrer: str = "",
 ) -> tuple[list[tuple[int, Any]], int]:
-    """EAP equivalent of PostgresSnubaQueryExecutor.snuba_search().
+    """
+    EAP equivalent of PostgresSnubaQueryExecutor.snuba_search().
 
     Returns a tuple of:
         * a list of (group_id, sort_score) tuples,
         * total count (0 during double-reading; legacy provides the real total).
-
-    This matches the return signature of snuba_search() so it can be used
-    as the experimental branch in check_and_choose().
     """
     if sort_field not in EAP_SORT_STRATEGIES:
         return ([], 0)
@@ -269,41 +284,7 @@ def run_eap_group_search(
         if group_id is not None:
             tuples.append((int(group_id), score))
 
-    # The EAP RPC TraceItemTableResponse does not include a total count
+    # TODO: the EAP RPC TraceItemTableResponse does not include a total count
     # (unlike Snuba's totals=True). During double-reading the legacy result
     # provides the real total, so we return 0 here.
     return (tuples, 0)
-
-
-def _format_value(
-    raw_value: str | int | float | datetime | Sequence[str] | Sequence[float],
-) -> str:
-    if isinstance(raw_value, (list, tuple)):
-        parts = ", ".join(_format_single_value(v) for v in raw_value)
-        return f"[{parts}]"
-    if isinstance(raw_value, datetime):
-        return raw_value.isoformat()
-    if isinstance(raw_value, (int, float)):
-        return str(raw_value)
-    return _format_string_value(str(raw_value))
-
-
-def _format_single_value(value: str | int | float | datetime) -> str:
-    if isinstance(value, datetime):
-        return value.isoformat()
-    if isinstance(value, (int, float)):
-        return str(value)
-    return _format_string_value(str(value))
-
-
-def _format_string_value(s: str) -> str:
-    # Wildcard values pass through as-is for the SearchResolver to handle
-    if "*" in s:
-        return s
-
-    # Quote strings containing spaces or special characters
-    if " " in s or '"' in s or "," in s or "(" in s or ")" in s:
-        escaped = s.replace("\\", "\\\\").replace('"', '\\"')
-        return f'"{escaped}"'
-
-    return s
