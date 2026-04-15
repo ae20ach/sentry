@@ -20,10 +20,10 @@ from sentry.replays.usecases.reader import has_archived_segment
 
 class ReplayDetailsPermission(ProjectPermission):
     scope_map = {
-        "GET": ["project:read"],
-        "POST": ["project:write"],
-        "PUT": ["project:write"],
-        "DELETE": ["project:write"],
+        "GET": ["project:read", "project:write", "project:admin"],
+        "POST": ["project:write", "project:admin"],
+        "PUT": ["project:write", "project:admin"],
+        "DELETE": ["project:write", "project:admin"],
     }
 
 
