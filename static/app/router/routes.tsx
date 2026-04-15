@@ -2336,6 +2336,16 @@ function buildRoutes(): RouteObject[] {
       path: 'saved-queries/',
       component: make(() => import('sentry/views/explore/savedQueries')),
     },
+    {
+      path: 'attributes/',
+      component: make(() => import('sentry/views/explore/attributes')),
+      children: [
+        {
+          index: true,
+          component: make(() => import('sentry/views/explore/attributes/content')),
+        },
+      ],
+    },
   ];
   const exploreRoutes: SentryRouteObject = {
     path: '/explore/',

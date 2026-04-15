@@ -80,6 +80,14 @@ export function ExploreSecondaryNavigation() {
                     {t('Traces')}
                   </SecondaryNavigation.Link>
                 </SecondaryNavigation.ListItem>
+                <SecondaryNavigation.ListItem>
+                  <SecondaryNavigation.Link
+                    to={`${baseUrl}/attributes/`}
+                    analyticsItemName="explore_attributes"
+                  >
+                    {t('Attributes')}
+                  </SecondaryNavigation.Link>
+                </SecondaryNavigation.ListItem>
               </Feature>
             </Feature>
             <Feature features="ourlogs-enabled">
