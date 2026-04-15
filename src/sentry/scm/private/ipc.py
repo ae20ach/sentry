@@ -19,6 +19,7 @@ import sentry_sdk
 from sentry.scm.errors import SCMProviderEventNotSupported, SCMProviderNotSupported
 from sentry.scm.private.event_stream import SourceCodeManagerEventStream, scm_event_stream
 from sentry.scm.private.webhooks.github import deserialize_github_event
+from sentry.scm.private.webhooks.gitlab import deserialize_gitlab_event
 from sentry.scm.types import (
     CheckRunAction,
     CheckRunEvent,
@@ -306,7 +307,7 @@ def deserialize_raw_event(event: SubscriptionEvent) -> EventType | None:
     elif event["type"] == "bitbucket":
         raise SCMProviderNotSupported("Bitbucket has not been implemented.")
     elif event["type"] == "gitlab":
-        raise SCMProviderNotSupported("GitLab has not been implemented.")
+        return deserialize_gitlab_event(event)
     else:
         assert_never(event["type"])
 
