@@ -1,7 +1,7 @@
 import {Button} from '@sentry/scraps/button';
 
 import {openModal} from 'sentry/actionCreators/modal';
-import {type LogsQueryInfo} from 'sentry/components/useDataExport';
+import {type LogsQueryInfo} from 'sentry/components/dataExport';
 import {IconDownload} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {getExportDisabledTooltip} from 'sentry/views/explore/components/getExportDisabledTooltip';
@@ -12,7 +12,7 @@ type LogsExportModalButtonProps = {
   downloadLocally: boolean;
   isLoading: boolean;
   queryInfo: LogsQueryInfo;
-  tableData: OurLogsResponseItem[] | null | undefined;
+  tableData: OurLogsResponseItem[];
   threshold: number;
   error?: Error | null;
 };

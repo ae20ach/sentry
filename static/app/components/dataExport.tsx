@@ -1,16 +1,24 @@
-import {useEffect, useRef} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import debounce from 'lodash/debounce';
 
 import {Button} from '@sentry/scraps/button';
 
 import Feature from 'sentry/components/acl/feature';
-import {ExportQueryType, useDataExport} from 'sentry/components/useDataExport';
+import {useDataExport, type DataExportPayload} from 'sentry/components/useDataExport';
 import {t} from 'sentry/locale';
+import type {OurLogFieldKey} from 'sentry/views/explore/logs/types';
 
-type DataExportPayload = {
-  queryInfo: any;
-  queryType: ExportQueryType; // TODO(ts): Formalize different possible payloads
-};
+export interface LogsQueryInfo {
+  dataset: 'logs';
+  field: OurLogFieldKey[];
+  project: number[];
+  query: string;
+  sort: string[];
+  end?: string;
+  environment?: string[];
+  start?: string;
+  statsPeriod?: string;
+}
 
 interface DataExportProps {
   payload: DataExportPayload;
@@ -32,11 +40,27 @@ export function DataExport({
   onClick,
 }: DataExportProps): React.ReactElement {
   const unmountedRef = useRef(false);
-  const {isExportWorking, runExport} = useDataExport({
+  const [inProgress, setInProgress] = useState(false);
+  const handleDataExport = useDataExport({
     payload,
     unmountedRef,
+    inProgressCallback: setInProgress,
   });
 
+  // We clear the indicator if export props change so that the user
+  // can fire another export without having to wait for the previous one to finish.
+  useEffect(() => {
+    if (inProgress) {
+      setInProgress(false);
+    }
+    // We are skipping the inProgress dependency because it would have fired on each handleDataExport
+    // call and would have immediately turned off the value giving users no feedback on their click action.
+    // An alternative way to handle this would have probably been to key the component by payload/queryType,
+    // but that seems like it can be a complex object so tracking changes could result in very brittle behavior.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payload.queryType, payload.queryInfo]);
+
+  // Tracking unmounting of the component to prevent setState call on unmounted component
   useEffect(() => {
     return () => {
       unmountedRef.current = true;
@@ -44,15 +68,13 @@ export function DataExport({
   }, []);
 
   const handleClick = () => {
-    debounce(() => {
-      void runExport();
-    }, 500)();
+    debounce(handleDataExport, 500)();
     onClick?.();
   };
 
   return (
     <Feature features={overrideFeatureFlags ? [] : 'organizations:discover-query'}>
-      {isExportWorking ? (
+      {inProgress ? (
         <Button
           size={size}
           priority="default"

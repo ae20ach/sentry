@@ -270,31 +270,4 @@ export function fetchMutation<TResponseData = unknown>(
   });
 }
 
-type FetchMutationWithStatusResult<TData = unknown> = {
-  data: TData;
-  statusCode: number;
-};
-
-/**
- * Like {@link fetchMutation} but returns HTTP status for mutations that must
- * distinguish responses (e.g. 201 created vs 200 OK).
- */
-export function fetchMutationWithStatus<TResponseData = unknown>(
-  variables: ApiMutationVariables
-): Promise<FetchMutationWithStatusResult<TResponseData>> {
-  const {method, url, options, data} = variables;
-
-  return QUERY_API_CLIENT.requestPromise(url, {
-    method,
-    query: options?.query,
-    headers: options?.headers,
-    host: options?.host,
-    data,
-    includeAllArgs: true,
-  }).then(([json, , resp]) => ({
-    data: json as TResponseData,
-    statusCode: resp?.status ?? 0,
-  }));
-}
-
 export * from '@tanstack/react-query';

@@ -1,11 +1,12 @@
-import {useCallback, useEffect} from 'react';
+import {useCallback} from 'react';
 
 import {addErrorMessage, addSuccessMessage} from 'sentry/actionCreators/indicator';
+import type {ResponseMeta} from 'sentry/api';
 import {t} from 'sentry/locale';
-import {fetchMutationWithStatus, useMutation} from 'sentry/utils/queryClient';
-import {RequestError} from 'sentry/utils/requestError/requestError';
+import {downloadFromHref} from 'sentry/utils/downloadFromHref';
+import {useApi} from 'sentry/utils/useApi';
 import {useOrganization} from 'sentry/utils/useOrganization';
-import type {OurLogFieldKey} from 'sentry/views/explore/logs/types';
+import {createLogDownloadFilename} from 'sentry/views/explore/logs/createLogDownloadFilename';
 
 // NOTE: Coordinate with other ExportQueryType (src/sentry/data_export/base.py)
 export enum ExportQueryType {
@@ -14,110 +15,114 @@ export enum ExportQueryType {
   EXPLORE = 'Explore',
 }
 
-export interface LogsQueryInfo {
-  dataset: 'logs';
-  field: OurLogFieldKey[];
-  project: number[];
-  query: string;
-  sort: string[];
-  end?: string;
-  environment?: string[];
-  start?: string;
-  statsPeriod?: string;
-}
-
-type DataExportPayload = {
+export interface DataExportPayload {
   queryInfo: any;
   queryType: ExportQueryType; // TODO(ts): Formalize different possible payloads
-};
+}
 
-type DataExportInvokeOptions = {
-  allColumns: boolean;
-  format: 'csv' | 'json';
-  limit: number;
-};
+interface DataExportOptions {
+  payload: DataExportPayload;
+  inProgressCallback?: (inProgress: boolean) => void;
+  unmountedRef?: React.RefObject<boolean>;
+}
 
-function getDataExportErrorMessage(error: unknown): string {
-  if (error instanceof RequestError) {
-    const detail = error.responseJSON?.detail;
-    if (typeof detail === 'string') {
-      return detail;
-    }
+type DataExportFormat = 'csv' | 'json';
+
+interface DataExportData {
+  checksum: null;
+  dateCreated: string;
+  dateExpired: null;
+  dateFinished: null;
+  fileName: null;
+  id: 99184;
+  query: {info: unknown; type: string};
+  status: string;
+  user: {
+    email: string;
+    id: string;
+    username: string;
+  };
+}
+
+function handleDataExportResponse(
+  data: DataExportData,
+  format: DataExportFormat,
+  response: ResponseMeta | undefined
+) {
+  if (response?.status !== 201) {
+    addSuccessMessage(
+      t("It looks like we're already working on it. Sit tight, we'll email you.")
+    );
+    return;
   }
-  return t("We tried our hardest, but we couldn't export your data. Give it another go.");
+
+  if (!data.fileName) {
+    addSuccessMessage(
+      t("Sit tight. We'll shoot you an email when your data is ready for download.")
+    );
+    return;
+  }
+
+  const filename = createLogDownloadFilename(data.fileName, format);
+  downloadFromHref(
+    filename,
+    `/api/0/organizations/sentry/data-export/${data.id}/?download=true`
+  );
+  addSuccessMessage(t("Downloading '%s' to your browser.", data.fileName));
 }
 
 export function useDataExport({
   payload,
   inProgressCallback,
   unmountedRef,
-}: {
-  payload: DataExportPayload;
-  inProgressCallback?: (inProgress: boolean) => void;
-  unmountedRef?: React.RefObject<boolean>;
-}) {
+}: DataExportOptions) {
   const organization = useOrganization();
+  const api = useApi();
 
-  const mutation = useMutation({
-    mutationFn: (invokeOptions?: DataExportInvokeOptions) => {
-      const data: Record<string, unknown> = {
-        query_type: payload.queryType,
-        query_info: payload.queryInfo,
-      };
-      if (typeof invokeOptions?.limit === 'number') {
-        data.limit = invokeOptions.limit;
-      }
-
-      return fetchMutationWithStatus({
-        method: 'POST',
-        url: `/organizations/${organization.slug}/data-export/`,
-        data,
-      });
-    },
-    onMutate: () => {
+  return useCallback(
+    async (format: DataExportFormat = 'csv') => {
       inProgressCallback?.(true);
-    },
-    onSuccess: result => {
-      if (unmountedRef?.current) {
-        return;
-      }
-      addSuccessMessage(
-        result.statusCode === 201
-          ? t("Sit tight. We'll shoot you an email when your data is ready for download.")
-          : t("It looks like we're already working on it. Sit tight, we'll email you.")
-      );
-    },
-    onError: (error: unknown) => {
-      if (unmountedRef?.current) {
-        return;
-      }
-      addErrorMessage(getDataExportErrorMessage(error));
-      inProgressCallback?.(false);
-    },
-  });
 
-  const {reset} = mutation;
+      // This is a fire and forget request.
+      const result = await api
+        .requestPromise(`/organizations/${organization.slug}/data-export/`, {
+          includeAllArgs: true,
+          method: 'POST',
+          data: {
+            query_type: payload.queryType,
+            query_info: payload.queryInfo,
+          },
+        })
+        .then(([data, _, response]) => {
+          if (!unmountedRef?.current) {
+            handleDataExportResponse(data, format, response);
+          }
+        })
+        .catch(error => {
+          // If component has unmounted, don't do anything
+          if (unmountedRef?.current) {
+            return;
+          }
+          const message =
+            error?.responseJSON?.detail ??
+            t(
+              "We tried our hardest, but we couldn't export your data. Give it another go."
+            );
 
-  useEffect(() => {
-    reset();
-  }, [payload.queryInfo, payload.queryType, reset]);
+          addErrorMessage(message);
+          inProgressCallback?.(false);
+        });
 
-  const runExport = useCallback(
-    async (invokeOptions?: DataExportInvokeOptions): Promise<boolean> => {
-      try {
-        await mutation.mutateAsync(invokeOptions);
-        if (unmountedRef?.current) {
-          return false;
-        }
-        return true;
-      } catch {
-        return false;
-      }
+      // TODO: We'll turn this whole function into a useApiQuery call soon.
+      return result!;
     },
-    [mutation, unmountedRef]
+    [
+      payload.queryInfo,
+      payload.queryType,
+      organization.slug,
+      api,
+      inProgressCallback,
+      unmountedRef,
+    ]
   );
-
-  const isExportWorking = mutation.isPending || mutation.isSuccess;
-
-  return {isExportWorking, mutation, runExport};
 }

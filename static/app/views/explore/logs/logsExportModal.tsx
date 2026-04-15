@@ -8,15 +8,10 @@ import {Heading, Text} from '@sentry/scraps/text';
 
 import {addSuccessMessage} from 'sentry/actionCreators/indicator';
 import type {ModalRenderProps} from 'sentry/actionCreators/modal';
-import {
-  ExportQueryType,
-  useDataExport,
-  type LogsQueryInfo,
-} from 'sentry/components/useDataExport';
+import type {LogsQueryInfo} from 'sentry/components/dataExport';
+import {ExportQueryType, useDataExport} from 'sentry/components/useDataExport';
 import {t} from 'sentry/locale';
-import {downloadFromHref} from 'sentry/utils/downloadFromHref';
 import {QUERY_PAGE_LIMIT} from 'sentry/views/explore/logs/constants';
-import {createLogDownloadFilename} from 'sentry/views/explore/logs/createLogDownloadFilename';
 import {downloadLogs} from 'sentry/views/explore/logs/downloadLogs';
 import type {OurLogsResponseItem} from 'sentry/views/explore/logs/types';
 import {TraceItemDataset} from 'sentry/views/explore/types';
@@ -36,12 +31,12 @@ const ROW_COUNT_VALUES = [
   10_000,
   50_000,
   100_000,
-] as const;
+];
 
 const exportModalFormSchema = z.object({
   allColumns: z.boolean(),
   format: z.enum(['csv', 'json']),
-  limit: z.union(ROW_COUNT_VALUES.map(option => z.literal(option))),
+  limit: z.number(),
 });
 
 type ExportModalFormValues = z.infer<typeof exportModalFormSchema>;
@@ -58,6 +53,25 @@ type LogsExportModalProps = ModalRenderProps & {
   tableData: OurLogsResponseItem[];
   threshold: number;
 };
+
+function generateRowOptions(dataLength: number) {
+  let rowOptions = ROW_COUNT_VALUES.map(value => ({label: value, value}));
+
+  // TODO: right now we only get up to the 1k page limit
+  // Next up I'll try to pipe through the actual logs result number
+  if (dataLength < ROW_COUNT_VALUE_SYNC_LIMIT) {
+    rowOptions = rowOptions.filter(({value}) => value <= dataLength);
+  }
+
+  if (!rowOptions.length || dataLength > rowOptions[rowOptions.length - 1]!.value) {
+    rowOptions.push({
+      label: dataLength,
+      value: dataLength,
+    });
+  }
+
+  return rowOptions;
+}
 
 export function LogsExportModal({
   Body,
@@ -77,12 +91,8 @@ export function LogsExportModal({
     }),
     [queryInfo]
   );
-  const {mutation} = useDataExport({payload});
-  const rowOptions = ROW_COUNT_VALUES.map(value => ({label: value, value}));
-  const rowOptionsAvailable =
-    tableData.length < QUERY_PAGE_LIMIT
-      ? rowOptions.filter(({value}) => value <= tableData.length)
-      : rowOptions;
+  const handleDataExport = useDataExport({payload});
+  const rowOptions = generateRowOptions(tableData.length);
 
   const form = useScrapsForm({
     ...defaultFormOptions,
@@ -91,30 +101,20 @@ export function LogsExportModal({
       onDynamic: exportModalFormSchema,
     },
     onSubmit: async ({value}) => {
-      if (!value.allColumns && value.limit < ROW_COUNT_VALUE_SYNC_LIMIT) {
-        downloadLogs({
-          tableData,
-          fields: queryInfo.field,
-          filename: 'logs',
-          format: value.format,
-          limit: value.limit,
-        });
-        addSuccessMessage(t('Downloading file to your browser.'));
+      if (value.allColumns || value.limit > ROW_COUNT_VALUE_SYNC_LIMIT) {
+        await handleDataExport(value.format);
         return;
       }
 
-      // TODO: How should we type this?
-      const {data} = (await mutation.mutateAsync(value)) as {
-        data: {fileName: string | null; id: string};
-      };
-      if (data.fileName) {
-        const filename = createLogDownloadFilename(data.fileName, value.format);
-        downloadFromHref(
-          filename,
-          `/api/0/organizations/sentry/data-export/${data.id}/?download=true`
-        );
-        addSuccessMessage(t("Downloading '%s' to your browser.", filename));
-      }
+      downloadLogs({
+        tableData,
+        fields: queryInfo.field,
+        filename: 'logs',
+        format: value.format,
+        limit: value.limit,
+      });
+
+      addSuccessMessage(t('Downloading file to your browser.'));
     },
   });
 
@@ -150,12 +150,11 @@ export function LogsExportModal({
             {field => (
               <field.Layout.Stack label={t('Number of rows')}>
                 <field.Select
-                  disabled={rowOptionsAvailable.length === 1}
-                  options={rowOptionsAvailable}
+                  disabled={rowOptions.length === 1}
+                  options={rowOptions}
                   onChange={field.handleChange}
                   value={field.state.value}
-                  // @ts-expect-error -- TODO: scraps & union-of-literal selects?
-                  defaultValue={rowOptionsAvailable[0].value}
+                  defaultValue={rowOptions[0]}
                 />
               </field.Layout.Stack>
             )}
