@@ -180,6 +180,8 @@ def _convert_aggregation_filter(sf: SearchFilter) -> str | None:
 EAP_SORT_STRATEGIES: dict[str, tuple[list[str], list[str]]] = {
     "last_seen": (["group_id", "last_seen()"], ["-last_seen()"]),
     "times_seen": (["group_id", "count()"], ["-count()"]),
+    "first_seen": (["group_id", "first_seen()"], ["-first_seen()"]),
+    "user_count": (["group_id", "count_unique(user)"], ["-count_unique(user)"]),
 }
 
 

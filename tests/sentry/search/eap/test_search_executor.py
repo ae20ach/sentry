@@ -191,9 +191,22 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
         )
         self.store_eap_items([occ])
 
-    def test_sort_and_filter(self) -> None:
-        """Freq sort returns groups ordered by count, and level filter narrows results."""
-        # Freq sort — group1 (3 events) should come before group2 (1 event)
+    def test_last_seen_sort(self) -> None:
+        result, _ = run_eap_group_search(
+            start=self.start,
+            end=self.end,
+            project_ids=[self.project.id],
+            environment_ids=None,
+            sort_field="last_seen",
+            organization=self.organization,
+            referrer="test",
+        )
+        group_ids = [gid for gid, _ in result]
+        assert len(group_ids) == 2
+        assert group_ids[0] == self.group1.id
+        assert group_ids[1] == self.group2.id
+
+    def test_times_seen_sort(self) -> None:
         result, _ = run_eap_group_search(
             start=self.start,
             end=self.end,
@@ -204,10 +217,75 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
             referrer="test",
         )
         group_ids = [gid for gid, _ in result]
+        assert len(group_ids) == 2
         assert group_ids[0] == self.group1.id
-        assert self.group2.id in group_ids
+        assert group_ids[1] == self.group2.id
 
-        # Adding a level filter should exclude group2
+    def test_first_seen_sort(self) -> None:
+        result, _ = run_eap_group_search(
+            start=self.start,
+            end=self.end,
+            project_ids=[self.project.id],
+            environment_ids=None,
+            sort_field="first_seen",
+            organization=self.organization,
+            referrer="test",
+        )
+        group_ids = [gid for gid, _ in result]
+        assert len(group_ids) == 2
+        assert group_ids[0] == self.group1.id
+        assert group_ids[1] == self.group2.id
+
+    def test_user_count_sort(self) -> None:
+        group3 = self.create_group(project=self.project)
+        for i in range(3):
+            occ = self.create_eap_occurrence(
+                group_id=group3.id,
+                level="error",
+                timestamp=self.now - timedelta(minutes=3),
+                tags={"sentry:user": f"user-{i}@example.com"},
+            )
+            self.store_eap_items([occ])
+
+        occ = self.create_eap_occurrence(
+            group_id=self.group1.id,
+            level="error",
+            timestamp=self.now - timedelta(minutes=3),
+            tags={"sentry:user": "only-user@example.com"},
+        )
+        self.store_eap_items([occ])
+
+        result, _ = run_eap_group_search(
+            start=self.start,
+            end=self.end,
+            project_ids=[self.project.id],
+            environment_ids=None,
+            sort_field="user_count",
+            organization=self.organization,
+            referrer="test",
+        )
+        group_ids = [gid for gid, _ in result]
+        assert len(group_ids) == 2
+        assert group_ids[0] == group3.id
+        assert group_ids[1] == self.group1.id
+
+    def test_unsupported_sort_returns_empty(self) -> None:
+        """Unsupported sort strategies (trends, recommended) return empty
+        so the caller can fall back to the legacy result."""
+        result, total = run_eap_group_search(
+            start=self.start,
+            end=self.end,
+            project_ids=[self.project.id],
+            environment_ids=None,
+            sort_field="trends",
+            organization=self.organization,
+            referrer="test",
+        )
+        assert result == []
+        assert total == 0
+
+    def test_filter_narrows_results(self) -> None:
+        """A level filter excludes groups that don't match."""
         result, _ = run_eap_group_search(
             start=self.start,
             end=self.end,
@@ -218,8 +296,8 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
             search_filters=[SearchFilter(SearchKey("level"), "=", SearchValue("error"))],
             referrer="test",
         )
-        result_group_ids = {gid for gid, _ in result}
-        assert result_group_ids == {self.group1.id}
+        group_ids = {gid for gid, _ in result}
+        assert group_ids == {self.group1.id}
 
     def test_group_id_pre_filter(self) -> None:
         """Pre-filtered group_ids are passed as extra_conditions, narrowing results."""
@@ -267,17 +345,32 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
         assert self.group1.id in group_ids
         assert self.group2.id not in group_ids
 
-    def test_unsupported_sort_returns_empty(self) -> None:
-        """Unsupported sort strategies (trends, recommended) return empty
-        so the caller can fall back to the legacy result."""
-        result, total = run_eap_group_search(
+    def test_sort_and_filter(self) -> None:
+        """Combines sorting, filtering, and group_id pre-filtering in one query.
+        Creates 3 groups across 2 levels, pre-filters to 2 of them, filters by
+        level, and verifies the remaining group is returned with correct sort order."""
+        group3 = self.create_group(project=self.project)
+        for i in range(5):
+            occ = self.create_eap_occurrence(
+                group_id=group3.id,
+                level="error",
+                timestamp=self.now - timedelta(minutes=1 + i),
+            )
+            self.store_eap_items([occ])
+
+        result, _ = run_eap_group_search(
             start=self.start,
             end=self.end,
             project_ids=[self.project.id],
             environment_ids=None,
-            sort_field="trends",
+            sort_field="times_seen",
             organization=self.organization,
+            group_ids=[self.group1.id, group3.id],
+            search_filters=[SearchFilter(SearchKey("level"), "=", SearchValue("error"))],
             referrer="test",
         )
-        assert result == []
-        assert total == 0
+        group_ids = [gid for gid, _ in result]
+        assert len(group_ids) == 2
+        assert group_ids[0] == group3.id
+        assert group_ids[1] == self.group1.id
+        assert self.group2.id not in group_ids
