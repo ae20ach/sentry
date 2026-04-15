@@ -1626,7 +1626,7 @@ describe('trace view', () => {
     it.isKnownFlake(
       'highlighted is persisted on node while it is part of the search results',
       async () => {
-        const {virtualizedContainer} = await searchTestSetup();
+        const {container, virtualizedContainer} = await searchTestSetup();
         const searchInput = await screen.findByPlaceholderText('Search in trace');
         await userEvent.type(searchInput, 'trans');
         await waitFor(() => expect(searchInput).toHaveValue('trans'));
@@ -1653,6 +1653,7 @@ describe('trace view', () => {
           ).textContent!.trim();
         });
 
+        await userEvent.click(searchInput);
         await userEvent.type(searchInput, 'act');
         await waitFor(() => expect(searchInput).toHaveValue('transact'));
         await searchToResolve();
@@ -1668,15 +1669,14 @@ describe('trace view', () => {
 
         await userEvent.clear(searchInput);
         await userEvent.click(searchInput);
+        await waitFor(() => expect(searchInput).toHaveFocus());
         await userEvent.paste('this wont match anything');
         await waitFor(() => expect(searchInput).toHaveValue('this wont match anything'));
         await searchToResolve();
 
         // When there is no match, the highlighting is removed
         await waitFor(() => {
-          expect(
-            virtualizedContainer.querySelectorAll('.TraceRow.Highlight')
-          ).toHaveLength(0);
+          expect(container.querySelectorAll('.TraceRow.Highlight')).toHaveLength(0);
         });
       },
       28_000
