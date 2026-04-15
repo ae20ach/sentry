@@ -6,9 +6,12 @@ from django.urls import reverse
 
 from sentry.data_export.base import ExportQueryType, ExportStatus
 from sentry.data_export.models import ExportedData
+from sentry.models.apitoken import ApiToken
 from sentry.search.utils import parse_datetime_string
+from sentry.silo.base import SiloMode
 from sentry.testutils.cases import APITestCase
 from sentry.testutils.helpers.datetime import freeze_time
+from sentry.testutils.silo import assume_test_silo_mode
 from sentry.utils.snuba import MAX_FIELDS
 
 
@@ -58,6 +61,10 @@ class DataExportTest(APITestCase):
                 payload["query_info"].update(extras)
         return payload
 
+    def _create_token(self, scope: str) -> ApiToken:
+        with assume_test_silo_mode(SiloMode.CONTROL):
+            return ApiToken.objects.create(user=self.user, scope_list=[scope])
+
     def test_authorization(self) -> None:
         payload = self.make_payload("issue")
 
@@ -80,30 +87,30 @@ class DataExportTest(APITestCase):
         with self.feature("organizations:discover-query"):
             self.get_error_response(self.org.slug, status_code=403, **modified_payload)
 
-    def test_post_requires_event_write_scope_for_api_keys(self) -> None:
+    def test_post_requires_event_write_scope_for_tokens(self) -> None:
         payload = self.make_payload("issue")
-        api_key = self.create_api_key(organization=self.org, scope_list=["event:read"])
+        token = self._create_token("event:read")
 
         with self.feature("organizations:discover-query"):
             response = self.client.post(
                 self.url,
                 data=payload,
                 format="json",
-                HTTP_AUTHORIZATION=self.create_basic_auth_header(api_key.key),
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
             )
 
         assert response.status_code == 403
 
-    def test_post_allows_event_write_scope_for_api_keys(self) -> None:
+    def test_post_allows_event_write_scope_for_tokens(self) -> None:
         payload = self.make_payload("issue")
-        api_key = self.create_api_key(organization=self.org, scope_list=["event:write"])
+        token = self._create_token("event:write")
 
         with self.feature("organizations:discover-query"):
             response = self.client.post(
                 self.url,
                 data=payload,
                 format="json",
-                HTTP_AUTHORIZATION=self.create_basic_auth_header(api_key.key),
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
             )
 
         assert response.status_code == 201
