@@ -2,7 +2,6 @@ import {useCallback, useMemo} from 'react';
 
 import {DiscoverDatasets} from 'sentry/utils/discover/types';
 import {useChartInterval} from 'sentry/utils/useChartInterval';
-import useOrganization from 'sentry/utils/useOrganization';
 import {formatSort} from 'sentry/views/explore/contexts/pageParamsContext/sortBys';
 import {shouldTriggerHighAccuracy} from 'sentry/views/explore/hooks/useExploreTimeseries';
 import {
@@ -11,16 +10,13 @@ import {
 } from 'sentry/views/explore/hooks/useProgressiveQuery';
 import {useTopEvents} from 'sentry/views/explore/hooks/useTopEvents';
 import type {TraceMetric} from 'sentry/views/explore/metrics/metricQuery';
-import {canUseMetricsMultiAggregateUI} from 'sentry/views/explore/metrics/metricsFlags';
-import {
-  useMetricVisualize,
-  useMetricVisualizes,
-} from 'sentry/views/explore/metrics/metricsQueryParams';
+import {useMetricVisualizes} from 'sentry/views/explore/metrics/metricsQueryParams';
 import {
   useQueryParamsAggregateSortBys,
   useQueryParamsGroupBys,
   useQueryParamsSearch,
 } from 'sentry/views/explore/queryParams/context';
+import {isVisualizeEquation} from 'sentry/views/explore/queryParams/visualize';
 import {useSortedTimeSeries} from 'sentry/views/insights/common/queries/useSortedTimeSeries';
 
 interface UseMetricTimeseriesOptions {
@@ -29,22 +25,14 @@ interface UseMetricTimeseriesOptions {
 }
 
 export function useMetricTimeseries({traceMetric, enabled}: UseMetricTimeseriesOptions) {
-  const organization = useOrganization();
-  const hasMultiVisualize = canUseMetricsMultiAggregateUI(organization);
-
-  const visualize = useMetricVisualize();
   const visualizes = useMetricVisualizes();
 
   const topEvents = useTopEvents();
   const canTriggerHighAccuracy = useCallback(
     (result: ReturnType<typeof useMetricTimeseriesImpl>['result']) => {
-      if (hasMultiVisualize) {
-        return shouldTriggerHighAccuracy(result.data, visualizes, !!topEvents);
-      }
-
-      return shouldTriggerHighAccuracy(result.data, [visualize], !!topEvents);
+      return shouldTriggerHighAccuracy(result.data, visualizes, !!topEvents);
     },
-    [hasMultiVisualize, topEvents, visualize, visualizes]
+    [topEvents, visualizes]
   );
   return useProgressiveQuery<typeof useMetricTimeseriesImpl>({
     queryHookImplementation: useMetricTimeseriesImpl,
@@ -64,7 +52,6 @@ function useMetricTimeseriesImpl({
   queryExtras,
   enabled,
 }: UseMetricTimeseriesImplOptions) {
-  const visualize = useMetricVisualize();
   const visualizes = useMetricVisualizes();
   const groupBys = useQueryParamsGroupBys();
   const [interval] = useChartInterval();
@@ -72,15 +59,9 @@ function useMetricTimeseriesImpl({
   const search = useQueryParamsSearch();
   const sortBys = useQueryParamsAggregateSortBys();
 
-  const organization = useOrganization();
-  const hasMultiVisualize = canUseMetricsMultiAggregateUI(organization);
-
   const yAxis = useMemo(() => {
-    if (hasMultiVisualize) {
-      return visualizes.map(v => v.yAxis);
-    }
-    return [visualize.yAxis];
-  }, [hasMultiVisualize, visualize.yAxis, visualizes]);
+    return visualizes.map(v => v.yAxis);
+  }, [visualizes]);
 
   const timeseriesResult = useSortedTimeSeries(
     {
@@ -88,7 +69,12 @@ function useMetricTimeseriesImpl({
       yAxis,
       interval,
       fields: [...groupBys, ...yAxis],
-      enabled: enabled && Boolean(traceMetric.name),
+      enabled:
+        enabled &&
+        (Boolean(traceMetric.name) ||
+          visualizes.some(
+            visualize => isVisualizeEquation(visualize) && visualize.expression.text
+          )),
       topEvents,
       orderby: sortBys.map(formatSort),
       ...queryExtras,

@@ -13,7 +13,7 @@ import type {FlamegraphPreferences} from 'sentry/utils/profiling/flamegraph/flam
 import {useFlamegraphPreferences} from 'sentry/utils/profiling/flamegraph/hooks/useFlamegraphPreferences';
 import {useDispatchFlamegraphState} from 'sentry/utils/profiling/flamegraph/hooks/useFlamegraphState';
 import {useLocation} from 'sentry/utils/useLocation';
-import useOrganization from 'sentry/utils/useOrganization';
+import {useOrganization} from 'sentry/utils/useOrganization';
 
 interface FlamegraphOptionsMenuProps {
   canvasPoolManager: CanvasPoolManager;
@@ -39,15 +39,15 @@ function FlamegraphOptionsMenu({
     [dispatch]
   );
 
-  const onResetZoom = useCallback(() => {
+  const onResetZoom = () => {
     canvasPoolManager.dispatch('reset zoom', []);
     trackAnalytics('profiling_views.flamegraph.zoom.reset', {
       organization,
       profile_type: profileType,
     });
-  }, [canvasPoolManager, organization, profileType]);
+  };
 
-  const continuousLocationDescriptor: {end: string; start: string} | null = useMemo(
+  const continuousLocationDescriptor = useMemo(
     () => {
       if (
         typeof location.query.start !== 'string' ||

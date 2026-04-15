@@ -4,14 +4,13 @@ import styled from '@emotion/styled';
 import {LinkButton} from '@sentry/scraps/button';
 import {Flex, Grid, type GridProps} from '@sentry/scraps/layout';
 
-import NoProjectEmptyState from 'sentry/components/illustrations/NoProjectEmptyState';
+import {NoProjectEmptyState} from 'sentry/components/illustrations/NoProjectEmptyState';
 import * as Layout from 'sentry/components/layouts/thirds';
 import {t} from 'sentry/locale';
-import {space} from 'sentry/styles/space';
 import type {Organization} from 'sentry/types/organization';
 import {useCanCreateProject} from 'sentry/utils/useCanCreateProject';
-import useProjects from 'sentry/utils/useProjects';
-import {useUser} from 'sentry/utils/useUser';
+import {useHasProjectAccess} from 'sentry/utils/useHasProjectAccess';
+import {useProjects} from 'sentry/utils/useProjects';
 import {makeProjectsPathname} from 'sentry/views/projects/pathname';
 
 type Props = {
@@ -20,22 +19,20 @@ type Props = {
   superuserNeedsToBeProjectMember?: boolean;
 };
 
-function NoProjectMessage({
+export function NoProjectMessage({
   children,
   organization,
   superuserNeedsToBeProjectMember,
 }: Props) {
-  const user = useUser();
-  const {projects, initiallyLoaded: projectsLoaded} = useProjects();
+  const {projects} = useProjects();
+  const {hasProjectAccess, projectsLoaded} = useHasProjectAccess({
+    superuserNeedsToBeProjectMember,
+  });
 
   const canUserCreateProject = useCanCreateProject();
   const canJoinTeam = organization.access.includes('team:read');
 
   const orgHasProjects = !!projects?.length;
-  const hasProjectAccess =
-    user.isSuperuser && !superuserNeedsToBeProjectMember
-      ? !!projects?.some(p => p.hasAccess)
-      : !!projects?.some(p => p.isMember && p.hasAccess);
 
   if (hasProjectAccess || !projectsLoaded) {
     return <Fragment>{children}</Fragment>;
@@ -109,15 +106,13 @@ function NoProjectMessage({
   );
 }
 
-export default NoProjectMessage;
-
 const StyledNoProjectEmptyState = styled(NoProjectEmptyState)`
   width: 100%;
   height: auto;
 `;
 
 const HelpMessage = styled('div')`
-  margin-bottom: ${space(2)};
+  margin-bottom: ${p => p.theme.space.xl};
 `;
 
 const Actions = styled((props: GridProps) => (

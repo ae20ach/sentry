@@ -850,11 +850,17 @@ def get_default_comparators() -> dict[str, list[JSONScrubbingComparator]]:
             "sentry.alertrule": [
                 DateUpdatedComparator("date_modified"),
             ],
+            "sentry.codereviewevent": [
+                DateUpdatedComparator("date_added", "date_updated"),
+            ],
             "sentry.dashboardfavoriteuser": [
                 DateUpdatedComparator("date_added", "date_updated"),
             ],
             "sentry.dashboardlastvisited": [
                 DateUpdatedComparator("last_visited", "date_added", "date_updated"),
+            ],
+            "sentry.dashboardrevision": [
+                DateUpdatedComparator("date_added", "date_updated"),
             ],
             "sentry.dataforwarder": [DateUpdatedComparator("date_updated", "date_added")],
             "sentry.dataforwarderproject": [DateUpdatedComparator("date_updated", "date_added")],
@@ -997,6 +1003,12 @@ def get_default_comparators() -> dict[str, list[JSONScrubbingComparator]]:
             "monitors.monitor": [UUID4Comparator("guid")],
             "replays.organizationmemberreplayaccess": [
                 DateUpdatedComparator("date_updated", "date_added")
+            ],
+            "seer.seerprojectrepository": [
+                DateUpdatedComparator("date_updated", "date_added"),
+            ],
+            "seer.seerprojectrepositorybranchoverride": [
+                DateUpdatedComparator("date_updated", "date_added"),
             ],
         },
     )

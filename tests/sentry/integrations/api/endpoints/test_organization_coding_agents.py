@@ -85,7 +85,7 @@ class BaseOrganizationCodingAgentsTest(APITestCase):
 
     endpoint = "sentry-api-0-organization-coding-agents"
 
-    def setUp(self):
+    def setUp(self) -> None:
         super().setUp()
         self.login_as(self.user)
         self._setup_mock_integration()
@@ -196,11 +196,9 @@ class BaseOrganizationCodingAgentsTest(APITestCase):
 
 
 class StoreCodingAgentStatesToSeerTest(APITestCase):
-    def test_batch_function_posts_correct_payload(self):
+    def test_batch_function_posts_correct_payload(self) -> None:
         from datetime import UTC, datetime
         from unittest.mock import MagicMock, patch
-
-        import orjson
 
         from sentry.seer.autofix.coding_agent import store_coding_agent_states_to_seer
         from sentry.seer.autofix.utils import (
@@ -229,16 +227,13 @@ class StoreCodingAgentStatesToSeerTest(APITestCase):
         mocked_response.data = b"{}"
 
         with patch(
-            "sentry.seer.autofix.coding_agent.make_signed_seer_api_request",
+            "sentry.seer.autofix.coding_agent.make_store_coding_agent_states_request",
             return_value=mocked_response,
         ) as mocked_call:
             store_coding_agent_states_to_seer(run_id=5, coding_agent_states=[state1, state2])
 
             mocked_call.assert_called_once()
-            args, kwargs = mocked_call.call_args
-            # path is the second positional arg
-            assert args[1] == "/v1/automation/autofix/coding-agent/state/set"
-            body = orjson.loads(kwargs["body"]) if "body" in kwargs else orjson.loads(args[2])
+            body = mocked_call.call_args[0][0]
             assert body["run_id"] == 5
             assert isinstance(body["coding_agent_states"], list)
             assert len(body["coding_agent_states"]) == 2
@@ -249,7 +244,7 @@ class StoreCodingAgentStatesToSeerTest(APITestCase):
 class OrganizationCodingAgentsGetTest(BaseOrganizationCodingAgentsTest):
     """Test class for GET endpoint functionality."""
 
-    def test_no_integrations(self):
+    def test_no_integrations(self) -> None:
         """Test GET request with no coding agent integrations."""
         organization = self.create_organization(owner=self.user)
 
@@ -258,7 +253,7 @@ class OrganizationCodingAgentsGetTest(BaseOrganizationCodingAgentsTest):
         assert response.status_code == 200
         assert response.data["integrations"] == []
 
-    def test_with_mock_integration(self):
+    def test_with_mock_integration(self) -> None:
         """Test GET request with mocked coding agent integration."""
         organization = self.create_organization(owner=self.user)
 
@@ -337,11 +332,19 @@ class OrganizationCodingAgentsGetTest(BaseOrganizationCodingAgentsTest):
         assert "integrations" in response.data
         assert len(response.data["integrations"]) == 0
 
-    def test_github_copilot_shown_with_feature_flag(self):
-        """Test GET endpoint shows GitHub Copilot when feature flag is enabled."""
+    def _mock_github_copilot_integration(self):
+        mock = Mock()
+        mock.id = 99
+        mock.name = "GitHub Copilot"
+        mock.provider = "github_copilot"
+        return mock
+
+    def test_github_copilot_shown_when_installed_and_feature_flag_enabled(self):
+        """Test GET endpoint shows GitHub Copilot when installed and feature flag is enabled."""
+        copilot = self._mock_github_copilot_integration()
         with (
             self.feature("organizations:integrations-github-copilot-agent"),
-            self.mock_integration_service_calls(integrations=[]),
+            self.mock_integration_service_calls(integrations=[copilot]),
         ):
             response = self.get_success_response(self.organization.slug)
 
@@ -353,16 +356,26 @@ class OrganizationCodingAgentsGetTest(BaseOrganizationCodingAgentsTest):
             assert integrations[0]["requires_identity"] is True
             assert integrations[0]["has_identity"] is False
 
+    def test_github_copilot_not_shown_when_not_installed(self):
+        """Test GET endpoint does not show GitHub Copilot when feature flag is on but integration is not installed."""
+        with (
+            self.feature("organizations:integrations-github-copilot-agent"),
+            self.mock_integration_service_calls(integrations=[]),
+        ):
+            response = self.get_success_response(self.organization.slug)
+            assert response.data["integrations"] == []
+
     @patch(
         "sentry.integrations.api.endpoints.organization_coding_agents.github_copilot_identity_service"
     )
     def test_github_copilot_has_identity_true_when_authenticated(self, mock_identity_service):
         """Test GET endpoint returns has_identity: True when user has GitHub Copilot OAuth token."""
         mock_identity_service.get_access_token_for_user.return_value = "mock-access-token"
+        copilot = self._mock_github_copilot_integration()
 
         with (
             self.feature("organizations:integrations-github-copilot-agent"),
-            self.mock_integration_service_calls(integrations=[]),
+            self.mock_integration_service_calls(integrations=[copilot]),
         ):
             response = self.get_success_response(self.organization.slug)
 
@@ -380,10 +393,11 @@ class OrganizationCodingAgentsGetTest(BaseOrganizationCodingAgentsTest):
     def test_github_copilot_has_identity_false_when_not_authenticated(self, mock_identity_service):
         """Test GET endpoint returns has_identity: False when user doesn't have GitHub Copilot OAuth token."""
         mock_identity_service.get_access_token_for_user.return_value = None
+        copilot = self._mock_github_copilot_integration()
 
         with (
             self.feature("organizations:integrations-github-copilot-agent"),
-            self.mock_integration_service_calls(integrations=[]),
+            self.mock_integration_service_calls(integrations=[copilot]),
         ):
             response = self.get_success_response(self.organization.slug)
 
@@ -402,18 +416,17 @@ class OrganizationCodingAgentsGetTest(BaseOrganizationCodingAgentsTest):
         """Test GET endpoint handles RPC exceptions gracefully when checking GitHub Copilot identity."""
         from sentry.hybridcloud.rpc.service import RpcRemoteException
 
-        # Simulate RPC service failure
         mock_identity_service.get_access_token_for_user.side_effect = RpcRemoteException(
             "github_copilot_identity", "get_access_token_for_user", "Service unavailable"
         )
+        copilot = self._mock_github_copilot_integration()
 
         with (
             self.feature("organizations:integrations-github-copilot-agent"),
-            self.mock_integration_service_calls(integrations=[]),
+            self.mock_integration_service_calls(integrations=[copilot]),
         ):
             response = self.get_success_response(self.organization.slug)
 
-            # Should still return successfully with has_identity set to False
             integrations = response.data["integrations"]
             assert len(integrations) == 1
             assert integrations[0]["provider"] == "github_copilot"
@@ -422,7 +435,7 @@ class OrganizationCodingAgentsGetTest(BaseOrganizationCodingAgentsTest):
                 user_id=self.user.id
             )
 
-    def test_github_copilot_not_shown_without_feature_flag(self):
+    def test_github_copilot_not_shown_without_feature_flag(self) -> None:
         """Test GET endpoint does not show GitHub Copilot without feature flag."""
         with (
             self.feature({"organizations:integrations-github-copilot-agent": False}),
@@ -434,10 +447,26 @@ class OrganizationCodingAgentsGetTest(BaseOrganizationCodingAgentsTest):
             assert len(integrations) == 0
 
 
+class OrganizationCodingAgentsPostCodingDisabledTest(BaseOrganizationCodingAgentsTest):
+    """Test that the endpoint returns 403 when code generation is disabled.
+
+    The check lives in launch_coding_agents_for_run() which raises PermissionDenied.
+    """
+
+    def test_post_blocked_when_coding_disabled(self):
+        self.organization.update_option("sentry:enable_seer_coding", False)
+
+        data = {"integration_id": str(self.integration.id), "run_id": 123}
+        response = self.get_error_response(
+            self.organization.slug, method="post", status_code=403, **data
+        )
+        assert response.data["detail"] == "Code generation is disabled for this organization"
+
+
 class OrganizationCodingAgentsPostParameterValidationTest(BaseOrganizationCodingAgentsTest):
     """Test class for POST endpoint parameter validation."""
 
-    def test_missing_integration_id_and_provider(self):
+    def test_missing_integration_id_and_provider(self) -> None:
         """Test POST endpoint with missing integration_id and provider."""
         data = {"run_id": 123}
         response = self.get_error_response(
@@ -448,7 +477,7 @@ class OrganizationCodingAgentsPostParameterValidationTest(BaseOrganizationCoding
             response.data["non_field_errors"]
         )
 
-    def test_both_integration_id_and_provider_provided(self):
+    def test_both_integration_id_and_provider_provided(self) -> None:
         """Test POST endpoint with both integration_id and provider provided."""
         data = {"run_id": 123, "integration_id": "123", "provider": "github_copilot"}
         response = self.get_error_response(
@@ -459,7 +488,7 @@ class OrganizationCodingAgentsPostParameterValidationTest(BaseOrganizationCoding
             response.data["non_field_errors"]
         )
 
-    def test_invalid_integration_id(self):
+    def test_invalid_integration_id(self) -> None:
         """Test POST endpoint with invalid integration_id."""
         data = {"integration_id": "invalid_id", "run_id": 123}
 
@@ -468,7 +497,7 @@ class OrganizationCodingAgentsPostParameterValidationTest(BaseOrganizationCoding
         )
         assert "integration_id" in response.data
 
-    def test_invalid_provider(self):
+    def test_invalid_provider(self) -> None:
         """Test POST endpoint with invalid provider (not enabled)."""
         data = {"provider": "github_copilot", "run_id": 123}
 
@@ -477,7 +506,7 @@ class OrganizationCodingAgentsPostParameterValidationTest(BaseOrganizationCoding
         )
         assert "GitHub Copilot is not enabled" in response.data["detail"]
 
-    def test_non_coding_agent_integration(self):
+    def test_non_coding_agent_integration(self) -> None:
         """Test POST endpoint with non-coding agent integration."""
         # Create a non-coding agent integration (e.g., Slack)
         slack_integration = self.create_integration(

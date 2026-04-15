@@ -1,6 +1,8 @@
 import {t} from 'sentry/locale';
 import {DisplayType, WidgetType} from 'sentry/views/dashboards/types';
 import type {PrebuiltDashboard} from 'sentry/views/dashboards/utils/prebuiltConfigs';
+import {MCP_OVERVIEW_DASHBOARD_TITLE} from 'sentry/views/dashboards/utils/prebuiltConfigs/ai/settings';
+import {WIDGET_COLUMN_LABELS} from 'sentry/views/dashboards/utils/prebuiltConfigs/settings';
 import {spaceWidgetsEquallyOnRow} from 'sentry/views/dashboards/utils/prebuiltConfigs/utils/spaceWidgetsEquallyOnRow';
 import {SpanFields, SpanFunction} from 'sentry/views/insights/types';
 
@@ -24,7 +26,7 @@ const FIRST_ROW_WIDGETS = spaceWidgetsEquallyOnRow(
           fields: [`count(${SpanFields.SPAN_DURATION})`],
           aggregates: [`count(${SpanFields.SPAN_DURATION})`],
           columns: [],
-          fieldAliases: [t('Count')],
+          fieldAliases: [WIDGET_COLUMN_LABELS.count],
           orderby: `-count(${SpanFields.SPAN_DURATION})`,
         },
       ],
@@ -43,7 +45,7 @@ const FIRST_ROW_WIDGETS = spaceWidgetsEquallyOnRow(
           fields: [SpanFields.MCP_CLIENT_NAME, 'count()'],
           aggregates: ['count()'],
           columns: [SpanFields.MCP_CLIENT_NAME],
-          fieldAliases: [t('Client'), t('Count')],
+          fieldAliases: [t('Client'), WIDGET_COLUMN_LABELS.count],
           orderby: '-count()',
         },
       ],
@@ -63,14 +65,15 @@ const FIRST_ROW_WIDGETS = spaceWidgetsEquallyOnRow(
           fields: [SpanFields.MCP_TRANSPORT, 'count()'],
           aggregates: ['count()'],
           columns: [SpanFields.MCP_TRANSPORT],
-          fieldAliases: [t('Transport'), t('Count')],
+          fieldAliases: [t('Transport'), WIDGET_COLUMN_LABELS.count],
           orderby: '-count()',
         },
       ],
       limit: 3,
     },
   ],
-  0
+  0,
+  {h: 3, minH: 3}
 );
 
 const SECOND_ROW_WIDGETS = spaceWidgetsEquallyOnRow(
@@ -89,8 +92,15 @@ const SECOND_ROW_WIDGETS = spaceWidgetsEquallyOnRow(
           fields: [SpanFields.MCP_TOOL_NAME, `count(${SpanFields.SPAN_DURATION})`],
           aggregates: [`count(${SpanFields.SPAN_DURATION})`],
           columns: [SpanFields.MCP_TOOL_NAME],
-          fieldAliases: [t('Tool'), t('Count')],
+          fieldAliases: [t('Tool'), WIDGET_COLUMN_LABELS.count],
           orderby: `-count(${SpanFields.SPAN_DURATION})`,
+          linkedDashboards: [
+            {
+              dashboardId: '-1',
+              field: SpanFields.MCP_TOOL_NAME,
+              staticDashboardId: 20,
+            },
+          ],
         },
       ],
       limit: 3,
@@ -109,8 +119,15 @@ const SECOND_ROW_WIDGETS = spaceWidgetsEquallyOnRow(
           fields: [SpanFields.MCP_RESOURCE_URI, `count(${SpanFields.SPAN_DURATION})`],
           aggregates: [`count(${SpanFields.SPAN_DURATION})`],
           columns: [SpanFields.MCP_RESOURCE_URI],
-          fieldAliases: [t('Resource'), t('Count')],
+          fieldAliases: [t('Resource'), WIDGET_COLUMN_LABELS.count],
           orderby: `-count(${SpanFields.SPAN_DURATION})`,
+          linkedDashboards: [
+            {
+              dashboardId: '-1',
+              field: SpanFields.MCP_RESOURCE_URI,
+              staticDashboardId: 21,
+            },
+          ],
         },
       ],
       limit: 3,
@@ -129,14 +146,21 @@ const SECOND_ROW_WIDGETS = spaceWidgetsEquallyOnRow(
           fields: [SpanFields.MCP_PROMPT_NAME, `count(${SpanFields.SPAN_DURATION})`],
           aggregates: [`count(${SpanFields.SPAN_DURATION})`],
           columns: [SpanFields.MCP_PROMPT_NAME],
-          fieldAliases: [t('Prompt'), t('Count')],
+          fieldAliases: [t('Prompt'), WIDGET_COLUMN_LABELS.count],
           orderby: `-count(${SpanFields.SPAN_DURATION})`,
+          linkedDashboards: [
+            {
+              dashboardId: '-1',
+              field: SpanFields.MCP_PROMPT_NAME,
+              staticDashboardId: 22,
+            },
+          ],
         },
       ],
       limit: 3,
     },
   ],
-  2,
+  3,
   {h: 3, minH: 3}
 );
 
@@ -154,12 +178,14 @@ const OVERVIEW_TABLE = {
         SpanFields.SPAN_DESCRIPTION,
         'count()',
         `${SpanFunction.FAILURE_RATE}()`,
+        `equation|count_if(${SpanFields.SPAN_STATUS},equals,internal_error)`,
         `avg(${SpanFields.SPAN_DURATION})`,
         `p95(${SpanFields.SPAN_DURATION})`,
       ],
       aggregates: [
         'count()',
         `${SpanFunction.FAILURE_RATE}()`,
+        `equation|count_if(${SpanFields.SPAN_STATUS},equals,internal_error)`,
         `avg(${SpanFields.SPAN_DURATION})`,
         `p95(${SpanFields.SPAN_DURATION})`,
       ],
@@ -168,15 +194,16 @@ const OVERVIEW_TABLE = {
         t('Span Description'),
         t('Requests'),
         t('Error Rate'),
-        t('Avg'),
-        t('P95'),
+        t('Errors'),
+        WIDGET_COLUMN_LABELS.avg,
+        WIDGET_COLUMN_LABELS.p95,
       ],
       orderby: '-count()',
     },
   ],
   layout: {
     x: 0,
-    y: 5,
+    y: 6,
     w: 6,
     h: 4,
     minH: 2,
@@ -186,7 +213,12 @@ const OVERVIEW_TABLE = {
 export const MCP_OVERVIEW_PREBUILT_CONFIG: PrebuiltDashboard = {
   dateCreated: '',
   projects: [],
-  title: 'MCP Overview',
+  title: MCP_OVERVIEW_DASHBOARD_TITLE,
   filters: {},
   widgets: [...FIRST_ROW_WIDGETS, ...SECOND_ROW_WIDGETS, OVERVIEW_TABLE],
+  onboarding: {
+    type: 'custom',
+    componentId: 'mcp',
+    requiredProjectFlags: ['hasInsightsMCP'],
+  },
 };

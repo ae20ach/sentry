@@ -9,19 +9,18 @@ import {
   addLoadingMessage,
   addSuccessMessage,
 } from 'sentry/actionCreators/indicator';
-import LoadingError from 'sentry/components/loadingError';
-import LoadingIndicator from 'sentry/components/loadingIndicator';
-import PluginConfig from 'sentry/components/pluginConfig';
-import SentryDocumentTitle from 'sentry/components/sentryDocumentTitle';
+import {LoadingError} from 'sentry/components/loadingError';
+import {LoadingIndicator} from 'sentry/components/loadingIndicator';
+import {PluginConfig} from 'sentry/components/pluginConfig';
+import {SentryDocumentTitle} from 'sentry/components/sentryDocumentTitle';
 import {t} from 'sentry/locale';
-import {space} from 'sentry/styles/space';
 import type {Plugin} from 'sentry/types/integrations';
 import {trackAnalytics} from 'sentry/utils/analytics';
-import getApiUrl from 'sentry/utils/api/getApiUrl';
+import {getApiUrl} from 'sentry/utils/api/getApiUrl';
 import {fetchMutation, useApiQuery, useMutation} from 'sentry/utils/queryClient';
-import useOrganization from 'sentry/utils/useOrganization';
+import {useOrganization} from 'sentry/utils/useOrganization';
 import {useParams} from 'sentry/utils/useParams';
-import SettingsPageHeader from 'sentry/views/settings/components/settingsPageHeader';
+import {SettingsPageHeader} from 'sentry/views/settings/components/settingsPageHeader';
 import {useProjectSettingsOutlet} from 'sentry/views/settings/project/projectSettingsLayout';
 
 import {useTogglePluginMutation} from './useTogglePluginMutation';
@@ -86,7 +85,7 @@ export default function ProjectPluginDetails() {
         organization,
       });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       addSuccessMessage(t('Plugin was reset'));
       trackAnalytics('integrations.uninstall_completed', {
         integration: pluginId,
@@ -94,6 +93,8 @@ export default function ProjectPluginDetails() {
         view: 'plugin_details',
         organization,
       });
+      // Keep both the toggle state and config form in sync after reset.
+      await Promise.all([refetchPlugins(), refetchPluginDetails()]);
     },
     onError: () => {
       addErrorMessage(t('An error occurred'));
@@ -240,5 +241,5 @@ export default function ProjectPluginDetails() {
 }
 
 const StyledButton = styled(Button)`
-  margin-right: ${space(0.75)};
+  margin-right: ${p => p.theme.space.sm};
 `;

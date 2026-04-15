@@ -3,7 +3,9 @@ import {FieldKind} from 'sentry/utils/fields';
 import {DisplayType, WidgetType} from 'sentry/views/dashboards/types';
 import type {Widget} from 'sentry/views/dashboards/types';
 import type {PrebuiltDashboard} from 'sentry/views/dashboards/utils/prebuiltConfigs';
-import {SpanFields} from 'sentry/views/insights/types';
+import {DASHBOARD_TITLE} from 'sentry/views/dashboards/utils/prebuiltConfigs/mobileVitals/settings';
+import {TABLE_MIN_HEIGHT} from 'sentry/views/dashboards/utils/prebuiltConfigs/settings';
+import {ModuleName, SpanFields} from 'sentry/views/insights/types';
 
 const TRANSACTION_OP_CONDITION = `${SpanFields.TRANSACTION_OP}:[ui.load,navigation]`;
 const COLD_START_CONDITION = `has:${SpanFields.APP_VITALS_START_COLD_VALUE}`;
@@ -11,9 +13,25 @@ const WARM_START_CONDITION = `has:${SpanFields.APP_VITALS_START_WARM_VALUE}`;
 const TTID_CONDITION = `has:${SpanFields.APP_VITALS_TTID_VALUE}`;
 const TTFD_CONDITION = `has:${SpanFields.APP_VITALS_TTFD_VALUE}`;
 
+// Mirrors the appStarts.ts sub-dashboard which uses transaction.op without is_transaction:true.
+// The has: checks already restrict results to spans with app start data. OR is intentional:
+// a screen may only have warm-start data (app was already running) and should still appear.
+const APP_START_CONDITION = `${TRANSACTION_OP_CONDITION} (has:${SpanFields.APP_VITALS_START_COLD_VALUE} OR has:${SpanFields.APP_VITALS_START_WARM_VALUE})`;
+
+// Filters to root transaction spans (is_transaction:true) since TTID/TTFD are only set on
+// root spans. OR is intentional: TTFD can be absent while TTID is present
+// (reportFullyDrawn() is opt-in).
+const SCREEN_LOAD_CONDITION = `is_transaction:true ${TRANSACTION_OP_CONDITION} (has:${SpanFields.APP_VITALS_TTID_VALUE} OR has:${SpanFields.APP_VITALS_TTFD_VALUE})`;
+
+// Uses transaction.op (consistent with APP_START_CONDITION and SCREEN_LOAD_CONDITION) since
+// this table groups by transaction. Requires mobile.total_frames to be present — a single
+// `has:` on the shared denominator, because both the slow-frames and frozen-frames equations
+// are undefined when total_frames is absent.
+const SCREEN_RENDERING_CONDITION = `${TRANSACTION_OP_CONDITION} has:${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT}`;
+
 const COLD_START_BIG_NUMBER_WIDGET: Widget = {
   id: 'cold-start-big-number',
-  title: t('Avg. Cold App Start'),
+  title: t('Average Cold App Start'),
   description: 'Average cold app start duration',
   displayType: DisplayType.BIG_NUMBER,
   widgetType: WidgetType.SPANS,
@@ -46,7 +64,7 @@ const COLD_START_BIG_NUMBER_WIDGET: Widget = {
 
 const WARM_START_BIG_NUMBER_WIDGET: Widget = {
   id: 'warm-start-big-number',
-  title: t('Avg. Warm App Start'),
+  title: t('Average Warm App Start'),
   description: 'Average warm app start duration',
   displayType: DisplayType.BIG_NUMBER,
   widgetType: WidgetType.SPANS,
@@ -79,7 +97,7 @@ const WARM_START_BIG_NUMBER_WIDGET: Widget = {
 
 const AVG_TTID_BIG_NUMBER_WIDGET: Widget = {
   id: 'avg-ttid-big-number',
-  title: t('Avg. TTID'),
+  title: t('Average TTID'),
   description: 'Average time to initial display',
   displayType: DisplayType.BIG_NUMBER,
   widgetType: WidgetType.SPANS,
@@ -106,7 +124,7 @@ const AVG_TTID_BIG_NUMBER_WIDGET: Widget = {
 
 const AVG_TTFD_BIG_NUMBER_WIDGET: Widget = {
   id: 'avg-ttfd-big-number',
-  title: t('Avg. TTFD'),
+  title: t('Average TTFD'),
   description: 'Average time to full display',
   displayType: DisplayType.BIG_NUMBER,
   widgetType: WidgetType.SPANS,
@@ -126,6 +144,36 @@ const AVG_TTFD_BIG_NUMBER_WIDGET: Widget = {
     h: 1,
     x: 3,
     y: 0,
+    w: 1,
+    minH: 1,
+  },
+};
+
+// Uses the Sessions (Release) dataset, so most dashboard global filters (which target Spans)
+// don't apply. Still valuable as a top-level health signal alongside the span-based vitals.
+const CRASH_FREE_SESSION_RATE_BIG_NUMBER_WIDGET: Widget = {
+  id: 'crash-free-session-rate-big-number',
+  title: t('Crash Free Session Rate'),
+  description:
+    'Percentage of sessions that did not crash. Based on session data, so span filters do not apply.',
+  displayType: DisplayType.BIG_NUMBER,
+  widgetType: WidgetType.RELEASE,
+  interval: '1h',
+  thresholds: null,
+  queries: [
+    {
+      name: '',
+      fields: ['crash_free_rate(session)'],
+      aggregates: ['crash_free_rate(session)'],
+      columns: [],
+      conditions: '',
+      orderby: '',
+    },
+  ],
+  layout: {
+    h: 1,
+    x: 3,
+    y: 1,
     w: 1,
     minH: 1,
   },
@@ -152,14 +200,6 @@ const SLOW_FRAME_RATE_WIDGET: Widget = {
         `sum(${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT})`,
         `equation|sum(${SpanFields.APP_VITALS_FRAMES_SLOW_COUNT}) / sum(${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT})`,
       ],
-      fieldMeta: [
-        null,
-        null,
-        {
-          valueType: 'percentage',
-          valueUnit: null,
-        },
-      ],
       selectedAggregate: 2,
       columns: [],
       conditions: TRANSACTION_OP_CONDITION,
@@ -170,7 +210,7 @@ const SLOW_FRAME_RATE_WIDGET: Widget = {
     h: 1,
     x: 0,
     y: 1,
-    w: 2,
+    w: 1,
     minH: 1,
   },
 };
@@ -196,14 +236,6 @@ const FROZEN_FRAME_RATE_WIDGET: Widget = {
         `sum(${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT})`,
         `equation|sum(${SpanFields.APP_VITALS_FRAMES_FROZEN_COUNT}) / sum(${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT})`,
       ],
-      fieldMeta: [
-        null,
-        null,
-        {
-          valueType: 'percentage',
-          valueUnit: null,
-        },
-      ],
       selectedAggregate: 2,
       columns: [],
       conditions: TRANSACTION_OP_CONDITION,
@@ -212,16 +244,16 @@ const FROZEN_FRAME_RATE_WIDGET: Widget = {
   ],
   layout: {
     h: 1,
-    x: 2,
+    x: 1,
     y: 1,
-    w: 2,
+    w: 1,
     minH: 1,
   },
 };
 
 const AVG_FRAME_DELAY_WIDGET: Widget = {
   id: 'avg-frame-delay-big-number',
-  title: t('Avg. Frame Delay'),
+  title: t('Average Frame Delay'),
   description: 'Average frame delay',
   displayType: DisplayType.BIG_NUMBER,
   widgetType: WidgetType.SPANS,
@@ -239,9 +271,9 @@ const AVG_FRAME_DELAY_WIDGET: Widget = {
   ],
   layout: {
     h: 1,
-    x: 4,
+    x: 2,
     y: 1,
-    w: 2,
+    w: 1,
     minH: 1,
   },
 };
@@ -269,8 +301,8 @@ const APP_START_TABLE: Widget = {
         `count(${SpanFields.SPAN_DURATION})`,
       ],
       columns: [SpanFields.TRANSACTION],
-      fieldAliases: ['Screen', 'Cold Start', 'Warm Start', 'Screen Loads'],
-      conditions: COLD_START_CONDITION,
+      fieldAliases: [t('Screen'), t('Cold Start'), t('Warm Start'), t('Screen Loads')],
+      conditions: APP_START_CONDITION,
       orderby: '-count(span.duration)',
       linkedDashboards: [
         {
@@ -286,7 +318,7 @@ const APP_START_TABLE: Widget = {
     x: 0,
     y: 2,
     w: 6,
-    minH: 2,
+    minH: TABLE_MIN_HEIGHT,
   },
 };
 
@@ -313,14 +345,13 @@ const SCREEN_RENDERING_TABLE: Widget = {
         `count(${SpanFields.SPAN_DURATION})`,
       ],
       columns: [SpanFields.TRANSACTION],
-      fieldAliases: ['Transaction', 'Slow Frame %', 'Frozen Frame %', 'Screen Loads'],
-      fieldMeta: [
-        null,
-        {valueType: 'percentage', valueUnit: null},
-        {valueType: 'percentage', valueUnit: null},
-        null,
+      fieldAliases: [
+        t('Transaction'),
+        t('Slow Frame %'),
+        t('Frozen Frame %'),
+        t('Screen Loads'),
       ],
-      conditions: TRANSACTION_OP_CONDITION,
+      conditions: SCREEN_RENDERING_CONDITION,
       orderby: `-count(${SpanFields.SPAN_DURATION})`,
       linkedDashboards: [
         {
@@ -336,7 +367,7 @@ const SCREEN_RENDERING_TABLE: Widget = {
     x: 0,
     y: 8,
     w: 6,
-    minH: 2,
+    minH: TABLE_MIN_HEIGHT,
   },
 };
 
@@ -363,8 +394,8 @@ const SCREEN_LOAD_TABLE: Widget = {
         `count(${SpanFields.SPAN_DURATION})`,
       ],
       columns: [SpanFields.TRANSACTION],
-      fieldAliases: ['Screen', 'TTID', 'TTFD', 'Screen Loads'],
-      conditions: TTID_CONDITION,
+      fieldAliases: [t('Screen'), 'TTID', 'TTFD', t('Screen Loads')],
+      conditions: SCREEN_LOAD_CONDITION,
       orderby: '-count(span.duration)',
       linkedDashboards: [
         {
@@ -380,7 +411,7 @@ const SCREEN_LOAD_TABLE: Widget = {
     x: 0,
     y: 5,
     w: 6,
-    minH: 2,
+    minH: TABLE_MIN_HEIGHT,
   },
 };
 
@@ -395,11 +426,12 @@ const SECOND_ROW_WIDGETS: Widget[] = [
   SLOW_FRAME_RATE_WIDGET,
   FROZEN_FRAME_RATE_WIDGET,
   AVG_FRAME_DELAY_WIDGET,
+  CRASH_FREE_SESSION_RATE_BIG_NUMBER_WIDGET,
 ];
 
 export const MOBILE_VITALS_PREBUILT_CONFIG: PrebuiltDashboard = {
   dateCreated: '',
-  title: t('Mobile Vitals as a Dashboard'),
+  title: DASHBOARD_TITLE,
   projects: [],
   widgets: [
     ...FIRST_ROW_WIDGETS,
@@ -430,4 +462,5 @@ export const MOBILE_VITALS_PREBUILT_CONFIG: PrebuiltDashboard = {
       },
     ],
   },
+  onboarding: {type: 'module', moduleName: ModuleName.MOBILE_VITALS},
 };

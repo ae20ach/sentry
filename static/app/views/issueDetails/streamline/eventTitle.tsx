@@ -1,4 +1,4 @@
-import {Fragment, useCallback, type CSSProperties} from 'react';
+import {type CSSProperties, Fragment} from 'react';
 import {css, useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
 // eslint-disable-next-line no-restricted-imports
@@ -9,7 +9,7 @@ import {Flex} from '@sentry/scraps/layout';
 import {ExternalLink} from '@sentry/scraps/link';
 
 import {useActionableItemsWithProguardErrors} from 'sentry/components/events/interfaces/crashContent/exception/useActionableItems';
-import TimeSince from 'sentry/components/timeSince';
+import {TimeSince} from 'sentry/components/timeSince';
 import {IconCopy, IconWarning} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import type {Event} from 'sentry/types/event';
@@ -20,11 +20,11 @@ import {
   getAnalyticsDataForGroup,
   getShortEventId,
 } from 'sentry/utils/events';
-import useCopyToClipboard from 'sentry/utils/useCopyToClipboard';
-import useOrganization from 'sentry/utils/useOrganization';
+import {useCopyToClipboard} from 'sentry/utils/useCopyToClipboard';
+import {useOrganization} from 'sentry/utils/useOrganization';
 import {useSyncedLocalStorageState} from 'sentry/utils/useSyncedLocalStorageState';
 import {Divider} from 'sentry/views/issueDetails/divider';
-import EventCreatedTooltip from 'sentry/views/issueDetails/eventCreatedTooltip';
+import {EventCreatedTooltip} from 'sentry/views/issueDetails/eventCreatedTooltip';
 import {SectionKey} from 'sentry/views/issueDetails/streamline/context';
 import {getFoldSectionKey} from 'sentry/views/issueDetails/streamline/foldSection';
 import {IssueDetailsJumpTo} from 'sentry/views/issueDetails/streamline/issueDetailsJumpTo';
@@ -68,7 +68,7 @@ export function EventTitle({event, group, ref, ...props}: EventNavigationProps) 
 
   const {copy} = useCopyToClipboard();
 
-  const handleCopyEventId = useCallback(() => {
+  const handleCopyEventId = () => {
     copy(event.id, {successMessage: t('Event ID copied to clipboard')}).then(() => {
       trackAnalytics('issue_details.copy_event_id_clicked', {
         organization,
@@ -77,7 +77,7 @@ export function EventTitle({event, group, ref, ...props}: EventNavigationProps) 
         streamline: true,
       });
     });
-  }, [copy, organization, group, event]);
+  };
 
   return (
     <div {...props} ref={ref}>

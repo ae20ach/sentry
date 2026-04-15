@@ -14,13 +14,12 @@ import type {ModalRenderProps} from 'sentry/actionCreators/modal';
 import {ArithmeticBuilder} from 'sentry/components/arithmeticBuilder';
 import type {Expression} from 'sentry/components/arithmeticBuilder/expression';
 import type {FunctionArgument} from 'sentry/components/arithmeticBuilder/types';
+import {DragReorderButton} from 'sentry/components/dnd/dragReorderButton';
 import {DropdownMenu} from 'sentry/components/dropdownMenu';
 import {SPAN_PROPS_DOCS_URL} from 'sentry/constants';
 import {IconAdd} from 'sentry/icons/iconAdd';
 import {IconDelete} from 'sentry/icons/iconDelete';
-import {IconGrabbable} from 'sentry/icons/iconGrabbable';
 import {t} from 'sentry/locale';
-import {space} from 'sentry/styles/space';
 import type {TagCollection} from 'sentry/types/group';
 import type {Organization} from 'sentry/types/organization';
 import {
@@ -33,7 +32,7 @@ import {
   FieldKind,
   getFieldDefinition,
 } from 'sentry/utils/fields';
-import useOrganization from 'sentry/utils/useOrganization';
+import {useOrganization} from 'sentry/utils/useOrganization';
 import {DragNDropContext} from 'sentry/views/explore/contexts/dragNDropContext';
 import type {GroupBy} from 'sentry/views/explore/contexts/pageParamsContext/aggregateFields';
 import {
@@ -90,7 +89,7 @@ export function AggregateColumnEditorModal({
     return columns.filter(isGroupBy).map(groupBy => groupBy.groupBy);
   }, [columns]);
 
-  const handleApply = useCallback(() => {
+  const handleApply = () => {
     const newColumns: WritableAggregateField[] = [];
 
     for (const col of tempColumns) {
@@ -103,7 +102,7 @@ export function AggregateColumnEditorModal({
 
     onColumnsChange(newColumns);
     closeModal();
-  }, [closeModal, onColumnsChange, tempColumns]);
+  };
 
   const groupByColumnss = tempColumns.filter(isGroupBy);
   const visualizeColumns = tempColumns.filter(isVisualize);
@@ -123,7 +122,7 @@ export function AggregateColumnEditorModal({
             {editableColumns.map((column, i) => {
               return (
                 <ColumnEditorRow
-                  key={column.id}
+                  key={column.uniqueId}
                   organization={organization}
                   canDelete={
                     isGroupBy(column.column) ? canDeleteGroupBy : canDeleteVisualize
@@ -156,18 +155,13 @@ export function AggregateColumnEditorModal({
                     onAction: () =>
                       insertColumn(new VisualizeFunction(DEFAULT_VISUALIZATION)),
                   },
-                  ...(organization.features.includes('visibility-explore-equations')
-                    ? [
-                        {
-                          key: 'add-equation',
-                          label: t('Equation'),
-                          details: t('ex. p50(span.duration) / 2'),
-                          disabled: !canAddVisualize,
-                          onAction: () =>
-                            insertColumn(new VisualizeEquation(EQUATION_PREFIX)),
-                        },
-                      ]
-                    : []),
+                  {
+                    key: 'add-equation',
+                    label: t('Equation'),
+                    details: t('ex. p50(span.duration) / 2'),
+                    disabled: !canAddVisualize,
+                    onAction: () => insertColumn(new VisualizeEquation(EQUATION_PREFIX)),
+                  },
                 ]}
                 trigger={triggerProps => (
                   <Button
@@ -236,13 +230,7 @@ function ColumnEditorRow({
       }}
       {...attributes}
     >
-      <StyledButton
-        aria-label={t('Drag to reorder')}
-        priority="transparent"
-        size="sm"
-        icon={<IconGrabbable size="sm" />}
-        {...listeners}
-      />
+      <StyledDragReorderButton size="sm" iconSize="sm" {...listeners} />
       {isGroupBy(column.column) ? (
         <GroupBySelector
           groupBy={column.column}
@@ -291,7 +279,7 @@ function GroupBySelector({
   stringTags,
   booleanTags,
 }: GroupBySelectorProps) {
-  const options: Array<SelectOption<string>> = useGroupByFields({
+  const options = useGroupByFields({
     groupBys,
     numberTags,
     stringTags,
@@ -374,7 +362,7 @@ function AggregateSelector({
     });
   }, []);
 
-  const argumentOptions: Array<SelectOption<string>> = useVisualizeFields({
+  const argumentOptions = useVisualizeFields({
     numberTags,
     stringTags,
     booleanTags,
@@ -394,21 +382,18 @@ function AggregateSelector({
     [parsedFunction, onChange, visualize]
   );
 
-  const handleArgumentChange = useCallback(
-    (index: number, option: SelectOption<SelectKey>) => {
-      if (typeof option.value === 'string') {
-        let args = cloneDeep(parsedFunction?.arguments);
-        if (args) {
-          args[index] = option.value;
-        } else {
-          args = [option.value];
-        }
-        const newYAxis = `${parsedFunction?.name}(${args.join(',')})`;
-        onChange(visualize.replace({yAxis: newYAxis}));
+  const handleArgumentChange = (index: number, option: SelectOption<SelectKey>) => {
+    if (typeof option.value === 'string') {
+      let args = cloneDeep(parsedFunction?.arguments);
+      if (args) {
+        args[index] = option.value;
+      } else {
+        args = [option.value];
       }
-    },
-    [parsedFunction, onChange, visualize]
-  );
+      const newYAxis = `${parsedFunction?.name}(${args.join(',')})`;
+      onChange(visualize.replace({yAxis: newYAxis}));
+    }
+  };
 
   return (
     <Fragment>
@@ -537,11 +522,16 @@ const RowContainer = styled('div')`
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: ${space(1)};
+  gap: ${p => p.theme.space.md};
 
   :not(:first-child) {
-    margin-top: ${space(1)};
+    margin-top: ${p => p.theme.space.md};
   }
+`;
+
+const StyledDragReorderButton = styled(DragReorderButton)`
+  padding-left: 0;
+  padding-right: 0;
 `;
 
 const StyledButton = styled(Button)`

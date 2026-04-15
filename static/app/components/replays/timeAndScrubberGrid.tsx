@@ -1,4 +1,4 @@
-import {useCallback, useRef} from 'react';
+import {useRef} from 'react';
 import {css} from '@emotion/react';
 import styled from '@emotion/styled';
 
@@ -6,20 +6,19 @@ import {Button} from '@sentry/scraps/button';
 import {Flex, Grid} from '@sentry/scraps/layout';
 
 import {DateTime} from 'sentry/components/dateTime';
-import Duration from 'sentry/components/duration/duration';
-import ReplayTimeline from 'sentry/components/replays/breadcrumbs/replayTimeline';
-import TimelineTooltip from 'sentry/components/replays/breadcrumbs/replayTimelineTooltip';
-import ReplayCurrentTime from 'sentry/components/replays/player/replayCurrentTime';
+import {Duration} from 'sentry/components/duration/duration';
+import {ReplayTimeline} from 'sentry/components/replays/breadcrumbs/replayTimeline';
+import {TimelineTooltip} from 'sentry/components/replays/breadcrumbs/replayTimelineTooltip';
+import {ReplayCurrentTime} from 'sentry/components/replays/player/replayCurrentTime';
 import {PlayerScrubber} from 'sentry/components/replays/player/scrubber';
-import useTimelineMouseTracking from 'sentry/components/replays/player/useTimelineMouseTracking';
+import {useTimelineMouseTracking} from 'sentry/components/replays/player/useTimelineMouseTracking';
 import {IconAdd, IconSubtract} from 'sentry/icons';
 import {t} from 'sentry/locale';
-import {space} from 'sentry/styles/space';
 import {trackAnalytics} from 'sentry/utils/analytics';
-import useTimelineScale from 'sentry/utils/replays/hooks/useTimelineScale';
+import {useTimelineScale} from 'sentry/utils/replays/hooks/useTimelineScale';
 import {useReplayPrefs} from 'sentry/utils/replays/playback/providers/replayPreferencesContext';
 import {useReplayReader} from 'sentry/utils/replays/playback/providers/replayReaderProvider';
-import useOrganization from 'sentry/utils/useOrganization';
+import {useOrganization} from 'sentry/utils/useOrganization';
 
 type TimeAndScrubberGridProps = {
   isCompact?: boolean;
@@ -34,21 +33,21 @@ function TimelineSizeBar({isLoading}: {isLoading?: boolean}) {
   const durationMs = replay?.getDurationMs();
   const maxScale = durationMs ? Math.ceil(durationMs / 60000) : 10;
 
-  const handleZoomOut = useCallback(() => {
+  const handleZoomOut = () => {
     const newScale = Math.max(timelineScale - 1, 1);
     setTimelineScale(newScale);
     trackAnalytics('replay.timeline.zoom-out', {
       organization,
     });
-  }, [timelineScale, setTimelineScale, organization]);
+  };
 
-  const handleZoomIn = useCallback(() => {
+  const handleZoomIn = () => {
     const newScale = Math.min(timelineScale + 1, maxScale);
     setTimelineScale(newScale);
     trackAnalytics('replay.timeline.zoom-in', {
       organization,
     });
-  }, [timelineScale, maxScale, setTimelineScale, organization]);
+  };
 
   return (
     <Grid flow="column" align="center" gap="0">
@@ -78,7 +77,7 @@ function TimelineSizeBar({isLoading}: {isLoading?: boolean}) {
   );
 }
 
-export default function TimeAndScrubberGrid({
+export function TimeAndScrubberGrid({
   isCompact = false,
   showZoom = false,
   isLoading,
@@ -154,7 +153,7 @@ const TimeAndScrubberGridLayout = styled('div')<{isCompact: boolean}>`
   grid-template-areas:
     '. timeline timelineSize'
     'currentTime scrubber duration';
-  grid-column-gap: ${space(1)};
+  grid-column-gap: ${p => p.theme.space.md};
   grid-template-columns: max-content auto max-content;
   align-items: center;
 

@@ -3,7 +3,9 @@ import {FieldKind} from 'sentry/utils/fields';
 import {DisplayType, WidgetType} from 'sentry/views/dashboards/types';
 import type {Widget} from 'sentry/views/dashboards/types';
 import type {PrebuiltDashboard} from 'sentry/views/dashboards/utils/prebuiltConfigs';
-import {SpanFields} from 'sentry/views/insights/types';
+import {APP_STARTS_DASHBOARD_TITLE} from 'sentry/views/dashboards/utils/prebuiltConfigs/mobileVitals/settings';
+import {WIDGET_COLUMN_LABELS} from 'sentry/views/dashboards/utils/prebuiltConfigs/settings';
+import {ModuleName, SpanFields} from 'sentry/views/insights/types';
 
 const COLD_START_CONDITION = `has:${SpanFields.APP_VITALS_START_COLD_VALUE}`;
 const WARM_START_CONDITION = `has:${SpanFields.APP_VITALS_START_WARM_VALUE}`;
@@ -191,7 +193,7 @@ const COLD_START_DEVICE_DISTRIBUTION_WIDGET: Widget = {
       aggregates: [`avg(${SpanFields.APP_VITALS_START_COLD_VALUE})`],
       columns: [SpanFields.DEVICE_CLASS],
       conditions: COLD_START_CONDITION,
-      orderby: `${SpanFields.DEVICE_CLASS}`,
+      orderby: SpanFields.DEVICE_CLASS,
     },
   ],
   layout: {
@@ -218,7 +220,7 @@ const WARM_START_DEVICE_DISTRIBUTION_WIDGET: Widget = {
       aggregates: [`avg(${SpanFields.APP_VITALS_START_WARM_VALUE})`],
       columns: [SpanFields.DEVICE_CLASS],
       conditions: WARM_START_CONDITION,
-      orderby: `${SpanFields.DEVICE_CLASS}`,
+      orderby: SpanFields.DEVICE_CLASS,
     },
   ],
   layout: {
@@ -248,7 +250,7 @@ const COLD_OPERATIONS_TABLE: Widget = {
       ],
       aggregates: [`avg(${SpanFields.SPAN_SELF_TIME})`],
       columns: [SpanFields.SPAN_OP, SpanFields.SPAN_DESCRIPTION],
-      fieldAliases: ['Operation', 'Span Description', 'Average Duration'],
+      fieldAliases: [t('Operation'), t('Span Description'), WIDGET_COLUMN_LABELS.avg],
       conditions: COLD_START_TABLE_OPERATIONS_CONDITION,
       orderby: '-avg(span.self_time)',
     },
@@ -280,7 +282,7 @@ const WARM_OPERATIONS_TABLE: Widget = {
       ],
       aggregates: [`avg(${SpanFields.SPAN_SELF_TIME})`],
       columns: [SpanFields.SPAN_OP, SpanFields.SPAN_DESCRIPTION],
-      fieldAliases: ['Operation', 'Span Description', 'Average Duration'],
+      fieldAliases: [t('Operation'), t('Span Description'), WIDGET_COLUMN_LABELS.avg],
       conditions: WARM_START_TABLE_OPERATIONS_CONDITION,
       orderby: '-avg(span.self_time)',
     },
@@ -313,7 +315,7 @@ const SECOND_ROW_WIDGETS: Widget[] = [
 
 export const MOBILE_VITALS_APP_STARTS_PREBUILT_CONFIG: PrebuiltDashboard = {
   dateCreated: '',
-  title: t('Mobile Vitals App Starts'),
+  title: APP_STARTS_DASHBOARD_TITLE,
   projects: [],
   widgets: [
     ...HEADER_ROW_WIDGETS,
@@ -362,4 +364,5 @@ export const MOBILE_VITALS_APP_STARTS_PREBUILT_CONFIG: PrebuiltDashboard = {
       },
     ],
   },
+  onboarding: {type: 'module', moduleName: ModuleName.APP_START},
 };

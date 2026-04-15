@@ -5,13 +5,15 @@ import throttle from 'lodash/throttle';
 
 import {Tooltip} from '@sentry/scraps/tooltip';
 
-import LoadingIndicator from 'sentry/components/loadingIndicator';
+import {LoadingIndicator} from 'sentry/components/loadingIndicator';
+import {COL_WIDTH_UNDEFINED} from 'sentry/components/tables/gridEditable';
 import {SimpleTable} from 'sentry/components/tables/simpleTable';
 import {IconWarning} from 'sentry/icons/iconWarning';
 import {t} from 'sentry/locale';
-import {parseFunction} from 'sentry/utils/discover/fields';
+import {isEquation, parseFunction} from 'sentry/utils/discover/fields';
 import {prettifyTagKey} from 'sentry/utils/fields';
-import useOrganization from 'sentry/utils/useOrganization';
+import {useOrganization} from 'sentry/utils/useOrganization';
+import type {TableColumn} from 'sentry/views/discover/table/types';
 import {decodeColumnOrder} from 'sentry/views/discover/utils';
 import {useTopEvents} from 'sentry/views/explore/hooks/useTopEvents';
 import {useTraceItemAttributeKeys} from 'sentry/views/explore/hooks/useTraceItemAttributeKeys';
@@ -26,6 +28,9 @@ import {
   TransparentLoadingMask,
 } from 'sentry/views/explore/metrics/metricInfoTabs/metricInfoTabStyles';
 import type {TraceMetric} from 'sentry/views/explore/metrics/metricQuery';
+import {canUseMetricsUIRefresh} from 'sentry/views/explore/metrics/metricsFlags';
+import {useMetricVisualize} from 'sentry/views/explore/metrics/metricsQueryParams';
+import {TraceMetricKnownFieldKey} from 'sentry/views/explore/metrics/types';
 import {
   createTraceMetricFilter,
   getMetricsUnit,
@@ -35,11 +40,27 @@ import {
   useQueryParamsGroupBys,
   useSetQueryParamsAggregateSortBys,
 } from 'sentry/views/explore/queryParams/context';
+import {
+  isVisualizeEquation,
+  isVisualizeFunction,
+} from 'sentry/views/explore/queryParams/visualize';
 import {FieldRenderer} from 'sentry/views/explore/tables/fieldRenderer';
 import {TraceItemDataset} from 'sentry/views/explore/types';
 import {GenericWidgetEmptyStateWarning} from 'sentry/views/performance/landing/widgets/components/selectableList';
 
 const RESULT_LIMIT = 50;
+
+const METRIC_NAME_COLUMN: TableColumn<string> = {
+  key: TraceMetricKnownFieldKey.METRIC_NAME,
+  name: TraceMetricKnownFieldKey.METRIC_NAME,
+  type: 'string',
+  isSortable: false,
+  column: {
+    kind: 'field',
+    field: TraceMetricKnownFieldKey.METRIC_NAME,
+  },
+  width: COL_WIDTH_UNDEFINED,
+};
 
 interface AggregatesTabProps {
   traceMetric: TraceMetric;
@@ -47,15 +68,16 @@ interface AggregatesTabProps {
 }
 
 export function AggregatesTab({traceMetric, isMetricOptionsEmpty}: AggregatesTabProps) {
+  const organization = useOrganization();
+  const hasMetricsUIRefresh = canUseMetricsUIRefresh(organization);
   const topEvents = useTopEvents();
   const tableRef = useRef<HTMLDivElement>(null);
-  const organization = useOrganization();
-  const hasBooleanFilters = organization.features.includes(
-    'search-query-builder-explicit-boolean-filters'
-  );
+  const visualize = useMetricVisualize();
 
   const {result, eventView, fields} = useMetricAggregatesTable({
-    enabled: Boolean(traceMetric.name) && !isMetricOptionsEmpty,
+    enabled: isVisualizeFunction(visualize)
+      ? Boolean(traceMetric.name) && !isMetricOptionsEmpty
+      : isVisualizeEquation(visualize) && Boolean(visualize.expression.text),
     limit: RESULT_LIMIT,
     traceMetric,
   });
@@ -85,14 +107,31 @@ export function AggregatesTab({traceMetric, isMetricOptionsEmpty}: AggregatesTab
   const {attributes: booleanTags} = useTraceItemAttributeKeys({
     traceItemType: TraceItemDataset.TRACEMETRICS,
     type: 'boolean',
-    enabled: Boolean(traceMetricFilter) && hasBooleanFilters,
+    enabled: Boolean(traceMetricFilter),
     query: traceMetricFilter,
   });
 
   const meta = result.meta ?? {};
 
-  const groupByFieldCount = groupBys.length;
-  const aggregateFieldCount = fields.length - groupByFieldCount;
+  // When no group bys are selected, prepend the metric name as a virtual group-by column
+  const displayFields = useMemo(() => {
+    if (groupBys.length === 0 && isVisualizeFunction(visualize)) {
+      return [TraceMetricKnownFieldKey.METRIC_NAME, ...fields];
+    }
+    return fields;
+  }, [groupBys.length, fields, visualize]);
+
+  const displayColumns = useMemo(() => {
+    if (groupBys.length === 0 && isVisualizeFunction(visualize)) {
+      return [METRIC_NAME_COLUMN, ...columns];
+    }
+    return columns;
+  }, [groupBys.length, columns, visualize]);
+
+  // Include the virtual metric name column in the group-by count so grid/divider logic works
+  const groupByFieldCount =
+    groupBys.length === 0 && isVisualizeFunction(visualize) ? 1 : groupBys.length;
+  const aggregateFieldCount = displayFields.length - groupByFieldCount;
 
   const tableStyle = useMemo(() => {
     // First aggregate column gets 1fr, pushing remaining aggregates to the right
@@ -103,23 +142,21 @@ export function AggregatesTab({traceMetric, isMetricOptionsEmpty}: AggregatesTab
         aggregateFieldCount > 1 ? `1fr repeat(${aggregateFieldCount - 1}, auto)` : '1fr';
       return {gridTemplateColumns: `${groupByColumns} ${aggregateColumns}`};
     }
-    if (aggregateFieldCount > 1) {
-      // Only aggregates: 1fr auto ... auto
-      return {gridTemplateColumns: `1fr repeat(${aggregateFieldCount - 1}, auto)`};
-    }
     // Single column or only groupBys
     return {
       gridTemplateColumns:
-        fields.length > 1 ? `repeat(${fields.length - 1}, auto) 1fr` : '1fr',
+        displayFields.length > 1
+          ? `repeat(${displayFields.length - 1}, auto) 1fr`
+          : '1fr',
     };
-  }, [aggregateFieldCount, fields.length, groupByFieldCount]);
+  }, [aggregateFieldCount, displayFields.length, groupByFieldCount]);
 
   const firstColumnOffset = useMemo(() => {
     return groupBys.length > 0 ? '15px' : '8px';
   }, [groupBys]);
 
   const isLastColumn = (index: number) => {
-    return index === fields.length - 1;
+    return !hasMetricsUIRefresh && index === displayFields.length - 1;
   };
 
   // Dividers: between last groupBy and first aggregate, and between all aggregates
@@ -129,16 +166,19 @@ export function AggregatesTab({traceMetric, isMetricOptionsEmpty}: AggregatesTab
       return true;
     }
 
-    // Between aggregate columns (not the last one), we use fields here because we need the total number of columns
-    if (index > groupByFieldCount && index < fields.length) {
+    // Between aggregate columns (not the last one)
+    if (index > groupByFieldCount && index < displayFields.length) {
       return true;
     }
 
     return false;
   };
 
-  // Detect horizontal scroll to conditionally show sticky column shadow
   useEffect(() => {
+    if (hasMetricsUIRefresh) {
+      return undefined;
+    }
+
     const tableElement = tableRef.current;
     if (!tableElement) {
       return undefined;
@@ -147,10 +187,8 @@ export function AggregatesTab({traceMetric, isMetricOptionsEmpty}: AggregatesTab
     const checkScroll = () => {
       const {scrollWidth, clientWidth, scrollLeft} = tableElement;
       const hasOverflow = scrollWidth > clientWidth;
-      // Check if scrolled all the way to the right, use < 1 as threshold to account for precision issues
       const isScrolledFullyRight = Math.abs(scrollLeft + clientWidth - scrollWidth) < 1;
 
-      // Update box-shadow directly on DOM elements (prevents re-renders)
       const shouldShowShadow = hasOverflow && !isScrolledFullyRight;
       tableElement
         .querySelectorAll<HTMLElement>('[data-sticky-column="true"]')
@@ -168,19 +206,14 @@ export function AggregatesTab({traceMetric, isMetricOptionsEmpty}: AggregatesTab
         });
     };
 
-    // Throttle scroll handler to avoid calling this too often
     const throttledCheckScroll = throttle(checkScroll, 100, {
       leading: true,
       trailing: true,
     });
 
-    // Check on mount and when content changes
     checkScroll();
-
-    // Listen to scroll events with throttled handler
     tableElement.addEventListener('scroll', throttledCheckScroll);
 
-    // Use ResizeObserver to check when table size changes
     const resizeObserver = new ResizeObserver(throttledCheckScroll);
     resizeObserver.observe(tableElement);
 
@@ -189,7 +222,7 @@ export function AggregatesTab({traceMetric, isMetricOptionsEmpty}: AggregatesTab
       throttledCheckScroll.cancel();
       resizeObserver.disconnect();
     };
-  }, [result.data, fields.length]);
+  }, [displayFields.length, hasMetricsUIRefresh, result.data]);
 
   const isPending = result.isPending && !isMetricOptionsEmpty;
 
@@ -198,20 +231,27 @@ export function AggregatesTab({traceMetric, isMetricOptionsEmpty}: AggregatesTab
       {isPending && <TransparentLoadingMask />}
 
       <StickyCompatibleStyledHeader>
-        {fields.map((field, i) => {
+        {displayFields.map((field, i) => {
           let label = field;
           const tag =
             stringTags?.[field] ?? numberTags?.[field] ?? booleanTags?.[field] ?? null;
           const func = parseFunction(field);
-          if (func) {
+          if (field === TraceMetricKnownFieldKey.METRIC_NAME) {
+            label = t('Metric');
+          } else if (func) {
             label = `${func.name}(…)`;
           } else if (tag) {
             label = tag.name;
+          } else if (isEquation(field)) {
+            // TODO: This should say the reference format of equations
+            label = t('Result');
           } else {
             label = prettifyTagKey(field);
           }
 
           const direction = sorts.find(s => s.field === field)?.kind;
+          const canSort =
+            displayColumns.find(column => column.key === field)?.isSortable !== false;
 
           function updateSort() {
             const kind = direction === 'desc' ? 'asc' : 'desc';
@@ -223,10 +263,12 @@ export function AggregatesTab({traceMetric, isMetricOptionsEmpty}: AggregatesTab
               key={i}
               divider={shouldShowDivider(i)}
               data-sticky-column={isLastColumn(i) ? 'true' : 'false'}
-              isAggregate={Boolean(func)}
+              isAggregate={
+                Boolean(func) || (isVisualizeEquation(visualize) && isEquation(field))
+              }
               isSticky={isLastColumn(i)}
               sort={direction}
-              handleSortClick={updateSort}
+              handleSortClick={canSort ? updateSort : undefined}
             >
               <Tooltip showOnlyOnOverflow title={label}>
                 {label}
@@ -242,30 +284,37 @@ export function AggregatesTab({traceMetric, isMetricOptionsEmpty}: AggregatesTab
             <IconWarning data-test-id="error-indicator" variant="muted" size="lg" />
           </SimpleTable.Empty>
         ) : result.data?.length ? (
-          result.data.map((row, i) => (
-            <SimpleTable.Row key={i} style={{minHeight: '33px'}}>
-              {topEvents && i < topEvents && (
-                <StyledTopResultsIndicator count={topEvents} index={i} />
-              )}
-              {fields.map((field, j) => (
-                <StickyCompatibleStyledRowCell
-                  key={j}
-                  data-sticky-column={isLastColumn(j) ? 'true' : 'false'}
-                  isAggregate={Boolean(parseFunction(field))}
-                  isSticky={isLastColumn(j)}
-                  offset={j === 0 ? firstColumnOffset : undefined}
-                >
-                  <FieldRenderer
-                    column={columns[j]}
-                    data={row}
-                    unit={getMetricsUnit(meta, field)}
-                    meta={meta}
-                    usePortalOnDropdown
-                  />
-                </StickyCompatibleStyledRowCell>
-              ))}
-            </SimpleTable.Row>
-          ))
+          result.data.map((row, i) => {
+            const displayRow =
+              groupBys.length === 0
+                ? {...row, [TraceMetricKnownFieldKey.METRIC_NAME]: traceMetric.name}
+                : row;
+
+            return (
+              <SimpleTable.Row key={i} style={{minHeight: '33px'}}>
+                {topEvents && i < topEvents && (
+                  <StyledTopResultsIndicator count={topEvents} index={i} />
+                )}
+                {displayFields.map((field, j) => (
+                  <StickyCompatibleStyledRowCell
+                    key={j}
+                    data-sticky-column={isLastColumn(j) ? 'true' : 'false'}
+                    isAggregate={Boolean(parseFunction(field))}
+                    isSticky={isLastColumn(j)}
+                    offset={j === 0 ? firstColumnOffset : undefined}
+                  >
+                    <FieldRenderer
+                      column={displayColumns.find(column => column.key === field)}
+                      data={displayRow}
+                      unit={getMetricsUnit(meta, field)}
+                      meta={meta}
+                      usePortalOnDropdown
+                    />
+                  </StickyCompatibleStyledRowCell>
+                ))}
+              </SimpleTable.Row>
+            );
+          })
         ) : isPending ? (
           <SimpleTable.Empty>
             <LoadingIndicator />

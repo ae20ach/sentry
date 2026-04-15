@@ -1,4 +1,4 @@
-import {Fragment, useCallback, useState} from 'react';
+import {Fragment, useState} from 'react';
 import styled from '@emotion/styled';
 
 import {Button} from '@sentry/scraps/button';
@@ -6,19 +6,19 @@ import {Input} from '@sentry/scraps/input';
 import {Container, Flex, Stack} from '@sentry/scraps/layout';
 import {Heading, Text} from '@sentry/scraps/text';
 
-import Confirm from 'sentry/components/confirm';
+import {Confirm} from 'sentry/components/confirm';
 import type {
   BranchOverride,
   SeerRepoDefinition,
 } from 'sentry/components/events/autofix/types';
 import {isOverrideValid} from 'sentry/components/events/autofix/utils/isOverrideValid';
-import QuestionTooltip from 'sentry/components/questionTooltip';
+import {QuestionTooltip} from 'sentry/components/questionTooltip';
 import {IconAdd} from 'sentry/icons/iconAdd';
 import {IconChevron} from 'sentry/icons/iconChevron';
 import {IconDelete} from 'sentry/icons/iconDelete';
 import {t, tct, tn} from 'sentry/locale';
 
-import AutofixRepositoriesItemBranchOverride from 'getsentry/views/seerAutomation/components/projectDetails/autofixRepositoriesItemBranchOverride';
+import {AutofixRepositoriesItemBranchOverride} from 'getsentry/views/seerAutomation/components/projectDetails/autofixRepositoriesItemBranchOverride';
 
 interface Props {
   canWrite: boolean;
@@ -37,8 +37,7 @@ function areOverridesEqual(a: BranchOverride[], b: BranchOverride[]) {
   return a.every((override, idx) => {
     const other = b[idx];
     return (
-      other &&
-      override.branch_name === other.branch_name &&
+      override.branch_name === other?.branch_name &&
       override.tag_name === other.tag_name &&
       override.tag_value === other.tag_value
     );
@@ -61,43 +60,37 @@ export function AutofixRepositoriesItem({
     repository.branch_overrides || []
   );
 
-  const handleUpdateOverride = useCallback(
-    (idx: number, updatedOverride: BranchOverride) => {
-      const newLocalOverrides = localOverrides.toSpliced(idx, 1, updatedOverride);
-      setLocalOverrides(newLocalOverrides);
+  const handleUpdateOverride = (idx: number, updatedOverride: BranchOverride) => {
+    const newLocalOverrides = localOverrides.toSpliced(idx, 1, updatedOverride);
+    setLocalOverrides(newLocalOverrides);
 
-      // Only sync valid overrides to the server if they changed
-      const branchOverrides = newLocalOverrides.filter(isOverrideValid);
-      if (!areOverridesEqual(branchOverrides, repository.branch_overrides || [])) {
-        onUpdateRepo({
-          ...repository,
-          branch_overrides: branchOverrides,
-        });
-      }
-    },
-    [localOverrides, repository, onUpdateRepo]
-  );
+    // Only sync valid overrides to the server if they changed
+    const branchOverrides = newLocalOverrides.filter(isOverrideValid);
+    if (!areOverridesEqual(branchOverrides, repository.branch_overrides || [])) {
+      onUpdateRepo({
+        ...repository,
+        branch_overrides: branchOverrides,
+      });
+    }
+  };
 
-  const handleRemoveOverride = useCallback(
-    (idx: number) => {
-      const newLocalOverrides = localOverrides.toSpliced(idx, 1);
-      setLocalOverrides(newLocalOverrides);
+  const handleRemoveOverride = (idx: number) => {
+    const newLocalOverrides = localOverrides.toSpliced(idx, 1);
+    setLocalOverrides(newLocalOverrides);
 
-      // Sync valid overrides to the server if they changed
-      const branchOverrides = newLocalOverrides.filter(isOverrideValid);
-      if (!areOverridesEqual(branchOverrides, repository.branch_overrides || [])) {
-        onUpdateRepo({
-          ...repository,
-          branch_overrides: branchOverrides,
-        });
-      }
-    },
-    [localOverrides, repository, onUpdateRepo]
-  );
+    // Sync valid overrides to the server if they changed
+    const branchOverrides = newLocalOverrides.filter(isOverrideValid);
+    if (!areOverridesEqual(branchOverrides, repository.branch_overrides || [])) {
+      onUpdateRepo({
+        ...repository,
+        branch_overrides: branchOverrides,
+      });
+    }
+  };
 
-  const handleAddOverride = useCallback(() => {
+  const handleAddOverride = () => {
     setLocalOverrides([...localOverrides, {...DEFAULT_OVERRIDE}]);
-  }, [localOverrides]);
+  };
 
   return (
     <Fragment>

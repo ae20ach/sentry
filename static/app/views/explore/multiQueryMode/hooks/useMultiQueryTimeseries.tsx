@@ -74,7 +74,7 @@ function useMultiQueryTimeseriesImpl({
 
   const mode = getQueryMode(groupBys);
 
-  const fields: string[] = useMemo(() => {
+  const fields = useMemo(() => {
     if (mode === Mode.SAMPLES) {
       return [];
     }
@@ -107,7 +107,7 @@ function useMultiQueryTimeseriesImpl({
 
   const timeseriesResult = useSortedTimeSeries(
     options,
-    `api.explore.spans-timeseries`,
+    'api.explore.spans-timeseries',
     DiscoverDatasets.SPANS
   );
 

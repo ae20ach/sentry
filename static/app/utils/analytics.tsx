@@ -1,12 +1,16 @@
 import type {Span} from '@sentry/core';
 import * as Sentry from '@sentry/react';
 
-import HookStore from 'sentry/stores/hookStore';
+import {HookStore} from 'sentry/stores/hookStore';
 import type {Hooks} from 'sentry/types/hooks';
 import {
   alertsEventMap,
   type AlertsEventParameters,
 } from 'sentry/utils/analytics/alertsAnalyticsEvents';
+import {
+  commandPaletteEventMap,
+  type CommandPaletteEventParameters,
+} from 'sentry/utils/analytics/commandPaletteAnalyticsEvents';
 import {
   exploreAnalyticsEventMap,
   type ExploreAnalyticsEventParameters,
@@ -66,7 +70,7 @@ import type {IssueEventParameters} from './analytics/issueAnalyticsEvents';
 import {issueEventMap} from './analytics/issueAnalyticsEvents';
 import type {LaravelInsightsEventParameters} from './analytics/laravelInsightsAnalyticsEvents';
 import {laravelInsightsEventMap} from './analytics/laravelInsightsAnalyticsEvents';
-import makeAnalyticsFunction from './analytics/makeAnalyticsFunction';
+import {makeAnalyticsFunction} from './analytics/makeAnalyticsFunction';
 import type {McpMonitoringEventParameters} from './analytics/mcpMonitoringAnalyticsEvents';
 import {mcpMonitoringEventMap} from './analytics/mcpMonitoringAnalyticsEvents';
 import type {MonitorsEventParameters} from './analytics/monitorsAnalyticsEvents';
@@ -104,6 +108,7 @@ import {workflowEventMap} from './analytics/workflowAnalyticsEvents';
 
 interface EventParameters
   extends
+    CommandPaletteEventParameters,
     GrowthEventParameters,
     AgentMonitoringEventParameters,
     AlertsEventParameters,
@@ -146,6 +151,7 @@ interface EventParameters
     Record<string, Record<string, any>> {}
 
 const allEventMap: Record<string, string | null> = {
+  ...commandPaletteEventMap,
   ...agentMonitoringEventMap,
   ...alertsEventMap,
   ...conversationsEventMap,
@@ -218,15 +224,6 @@ const allEventMap: Record<string, string | null> = {
  */
 export const trackAnalytics = makeAnalyticsFunction<EventParameters>(allEventMap);
 
-/**
- * Should NOT be used directly. Instead, use makeAnalyticsFunction to generate
- * an analytics function.
- */
-export const rawTrackAnalyticsEvent: Hooks['analytics:raw-track-event'] = (
-  data,
-  options
-) => HookStore.get('analytics:raw-track-event').forEach(cb => cb(data, options));
-
 type RecordMetric = Hooks['metrics:event'] & {
   endSpan: (opts: {
     /**
@@ -295,7 +292,7 @@ export const metric: RecordMetric = (name, value, tags) =>
   HookStore.get('metrics:event').forEach(cb => cb(name, value, tags));
 
 // JSDOM implements window.performance but not window.performance.mark
-const CAN_MARK =
+export const CAN_MARK =
   window.performance &&
   typeof window.performance.mark === 'function' &&
   typeof window.performance.measure === 'function' &&

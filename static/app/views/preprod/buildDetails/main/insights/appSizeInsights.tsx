@@ -9,7 +9,7 @@ import {IconSettings} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {formatBytesBase10} from 'sentry/utils/bytes/formatBytesBase10';
-import useOrganization from 'sentry/utils/useOrganization';
+import {useOrganization} from 'sentry/utils/useOrganization';
 import {AppSizeInsightsSidebar} from 'sentry/views/preprod/buildDetails/main/insights/appSizeInsightsSidebar';
 import {formatUpside} from 'sentry/views/preprod/buildDetails/main/insights/appSizeInsightsSidebarRow';
 import type {Platform} from 'sentry/views/preprod/types/sharedTypes';
@@ -30,7 +30,7 @@ export function AppSizeInsights({
   const isSidebarOpen = searchParams.get('insights') === 'open';
   const organization = useOrganization();
 
-  const openSidebar = useCallback(() => {
+  const openSidebar = () => {
     trackAnalytics('preprod.builds.details.open_insights_sidebar', {
       organization,
       platform: platform ?? null,
@@ -40,7 +40,7 @@ export function AppSizeInsights({
     const newParams = new URLSearchParams(searchParams);
     newParams.set('insights', 'open');
     setSearchParams(newParams);
-  }, [organization, platform, projectType, searchParams, setSearchParams]);
+  };
 
   const closeSidebar = useCallback(() => {
     const newParams = new URLSearchParams(searchParams);

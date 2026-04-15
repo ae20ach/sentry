@@ -1,5 +1,5 @@
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {css} from '@emotion/react';
+import {useEffect, useMemo, useRef, useState} from 'react';
+import {css, useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
 import debounce from 'lodash/debounce';
 import isEqual from 'lodash/isEqual';
@@ -8,28 +8,27 @@ import omit from 'lodash/omit';
 import {Button} from '@sentry/scraps/button';
 import {Flex} from '@sentry/scraps/layout';
 
-import useDrawer from 'sentry/components/globalDrawer';
-import LoadingIndicator from 'sentry/components/loadingIndicator';
+import {useDrawer} from 'sentry/components/globalDrawer';
+import {LoadingIndicator} from 'sentry/components/loadingIndicator';
 import {getFunctionTags} from 'sentry/components/performance/spanSearchQueryBuilder';
 import {useSearchQueryBuilder} from 'sentry/components/searchQueryBuilder/context';
 import type {FilterKeySection} from 'sentry/components/searchQueryBuilder/types';
 import {t} from 'sentry/locale';
-import {space} from 'sentry/styles/space';
 import type {Tag, TagCollection} from 'sentry/types/group';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {isAggregateField, parseFunction} from 'sentry/utils/discover/fields';
 import {
+  type AggregationKey,
+  type FieldDefinition,
   FieldKind,
   FieldValueType,
   getFieldDefinition,
   prettifyTagKey,
-  type AggregationKey,
-  type FieldDefinition,
 } from 'sentry/utils/fields';
 import {MutableSearch} from 'sentry/utils/tokenizeSearch';
 import {useLocation} from 'sentry/utils/useLocation';
-import useOrganization from 'sentry/utils/useOrganization';
-import SchemaHintsDrawer from 'sentry/views/explore/components/schemaHints/schemaHintsDrawer';
+import {useOrganization} from 'sentry/utils/useOrganization';
+import {SchemaHintsDrawer} from 'sentry/views/explore/components/schemaHints/schemaHintsDrawer';
 import {
   getSchemaHintsListOrder,
   onlyShowSchemaHintsKeys,
@@ -119,6 +118,8 @@ const FILTER_KEY_SECTIONS: Record<SchemaHintsSources, FilterKeySection[]> = {
   [SchemaHintsSources.EXPLORE]: SPANS_FILTER_KEY_SECTIONS,
   [SchemaHintsSources.LOGS]: LOGS_FILTER_KEY_SECTIONS,
   [SchemaHintsSources.CONVERSATIONS]: SPANS_FILTER_KEY_SECTIONS,
+  // TODO: add error filter key sections when they are implemented
+  [SchemaHintsSources.ERRORS]: [],
 };
 
 function getFilterKeySections(source: SchemaHintsSources) {
@@ -139,7 +140,7 @@ function formatHintOperator(hint: Tag) {
   return 'is';
 }
 
-function SchemaHintsList({
+export function SchemaHintsList({
   supportedAggregates,
   booleanTags = {},
   numberTags,
@@ -148,6 +149,7 @@ function SchemaHintsList({
   source = SchemaHintsSources.EXPLORE,
   searchBarWidthOffset,
 }: SchemaHintsListProps) {
+  const theme = useTheme();
   const schemaHintsContainerRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const organization = useOrganization();
@@ -311,113 +313,100 @@ function SchemaHintsList({
     return () => resizeObserver.disconnect();
   }, [isDrawerOpen, panelRef, searchBarWidthOffset, searchBarWrapperRef]);
 
-  const onHintClick = useCallback(
-    (hint: Tag) => {
-      if (hint.key === seeFullListTag.key) {
-        if (!isDrawerOpen) {
-          setIsDrawerOpen(true);
-          openDrawer(
-            () => (
-              <SchemaHintsDrawer
-                hints={fullFilterTagsSorted}
-                exploreQuery={query}
-                searchBarDispatch={dispatch}
-                queryRef={queryRef}
-              />
-            ),
-            {
-              ariaLabel: t('Schema Hints Drawer'),
-              drawerWidth: SCHEMA_HINTS_DRAWER_WIDTH,
-              drawerKey: 'schema-hints-drawer',
-              resizable: true,
-              drawerCss: css`
-                height: calc(100% - ${space(4)});
-              `,
-              shouldCloseOnLocationChange: newLocation => {
-                return (
-                  location.pathname !== newLocation.pathname ||
-                  // will close if anything but the filter query has changed
-                  !isEqual(
-                    omit(location.query, [
-                      'query',
-                      'field',
-                      LOGS_FIELDS_KEY,
-                      LOGS_QUERY_KEY,
-                    ]),
-                    omit(newLocation.query, [
-                      'query',
-                      'field',
-                      LOGS_FIELDS_KEY,
-                      LOGS_QUERY_KEY,
-                    ])
-                  )
-                );
-              },
-              onOpen: () => {
-                trackAnalytics('trace.explorer.schema_hints_drawer', {
-                  drawer_open: true,
-                  organization,
-                });
-                if (searchBarWrapperRef.current) {
-                  searchBarWrapperRef.current.style.minWidth = '20%';
-                }
-              },
+  const onHintClick = (hint: Tag) => {
+    if (hint.key === seeFullListTag.key) {
+      if (!isDrawerOpen) {
+        setIsDrawerOpen(true);
+        openDrawer(
+          () => (
+            <SchemaHintsDrawer
+              hints={fullFilterTagsSorted}
+              exploreQuery={query}
+              searchBarDispatch={dispatch}
+              queryRef={queryRef}
+            />
+          ),
+          {
+            ariaLabel: t('Schema Hints Drawer'),
+            drawerWidth: SCHEMA_HINTS_DRAWER_WIDTH,
+            drawerKey: 'schema-hints-drawer',
+            resizable: true,
+            drawerCss: css`
+              height: calc(100% - ${theme.space['3xl']});
+            `,
+            shouldCloseOnLocationChange: newLocation => {
+              return (
+                location.pathname !== newLocation.pathname ||
+                // will close if anything but the filter query has changed
+                !isEqual(
+                  omit(location.query, [
+                    'query',
+                    'field',
+                    LOGS_FIELDS_KEY,
+                    LOGS_QUERY_KEY,
+                  ]),
+                  omit(newLocation.query, [
+                    'query',
+                    'field',
+                    LOGS_FIELDS_KEY,
+                    LOGS_QUERY_KEY,
+                  ])
+                )
+              );
+            },
+            onOpen: () => {
+              trackAnalytics('trace.explorer.schema_hints_drawer', {
+                drawer_open: true,
+                organization,
+              });
+              if (searchBarWrapperRef.current) {
+                searchBarWrapperRef.current.style.minWidth = '20%';
+              }
+            },
 
-              onClose: () => {
-                setIsDrawerOpen(false);
-                trackAnalytics('trace.explorer.schema_hints_drawer', {
-                  drawer_open: false,
-                  organization,
-                });
-                if (searchBarWrapperRef.current) {
-                  searchBarWrapperRef.current.style.width = '100%';
-                  searchBarWrapperRef.current.style.minWidth = '';
-                }
-              },
-            }
-          );
-        }
-        return;
+            onClose: () => {
+              setIsDrawerOpen(false);
+              trackAnalytics('trace.explorer.schema_hints_drawer', {
+                drawer_open: false,
+                organization,
+              });
+              if (searchBarWrapperRef.current) {
+                searchBarWrapperRef.current.style.width = '100%';
+                searchBarWrapperRef.current.style.minWidth = '';
+              }
+            },
+          }
+        );
       }
+      return;
+    }
 
-      const newSearchQuery = new MutableSearch(query);
-      const fieldDefinition = getFieldDefinition(hint.key, 'span', hint.kind);
-      addFilterToQuery(newSearchQuery, hint, fieldDefinition);
+    const newSearchQuery = new MutableSearch(query);
+    const fieldDefinition = getFieldDefinition(hint.key, 'span', hint.kind);
+    addFilterToQuery(newSearchQuery, hint, fieldDefinition);
 
-      const newQuery = newSearchQuery.formatString();
+    const newQuery = newSearchQuery.formatString();
 
-      dispatch({
-        type: 'UPDATE_QUERY',
-        query: newQuery,
-        focusOverride: {
-          itemKey: `filter:${newSearchQuery
-            .getTokenKeys()
-            .filter(key => key !== undefined)
-            .map(parseTagKey)
-            .lastIndexOf(hint.key)}`,
-          part: 'value',
-        },
-        shouldCommitQuery: false,
-      });
+    dispatch({
+      type: 'UPDATE_QUERY',
+      query: newQuery,
+      focusOverride: {
+        itemKey: `filter:${newSearchQuery
+          .getTokenKeys()
+          .filter(key => key !== undefined)
+          .map(parseTagKey)
+          .lastIndexOf(hint.key)}`,
+        part: 'value',
+      },
+      shouldCommitQuery: false,
+    });
 
-      trackAnalytics('trace.explorer.schema_hints_click', {
-        hint_key: hint.key,
-        source: 'list',
-        organization,
-      });
-    },
-    [
-      query,
-      dispatch,
+    trackAnalytics('trace.explorer.schema_hints_click', {
+      hint_key: hint.key,
+      source: 'list',
       organization,
-      isDrawerOpen,
-      searchBarWrapperRef,
-      openDrawer,
-      fullFilterTagsSorted,
-      location.pathname,
-      location.query,
-    ]
-  );
+    });
+  };
 
   const getHintText = (hint: Tag) => {
     if (hint.key === seeFullListTag.key) {
@@ -468,12 +457,10 @@ function SchemaHintsList({
   );
 }
 
-export default SchemaHintsList;
-
 const SchemaHintsContainer = styled('div')`
   display: flex;
   flex-direction: row;
-  gap: ${space(1)};
+  gap: ${p => p.theme.space.md};
   flex-wrap: nowrap;
 
   > * {
@@ -490,7 +477,7 @@ export const SchemaHintsSection = styled('div')`
   display: grid;
   /* This is to ensure the hints section spans all the columns */
   grid-column: 1/-1;
-  margin-bottom: ${space(2)};
+  margin-bottom: ${p => p.theme.space.xl};
   margin-top: -4px;
   height: fit-content;
 

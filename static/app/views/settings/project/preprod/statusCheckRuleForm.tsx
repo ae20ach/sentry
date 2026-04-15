@@ -1,4 +1,4 @@
-import {useCallback, useState} from 'react';
+import {useState} from 'react';
 import styled from '@emotion/styled';
 
 import {Button} from '@sentry/scraps/button';
@@ -24,6 +24,7 @@ import {
   mbToBytes,
   MEASUREMENT_OPTIONS,
   METRIC_OPTIONS,
+  STATUS_CHECK_ALLOWED_FILTER_KEYS,
 } from './types';
 
 interface Props {
@@ -64,9 +65,9 @@ export function StatusCheckRuleForm({rule, onSave, onDelete}: Props) {
     });
   };
 
-  const handleQueryChange = useCallback((query: string) => {
+  const handleQueryChange = (query: string) => {
     setFilterQuery(query);
-  }, []);
+  };
 
   const handleDelete = () => {
     const ruleDisplayValue =
@@ -139,12 +140,7 @@ export function StatusCheckRuleForm({rule, onSave, onDelete}: Props) {
           disallowFreeText
           disallowHas
           disallowLogicalOperators
-          allowedKeys={[
-            'app_id',
-            'git_head_ref',
-            'build_configuration_name',
-            'platform_name',
-          ]}
+          allowedKeys={STATUS_CHECK_ALLOWED_FILTER_KEYS}
         />
       </Stack>
 

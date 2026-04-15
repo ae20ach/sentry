@@ -1,5 +1,5 @@
 import type {ReactNode} from 'react';
-import {useCallback, useEffect, useEffectEvent, useMemo} from 'react';
+import {useEffect, useEffectEvent, useMemo} from 'react';
 import styled from '@emotion/styled';
 
 import {Button} from '@sentry/scraps/button';
@@ -13,8 +13,7 @@ import {FeatureDisabledModal} from 'sentry/components/acl/featureDisabledModal';
 import {ProductSolution} from 'sentry/components/onboarding/gettingStartedDoc/types';
 import {IconQuestion} from 'sentry/icons';
 import {t, tct} from 'sentry/locale';
-import ConfigStore from 'sentry/stores/configStore';
-import {space} from 'sentry/styles/space';
+import {ConfigStore} from 'sentry/stores/configStore';
 import type {Organization} from 'sentry/types/organization';
 import type {PlatformKey} from 'sentry/types/project';
 import {useOnboardingQueryParams} from 'sentry/views/onboarding/components/useOnboardingQueryParams';
@@ -27,7 +26,7 @@ interface DisabledProduct {
 
 export type DisabledProducts = Partial<Record<ProductSolution, DisabledProduct>>;
 
-function getDisabledProducts(organization: Organization): DisabledProducts {
+export function getDisabledProducts(organization: Organization): DisabledProducts {
   const disabledProducts: DisabledProducts = {};
   const hasSessionReplay = organization.features.includes('session-replay');
   const hasPerformance = organization.features.includes('performance-view');
@@ -264,6 +263,7 @@ export const platformProductAvailability = {
   'javascript-tanstackstart-react': [
     ProductSolution.PERFORMANCE_MONITORING,
     ProductSolution.SESSION_REPLAY,
+    ProductSolution.LOGS,
     ProductSolution.METRICS,
   ],
   'javascript-astro': [
@@ -432,6 +432,12 @@ export const platformProductAvailability = {
     ProductSolution.LOGS,
     ProductSolution.METRICS,
   ],
+  'python-litestar': [
+    ProductSolution.PERFORMANCE_MONITORING,
+    ProductSolution.PROFILING,
+    ProductSolution.LOGS,
+    ProductSolution.METRICS,
+  ],
   'python-gcpfunctions': [
     ProductSolution.PERFORMANCE_MONITORING,
     ProductSolution.PROFILING,
@@ -489,7 +495,7 @@ export const platformProductAvailability = {
     ProductSolution.PROFILING,
     ProductSolution.LOGS,
   ],
-  unity: [ProductSolution.LOGS],
+  unity: [ProductSolution.LOGS, ProductSolution.METRICS],
   unreal: [ProductSolution.LOGS],
 } as Record<PlatformKey, ProductSolution[]>;
 
@@ -608,9 +614,7 @@ export function ProductSelection({
     [params.product]
   );
 
-  const products: ProductSolution[] | undefined = platform
-    ? platformProductAvailability[platform]
-    : undefined;
+  const products = platform ? platformProductAvailability[platform] : undefined;
 
   const disabledProducts = useMemo(
     () => disabledProductsProp ?? getDisabledProducts(organization),
@@ -627,39 +631,36 @@ export function ProductSelection({
     initializeProducts();
   }, []);
 
-  const handleClickProduct = useCallback(
-    (product: ProductSolution) => {
-      const newProduct = new Set(
-        urlProducts.includes(product)
-          ? urlProducts.filter(p => p !== product)
-          : [...urlProducts, product]
-      );
+  const handleClickProduct = (product: ProductSolution) => {
+    const newProduct = new Set(
+      urlProducts.includes(product)
+        ? urlProducts.filter(p => p !== product)
+        : [...urlProducts, product]
+    );
 
-      if (products?.includes(ProductSolution.PROFILING)) {
-        // Ensure that if profiling is enabled, tracing is also enabled
-        if (
-          product === ProductSolution.PROFILING &&
-          newProduct.has(ProductSolution.PROFILING)
-        ) {
-          newProduct.add(ProductSolution.PERFORMANCE_MONITORING);
-        } else if (
-          product === ProductSolution.PERFORMANCE_MONITORING &&
-          !newProduct.has(ProductSolution.PERFORMANCE_MONITORING)
-        ) {
-          newProduct.delete(ProductSolution.PROFILING);
-        }
+    if (products?.includes(ProductSolution.PROFILING)) {
+      // Ensure that if profiling is enabled, tracing is also enabled
+      if (
+        product === ProductSolution.PROFILING &&
+        newProduct.has(ProductSolution.PROFILING)
+      ) {
+        newProduct.add(ProductSolution.PERFORMANCE_MONITORING);
+      } else if (
+        product === ProductSolution.PERFORMANCE_MONITORING &&
+        !newProduct.has(ProductSolution.PERFORMANCE_MONITORING)
+      ) {
+        newProduct.delete(ProductSolution.PROFILING);
       }
+    }
 
-      const selectedProducts = Array.from(newProduct);
+    const selectedProducts = Array.from(newProduct);
 
-      onChange?.({
-        previousProducts: urlProducts,
-        products: selectedProducts,
-      });
-      setParams({product: selectedProducts});
-    },
-    [products, setParams, urlProducts, onChange]
-  );
+    onChange?.({
+      previousProducts: urlProducts,
+      products: selectedProducts,
+    });
+    setParams({product: selectedProducts});
+  };
 
   if (!products) {
     // if the platform does not support any product, we don't render anything
@@ -745,6 +746,6 @@ const ProductButton = Button;
 const ProductButtonInner = styled('div')`
   display: grid;
   grid-template-columns: repeat(3, max-content);
-  gap: ${space(1)};
+  gap: ${p => p.theme.space.md};
   align-items: center;
 `;

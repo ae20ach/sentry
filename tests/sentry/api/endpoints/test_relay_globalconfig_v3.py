@@ -35,13 +35,12 @@ def call_endpoint(client, relay, private_key):
 @override_options(
     {
         # Set options to Relay's non-default values to avoid Relay skipping deserialization
-        "relay.cardinality-limiter.error-sample-rate": 1.0,
         "profiling.profile_metrics.unsampled_profiles.enabled": True,
         "profiling.profile_metrics.unsampled_profiles.platforms": ["fake-platform"],
         "profiling.profile_metrics.unsampled_profiles.sample_rate": 1.0,
         "relay.span-usage-metric": True,
-        "relay.cardinality-limiter.mode": "passive",
         "relay.sessions-eap.rollout-rate": 1.0,
+        "relay.objectstore-attachments.sample-rate": 1.0,
         "relay.kafka.span-v2.sample-rate": 1.0,
         "relay.metric-bucket-distribution-encodings": {
             "custom": "array",
@@ -55,6 +54,8 @@ def call_endpoint(client, relay, private_key):
             "spans": "base64",
             "transactions": "base64",
         },
+        "relay.eap-outcomes.rollout-rate": 1.0,
+        "relay.eap-span-outcomes.rollout-rate": 1.0,
     }
 )
 def test_global_config() -> None:

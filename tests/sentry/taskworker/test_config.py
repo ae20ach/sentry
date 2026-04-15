@@ -6,9 +6,9 @@ from typing import Any
 
 import pytest
 from django.conf import settings
+from taskbroker_client.scheduler import crontab
 
 import sentry
-from sentry.conf.types.taskworker import crontab
 from sentry.taskworker.runtime import app
 
 
@@ -53,7 +53,7 @@ def test_taskworker_schedule_type(name: str, config: dict[str, Any], load_tasks)
     )
 
 
-def test_taskworker_schedule_parameters() -> None:
+def test_taskworker_schedule_parameters(load_tasks) -> None:
     for config in settings.TASKWORKER_SCHEDULES.values():
         (namespace, taskname) = config["task"].split(":")
         task = app.taskregistry.get_task(namespace, taskname)

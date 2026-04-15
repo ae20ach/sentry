@@ -18,16 +18,16 @@ import {
   GuidedSteps,
   useGuidedStepsContext,
 } from 'sentry/components/guidedSteps/guidedSteps';
-import LoadingIndicator from 'sentry/components/loadingIndicator';
-import PanelBody from 'sentry/components/panels/panelBody';
-import PanelItem from 'sentry/components/panels/panelItem';
-import Placeholder from 'sentry/components/placeholder';
+import {LoadingIndicator} from 'sentry/components/loadingIndicator';
+import {PanelBody} from 'sentry/components/panels/panelBody';
+import {PanelItem} from 'sentry/components/panels/panelItem';
+import {Placeholder} from 'sentry/components/placeholder';
 import {IconAdd} from 'sentry/icons';
 import {t} from 'sentry/locale';
-import useOrganization from 'sentry/utils/useOrganization';
-import useProjects from 'sentry/utils/useProjects';
+import {useOrganization} from 'sentry/utils/useOrganization';
+import {useProjects} from 'sentry/utils/useProjects';
 
-import trackGetsentryAnalytics from 'getsentry/utils/trackGetsentryAnalytics';
+import {trackGetsentryAnalytics} from 'getsentry/utils/trackGetsentryAnalytics';
 
 import {useSeerOnboardingContext} from './hooks/seerOnboardingContext';
 import {useCodeMappings} from './hooks/useCodeMappings';
@@ -88,11 +88,11 @@ export function ConfigureRootCauseAnalysisStep() {
     addRepositoryProjectMappings,
   ]);
 
-  const handlePreviousStep = useCallback(() => {
+  const handlePreviousStep = () => {
     setCurrentStep(currentStep - 1);
-  }, [setCurrentStep, currentStep]);
+  };
 
-  const handleNextStep = useCallback(() => {
+  const handleNextStep = () => {
     // Build a map from repo ID to full repo object
     const repoMap = new Map(
       selectedRootCauseAnalysisRepositories.map(repo => [repo.id, repo])
@@ -162,16 +162,7 @@ export function ConfigureRootCauseAnalysisStep() {
         },
       }
     );
-  }, [
-    setCurrentStep,
-    currentStep,
-    updateAutofix,
-    repositoryProjectMapping,
-    selectedRootCauseAnalysisRepositories,
-    autoCreatePREnabled,
-    organization,
-    setAutoCreatePR,
-  ]);
+  };
 
   const handleRepositoryProjectMappingsChange = useCallback(
     (repoId: string, index: number, newValue: string | undefined) => {
@@ -190,12 +181,9 @@ export function ConfigureRootCauseAnalysisStep() {
     [changeRepositoryProjectMapping, repositoryProjectMapping]
   );
 
-  const handleAutoCreatePRChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setAutoCreatePREnabled(e.target.checked);
-    },
-    [setAutoCreatePREnabled]
-  );
+  const handleAutoCreatePRChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAutoCreatePREnabled(e.target.checked);
+  };
 
   const availableRepositories = useMemo(() => {
     return (

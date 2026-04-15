@@ -14,7 +14,7 @@ import {
 } from 'sentry/actionCreators/indicator';
 import {openModal} from 'sentry/actionCreators/modal';
 import {hasEveryAccess} from 'sentry/components/acl/access';
-import ClippedBox from 'sentry/components/clippedBox';
+import {ClippedBox} from 'sentry/components/clippedBox';
 import {useOrganizationRepositories} from 'sentry/components/events/autofix/preferences/hooks/useOrganizationRepositories';
 import {useProjectSeerPreferences} from 'sentry/components/events/autofix/preferences/hooks/useProjectSeerPreferences';
 import {useUpdateProjectSeerPreferences} from 'sentry/components/events/autofix/preferences/hooks/useUpdateProjectSeerPreferences';
@@ -23,26 +23,25 @@ import {
   GuidedSteps,
   useGuidedStepsContext,
 } from 'sentry/components/guidedSteps/guidedSteps';
-import ExternalLink from 'sentry/components/links/externalLink';
-import LoadingIndicator from 'sentry/components/loadingIndicator';
-import NoProjectMessage from 'sentry/components/noProjectMessage';
-import Panel from 'sentry/components/panels/panel';
-import PanelBody from 'sentry/components/panels/panelBody';
-import PanelHeader from 'sentry/components/panels/panelHeader';
-import PanelItem from 'sentry/components/panels/panelItem';
-import SentryDocumentTitle from 'sentry/components/sentryDocumentTitle';
+import {ExternalLink} from 'sentry/components/links/externalLink';
+import {LoadingIndicator} from 'sentry/components/loadingIndicator';
+import {NoProjectMessage} from 'sentry/components/noProjectMessage';
+import {Panel} from 'sentry/components/panels/panel';
+import {PanelBody} from 'sentry/components/panels/panelBody';
+import {PanelHeader} from 'sentry/components/panels/panelHeader';
+import {PanelItem} from 'sentry/components/panels/panelItem';
+import {SentryDocumentTitle} from 'sentry/components/sentryDocumentTitle';
 import {IconChevron, IconSearch} from 'sentry/icons';
 import {t, tct} from 'sentry/locale';
-import {space} from 'sentry/styles/space';
 import type {Repository} from 'sentry/types/integrations';
 import type {Project} from 'sentry/types/project';
 import {makeDetailedProjectQueryKey} from 'sentry/utils/project/useDetailedProject';
 import {useQueryClient} from 'sentry/utils/queryClient';
-import useApi from 'sentry/utils/useApi';
+import {useApi} from 'sentry/utils/useApi';
 import {useNavigate} from 'sentry/utils/useNavigate';
-import useOrganization from 'sentry/utils/useOrganization';
-import useProjects from 'sentry/utils/useProjects';
-import SettingsPageHeader from 'sentry/views/settings/components/settingsPageHeader';
+import {useOrganization} from 'sentry/utils/useOrganization';
+import {useProjects} from 'sentry/utils/useProjects';
+import {SettingsPageHeader} from 'sentry/views/settings/components/settingsPageHeader';
 import {AddAutofixRepoModal} from 'sentry/views/settings/projectSeer/addAutofixRepoModal';
 import {SEER_THRESHOLD_OPTIONS} from 'sentry/views/settings/projectSeer/constants';
 
@@ -439,7 +438,7 @@ function AutoTriggerFixesButton({
   const {setCurrentStep, getStepNumber} = useGuidedStepsContext();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleEnableAutoTriggerFixes = useCallback(async () => {
+  const handleEnableAutoTriggerFixes = async () => {
     if (projectsWithRepos.length === 0) {
       addErrorMessage(t('No projects with repositories found to update'));
       return;
@@ -492,15 +491,7 @@ function AutoTriggerFixesButton({
     } finally {
       setIsLoading(false);
     }
-  }, [
-    api,
-    organization.slug,
-    projectsWithRepos,
-    selectedThreshold,
-    queryClient,
-    getStepNumber,
-    setCurrentStep,
-  ]);
+  };
 
   return (
     <Button
@@ -527,7 +518,7 @@ function EnableIssueScansButton({
   const {setCurrentStep, getStepNumber} = useGuidedStepsContext();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleEnableIssueScans = useCallback(async () => {
+  const handleEnableIssueScans = async () => {
     if (projectsWithoutRepos.length === 0) {
       addErrorMessage(t('No remaining projects found to update'));
       return;
@@ -574,14 +565,7 @@ function EnableIssueScansButton({
     } finally {
       setIsLoading(false);
     }
-  }, [
-    api,
-    organization.slug,
-    projectsWithoutRepos,
-    queryClient,
-    getStepNumber,
-    setCurrentStep,
-  ]);
+  };
 
   return (
     <Button
@@ -595,7 +579,7 @@ function EnableIssueScansButton({
   );
 }
 
-function SeerAutomationOnboarding() {
+export function SeerAutomationOnboarding() {
   const organization = useOrganization();
   const {projects, fetching} = useProjects();
   const navigate = useNavigate();
@@ -832,7 +816,7 @@ const ProjectName = styled('span')`
 `;
 
 const StepDescription = styled('div')`
-  margin-bottom: ${space(2)};
+  margin-bottom: ${p => p.theme.space.xl};
   color: ${p => p.theme.tokens.content.secondary};
 `;
 
@@ -841,7 +825,7 @@ const HeaderText = styled('div')`
 `;
 
 const EmptyState = styled('div')`
-  padding: ${space(2)};
+  padding: ${p => p.theme.space.xl};
   text-align: center;
   color: ${p => p.theme.tokens.content.secondary};
 `;
@@ -850,8 +834,8 @@ const LoadingState = styled('div')`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: ${space(1)};
-  padding: ${space(3)};
+  gap: ${p => p.theme.space.md};
+  padding: ${p => p.theme.space['2xl']};
   color: ${p => p.theme.tokens.content.secondary};
 `;
 
@@ -862,8 +846,8 @@ const StyledGuidedSteps = styled(GuidedSteps)`
 const ClickablePanelItem = styled(PanelItem)`
   cursor: pointer;
   transition: background-color 0.1s;
-  padding-top: ${space(1)};
-  padding-bottom: ${space(1)};
+  padding-top: ${p => p.theme.space.md};
+  padding-bottom: ${p => p.theme.space.md};
 
   &:hover {
     background-color: ${p =>
@@ -881,11 +865,11 @@ const SelectorLabel = styled('div')`
 `;
 
 const CustomizationList = styled('ul')`
-  margin: ${space(2)} 0;
-  padding-left: ${space(3)};
+  margin: ${p => p.theme.space.xl} 0;
+  padding-left: ${p => p.theme.space['2xl']};
 
   li {
-    margin-bottom: ${space(1)};
+    margin-bottom: ${p => p.theme.space.md};
     color: ${p => p.theme.tokens.content.secondary};
   }
 `;
@@ -893,5 +877,3 @@ const CustomizationList = styled('ul')`
 const SearchInputWrapper = styled('div')`
   width: 300px;
 `;
-
-export default SeerAutomationOnboarding;

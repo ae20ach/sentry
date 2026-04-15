@@ -8,7 +8,7 @@ import {DifferentialFlamegraphMenu} from 'sentry/components/profiling/flamegraph
 import {IconSettings} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {useContextMenu} from 'sentry/utils/profiling/hooks/useContextMenu';
-import useOnClickOutside from 'sentry/utils/useOnClickOutside';
+import {useOnClickOutside} from 'sentry/utils/useOnClickOutside';
 
 interface DifferentialFlamegraphSettingsButtonProps {
   frameFilter: 'application' | 'system' | 'all';
@@ -29,9 +29,9 @@ export function DifferentialFlamegraphSettingsButton(
 
   const contextMenu = useContextMenu({container: null});
 
-  const onToggleMenu = useCallback(() => {
+  const onToggleMenu = () => {
     contextMenu.setOpen(!contextMenu.open);
-  }, [contextMenu]);
+  };
 
   const onClose = useCallback(() => {
     contextMenu.setOpen(false);

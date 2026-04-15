@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
 
 import {Alert} from '@sentry/scraps/alert';
@@ -16,16 +17,15 @@ import type {
   ProjectSeerPreferences,
   RepoSettings,
 } from 'sentry/components/events/autofix/types';
-import LoadingIndicator from 'sentry/components/loadingIndicator';
-import Panel from 'sentry/components/panels/panel';
-import PanelHeader from 'sentry/components/panels/panelHeader';
-import QuestionTooltip from 'sentry/components/questionTooltip';
+import {LoadingIndicator} from 'sentry/components/loadingIndicator';
+import {Panel} from 'sentry/components/panels/panel';
+import {PanelHeader} from 'sentry/components/panels/panelHeader';
+import {QuestionTooltip} from 'sentry/components/questionTooltip';
 import {IconAdd} from 'sentry/icons';
 import {t, tct} from 'sentry/locale';
 import {PluginIcon} from 'sentry/plugins/components/pluginIcon';
-import {space} from 'sentry/styles/space';
 import type {Project} from 'sentry/types/project';
-import useOrganization from 'sentry/utils/useOrganization';
+import {useOrganization} from 'sentry/utils/useOrganization';
 
 import {AddAutofixRepoModal} from './addAutofixRepoModal';
 import {AutofixRepoItem} from './autofixRepoItem';
@@ -36,6 +36,7 @@ interface ProjectSeerProps {
 }
 
 export function AutofixRepositories({project}: ProjectSeerProps) {
+  const theme = useTheme();
   const organization = useOrganization();
   const {data: repositories, isFetching: isFetchingRepositories} =
     useOrganizationRepositories();
@@ -176,32 +177,26 @@ export function AutofixRepositories({project}: ProjectSeerProps) {
     [updatePreferences]
   );
 
-  const removeRepository = useCallback(
-    (repoId: string) => {
-      setSelectedRepoIds(prevSelectedIds => {
-        const newIds = prevSelectedIds.filter(id => id !== repoId);
-        updatePreferences(newIds);
-        return newIds;
-      });
-    },
-    [updatePreferences]
-  );
+  const removeRepository = (repoId: string) => {
+    setSelectedRepoIds(prevSelectedIds => {
+      const newIds = prevSelectedIds.filter(id => id !== repoId);
+      updatePreferences(newIds);
+      return newIds;
+    });
+  };
 
-  const updateRepoSettings = useCallback(
-    (repoId: string, settings: RepoSettings) => {
-      setRepoSettings(prev => {
-        const newSettings = {
-          ...prev,
-          [repoId]: settings,
-        };
+  const updateRepoSettings = (repoId: string, settings: RepoSettings) => {
+    setRepoSettings(prev => {
+      const newSettings = {
+        ...prev,
+        [repoId]: settings,
+      };
 
-        updatePreferences(undefined, newSettings);
+      updatePreferences(undefined, newSettings);
 
-        return newSettings;
-      });
-    },
-    [updatePreferences]
-  );
+      return newSettings;
+    });
+  };
 
   const {unselectedRepositories, filteredSelectedRepositories} = useMemo(() => {
     if (!repositories || repositories.length === 0) {
@@ -230,7 +225,7 @@ export function AutofixRepositories({project}: ProjectSeerProps) {
 
   const isRepoLimitReached = selectedRepoIds.length >= MAX_REPOS_LIMIT;
 
-  const openAddRepoModal = useCallback(() => {
+  const openAddRepoModal = () => {
     openModal(deps => (
       <AddAutofixRepoModal
         {...deps}
@@ -238,7 +233,7 @@ export function AutofixRepositories({project}: ProjectSeerProps) {
         onSave={handleSaveModalSelections}
       />
     ));
-  }, [selectedRepoIds, handleSaveModalSelections]);
+  };
 
   return (
     <Panel>
@@ -256,13 +251,14 @@ export function AutofixRepositories({project}: ProjectSeerProps) {
             isHoverable
           />
         </Flex>
-        <div style={{display: 'flex', alignItems: 'center', gap: space(1)}}>
+        <div style={{display: 'flex', alignItems: 'center', gap: theme.space.md}}>
           <DropdownMenu
             size="sm"
             triggerLabel={t('Manage Integration')}
             items={[
               {
                 key: 'github',
+                textValue: t('GitHub'),
                 label: (
                   <Flex gap="sm" align="center">
                     <PluginIcon pluginId="github" size={16} />
@@ -273,6 +269,7 @@ export function AutofixRepositories({project}: ProjectSeerProps) {
               },
               {
                 key: 'github_enterprise',
+                textValue: t('GitHub Enterprise'),
                 label: (
                   <Flex gap="sm" align="center">
                     <PluginIcon pluginId="github_enterprise" size={16} />
@@ -372,7 +369,7 @@ const ReposContainer = styled('div')`
 `;
 
 const EmptyMessage = styled('div')`
-  padding: ${space(2)};
+  padding: ${p => p.theme.space.xl};
   color: ${p => p.theme.tokens.content.danger};
   text-align: center;
   font-size: ${p => p.theme.font.size.md};

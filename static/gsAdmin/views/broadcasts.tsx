@@ -1,14 +1,13 @@
-import {useCallback} from 'react';
 import moment from 'moment-timezone';
 
 import {Button} from '@sentry/scraps/button';
 import {Link} from '@sentry/scraps/link';
 
 import {openModal} from 'sentry/actionCreators/modal';
-import ConfigStore from 'sentry/stores/configStore';
+import {ConfigStore} from 'sentry/stores/configStore';
 
 import {CreateBroadcastModal} from 'admin/components/createBroadcastModal';
-import PageHeader from 'admin/components/pageHeader';
+import {PageHeader} from 'admin/components/pageHeader';
 import ResultGrid from 'admin/components/resultGrid';
 import {getBroadcastSchema} from 'admin/schemas/broadcasts';
 
@@ -36,15 +35,15 @@ const getRow = (row: any) => [
   </td>,
 ];
 
-export default function Broadcasts() {
+export function Broadcasts() {
   const hasPermission = ConfigStore.get('user').permissions.has('broadcasts.admin');
   const fields = getBroadcastSchema();
 
-  const handleNewBroadcast = useCallback(() => {
+  const handleNewBroadcast = () => {
     openModal(deps => <CreateBroadcastModal {...deps} fields={fields} />, {
       closeEvents: 'escape-key',
     });
-  }, [fields]);
+  };
 
   return (
     <div>

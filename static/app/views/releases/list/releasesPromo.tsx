@@ -6,15 +6,19 @@ import resolutionImage from 'sentry-images/spot/releases-tour-resolution.svg';
 import statsImage from 'sentry-images/spot/releases-tour-stats.svg';
 
 import {SentryAppAvatar} from '@sentry/scraps/avatar';
-import {Button, LinkButton} from '@sentry/scraps/button';
+import {LinkButton} from '@sentry/scraps/button';
 import {CodeBlock} from '@sentry/scraps/code';
-import {CompactSelect, type SelectOption} from '@sentry/scraps/compactSelect';
+import {
+  CompactSelect,
+  MenuComponents,
+  type SelectOption,
+} from '@sentry/scraps/compactSelect';
 import {Flex, Stack} from '@sentry/scraps/layout';
 import {OverlayTrigger} from '@sentry/scraps/overlayTrigger';
 import {Heading, Text} from '@sentry/scraps/text';
 
 import {openCreateReleaseIntegration} from 'sentry/actionCreators/modal';
-import LoadingIndicator from 'sentry/components/loadingIndicator';
+import {LoadingIndicator} from 'sentry/components/loadingIndicator';
 import type {TourStep} from 'sentry/components/modals/featureTourModal';
 import {TourImage, TourText} from 'sentry/components/modals/featureTourModal';
 import {
@@ -22,16 +26,16 @@ import {
   CopySetupInstructionsGate,
 } from 'sentry/components/onboarding/gettingStartedDoc/onboardingCopyMarkdownButton';
 import {simpleHtmlToMarkdown} from 'sentry/components/onboarding/utils/stepsToMarkdown';
-import Panel from 'sentry/components/panels/panel';
+import {Panel} from 'sentry/components/panels/panel';
 import {t} from 'sentry/locale';
 import type {SentryApp} from 'sentry/types/integrations';
 import type {Organization} from 'sentry/types/organization';
 import type {Project} from 'sentry/types/project';
 import type {NewInternalAppApiToken} from 'sentry/types/user';
 import {trackAnalytics} from 'sentry/utils/analytics';
-import getApiUrl from 'sentry/utils/api/getApiUrl';
+import {getApiUrl} from 'sentry/utils/api/getApiUrl';
 import {useApiQuery} from 'sentry/utils/queryClient';
-import useApi from 'sentry/utils/useApi';
+import {useApi} from 'sentry/utils/useApi';
 
 const releasesSetupUrl = 'https://docs.sentry.io/product/releases/';
 
@@ -96,10 +100,10 @@ type Props = {
   project: Project;
 };
 
-function ReleasesPromo({organization, project}: Props) {
+export function ReleasesPromo({organization, project}: Props) {
   const {data, isPending} = useApiQuery<SentryApp[]>(
     [
-      getApiUrl(`/organizations/$organizationIdOrSlug/sentry-apps/`, {
+      getApiUrl('/organizations/$organizationIdOrSlug/sentry-apps/', {
         path: {organizationIdOrSlug: organization.slug},
       }),
       {query: {status: 'internal'}},
@@ -147,16 +151,13 @@ function ReleasesPromo({organization, project}: Props) {
     });
   }, [organization, project]);
 
-  const trackQuickstartCreatedIntegration = useCallback(
-    (integration: SentryApp) => {
-      trackAnalytics('releases.quickstart_create_integration.success', {
-        organization,
-        project_id: project.id,
-        integration_uuid: integration.uuid,
-      });
-    },
-    [organization, project]
-  );
+  const trackQuickstartCreatedIntegration = (integration: SentryApp) => {
+    trackAnalytics('releases.quickstart_create_integration.success', {
+      organization,
+      project_id: project.id,
+      integration_uuid: integration.uuid,
+    });
+  };
 
   const trackCreateIntegrationModalClose = useCallback(() => {
     trackAnalytics('releases.quickstart_create_integration_modal.close', {
@@ -243,7 +244,7 @@ sentry-cli releases finalize "$VERSION"`;
             search
             disabled={false}
             menuFooter={({closeOverlay}) => (
-              <Button
+              <MenuComponents.CTAButton
                 tooltipProps={{
                   title: canMakeIntegration
                     ? undefined
@@ -251,8 +252,6 @@ sentry-cli releases finalize "$VERSION"`;
                         'You must be an organization owner, manager or admin to create an integration.'
                       ),
                 }}
-                size="xs"
-                priority="transparent"
                 disabled={!canMakeIntegration}
                 onClick={() => {
                   closeOverlay();
@@ -270,7 +269,7 @@ sentry-cli releases finalize "$VERSION"`;
                 }}
               >
                 {t('Add New Integration')}
-              </Button>
+              </MenuComponents.CTAButton>
             )}
             trigger={triggerProps => (
               <OverlayTrigger.Button
@@ -308,5 +307,3 @@ sentry-cli releases finalize "$VERSION"`;
     </Panel>
   );
 }
-
-export default ReleasesPromo;

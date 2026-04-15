@@ -4,12 +4,13 @@ import {usePopper} from 'react-popper';
 import {css, useTheme} from '@emotion/react';
 
 import {Tag} from '@sentry/scraps/badge';
+import {useHotkeys} from '@sentry/scraps/hotkey';
 import {Flex, Stack} from '@sentry/scraps/layout';
 import {Separator} from '@sentry/scraps/separator';
 import {Text} from '@sentry/scraps/text';
 
 import {addSuccessMessage} from 'sentry/actionCreators/indicator';
-import LoadingIndicator from 'sentry/components/loadingIndicator';
+import {LoadingIndicator} from 'sentry/components/loadingIndicator';
 import {Overlay} from 'sentry/components/overlay';
 import {
   ProfilingContextMenu,
@@ -27,8 +28,7 @@ import {
 } from 'sentry/stories/view/useStoriesLoader';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {useContextMenu} from 'sentry/utils/profiling/hooks/useContextMenu';
-import {useHotkeys} from 'sentry/utils/useHotkeys';
-import useOrganization from 'sentry/utils/useOrganization';
+import {useOrganization} from 'sentry/utils/useOrganization';
 
 type TraceElement = HTMLElement | SVGElement;
 
@@ -282,25 +282,22 @@ export function SentryComponentInspector() {
   }, [state.trace]);
 
   const {ref: contextMenuRef, ...contextMenuProps} = {...contextMenu.getMenuProps()};
-  const positionContextMenuOnMountRef = useCallback(
-    (ref: HTMLDivElement | null) => {
-      contextMenuRef(ref);
+  const positionContextMenuOnMountRef = (ref: HTMLDivElement | null) => {
+    contextMenuRef(ref);
 
-      if (ref) {
-        const position = computeTooltipPosition(
-          {
-            x: tooltipPositionRef.current?.mouse.x ?? 0,
-            y: tooltipPositionRef.current?.mouse.y ?? 0,
-          },
-          ref
-        );
+    if (ref) {
+      const position = computeTooltipPosition(
+        {
+          x: tooltipPositionRef.current?.mouse.x ?? 0,
+          y: tooltipPositionRef.current?.mouse.y ?? 0,
+        },
+        ref
+      );
 
-        ref.style.left = `${position.left}px`;
-        ref.style.top = `${position.top}px`;
-      }
-    },
-    [contextMenuRef]
-  );
+      ref.style.left = `${position.left}px`;
+      ref.style.top = `${position.top}px`;
+    }
+  };
 
   const storybookFiles = useStoryBookFiles();
   const storybookFilesLookup = useMemo(

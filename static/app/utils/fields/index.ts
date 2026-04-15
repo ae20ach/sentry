@@ -5,6 +5,7 @@ import type {TagCollection} from 'sentry/types/group';
 import {CONDITIONS_ARGUMENTS, WEB_VITALS_QUALITY} from 'sentry/utils/discover/types';
 import {OurLogKnownFieldKey} from 'sentry/views/explore/logs/types';
 import {SpanFields} from 'sentry/views/insights/types';
+import {METRICS_ARTIFACT_TYPES} from 'sentry/views/settings/project/preprod/types';
 
 // Don't forget to update https://docs.sentry.io/product/sentry-basics/search/searchable-properties/ for any changes made here
 
@@ -394,6 +395,7 @@ export enum AggregationKey {
   FAILURE_RATE = 'failure_rate',
   LAST_SEEN = 'last_seen',
   PERFORMANCE_SCORE = 'performance_score',
+  OPPORTUNITY_SCORE = 'opportunity_score',
 }
 
 export enum IsFieldValues {
@@ -426,8 +428,8 @@ const IsFieldDescriptions: Record<IsFieldValues, string> = {
   [IsFieldValues.ASSIGNED]: t('Issues assigned to a team member'),
   [IsFieldValues.UNASSIGNED]: t('Issues not assigned to anyone'),
   [IsFieldValues.FOR_REVIEW]: t('Issues pending review'),
-  [IsFieldValues.LINKED]: t('Issues linked to other issues'),
-  [IsFieldValues.UNLINKED]: t('Issues not linked to other issues'),
+  [IsFieldValues.LINKED]: t('Issues linked via an integration'),
+  [IsFieldValues.UNLINKED]: t('Issues not linked via an integration'),
 };
 
 export function getIsFieldDescriptionFromValue(
@@ -1023,7 +1025,35 @@ export const AGGREGATION_FIELDS: Record<AggregationKey, FieldDefinition> = {
       {
         name: 'value',
         kind: 'column',
-        columnTypes: [FieldValueType.NUMBER],
+        columnTypes: validateAllowedColumns([
+          'measurements.score.total',
+          'measurements.score.lcp',
+          'measurements.score.fcp',
+          'measurements.score.inp',
+          'measurements.score.cls',
+          'measurements.score.ttfb',
+        ]),
+        defaultValue: 'measurements.score.total',
+        required: true,
+      },
+    ],
+  },
+  [AggregationKey.OPPORTUNITY_SCORE]: {
+    desc: t('Returns the opportunity score for a given web vital'),
+    kind: FieldKind.FUNCTION,
+    valueType: FieldValueType.SCORE,
+    parameters: [
+      {
+        name: 'value',
+        kind: 'column',
+        columnTypes: validateAllowedColumns([
+          'measurements.score.total',
+          'measurements.score.lcp',
+          'measurements.score.fcp',
+          'measurements.score.inp',
+          'measurements.score.cls',
+          'measurements.score.ttfb',
+        ]),
         defaultValue: 'measurements.score.total',
         required: true,
       },
@@ -1054,6 +1084,8 @@ export const ALLOWED_EXPLORE_VISUALIZE_AGGREGATES: AggregationKey[] = [
   AggregationKey.EPS,
   AggregationKey.FAILURE_RATE,
   AggregationKey.FAILURE_COUNT,
+  AggregationKey.PERFORMANCE_SCORE,
+  AggregationKey.OPPORTUNITY_SCORE,
 ];
 
 export const ALLOWED_EXPLORE_EQUATION_AGGREGATES: AggregationKey[] = [
@@ -2518,6 +2550,12 @@ const PREPROD_FIELD_DEFINITIONS: Record<string, FieldDefinition> = {
     kind: FieldKind.FIELD,
     valueType: FieldValueType.STRING,
   },
+  artifact_type: {
+    desc: t('The type of artifact component (e.g., main app, watch app, app clip)'),
+    kind: FieldKind.FIELD,
+    valueType: FieldValueType.STRING,
+    values: [...METRICS_ARTIFACT_TYPES],
+  },
   build_configuration_name: {
     desc: t('The name of the build configuration (e.g., Debug, Release)'),
     kind: FieldKind.FIELD,
@@ -2566,7 +2604,7 @@ const PREPROD_FIELD_DEFINITIONS: Record<string, FieldDefinition> = {
   git_pr_number: {
     desc: t('The pull request number associated with a build'),
     kind: FieldKind.FIELD,
-    valueType: FieldValueType.STRING,
+    valueType: FieldValueType.INTEGER,
   },
 };
 
@@ -2757,7 +2795,7 @@ export const ISSUE_FIELDS: FieldKey[] = [
  * Search locations are defined in sentry/snuba/events.py, anything that
  * references a tag should not be defined here.
  */
-export const ISSUE_EVENT_FIELDS_THAT_MAY_CONFLICT_WITH_TAGS: Set<FieldKey> = new Set([
+export const ISSUE_EVENT_FIELDS_THAT_MAY_CONFLICT_WITH_TAGS = new Set<FieldKey>([
   FieldKey.APP_IN_FOREGROUND,
   FieldKey.DEVICE_ARCH,
   FieldKey.DEVICE_BRAND,
@@ -3588,7 +3626,7 @@ export function isDeviceClass(key: any): boolean {
 
 export const DEVICE_CLASS_TAG_VALUES = ['high', 'medium', 'low'];
 
-const TYPED_TAG_KEY_RE = /tags\[([^\s]*),([^\s]*)\]/;
+const TYPED_TAG_KEY_RE = /tags\[(\S*),(\S*)\]/;
 
 export function classifyTagKey(key: string): FieldKind {
   const result = key.match(TYPED_TAG_KEY_RE);

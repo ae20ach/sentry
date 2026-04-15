@@ -23,12 +23,12 @@ from sentry.silo.base import SiloMode
 from sentry.testutils.cases import TestCase
 from sentry.testutils.silo import (
     assume_test_silo_mode,
+    cell_silo_test,
     control_silo_test,
-    create_test_regions,
-    region_silo_test,
+    create_test_cells,
 )
 
-TEST_REGIONS = create_test_regions("us", "de")
+TEST_REGIONS = create_test_cells("us", "de")
 
 
 def create_control_relocation_transfer(organization: Organization, **kwargs):
@@ -42,7 +42,7 @@ def create_control_relocation_transfer(organization: Organization, **kwargs):
     )
 
 
-def create_region_relocation_transfer(organization: Organization, **kwargs):
+def create_cell_relocation_transfer(organization: Organization, **kwargs):
     if "relocation_uuid" not in kwargs:
         kwargs["relocation_uuid"] = uuid4()
     if "state" not in kwargs:
@@ -100,7 +100,7 @@ class FindRelocationTransferRegionTest(TestCase):
 
     @patch("sentry.relocation.tasks.transfer.process_relocation_transfer_region")
     def test_no_due_records(self, mock_process: MagicMock) -> None:
-        create_region_relocation_transfer(
+        create_cell_relocation_transfer(
             organization=self.organization, scheduled_for=timezone.now() + timedelta(minutes=2)
         )
         find_relocation_transfer_region()
@@ -108,7 +108,7 @@ class FindRelocationTransferRegionTest(TestCase):
 
     @patch("sentry.relocation.tasks.transfer.process_relocation_transfer_region")
     def test_due_records(self, mock_process: MagicMock) -> None:
-        transfer = create_region_relocation_transfer(
+        transfer = create_cell_relocation_transfer(
             organization=self.organization, scheduled_for=timezone.now() - timedelta(minutes=2)
         )
         find_relocation_transfer_region()
@@ -118,7 +118,7 @@ class FindRelocationTransferRegionTest(TestCase):
 
     @patch("sentry.relocation.tasks.transfer.process_relocation_transfer_region")
     def test_purge_expired(self, mock_process: MagicMock) -> None:
-        transfer = create_region_relocation_transfer(
+        transfer = create_cell_relocation_transfer(
             organization=self.organization,
             scheduled_for=timezone.now() - timedelta(minutes=2),
         )
@@ -130,7 +130,7 @@ class FindRelocationTransferRegionTest(TestCase):
         assert not RegionRelocationTransfer.objects.filter(id=transfer.id).exists()
 
 
-@control_silo_test(regions=TEST_REGIONS)
+@control_silo_test(cells=TEST_REGIONS)
 class ProcessRelocationTransferControlTest(TestCase):
     def test_missing_transfer(self) -> None:
         res = process_relocation_transfer_control(transfer_id=999)
@@ -152,7 +152,7 @@ class ProcessRelocationTransferControlTest(TestCase):
     @patch("sentry.relocation.services.relocation_export.impl.uploading_complete")
     def test_transfer_reply_state(self, mock_uploading_complete: MagicMock) -> None:
         organization = self.organization
-        with assume_test_silo_mode(SiloMode.REGION):
+        with assume_test_silo_mode(SiloMode.CELL):
             relocation = Relocation.objects.create(
                 creator_id=self.user.id,
                 owner_id=self.user.id,
@@ -176,19 +176,19 @@ class ProcessRelocationTransferControlTest(TestCase):
         assert mock_uploading_complete.apply_async.called, "task should be spawned"
         # Should be removed on completion.
         assert not ControlRelocationTransfer.objects.filter(id=transfer.id).exists()
-        # the relocation RPC call should create a file on the region
-        with assume_test_silo_mode(SiloMode.REGION):
+        # the relocation RPC call should create a file on the cell
+        with assume_test_silo_mode(SiloMode.CELL):
             assert RelocationFile.objects.filter(relocation=relocation).exists()
 
 
-@region_silo_test(regions=TEST_REGIONS)
+@cell_silo_test(cells=TEST_REGIONS)
 class ProcessRelocationTransferRegionTest(TestCase):
     def test_missing_transfer(self) -> None:
         res = process_relocation_transfer_region(transfer_id=999)
         assert res is None
 
     def test_transfer_request_state(self) -> None:
-        transfer = create_region_relocation_transfer(
+        transfer = create_cell_relocation_transfer(
             organization=self.organization,
             state=RelocationTransferState.Request,
         )
@@ -204,7 +204,7 @@ class ProcessRelocationTransferRegionTest(TestCase):
             want_org_slugs=["acme-org"],
             step=Relocation.Step.UPLOADING.value,
         )
-        transfer = create_region_relocation_transfer(
+        transfer = create_cell_relocation_transfer(
             organization=organization,
             relocation_uuid=relocation.uuid,
             state=RelocationTransferState.Reply,

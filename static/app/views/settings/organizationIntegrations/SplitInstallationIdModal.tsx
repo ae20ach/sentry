@@ -4,7 +4,7 @@ import styled from '@emotion/styled';
 import {Button} from '@sentry/scraps/button';
 
 import {addSuccessMessage} from 'sentry/actionCreators/indicator';
-import TextCopyInput from 'sentry/components/textCopyInput';
+import {TextCopyInput} from 'sentry/components/textCopyInput';
 
 type Props = {
   closeModal: () => void;
@@ -30,7 +30,7 @@ export function SplitInstallationIdModal(props: Props) {
     await navigator.clipboard.writeText(props.installationId);
   }, [props.installationId]);
 
-  const handleContinue = useCallback(() => {
+  const handleContinue = () => {
     onCopy();
     addSuccessMessage('Copied to clipboard');
 
@@ -39,7 +39,7 @@ export function SplitInstallationIdModal(props: Props) {
     openAdminIntegrationTimeoutRef.current = window.setTimeout(() => {
       window.open('https://app.split.io/org/admin/integrations');
     }, 2000);
-  }, [onCopy]);
+  };
 
   // no need to translate this temporary component
   return (

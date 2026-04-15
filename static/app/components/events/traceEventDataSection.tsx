@@ -8,20 +8,18 @@ import {OverlayTrigger} from '@sentry/scraps/overlayTrigger';
 import {SegmentedControl} from '@sentry/scraps/segmentedControl';
 
 import {CopyAsDropdown} from 'sentry/components/copyAsDropdown';
-import displayRawContent from 'sentry/components/events/interfaces/crashContent/stackTrace/rawContent';
+import {displayRawContent} from 'sentry/components/events/interfaces/crashContent/stackTrace/rawContent';
 import {useStacktraceContext} from 'sentry/components/events/interfaces/stackTraceContext';
 import {IconEllipsis, IconSort} from 'sentry/icons';
 import {t} from 'sentry/locale';
-import {space} from 'sentry/styles/space';
 import type {Event} from 'sentry/types/event';
 import {EntryType} from 'sentry/types/event';
 import type {PlatformKey, Project} from 'sentry/types/project';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {isMobilePlatform, isNativePlatform} from 'sentry/utils/platform';
-import useApi from 'sentry/utils/useApi';
-import useOrganization from 'sentry/utils/useOrganization';
+import {useApi} from 'sentry/utils/useApi';
+import {useOrganization} from 'sentry/utils/useOrganization';
 import {InterimSection} from 'sentry/views/issueDetails/streamline/interimSection';
-import {useHasStreamlinedUI} from 'sentry/views/issueDetails/utils';
 
 const sortByOptions = {
   'recent-first': t('Newest'),
@@ -73,7 +71,6 @@ export function TraceEventDataSection({
 }: Props) {
   const api = useApi();
   const organization = useOrganization();
-  const hasStreamlinedUI = useHasStreamlinedUI();
 
   const {
     displayOptions,
@@ -87,154 +84,145 @@ export function TraceEventDataSection({
 
   const isMobile = isMobilePlatform(platform);
 
-  const handleFilterFramesChange = useCallback(
-    (val: 'full' | 'relevant') => {
-      const isFullOptionClicked = val === 'full';
+  const handleFilterFramesChange = (val: 'full' | 'relevant') => {
+    const isFullOptionClicked = val === 'full';
 
+    trackAnalytics(
+      isFullOptionClicked
+        ? 'stack-trace.full_stack_trace_clicked'
+        : 'stack-trace.most_relevant_clicked',
+      {
+        organization,
+        project_slug: projectSlug,
+        platform,
+        is_mobile: isMobile,
+      }
+    );
+
+    setIsFullStackTrace(isFullOptionClicked);
+  };
+
+  const handleSortByChange = (val: keyof typeof sortByOptions) => {
+    const isRecentFirst = val === 'recent-first';
+
+    trackAnalytics(
+      isRecentFirst
+        ? 'stack-trace.sort_option_recent_first_clicked'
+        : 'stack-trace.sort_option_recent_last_clicked',
+      {
+        organization,
+        project_slug: projectSlug,
+        platform,
+        is_mobile: isMobile,
+      }
+    );
+
+    setIsNewestFramesFirst(isRecentFirst);
+  };
+
+  const handleDisplayChange = (vals: typeof displayOptions) => {
+    if (vals.includes('raw-stack-trace')) {
+      trackAnalytics('stack-trace.display_option_raw_stack_trace_clicked', {
+        organization,
+        project_slug: projectSlug,
+        platform,
+        is_mobile: isMobile,
+        checked: true,
+      });
+    } else if (displayOptions.includes('raw-stack-trace')) {
+      trackAnalytics('stack-trace.display_option_raw_stack_trace_clicked', {
+        organization,
+        project_slug: projectSlug,
+        platform,
+        is_mobile: isMobile,
+        checked: false,
+      });
+    }
+
+    if (vals.includes('absolute-addresses')) {
+      trackAnalytics('stack-trace.display_option_absolute_addresses_clicked', {
+        organization,
+        project_slug: projectSlug,
+        platform,
+        is_mobile: isMobile,
+        checked: true,
+      });
+    } else if (displayOptions.includes('absolute-addresses')) {
+      trackAnalytics('stack-trace.display_option_absolute_addresses_clicked', {
+        organization,
+        project_slug: projectSlug,
+        platform,
+        is_mobile: isMobile,
+        checked: false,
+      });
+    }
+
+    if (vals.includes('absolute-file-paths')) {
+      trackAnalytics('stack-trace.display_option_absolute_file_paths_clicked', {
+        organization,
+        project_slug: projectSlug,
+        platform,
+        is_mobile: isMobile,
+        checked: true,
+      });
+    } else if (displayOptions.includes('absolute-file-paths')) {
+      trackAnalytics('stack-trace.display_option_absolute_file_paths_clicked', {
+        organization,
+        project_slug: projectSlug,
+        platform,
+        is_mobile: isMobile,
+        checked: false,
+      });
+    }
+
+    if (vals.includes('minified')) {
       trackAnalytics(
-        isFullOptionClicked
-          ? 'stack-trace.full_stack_trace_clicked'
-          : 'stack-trace.most_relevant_clicked',
+        platform.startsWith('javascript')
+          ? 'stack-trace.display_option_minified_clicked'
+          : 'stack-trace.display_option_unsymbolicated_clicked',
         {
           organization,
           project_slug: projectSlug,
           platform,
           is_mobile: isMobile,
+          checked: true,
         }
       );
-
-      setIsFullStackTrace(isFullOptionClicked);
-    },
-    [organization, platform, projectSlug, isMobile, setIsFullStackTrace]
-  );
-
-  const handleSortByChange = useCallback(
-    (val: keyof typeof sortByOptions) => {
-      const isRecentFirst = val === 'recent-first';
-
+    } else if (displayOptions.includes('minified')) {
       trackAnalytics(
-        isRecentFirst
-          ? 'stack-trace.sort_option_recent_first_clicked'
-          : 'stack-trace.sort_option_recent_last_clicked',
+        platform.startsWith('javascript')
+          ? 'stack-trace.display_option_minified_clicked'
+          : 'stack-trace.display_option_unsymbolicated_clicked',
         {
           organization,
           project_slug: projectSlug,
           platform,
           is_mobile: isMobile,
+          checked: false,
         }
       );
+    }
 
-      setIsNewestFramesFirst(isRecentFirst);
-    },
-    [organization, platform, projectSlug, isMobile, setIsNewestFramesFirst]
-  );
+    if (vals.includes('verbose-function-names')) {
+      trackAnalytics('stack-trace.display_option_verbose_function_names_clicked', {
+        organization,
+        project_slug: projectSlug,
+        platform,
+        is_mobile: isMobile,
+        checked: true,
+      });
+    } else if (displayOptions.includes('verbose-function-names')) {
+      trackAnalytics('stack-trace.display_option_verbose_function_names_clicked', {
+        organization,
+        project_slug: projectSlug,
+        platform,
+        is_mobile: isMobile,
+        checked: false,
+      });
+    }
 
-  const handleDisplayChange = useCallback(
-    (vals: typeof displayOptions) => {
-      if (vals.includes('raw-stack-trace')) {
-        trackAnalytics('stack-trace.display_option_raw_stack_trace_clicked', {
-          organization,
-          project_slug: projectSlug,
-          platform,
-          is_mobile: isMobile,
-          checked: true,
-        });
-      } else if (displayOptions.includes('raw-stack-trace')) {
-        trackAnalytics('stack-trace.display_option_raw_stack_trace_clicked', {
-          organization,
-          project_slug: projectSlug,
-          platform,
-          is_mobile: isMobile,
-          checked: false,
-        });
-      }
-
-      if (vals.includes('absolute-addresses')) {
-        trackAnalytics('stack-trace.display_option_absolute_addresses_clicked', {
-          organization,
-          project_slug: projectSlug,
-          platform,
-          is_mobile: isMobile,
-          checked: true,
-        });
-      } else if (displayOptions.includes('absolute-addresses')) {
-        trackAnalytics('stack-trace.display_option_absolute_addresses_clicked', {
-          organization,
-          project_slug: projectSlug,
-          platform,
-          is_mobile: isMobile,
-          checked: false,
-        });
-      }
-
-      if (vals.includes('absolute-file-paths')) {
-        trackAnalytics('stack-trace.display_option_absolute_file_paths_clicked', {
-          organization,
-          project_slug: projectSlug,
-          platform,
-          is_mobile: isMobile,
-          checked: true,
-        });
-      } else if (displayOptions.includes('absolute-file-paths')) {
-        trackAnalytics('stack-trace.display_option_absolute_file_paths_clicked', {
-          organization,
-          project_slug: projectSlug,
-          platform,
-          is_mobile: isMobile,
-          checked: false,
-        });
-      }
-
-      if (vals.includes('minified')) {
-        trackAnalytics(
-          platform.startsWith('javascript')
-            ? 'stack-trace.display_option_minified_clicked'
-            : 'stack-trace.display_option_unsymbolicated_clicked',
-          {
-            organization,
-            project_slug: projectSlug,
-            platform,
-            is_mobile: isMobile,
-            checked: true,
-          }
-        );
-      } else if (displayOptions.includes('minified')) {
-        trackAnalytics(
-          platform.startsWith('javascript')
-            ? 'stack-trace.display_option_minified_clicked'
-            : 'stack-trace.display_option_unsymbolicated_clicked',
-          {
-            organization,
-            project_slug: projectSlug,
-            platform,
-            is_mobile: isMobile,
-            checked: false,
-          }
-        );
-      }
-
-      if (vals.includes('verbose-function-names')) {
-        trackAnalytics('stack-trace.display_option_verbose_function_names_clicked', {
-          organization,
-          project_slug: projectSlug,
-          platform,
-          is_mobile: isMobile,
-          checked: true,
-        });
-      } else if (displayOptions.includes('verbose-function-names')) {
-        trackAnalytics('stack-trace.display_option_verbose_function_names_clicked', {
-          organization,
-          project_slug: projectSlug,
-          platform,
-          is_mobile: isMobile,
-          checked: false,
-        });
-      }
-
-      setDisplayOptions(vals);
-    },
-    [organization, platform, projectSlug, isMobile, displayOptions, setDisplayOptions]
-  );
+    setDisplayOptions(vals);
+  };
 
   const handleCopyRawStacktrace = useCallback(() => {
     trackAnalytics('stack-trace.copy_raw_clicked', {
@@ -445,7 +433,7 @@ export function TraceEventDataSection({
   return (
     <SectionComponent
       type={type}
-      showPermalink={!hasStreamlinedUI}
+      showPermalink={false}
       title={title}
       disableCollapsePersistence
       actions={
@@ -564,5 +552,5 @@ const ThreadHeading = styled('h3')`
   color: ${p => p.theme.tokens.content.secondary};
   font-size: ${p => p.theme.font.size.md};
   font-weight: ${p => p.theme.font.weight.sans.medium};
-  margin-bottom: ${space(1)};
+  margin-bottom: ${p => p.theme.space.md};
 `;

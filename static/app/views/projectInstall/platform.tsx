@@ -1,4 +1,4 @@
-import {Fragment, useCallback, useMemo} from 'react';
+import {Fragment, useMemo} from 'react';
 import styled from '@emotion/styled';
 import type {LocationDescriptorObject} from 'history';
 
@@ -7,23 +7,22 @@ import {Button} from '@sentry/scraps/button';
 import {Grid, type GridProps} from '@sentry/scraps/layout';
 
 import Feature from 'sentry/components/acl/feature';
-import NotFound from 'sentry/components/errors/notFound';
-import HookOrDefault from 'sentry/components/hookOrDefault';
+import {NotFound} from 'sentry/components/errors/notFound';
+import {HookOrDefault} from 'sentry/components/hookOrDefault';
 import {SdkDocumentation} from 'sentry/components/onboarding/gettingStartedDoc/sdkDocumentation';
 import type {ProductSolution} from 'sentry/components/onboarding/gettingStartedDoc/types';
 import {platformProductAvailability} from 'sentry/components/onboarding/productSelection';
 import {setPageFiltersStorage} from 'sentry/components/pageFilters/persistence';
-import PageFiltersStore from 'sentry/components/pageFilters/store';
+import {PageFiltersStore} from 'sentry/components/pageFilters/store';
 import {performance as performancePlatforms} from 'sentry/data/platformCategories';
 import {t} from 'sentry/locale';
-import ConfigStore from 'sentry/stores/configStore';
-import {space} from 'sentry/styles/space';
+import {ConfigStore} from 'sentry/stores/configStore';
 import type {PlatformIntegration, Project} from 'sentry/types/project';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {decodeList} from 'sentry/utils/queryString';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useNavigate} from 'sentry/utils/useNavigate';
-import useOrganization from 'sentry/utils/useOrganization';
+import {useOrganization} from 'sentry/utils/useOrganization';
 
 import {OtherPlatformsInfo} from './otherPlatformsInfo';
 import {PlatformDocHeader} from './platformDocHeader';
@@ -49,27 +48,24 @@ export function ProjectInstallPlatform({project, platform}: Props) {
     [location.query.product]
   );
 
-  const redirectWithProjectSelection = useCallback(
-    (to: LocationDescriptorObject) => {
-      if (!project?.id) {
-        return;
-      }
-      // We need to persist and pin the project filter
-      // so the selection does not reset on further navigation
-      PageFiltersStore.updateProjects([Number(project?.id)], null);
-      PageFiltersStore.pin('projects', true);
-      setPageFiltersStorage(organization.slug, new Set(['projects']));
+  const redirectWithProjectSelection = (to: LocationDescriptorObject) => {
+    if (!project?.id) {
+      return;
+    }
+    // We need to persist and pin the project filter
+    // so the selection does not reset on further navigation
+    PageFiltersStore.updateProjects([Number(project?.id)], null);
+    PageFiltersStore.pin('projects', true);
+    setPageFiltersStorage(organization.slug, new Set(['projects']));
 
-      navigate({
-        ...to,
-        query: {
-          ...to.query,
-          project: project?.id,
-        },
-      });
-    },
-    [navigate, organization.slug, project?.id]
-  );
+    navigate({
+      ...to,
+      query: {
+        ...to.query,
+        project: project?.id,
+      },
+    });
+  };
 
   if (!platform) {
     return <NotFound />;
@@ -114,7 +110,7 @@ export function ProjectInstallPlatform({project, platform}: Props) {
                 <Alert.Container>
                   <StyledAlert variant="info">
                     {t(
-                      `Your selected platform supports performance, but your organization does not have performance enabled.`
+                      'Your selected platform supports performance, but your organization does not have performance enabled.'
                     )}
                   </StyledAlert>
                 </Alert.Container>
@@ -148,16 +144,16 @@ export function ProjectInstallPlatform({project, platform}: Props) {
 const StyledButtonBar = styled((props: GridProps) => (
   <Grid flow="column" align="center" gap="md" {...props} />
 ))`
-  margin-top: ${space(3)};
+  margin-top: ${p => p.theme.space['2xl']};
   width: max-content;
 
   @media (max-width: ${p => p.theme.breakpoints.sm}) {
     width: auto;
-    grid-row-gap: ${space(1)};
+    grid-row-gap: ${p => p.theme.space.md};
     grid-auto-flow: row;
   }
 `;
 
 const StyledAlert = styled(Alert)`
-  margin-top: ${space(2)};
+  margin-top: ${p => p.theme.space.xl};
 `;

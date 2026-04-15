@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useMemo} from 'react';
+import {useEffect, useMemo} from 'react';
 import styled from '@emotion/styled';
 
 import {Alert} from '@sentry/scraps/alert';
@@ -13,15 +13,15 @@ import {IconAdd, IconDelete, IconMail} from 'sentry/icons';
 import {t, tct} from 'sentry/locale';
 import type {SelectValue} from 'sentry/types/core';
 import {
+  type DataConditionGroup,
   DataConditionGroupLogicType,
   DataConditionHandlerGroupType,
-  type DataConditionGroup,
 } from 'sentry/types/workflowEngine/dataConditions';
-import type RequestError from 'sentry/utils/requestError/requestError';
-import useApi from 'sentry/utils/useApi';
-import useOrganization from 'sentry/utils/useOrganization';
+import type {RequestError} from 'sentry/utils/requestError/requestError';
+import {useApi} from 'sentry/utils/useApi';
+import {useOrganization} from 'sentry/utils/useOrganization';
 import {FILTER_MATCH_OPTIONS} from 'sentry/views/automations/components/actionFilters/constants';
-import ActionNodeList from 'sentry/views/automations/components/actionNodeList';
+import {ActionNodeList} from 'sentry/views/automations/components/actionNodeList';
 import {AutomationBuilderConflictContext} from 'sentry/views/automations/components/automationBuilderConflictContext';
 import {useAutomationBuilderContext} from 'sentry/views/automations/components/automationBuilderContext';
 import {useAutomationBuilderErrorContext} from 'sentry/views/automations/components/automationBuilderErrorContext';
@@ -29,12 +29,12 @@ import {
   stripActionFields,
   validateActions,
 } from 'sentry/views/automations/components/automationFormData';
-import DataConditionNodeList from 'sentry/views/automations/components/dataConditionNodeList';
+import {DataConditionNodeList} from 'sentry/views/automations/components/dataConditionNodeList';
 import {TRIGGER_MATCH_OPTIONS} from 'sentry/views/automations/components/triggers/constants';
 import {useSendTestNotification} from 'sentry/views/automations/hooks';
 import {findConflictingConditions} from 'sentry/views/automations/hooks/utils';
 
-export default function AutomationBuilder() {
+export function AutomationBuilder() {
   const {state, actions, showTriggerLogicTypeSelector} = useAutomationBuilderContext();
   const {mutationErrors} = useAutomationBuilderErrorContext();
   const organization = useOrganization();
@@ -68,7 +68,6 @@ export default function AutomationBuilder() {
                           height: '21px',
                         }),
                       }}
-                      inline={false}
                       isSearchable={false}
                       isClearable={false}
                       name={`${state.triggers.id}.logicType`}
@@ -81,8 +80,6 @@ export default function AutomationBuilder() {
                       onChange={(option: SelectValue<DataConditionGroupLogicType>) =>
                         actions.updateWhenLogicType(option.value)
                       }
-                      required
-                      flexibleControlStateSize
                       options={TRIGGER_MATCH_OPTIONS}
                       size="xs"
                     />
@@ -151,7 +148,7 @@ function ActionFilterBlock({actionFilter}: ActionFilterBlockProps) {
 
   const numActionFilters = state.actionFilters.length;
 
-  const handleSendTestNotification = useCallback(() => {
+  const handleSendTestNotification = () => {
     const actionFilterActions = actionFilter.actions || [];
 
     // Validate actions before sending test notification
@@ -166,7 +163,7 @@ function ActionFilterBlock({actionFilter}: ActionFilterBlockProps) {
         })
       );
     }
-  }, [actionFilter.actions, sendTestNotification, setErrors]);
+  };
 
   return (
     <IfThenWrapper>
@@ -185,12 +182,9 @@ function ActionFilterBlock({actionFilter}: ActionFilterBlockProps) {
                         height: '21px',
                       }),
                     }}
-                    inline={false}
                     isSearchable={false}
                     isClearable={false}
                     name={`actionFilters.${actionFilter.id}.logicType`}
-                    required
-                    flexibleControlStateSize
                     options={FILTER_MATCH_OPTIONS}
                     size="xs"
                     value={

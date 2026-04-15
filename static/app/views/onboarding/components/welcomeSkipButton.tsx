@@ -1,10 +1,10 @@
-import {useCallback, type PropsWithChildren} from 'react';
+import {type PropsWithChildren} from 'react';
 
 import {LinkButton} from '@sentry/scraps/button';
 import {Link} from '@sentry/scraps/link';
 
 import {trackAnalytics} from 'sentry/utils/analytics';
-import useOrganization from 'sentry/utils/useOrganization';
+import {useOrganization} from 'sentry/utils/useOrganization';
 import {ONBOARDING_WELCOME_SCREEN_SOURCE} from 'sentry/views/onboarding/consts';
 import {useOnboardingSidebar} from 'sentry/views/onboarding/useOnboardingSidebar';
 
@@ -19,14 +19,14 @@ export function WelcomeSkipButton({
   const organization = useOrganization();
   const {activateSidebar} = useOnboardingSidebar();
 
-  const handleSkipOnboarding = useCallback(() => {
+  const handleSkipOnboarding = () => {
     trackAnalytics('growth.onboarding_clicked_skip', {
       organization,
       source: ONBOARDING_WELCOME_SCREEN_SOURCE,
     });
 
     activateSidebar({userClicked: false, source: 'targeted_onboarding_welcome_skip'});
-  }, [organization, activateSidebar]);
+  };
 
   const to = `/organizations/${organization.slug}/issues/?referrer=onboarding-welcome-skip`;
 

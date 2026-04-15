@@ -8,6 +8,7 @@ from typing import Any, TypedDict
 
 import orjson
 import sentry_sdk
+from django.core.cache import cache
 from requests import PreparedRequest
 
 from sentry.constants import ObjectStatus
@@ -54,6 +55,14 @@ logger = logging.getLogger("sentry.integrations.github")
 MINIMUM_REQUESTS = 200
 
 JWT_AUTH_ROUTES = ("/app/installations", "access_tokens")
+
+
+class CachedRepo(TypedDict):
+    id: int
+    name: str
+    full_name: str
+    default_branch: str | None
+    archived: bool | None
 
 
 class GithubRateLimitInfo:
@@ -404,7 +413,7 @@ class GitHubBaseClient(
         """
         return self.get(f"/repos/{repo}/pulls/{pull_number}/files")
 
-    def get_pull_request(self, repo: str, pull_number: int) -> Any:
+    def get_pull_request(self, repo: str, pull_number: str) -> Any:
         """
         https://docs.github.com/en/rest/pulls/pulls#get-a-pull-request
 
@@ -412,11 +421,38 @@ class GitHubBaseClient(
         """
         return self.get(f"/repos/{repo}/pulls/{pull_number}")
 
+    def get_archive_link(self, repo: str, archive_format: str, ref: str) -> str:
+        """
+        https://docs.github.com/en/rest/repos/contents#download-a-repository-archive-tar-ball-or-zip-ball
+
+        Returns the redirect URL for downloading a repository archive.
+        The API returns a 302; we capture the Location header instead of following it.
+        """
+        resp = self._request(
+            "GET",
+            f"/repos/{repo}/{archive_format}/{ref}",
+            allow_redirects=False,
+            raw_response=True,
+        )
+        if resp.status_code != 302 or "Location" not in resp.headers:
+            raise ApiError.from_response(resp)
+        return resp.headers["Location"]
+
     def get_repo(self, repo: str) -> Any:
         """
         https://docs.github.com/en/rest/repos/repos#get-a-repository
         """
         return self.get(f"/repos/{repo}")
+
+    def get_languages(self, repo: str) -> dict[str, int]:
+        """
+        https://docs.github.com/en/rest/repos/repos#list-repository-languages
+
+        :param repo: "owner/repo" format
+        :returns: {"Python": 50000, "JavaScript": 30000, ...}
+                  Keys are GitHub Linguist names, values are bytes of code.
+        """
+        return self.get(f"/repos/{repo}/languages")
 
     # https://docs.github.com/en/rest/rate-limit?apiVersion=2022-11-28
     def get_rate_limit(self, specific_resource: str = "core") -> GithubRateLimitInfo:
@@ -521,6 +557,33 @@ class GitHubBaseClient(
                 response_key="repositories",
                 page_number_limit=page_number_limit,
             )
+
+    def get_repos_cached(self, ttl: int = 300) -> list[CachedRepo]:
+        """
+        Return all repos accessible to this installation, cached in
+        Django cache for ``ttl`` seconds.
+
+        Only the fields used by get_repositories() are stored to keep
+        the cache payload small.
+        """
+        cache_key = f"github:repos:{self.integration.id}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        all_repos = self.get_repos()
+        repos: list[CachedRepo] = [
+            {
+                "id": r["id"],
+                "name": r["name"],
+                "full_name": r["full_name"],
+                "default_branch": r.get("default_branch"),
+                "archived": r.get("archived"),
+            }
+            for r in all_repos
+        ]
+        cache.set(cache_key, repos, ttl)
+        return repos
 
     def search_repositories(self, query: bytes) -> Mapping[str, Sequence[Any]]:
         """
@@ -666,15 +729,11 @@ class GitHubBaseClient(
     ) -> Any:
         return self.update_comment(repo.name, pr.key, pr_comment.external_id, data)
 
-    def get_comment_reactions(self, repo: str, comment_id: str) -> Any:
+    def get_comment_reactions(self, repo: str, comment_id: str) -> list[Any]:
         """
-        https://docs.github.com/en/rest/issues/comments?#get-an-issue-comment
+        https://docs.github.com/en/rest/reactions/reactions#list-reactions-for-an-issue-comment
         """
-        endpoint = f"/repos/{repo}/issues/comments/{comment_id}"
-        response = self.get(endpoint)
-        reactions = response.get("reactions", {})
-        reactions.pop("url", None)
-        return reactions
+        return self._get_with_pagination(f"/repos/{repo}/issues/comments/{comment_id}/reactions")
 
     def create_comment_reaction(self, repo: str, comment_id: str, reaction: GitHubReaction) -> Any:
         """
@@ -721,12 +780,12 @@ class GitHubBaseClient(
             headers=headers,
         )
 
-        result = (
-            contents.content.decode("utf-8")
-            if codeowners
-            else b64decode(contents["content"]).decode("utf-8")
-        )
-        return result
+        if codeowners:
+            if not contents.ok:
+                raise ApiError.from_response(contents)
+            return contents.content.decode("utf-8")
+
+        return b64decode(contents["content"]).decode("utf-8")
 
     def get_blame_for_files(
         self, files: Sequence[SourceLineInfo], extra: dict[str, Any]

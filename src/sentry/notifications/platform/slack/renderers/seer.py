@@ -11,6 +11,7 @@ from slack_sdk.models.blocks import (
     ContextBlock,
     InteractiveElement,
     LinkButtonElement,
+    MarkdownBlock,
     MarkdownTextObject,
     PlainTextObject,
     RichTextBlock,
@@ -26,6 +27,8 @@ from sentry.notifications.platform.templates.seer import (
     SeerAutofixError,
     SeerAutofixTrigger,
     SeerAutofixUpdate,
+    SeerExplorerError,
+    SeerExplorerResponse,
 )
 from sentry.notifications.platform.types import (
     NotificationData,
@@ -91,6 +94,10 @@ class SeerSlackRenderer(NotificationRenderer[SlackRenderable]):
             return cls._render_autofix_error(data)
         elif isinstance(data, SeerAutofixUpdate):
             return cls._render_autofix_update(data)
+        elif isinstance(data, SeerExplorerError):
+            return cls._render_explorer_error(data)
+        elif isinstance(data, SeerExplorerResponse):
+            return cls._render_explorer_response(data)
         else:
             raise ValueError(f"SeerSlackRenderer does not support {data.__class__.__name__}")
 
@@ -108,7 +115,7 @@ class SeerSlackRenderer(NotificationRenderer[SlackRenderable]):
         return ButtonElement(
             text=AUTOFIX_CONFIG[data.stopping_point]["label"],
             style="primary",
-            value=data.stopping_point.value,
+            value=data.stopping_point,
             action_id=encode_action_id(
                 action=SlackAction.SEER_AUTOFIX_START.value,
                 organization_id=data.organization_id,
@@ -188,6 +195,34 @@ class SeerSlackRenderer(NotificationRenderer[SlackRenderable]):
         return SlackRenderable(blocks=blocks, text="Seer has emerged with news from its voyage")
 
     @classmethod
+    def _render_explorer_error(cls, data: SeerExplorerError) -> SlackRenderable:
+        return SlackRenderable(
+            blocks=[
+                SectionBlock(text=data.error_title),
+                SectionBlock(text=MarkdownTextObject(text=f">{data.error_message}")),
+            ],
+            text=f"Seer stumbled: {data.error_title}",
+        )
+
+    @classmethod
+    def _render_explorer_response(cls, data: SeerExplorerResponse) -> SlackRenderable:
+        from sentry import features
+        from sentry.models.organization import Organization
+
+        blocks: list[Block] = [MarkdownBlock(text=data.summary)]
+        try:
+            organization = Organization.objects.get_from_cache(id=data.organization_id)
+        except Organization.DoesNotExist:
+            organization = None
+        if organization and features.has("organizations:seer-run-id-in-slack", organization):
+            blocks.append(ContextBlock(elements=[PlainTextObject(text=f"Run ID: {data.run_id}")]))
+
+        if data.missing_scope_settings_url:
+            blocks.extend(cls.render_missing_scope_footer(data.missing_scope_settings_url))
+
+        return SlackRenderable(blocks=blocks, text="Seer Explorer has finished")
+
+    @classmethod
     def _render_link_button(
         cls,
         *,
@@ -238,6 +273,15 @@ class SeerSlackRenderer(NotificationRenderer[SlackRenderable]):
             blocks.append(ContextBlock(elements=[PlainTextObject(text=f"Run ID: {data.run_id}")]))
 
         return blocks
+
+    @classmethod
+    def render_missing_scope_footer(cls, settings_url: str) -> list[Block]:
+        """Return a context block warning that optional history scopes are missing."""
+        footer_text = (
+            f"_I am only able to see the message with the mention. I can't read the whole thread. "
+            f"<{settings_url}|Reinstall me> to change that._"
+        )
+        return [ContextBlock(elements=[MarkdownTextObject(text=footer_text)])]
 
     @classmethod
     def render_autofix_button(cls, group: Group) -> InteractiveElement:

@@ -62,7 +62,7 @@ class OrganizationEventsMetaEndpoint(
         assert response.data["count"] == 1
 
     def test_logs_dataset(self) -> None:
-        self.store_ourlogs(
+        self.store_eap_items(
             [
                 self.create_ourlog(
                     {"body": "foo"},
@@ -122,7 +122,6 @@ class OrganizationEventsMetaEndpoint(
         )
         features = {
             "organizations:discover-basic": True,
-            "organizations:performance-use-metrics": True,
         }
         for dataset in ["discover", "transactions"]:
             query = {

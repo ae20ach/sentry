@@ -1,19 +1,19 @@
 import {Fragment, useCallback, useState} from 'react';
 import * as React from 'react';
+import {useMatches} from 'react-router-dom';
 import styled from '@emotion/styled';
 import {mergeProps} from '@react-aria/utils';
 
 import {Button} from '@sentry/scraps/button';
 import type {SelectOption, SingleSelectProps} from '@sentry/scraps/compactSelect';
-import {CompactSelect} from '@sentry/scraps/compactSelect';
+import {CompactSelect, MenuComponents} from '@sentry/scraps/compactSelect';
 import {Flex} from '@sentry/scraps/layout';
 import {OverlayTrigger, type TriggerProps} from '@sentry/scraps/overlayTrigger';
 
-import HookOrDefault from 'sentry/components/hookOrDefault';
+import {HookOrDefault} from 'sentry/components/hookOrDefault';
 import {DEFAULT_RELATIVE_PERIODS, DEFAULT_STATS_PERIOD} from 'sentry/constants';
 import {IconArrow} from 'sentry/icons';
 import {t} from 'sentry/locale';
-import {space} from 'sentry/styles/space';
 import type {DateString} from 'sentry/types/core';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {
@@ -25,13 +25,12 @@ import {
   getUtcToSystem,
 } from 'sentry/utils/dates';
 import {parsePeriodToHours} from 'sentry/utils/duration/parsePeriodToHours';
-import getRouteStringFromRoutes from 'sentry/utils/getRouteStringFromRoutes';
+import {getRouteStringFromRoutes} from 'sentry/utils/getRouteStringFromRoutes';
 import {useDefaultMaxPickableDays} from 'sentry/utils/useMaxPickableDays';
-import useOrganization from 'sentry/utils/useOrganization';
-import useRouter from 'sentry/utils/useRouter';
+import {useOrganization} from 'sentry/utils/useOrganization';
 
-import DateRange from './dateRange';
-import SelectorItems from './selectorItems';
+import {DateRange} from './dateRange';
+import {SelectorItems} from './selectorItems';
 import type {TimeRangeItem} from './types';
 import {
   getAbsoluteSummary,
@@ -169,7 +168,7 @@ export function TimeRangeSelector({
   menuFooterMessage,
   ...selectProps
 }: TimeRangeSelectorProps) {
-  const router = useRouter();
+  const matches = useMatches();
   const organization = useOrganization({allowNull: true});
 
   const defaultMaxPickableDays = useDefaultMaxPickableDays();
@@ -271,34 +270,31 @@ export function TimeRangeSelector({
     );
   }, [showRelative, onChange, internalValue, hasChanges]);
 
-  const handleChange = useCallback(
-    (option: SelectOption<string>) => {
-      // The absolute option was selected -> open absolute selector
-      if (option.value === ABSOLUTE_OPTION_VALUE) {
-        setInternalValue(current => {
-          const defaultStart = defaultAbsolute?.start
-            ? defaultAbsolute.start
-            : getPeriodAgo(
-                'hours',
-                parsePeriodToHours(relative || defaultPeriod || DEFAULT_STATS_PERIOD)
-              ).toDate();
-          const defaultEnd = defaultAbsolute?.end ? defaultAbsolute.end : new Date();
-          return {
-            ...current,
-            // Update default values for absolute selector
-            start: start ? getInternalDate(start, utc) : defaultStart,
-            end: end ? getInternalDate(end, utc) : defaultEnd,
-          };
-        });
-        setShowAbsoluteSelector(true);
-        return;
-      }
+  const handleChange = (option: SelectOption<string>) => {
+    // The absolute option was selected -> open absolute selector
+    if (option.value === ABSOLUTE_OPTION_VALUE) {
+      setInternalValue(current => {
+        const defaultStart = defaultAbsolute?.start
+          ? defaultAbsolute.start
+          : getPeriodAgo(
+              'hours',
+              parsePeriodToHours(relative || defaultPeriod || DEFAULT_STATS_PERIOD)
+            ).toDate();
+        const defaultEnd = defaultAbsolute?.end ? defaultAbsolute.end : new Date();
+        return {
+          ...current,
+          // Update default values for absolute selector
+          start: start ? getInternalDate(start, utc) : defaultStart,
+          end: end ? getInternalDate(end, utc) : defaultEnd,
+        };
+      });
+      setShowAbsoluteSelector(true);
+      return;
+    }
 
-      setInternalValue(current => ({...current, relative: option.value}));
-      onChange?.({relative: option.value, start: undefined, end: undefined});
-    },
-    [start, end, utc, defaultAbsolute, defaultPeriod, relative, onChange]
-  );
+    setInternalValue(current => ({...current, relative: option.value}));
+    onChange?.({relative: option.value, start: undefined, end: undefined});
+  };
 
   const arbitraryRelativePeriods = getArbitraryRelativePeriod(relative);
 
@@ -421,7 +417,7 @@ export function TimeRangeSelector({
 
                           trackAnalytics('dateselector.utc_changed', {
                             utc: newUtc,
-                            path: getRouteStringFromRoutes(router.routes),
+                            path: getRouteStringFromRoutes({matches}),
                             organization,
                           });
 
@@ -447,7 +443,7 @@ export function TimeRangeSelector({
           }
           menuFooter={
             menuFooter || menuFooterMessage || showAbsoluteSelector
-              ? ({closeOverlay}) => (
+              ? () => (
                   <Fragment>
                     {menuFooterMessage && (
                       <FooterMessage>{menuFooterMessage}</FooterMessage>
@@ -466,17 +462,10 @@ export function TimeRangeSelector({
                               {t('Back')}
                             </Button>
                           )}
-                          <Button
-                            size="xs"
-                            priority="primary"
+                          <MenuComponents.ApplyButton
                             disabled={!hasChanges || hasDateRangeErrors}
-                            onClick={() => {
-                              commitChanges();
-                              closeOverlay();
-                            }}
-                          >
-                            {t('Apply')}
-                          </Button>
+                            onClick={commitChanges}
+                          />
                         </Flex>
                       )}
                     </FooterWrap>
@@ -538,8 +527,8 @@ const StyledDateRangeHook = styled(DateRangeHook)`
 `;
 
 const FooterMessage = styled('p')`
-  padding: ${space(0.75)} ${space(1)};
-  margin: ${space(0.5)} 0;
+  padding: ${p => p.theme.space.sm} ${p => p.theme.space.md};
+  margin: ${p => p.theme.space.xs} 0;
   border-radius: ${p => p.theme.radius.md};
   border: solid 1px ${p => p.theme.colors.yellow200};
   background: ${p => p.theme.colors.yellow100};
@@ -550,11 +539,11 @@ const FooterMessage = styled('p')`
 const FooterWrap = styled('div')`
   display: grid;
   grid-auto-flow: column;
-  gap: ${space(2)};
+  gap: ${p => p.theme.space.xl};
 
   /* If there's FooterMessage above */
   &:not(:first-child) {
-    margin-top: ${space(1)};
+    margin-top: ${p => p.theme.space.md};
   }
 `;
 
@@ -562,7 +551,7 @@ const FooterInnerWrap = styled('div')`
   grid-row: -1;
   display: grid;
   grid-auto-flow: column;
-  gap: ${space(1)};
+  gap: ${p => p.theme.space.md};
 
   &:empty {
     display: none;

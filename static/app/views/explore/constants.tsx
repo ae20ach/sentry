@@ -72,6 +72,14 @@ export const SENTRY_SPAN_NUMBER_TAGS: string[] = [...SENTRY_SEARCHABLE_SPAN_NUMB
 export const SENTRY_SPAN_BOOLEAN_TAGS: string[] = [
   // duplicating until we've fully rolled out boolean attributes
   SpanFields.IS_TRANSACTION,
+  SpanFields.IS_STARRED_TRANSACTION,
+];
+
+// Span attributes that should only appear in dashboards, not in Explore.
+// is_starred_transaction relies on the dashboard widget query cache for
+// starring mutations and is not supported in Explore.
+export const DASHBOARD_ONLY_SPAN_ATTRIBUTES: string[] = [
+  SpanFields.IS_STARRED_TRANSACTION,
 ];
 
 export const SENTRY_LOG_STRING_TAGS: string[] = [
@@ -88,16 +96,16 @@ export const SENTRY_LOG_NUMBER_TAGS: string[] = [OurLogKnownFieldKey.SEVERITY_NU
 export const SENTRY_PREPROD_STRING_TAGS: string[] = [
   'app_id',
   'app_name',
+  'artifact_type',
   'build_configuration_name',
   'build_number',
   'build_version',
   'git_base_ref',
   'git_head_ref',
-  'git_pr_number',
   'platform_name',
 ];
 
-export const SENTRY_PREPROD_NUMBER_TAGS: string[] = [];
+export const SENTRY_PREPROD_NUMBER_TAGS: string[] = ['git_pr_number'];
 
 export const SENTRY_PREPROD_BOOLEAN_TAGS: string[] = [];
 
@@ -119,6 +127,9 @@ export const HIDDEN_PREPROD_ATTRIBUTES = [
   'tags[artifact_state,number]',
   'tags[artifact_date_built,number]',
   'tags[build_number,number]',
+  'metrics_artifact_type',
+  'tags[metrics_artifact_type,number]',
+  'tags[artifact_type,number]',
 ];
 
 export const SENTRY_TRACEMETRIC_STRING_TAGS: string[] = [

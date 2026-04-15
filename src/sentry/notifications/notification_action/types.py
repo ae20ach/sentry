@@ -5,6 +5,8 @@ from dataclasses import asdict
 from typing import Any, NotRequired, Protocol, TypedDict
 
 from django.core.exceptions import ValidationError
+from taskbroker_client.retry import RetryTaskError
+from taskbroker_client.worker.workerchild import ProcessingDeadlineExceeded
 
 from sentry.constants import ObjectStatus
 from sentry.exceptions import InvalidIdentity
@@ -31,11 +33,9 @@ from sentry.shared_integrations.exceptions import (
     IntegrationConfigurationError,
     IntegrationFormError,
 )
-from sentry.taskworker.retry import RetryTaskError
-from sentry.taskworker.workerchild import ProcessingDeadlineExceeded
 from sentry.types.activity import ActivityType
 from sentry.types.rules import RuleFuture
-from sentry.workflow_engine.models import Action, AlertRuleWorkflow, Detector
+from sentry.workflow_engine.models import Action, AlertRuleWorkflow, Detector, Workflow
 from sentry.workflow_engine.types import ActionInvocation, DetectorPriorityLevel, WorkflowEventData
 from sentry.workflow_engine.typings.notification_action import (
     ACTION_FIELD_MAPPINGS,
@@ -201,7 +201,19 @@ class BaseIssueAlertHandler(ABC):
         workflow_id = getattr(action, "workflow_id", None)
         rule_id = None
 
-        label = detector.name
+        label = None
+        # Attempt to query the workflow name for non-test notifications.
+        if workflow_id is not None and workflow_id != TEST_NOTIFICATION_ID:
+            try:
+                workflow = Workflow.objects.get(id=workflow_id)
+                label = workflow.name
+            except Workflow.DoesNotExist:
+                # If the workflow no longer exists, bail and use detector name
+                # as a fallback.
+                pass
+
+        if label is None:
+            label = detector.name
         # Build link to the rule if it exists, otherwise build link to the workflow.
         # FE will handle redirection if necessary from rule -> workflow
 
@@ -507,7 +519,7 @@ class BaseMetricAlertHandler(ABC):
                 "notification_context": asdict(notification_context),
                 "alert_context": asdict(alert_context),
                 "metric_issue_context": asdict(metric_issue_context),
-                "open_period_context": asdict(open_period_context),
+                "open_period_context": open_period_context.dict(),
                 "trigger_status": trigger_status,
             },
         )

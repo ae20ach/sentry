@@ -82,6 +82,12 @@ class GroupCategory(IntEnum):
     """
     INSTRUMENTATION = 18
 
+    """
+    Issues detected from SDK/tooling configuration problems,
+    such as missing or broken source maps.
+    """
+    CONFIGURATION = 19
+
 
 GROUP_CATEGORIES_CUSTOM_EMAIL = (
     GroupCategory.ERROR,
@@ -240,7 +246,8 @@ class GroupType:
     noise_config: NoiseConfig | None = None
     default_priority: int = PriorityLevel.MEDIUM
     # If True this group type should be released everywhere. If False, fall back to features to
-    # decide if this is released.
+    # decide if this is released. Add to HIDDEN_ISSUE_TYPES as well to prevent Events from this Group
+    # being displayed on frontend.
     released: bool = False
     # If False this group is excluded from default searches, when there are no filters on issue.category or issue.type.
     in_default_search: bool = True
@@ -676,6 +683,84 @@ class LLMDetectedExperimentalGroupTypeV2(GroupType):
     type_id = 3502
     slug = "llm_detected_experimental_v2"
     description = "LLM Detected Issue"
+    category = GroupCategory.AI_DETECTED.value
+    category_v2 = GroupCategory.AI_DETECTED.value
+    default_priority = PriorityLevel.MEDIUM
+    released = False
+    enable_auto_resolve = False
+    enable_escalation_detection = False
+
+
+@dataclass(frozen=True)
+class AIDetectedHTTPGroupType(GroupType):
+    type_id = 3503
+    slug = "ai_detected_http"
+    description = "AI Detected HTTP Issue"
+    category = GroupCategory.AI_DETECTED.value
+    category_v2 = GroupCategory.HTTP_CLIENT.value
+    default_priority = PriorityLevel.MEDIUM
+    released = False
+    enable_auto_resolve = False
+    enable_escalation_detection = False
+
+
+@dataclass(frozen=True)
+class AIDetectedDBGroupType(GroupType):
+    type_id = 3504
+    slug = "ai_detected_db"
+    description = "AI Detected Database Issue"
+    category = GroupCategory.AI_DETECTED.value
+    category_v2 = GroupCategory.DB_QUERY.value
+    default_priority = PriorityLevel.MEDIUM
+    released = False
+    enable_auto_resolve = False
+    enable_escalation_detection = False
+
+
+@dataclass(frozen=True)
+class AIDetectedRuntimePerformanceGroupType(GroupType):
+    type_id = 3505
+    slug = "ai_detected_runtime_performance"
+    description = "AI Detected Runtime Performance Issue"
+    category = GroupCategory.AI_DETECTED.value
+    category_v2 = GroupCategory.AI_DETECTED.value
+    default_priority = PriorityLevel.MEDIUM
+    released = False
+    enable_auto_resolve = False
+    enable_escalation_detection = False
+
+
+@dataclass(frozen=True)
+class AIDetectedSecurityGroupType(GroupType):
+    type_id = 3506
+    slug = "ai_detected_security"
+    description = "AI Detected Security Issue"
+    category = GroupCategory.AI_DETECTED.value
+    category_v2 = GroupCategory.AI_DETECTED.value
+    default_priority = PriorityLevel.MEDIUM
+    released = False
+    enable_auto_resolve = False
+    enable_escalation_detection = False
+
+
+@dataclass(frozen=True)
+class AIDetectedCodeHealthGroupType(GroupType):
+    type_id = 3507
+    slug = "ai_detected_code_health"
+    description = "AI Detected Code Health Issue"
+    category = GroupCategory.AI_DETECTED.value
+    category_v2 = GroupCategory.CONFIGURATION.value
+    default_priority = PriorityLevel.MEDIUM
+    released = False
+    enable_auto_resolve = False
+    enable_escalation_detection = False
+
+
+@dataclass(frozen=True)
+class AIDetectedGeneralGroupType(GroupType):
+    type_id = 3508
+    slug = "ai_detected_general"
+    description = "AI Detected Issue"
     category = GroupCategory.AI_DETECTED.value
     category_v2 = GroupCategory.AI_DETECTED.value
     default_priority = PriorityLevel.MEDIUM

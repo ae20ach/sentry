@@ -9,7 +9,7 @@ import type {
   MultiSeriesEventsStats,
 } from 'sentry/types/organization';
 import {defined} from 'sentry/utils';
-import getApiUrl from 'sentry/utils/api/getApiUrl';
+import {getApiUrl} from 'sentry/utils/api/getApiUrl';
 import {getUtcDateString} from 'sentry/utils/dates';
 import type {
   EventsTableData,
@@ -127,7 +127,7 @@ export function useTransactionsSeriesQuery(
 
       // Build the API query key for events-stats endpoint
       return [
-        getApiUrl(`/organizations/$organizationIdOrSlug/events-stats/`, {
+        getApiUrl('/organizations/$organizationIdOrSlug/events-stats/', {
           path: {organizationIdOrSlug: organization.slug},
         }),
         {
@@ -270,7 +270,7 @@ export function useTransactionsSeriesQuery(
 
     // Check if rawData is the same as before to prevent unnecessary rerenders
     let finalRawData = rawData;
-    if (prevRawDataRef.current && prevRawDataRef.current.length === rawData.length) {
+    if (prevRawDataRef.current?.length === rawData.length) {
       const allSame = rawData.every((data, i) => data === prevRawDataRef.current?.[i]);
       if (allSame) {
         finalRawData = prevRawDataRef.current;
@@ -381,7 +381,7 @@ export function useTransactionsTableQuery(
       };
 
       const baseQueryKey: ApiQueryKey = [
-        getApiUrl(`/organizations/$organizationIdOrSlug/events/`, {
+        getApiUrl('/organizations/$organizationIdOrSlug/events/', {
           path: {organizationIdOrSlug: organization.slug},
         }),
         {
@@ -489,7 +489,7 @@ export function useTransactionsTableQuery(
 
     // Check if rawData is the same as before to prevent unnecessary rerenders
     let finalRawData = rawData;
-    if (prevRawDataRef.current && prevRawDataRef.current.length === rawData.length) {
+    if (prevRawDataRef.current?.length === rawData.length) {
       const allSame = rawData.every((data, i) => data === prevRawDataRef.current?.[i]);
       if (allSame) {
         finalRawData = prevRawDataRef.current;

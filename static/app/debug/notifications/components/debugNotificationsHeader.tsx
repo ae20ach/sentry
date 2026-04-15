@@ -1,4 +1,3 @@
-import {useCallback} from 'react';
 import styled from '@emotion/styled';
 
 import {Button, LinkButton} from '@sentry/scraps/button';
@@ -8,7 +7,7 @@ import {Heading} from '@sentry/scraps/text';
 
 import {DebugNotificationsSearch} from 'sentry/debug/notifications/components/debugNotificationsSearch';
 import {IconGithub, IconLink, IconMoon} from 'sentry/icons';
-import ConfigStore from 'sentry/stores/configStore';
+import {ConfigStore} from 'sentry/stores/configStore';
 import {useLegacyStore} from 'sentry/stores/useLegacyStore';
 import {useLocation} from 'sentry/utils/useLocation';
 
@@ -78,9 +77,9 @@ function ThemeSwitcher() {
   const config = useLegacyStore(ConfigStore);
   const isDark = config.theme === 'dark';
 
-  const handleClick = useCallback(() => {
+  const handleClick = () => {
     ConfigStore.set('theme', isDark ? 'light' : 'dark');
-  }, [isDark]);
+  };
 
   return (
     <Button

@@ -1,4 +1,4 @@
-import {Fragment, useCallback, useEffect, useMemo, useState} from 'react';
+import {Fragment, useEffect, useMemo, useState} from 'react';
 import styled from '@emotion/styled';
 
 import {Container, Flex} from '@sentry/scraps/layout';
@@ -62,7 +62,7 @@ interface PRFilesListProps {
   files: PRFileData[];
 }
 
-function PRFilesList({files}: PRFilesListProps) {
+export function PRFilesList({files}: PRFilesListProps) {
   const [expandedFiles, setExpandedFiles] = useState<Record<string, boolean>>({});
 
   // Use filename as key instead of index for more stable state
@@ -74,12 +74,12 @@ function PRFilesList({files}: PRFilesListProps) {
     setExpandedFiles(initialExpanded);
   }, [files]);
 
-  const toggleFileExpanded = useCallback((filename: string) => {
+  const toggleFileExpanded = (filename: string) => {
     setExpandedFiles(prev => ({
       ...prev,
       [filename]: !prev[filename],
     }));
-  }, []);
+  };
 
   const totalStats = useMemo(() => {
     return files.reduce(
@@ -281,5 +281,3 @@ const DiffContent = styled('td')`
     font-size: inherit;
   }
 `;
-
-export default PRFilesList;

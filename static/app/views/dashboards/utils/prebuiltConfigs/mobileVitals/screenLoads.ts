@@ -3,7 +3,8 @@ import {FieldKind} from 'sentry/utils/fields';
 import {DisplayType, WidgetType} from 'sentry/views/dashboards/types';
 import type {Widget} from 'sentry/views/dashboards/types';
 import type {PrebuiltDashboard} from 'sentry/views/dashboards/utils/prebuiltConfigs';
-import {SpanFields} from 'sentry/views/insights/types';
+import {SCREEN_LOADS_DASHBOARD_TITLE} from 'sentry/views/dashboards/utils/prebuiltConfigs/mobileVitals/settings';
+import {ModuleName, SpanFields} from 'sentry/views/insights/types';
 
 const TTID_CONDITION = `has:${SpanFields.APP_VITALS_TTID_VALUE} ${SpanFields.TRANSACTION_OP}:[ui.load,navigation]`;
 const TTFD_CONDITION = `has:${SpanFields.APP_VITALS_TTFD_VALUE} ${SpanFields.TRANSACTION_OP}:[ui.load,navigation]`;
@@ -188,9 +189,9 @@ const TTID_BAR_CHART_WIDGET: Widget = {
       fields: [SpanFields.DEVICE_CLASS, `avg(${SpanFields.APP_VITALS_TTID_VALUE})`],
       aggregates: [`avg(${SpanFields.APP_VITALS_TTID_VALUE})`],
       columns: [SpanFields.DEVICE_CLASS],
-      fieldAliases: ['Device Class', 'AVG TTID'],
+      fieldAliases: [t('Device Class'), 'AVG TTID'],
       conditions: TTID_CONDITION,
-      orderby: `${SpanFields.DEVICE_CLASS}`,
+      orderby: SpanFields.DEVICE_CLASS,
     },
   ],
   layout: {
@@ -216,9 +217,9 @@ const TTFD_BAR_CHART_WIDGET: Widget = {
       fields: [SpanFields.DEVICE_CLASS, `avg(${SpanFields.APP_VITALS_TTFD_VALUE})`],
       aggregates: [`avg(${SpanFields.APP_VITALS_TTFD_VALUE})`],
       columns: [SpanFields.DEVICE_CLASS],
-      fieldAliases: ['Device Class', 'AVG TTFD'],
+      fieldAliases: [t('Device Class'), 'AVG TTFD'],
       conditions: TTFD_CONDITION,
-      orderby: `${SpanFields.DEVICE_CLASS}`,
+      orderby: SpanFields.DEVICE_CLASS,
     },
   ],
   layout: {
@@ -244,21 +245,21 @@ const SPAN_OPERATIONS_TABLE: Widget = {
       fields: [
         SpanFields.SPAN_OP,
         SpanFields.SPAN_DESCRIPTION,
-        `ttid_contribution_rate()`,
-        `ttfd_contribution_rate()`,
+        'equation|ttid_contribution_rate()',
+        'equation|ttfd_contribution_rate()',
         `avg(${SpanFields.SPAN_SELF_TIME})`,
         `sum(${SpanFields.SPAN_SELF_TIME})`,
       ],
       aggregates: [
-        `ttid_contribution_rate()`,
-        `ttfd_contribution_rate()`,
+        'equation|ttid_contribution_rate()',
+        'equation|ttfd_contribution_rate()',
         `avg(${SpanFields.SPAN_SELF_TIME})`,
         `sum(${SpanFields.SPAN_SELF_TIME})`,
       ],
       columns: [SpanFields.SPAN_OP, SpanFields.SPAN_DESCRIPTION],
       fieldAliases: [
-        'Operation',
-        'Span Description',
+        t('Operation'),
+        t('Span Description'),
         'TTID Contribution Rate',
         'TTFD Contribution Rate',
         'Avg Self Time',
@@ -293,7 +294,7 @@ const THIRD_ROW_WIDGETS: Widget[] = [TTID_BAR_CHART_WIDGET, TTFD_BAR_CHART_WIDGE
 
 export const MOBILE_VITALS_SCREEN_LOADS_PREBUILT_CONFIG: PrebuiltDashboard = {
   dateCreated: '',
-  title: t('Mobile Vitals Screen Loads'),
+  title: SCREEN_LOADS_DASHBOARD_TITLE,
   projects: [],
   widgets: [
     ...HEADER_ROW_WIDGETS,
@@ -321,15 +322,7 @@ export const MOBILE_VITALS_SCREEN_LOADS_PREBUILT_CONFIG: PrebuiltDashboard = {
         },
         value: '',
       },
-      {
-        dataset: WidgetType.SPANS,
-        tag: {
-          key: SpanFields.SPAN_OP,
-          name: SpanFields.SPAN_OP,
-          kind: FieldKind.TAG,
-        },
-        value: '',
-      },
     ],
   },
+  onboarding: {type: 'module', moduleName: ModuleName.SCREEN_LOAD},
 };

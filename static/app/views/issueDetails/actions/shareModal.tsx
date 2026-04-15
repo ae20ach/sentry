@@ -1,31 +1,29 @@
-import {Fragment, useCallback, useRef, useState} from 'react';
+import {Fragment, useRef, useState} from 'react';
 import styled from '@emotion/styled';
 
 import {Button} from '@sentry/scraps/button';
 import {Checkbox} from '@sentry/scraps/checkbox';
-import {Grid, Stack, type GridProps} from '@sentry/scraps/layout';
+import {Grid, type GridProps, Stack} from '@sentry/scraps/layout';
 import {Switch} from '@sentry/scraps/switch';
 
 import {bulkUpdate} from 'sentry/actionCreators/group';
 import {addErrorMessage} from 'sentry/actionCreators/indicator';
 import type {ModalRenderProps} from 'sentry/actionCreators/modal';
-import AutoSelectText from 'sentry/components/autoSelectText';
-import LoadingIndicator from 'sentry/components/loadingIndicator';
+import {AutoSelectText} from 'sentry/components/autoSelectText';
+import {LoadingIndicator} from 'sentry/components/loadingIndicator';
 import {IconRefresh} from 'sentry/icons';
 import {t} from 'sentry/locale';
-import GroupStore from 'sentry/stores/groupStore';
+import {GroupStore} from 'sentry/stores/groupStore';
 import {useLegacyStore} from 'sentry/stores/useLegacyStore';
-import {space} from 'sentry/styles/space';
 import type {Event} from 'sentry/types/event';
 import type {Group} from 'sentry/types/group';
 import type {Organization} from 'sentry/types/organization';
 import {getAnalyticsDataForEvent, getAnalyticsDataForGroup} from 'sentry/utils/events';
-import normalizeUrl from 'sentry/utils/url/normalizeUrl';
-import useApi from 'sentry/utils/useApi';
-import useCopyToClipboard from 'sentry/utils/useCopyToClipboard';
+import {normalizeUrl} from 'sentry/utils/url/normalizeUrl';
+import {useApi} from 'sentry/utils/useApi';
+import {useCopyToClipboard} from 'sentry/utils/useCopyToClipboard';
 import {useLocalStorageState} from 'sentry/utils/useLocalStorageState';
 import {SectionDivider} from 'sentry/views/issueDetails/streamline/foldSection';
-import {useHasStreamlinedUI} from 'sentry/views/issueDetails/utils';
 
 interface ShareIssueModalProps extends ModalRenderProps {
   event: Event | null;
@@ -43,7 +41,7 @@ export function getShareUrl(organization: Organization, group: Group) {
   return `${window.location.origin}${normalizeUrl(path)}`;
 }
 
-export default function ShareIssueModal({
+export function ShareIssueModal({
   Header,
   Body,
   organization,
@@ -65,7 +63,6 @@ export default function ShareIssueModal({
   const api = useApi({persistInFlight: true});
   const [loading, setLoading] = useState(false);
   const isPublished = group?.isPublic;
-  const hasStreamlinedUI = useHasStreamlinedUI();
 
   const hasPublicShare = organization.features.includes('shared-issues') && hasIssueShare;
 
@@ -82,45 +79,45 @@ export default function ShareIssueModal({
 
   const {copy} = useCopyToClipboard();
 
-  const handleCopyIssueLink = useCallback(() => {
+  const handleCopyIssueLink = () => {
     copy(issueUrl, {successMessage: t('Copied Issue Link to clipboard')}).then(
       closeModal
     );
-  }, [copy, issueUrl, closeModal]);
+  };
 
-  const handleCopyMarkdownLink = useCallback(() => {
+  const handleCopyMarkdownLink = () => {
     copy(markdownLink, {successMessage: t('Copied Markdown link to clipboard')}).then(
       closeModal
     );
-  }, [copy, markdownLink, closeModal]);
+  };
 
-  const handlePublicShare = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement> | null, reshare?: boolean) => {
-      e?.preventDefault();
-      setLoading(true);
-      onToggle();
-      bulkUpdate(
-        api,
-        {
-          orgId: organization.slug,
-          projectId: projectSlug,
-          itemIds: [groupId],
-          data: {
-            isPublic: reshare ?? !isPublished,
-          },
+  const handlePublicShare = (
+    e: React.ChangeEvent<HTMLInputElement> | null,
+    reshare?: boolean
+  ) => {
+    e?.preventDefault();
+    setLoading(true);
+    onToggle();
+    bulkUpdate(
+      api,
+      {
+        orgId: organization.slug,
+        projectId: projectSlug,
+        itemIds: [groupId],
+        data: {
+          isPublic: reshare ?? !isPublished,
         },
-        {
-          error: () => {
-            addErrorMessage(t('Error sharing'));
-          },
-          complete: () => {
-            setLoading(false);
-          },
-        }
-      );
-    },
-    [api, setLoading, onToggle, isPublished, organization.slug, projectSlug, groupId]
-  );
+      },
+      {
+        error: () => {
+          addErrorMessage(t('Error sharing'));
+        },
+        complete: () => {
+          setLoading(false);
+        },
+      }
+    );
+  };
 
   const shareUrl = group?.shareId ? getShareUrl(organization, group) : null;
 
@@ -237,9 +234,6 @@ export default function ShareIssueModal({
                       }
                       analyticsEventKey="issue_details.publish_issue_modal.copy_link"
                       analyticsEventName="Issue Details: Publish Issue Modal Copy Link"
-                      analyticsParams={{
-                        streamline: hasStreamlinedUI,
-                      }}
                     >
                       {t('Copy Public Link')}
                     </Button>
@@ -259,12 +253,12 @@ const UrlContainer = styled('div')`
   grid-template-columns: 1fr max-content max-content;
   align-items: center;
   border: 1px solid ${p => p.theme.tokens.border.primary};
-  border-radius: ${space(0.5)};
+  border-radius: ${p => p.theme.space.xs};
   width: 100%;
 `;
 
 const StyledAutoSelectText = styled(AutoSelectText)`
-  padding: ${space(1)} ${space(1)};
+  padding: ${p => p.theme.space.md} ${p => p.theme.space.md};
   display: block;
   width: 100%;
   white-space: nowrap;
@@ -283,7 +277,7 @@ const TextContainer = styled('div')`
 
 const CheckboxContainer = styled('label')`
   display: flex;
-  gap: ${space(1)};
+  gap: ${p => p.theme.space.md};
   align-items: center;
   font-weight: ${p => p.theme.font.weight.sans.regular};
 `;
@@ -298,11 +292,11 @@ const SwitchWrapper = styled('div')`
   display: grid;
   grid-template-columns: 1fr max-content max-content;
   align-items: center;
-  gap: ${space(2)};
+  gap: ${p => p.theme.space.xl};
 `;
 
 const Title = styled('div')`
-  padding-right: ${space(4)};
+  padding-right: ${p => p.theme.space['3xl']};
   white-space: nowrap;
 `;
 

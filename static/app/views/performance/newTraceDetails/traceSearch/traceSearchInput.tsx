@@ -4,15 +4,14 @@ import styled from '@emotion/styled';
 
 import {InputGroup} from '@sentry/scraps/input';
 
-import LoadingIndicator from 'sentry/components/loadingIndicator';
+import {LoadingIndicator} from 'sentry/components/loadingIndicator';
 import {SearchBarTrailingButton} from 'sentry/components/searchBar';
 import {IconChevron, IconClose, IconSearch} from 'sentry/icons';
 import {t} from 'sentry/locale';
-import {space} from 'sentry/styles/space';
 import type {Organization} from 'sentry/types/organization';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import type {DispatchingReducerMiddleware} from 'sentry/utils/useDispatchingReducer';
-import useOrganization from 'sentry/utils/useOrganization';
+import {useOrganization} from 'sentry/utils/useOrganization';
 import {traceAnalytics} from 'sentry/views/performance/newTraceDetails/traceAnalytics';
 import type {BaseNode} from 'sentry/views/performance/newTraceDetails/traceModels/traceTreeNode/baseNode';
 import type {TraceReducer} from 'sentry/views/performance/newTraceDetails/traceState';
@@ -87,29 +86,26 @@ export function TraceSearchInput(props: TraceSearchInputProps) {
     };
   }, [traceState.search.status]);
 
-  const onSearchFocus = useCallback(() => {
+  const onSearchFocus = () => {
     traceAnalytics.trackSearchFocus(organization);
     if (traceStateRef.current.rovingTabIndex.node) {
       traceDispatch({type: 'clear roving index'});
     }
-  }, [traceDispatch, organization]);
+  };
 
-  const onChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      if (!event.target.value) {
-        traceDispatch({type: 'clear query'});
-        return;
-      }
+  const onChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.value) {
+      traceDispatch({type: 'clear query'});
+      return;
+    }
 
-      traceDispatch({type: 'set query', query: event.target.value});
-      onTraceSearch(
-        event.target.value,
-        traceStateRef.current.rovingTabIndex.node ?? traceStateRef.current.search.node,
-        'track result'
-      );
-    },
-    [traceDispatch, onTraceSearch]
-  );
+    traceDispatch({type: 'set query', query: event.target.value});
+    onTraceSearch(
+      event.target.value,
+      traceStateRef.current.rovingTabIndex.node ?? traceStateRef.current.search.node,
+      'track result'
+    );
+  };
 
   const onSearchClear = useCallback(() => {
     trackAnalytics('trace.trace_layout.search_clear', {
@@ -122,44 +118,41 @@ export function TraceSearchInput(props: TraceSearchInputProps) {
     }
   }, [traceDispatch, organization]);
 
-  const onKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLInputElement>) => {
-      switch (event.key) {
-        case 'ArrowDown':
-          trackAnalytics('trace.trace_layout.search_match_navigate', {
-            organization,
-            direction: 'next',
-            interaction: 'arrowKey',
-          });
-          traceDispatch({
-            type: event.shiftKey ? 'go to last match' : 'go to next match',
-          });
-          break;
-        case 'ArrowUp':
-          trackAnalytics('trace.trace_layout.search_match_navigate', {
-            organization,
-            direction: 'prev',
-            interaction: 'arrowKey',
-          });
-          traceDispatch({
-            type: event.shiftKey ? 'go to first match' : 'go to previous match',
-          });
-          break;
-        case 'Enter':
-          trackAnalytics('trace.trace_layout.search_match_navigate', {
-            organization,
-            direction: event.shiftKey ? 'prev' : 'next',
-            interaction: 'enterKey',
-          });
-          traceDispatch({
-            type: event.shiftKey ? 'go to previous match' : 'go to next match',
-          });
-          break;
-        default:
-      }
-    },
-    [traceDispatch, organization]
-  );
+  const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    switch (event.key) {
+      case 'ArrowDown':
+        trackAnalytics('trace.trace_layout.search_match_navigate', {
+          organization,
+          direction: 'next',
+          interaction: 'arrowKey',
+        });
+        traceDispatch({
+          type: event.shiftKey ? 'go to last match' : 'go to next match',
+        });
+        break;
+      case 'ArrowUp':
+        trackAnalytics('trace.trace_layout.search_match_navigate', {
+          organization,
+          direction: 'prev',
+          interaction: 'arrowKey',
+        });
+        traceDispatch({
+          type: event.shiftKey ? 'go to first match' : 'go to previous match',
+        });
+        break;
+      case 'Enter':
+        trackAnalytics('trace.trace_layout.search_match_navigate', {
+          organization,
+          direction: event.shiftKey ? 'prev' : 'next',
+          interaction: 'enterKey',
+        });
+        traceDispatch({
+          type: event.shiftKey ? 'go to previous match' : 'go to next match',
+        });
+        break;
+      default:
+    }
+  };
 
   const onNextSearchClick = useCallback(() => {
     trackAnalytics('trace.trace_layout.search_match_navigate', {
@@ -238,16 +231,14 @@ export function TraceSearchInput(props: TraceSearchInputProps) {
       />
       <InputGroup.TrailingItems>
         <StyledTrailingText data-test-id="trace-search-result-iterator">
-          {`${
-            traceState.search.query && !traceState.search.results?.length
-              ? t('no results')
-              : traceState.search.query
-                ? (traceState.search.resultIteratorIndex === null
-                    ? '-'
-                    : traceState.search.resultIteratorIndex + 1) +
-                  `/${traceState.search.results?.length ?? 0}`
-                : ''
-          }`}
+          {traceState.search.query && !traceState.search.results?.length
+            ? t('no results')
+            : traceState.search.query
+              ? (traceState.search.resultIteratorIndex === null
+                  ? '-'
+                  : traceState.search.resultIteratorIndex + 1) +
+                `/${traceState.search.results?.length ?? 0}`
+              : ''}
         </StyledTrailingText>
         {traceState.search.query ? (
           <Fragment>
@@ -352,9 +343,9 @@ const StyledTrailingText = styled('span')`
 
 const StyledSearchBar = styled(InputGroup)`
   flex: 1 1 100%;
-  margin-bottom: ${space(1)};
+  margin-bottom: ${p => p.theme.space.md};
 
   > div > div:last-child {
-    gap: ${space(0.25)};
+    gap: ${p => p.theme.space['2xs']};
   }
 `;

@@ -327,6 +327,7 @@ class TestProcessWorkflows(BaseWorkflowTest):
     @patch("sentry.workflow_engine.processors.detector.logger")
     def test_no_detector(self, mock_logger: MagicMock, mock_incr: MagicMock) -> None:
         self.group_event.occurrence = self.build_occurrence(evidence_data={})
+        self.issue_stream_detector.delete()
 
         result = process_workflows(self.batch_client, self.event_data, FROZEN_TIME)
         assert result.msg == "No Detectors associated with the issue were found"
@@ -348,9 +349,8 @@ class TestProcessWorkflows(BaseWorkflowTest):
             },
         )
 
-    @patch("sentry.utils.metrics.incr")
     @patch("sentry.workflow_engine.processors.workflow.logger")
-    def test_no_environment(self, mock_logger: MagicMock, mock_incr: MagicMock) -> None:
+    def test_no_environment(self, mock_logger: MagicMock) -> None:
         Environment.objects.all().delete()
         cache.clear()
         result = process_workflows(self.batch_client, self.event_data, FROZEN_TIME)
@@ -358,11 +358,8 @@ class TestProcessWorkflows(BaseWorkflowTest):
         assert not result.data.triggered_workflows
         assert result.msg == "Environment for event not found"
 
-        mock_incr.assert_any_call(
-            "workflow_engine.process_workflows.error", 1, tags={"detector_type": "error"}
-        )
-        mock_logger.exception.assert_called_once_with(
-            "Missing environment for event",
+        mock_logger.info.assert_called_once_with(
+            "workflow_engine.process_workflows.environment_not_found",
             extra={"event_id": self.event.event_id},
         )
 
@@ -450,13 +447,8 @@ class TestProcessWorkflows(BaseWorkflowTest):
         assert len(result.data.triggered_actions) == 0
 
     def test_multiple_detectors__preferred(self) -> None:
-        _, issue_stream_detector, _, _ = self.create_detector_and_workflow(
-            name_prefix="issue_stream",
-            workflow_triggers=self.create_data_condition_group(),
-            detector_type=IssueStreamGroupType.slug,
-        )
         self.create_detector_workflow(
-            detector=issue_stream_detector,
+            detector=self.issue_stream_detector,
             workflow=self.error_workflow,
         )
 
@@ -745,6 +737,16 @@ class TestTaintTracking(BaseWorkflowTest):
         a = EvaluationStats(tainted=1, untainted=2)
         b = EvaluationStats(tainted=3, untainted=4)
         assert a + b == EvaluationStats(tainted=4, untainted=6)
+
+    # Temporary test to exercise all evaluate_workflows_action_filters paths
+    # with caching enabled
+    def test_action_filter_stats_excludes_delayed_workflows__with_cache(self) -> None:
+        with self.feature("organizations:workflow-engine-action-filters-cache"):
+            self.test_action_filter_stats_excludes_delayed_workflows()
+
+    def test_action_filter_stats_from_trigger_result__with_cache(self) -> None:
+        with self.feature("organizations:workflow-engine-action-filters-cache"):
+            self.test_action_filter_stats_from_trigger_result()
 
 
 @freeze_time(FROZEN_TIME)
@@ -1130,6 +1132,32 @@ class TestEvaluateWorkflowActionFilters(BaseWorkflowTest):
             max=timezone.now().timestamp(),
         )
         assert list(project_ids.keys()) == [self.project.id]
+
+    # Temporary tests to exercise all evaluate_workflows_action_filters paths
+    # with caching enabled
+    def test_activity__with_slow_conditions__with_cache(self) -> None:
+        with self.feature("organizations:workflow-engine-action-filters-cache"):
+            self.test_activity__with_slow_conditions()
+
+    def test_enqueues_when_slow_conditions__with_cache(self) -> None:
+        with self.feature("organizations:workflow-engine-action-filters-cache"):
+            self.test_enqueues_when_slow_conditions()
+
+    def test_with_slow_conditions__with_cache(self) -> None:
+        with self.feature("organizations:workflow-engine-action-filters-cache"):
+            self.test_with_slow_conditions()
+
+    def test_basic__with_filter__filtered__with_cache(self) -> None:
+        with self.feature("organizations:workflow-engine-action-filters-cache"):
+            self.test_basic__with_filter__filtered()
+
+    def test_basic__with_filter__passes__with_cache(self) -> None:
+        with self.feature("organizations:workflow-engine-action-filters-cache"):
+            self.test_basic__with_filter__passes()
+
+    def test_basic__no_filter__with_cache(self) -> None:
+        with self.feature("organizations:workflow-engine-action-filters-cache"):
+            self.test_basic__no_filter()
 
 
 class TestEnqueueWorkflows(BaseWorkflowTest):
