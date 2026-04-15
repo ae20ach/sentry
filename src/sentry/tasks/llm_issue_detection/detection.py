@@ -45,8 +45,6 @@ TRANSACTION_BATCH_SIZE = 50
 TRACE_PROCESSING_TTL_SECONDS = 7200
 MAX_LLM_FIELD_LENGTH = 2000
 
-# Budget pacing: number of slots to spread dispatches across.
-# 10 slots × 15 min = 2.5h cycle. Increase toward 67 (~16.75h) as org count grows.
 DISPATCH_INTERVAL_MINUTES = 15
 NUM_DISPATCH_SLOTS = 10
 MAX_ORGS_PER_CYCLE = 500
