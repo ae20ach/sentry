@@ -1,7 +1,11 @@
 from datetime import timedelta
 
 from sentry.models.rulefirehistory import RuleFireHistory
-from sentry.rules.history.backends.postgres import PostgresRuleHistoryBackend
+from sentry.rules.history.backends.postgres import (
+    IdPair,
+    PostgresRuleHistoryBackend,
+    get_rule_workflow_ids,
+)
 from sentry.rules.history.base import RuleGroupHistory
 from sentry.testutils.cases import TestCase
 from sentry.testutils.helpers import with_feature
@@ -510,3 +514,70 @@ class FetchRuleHourlyStatsPaginatedTest(BasePostgresRuleHistoryBackendTest):
         # Hour 1: 1 (workflow)
         # Hour 0: 0
         assert [r.count for r in results[-5:]] == [2, 2, 1, 1, 0]
+
+
+class GetRuleWorkflowIdsTest(BaseWorkflowTest):
+    def test_workflow_with_single_alert_rule_workflow(self) -> None:
+        rule = self.create_project_rule(project=self.project)
+        workflow_triggers = self.create_data_condition_group()
+        workflow = self.create_workflow(
+            when_condition_group=workflow_triggers,
+            organization=self.organization,
+        )
+        AlertRuleWorkflow.objects.create(rule_id=rule.id, workflow=workflow)
+
+        result = get_rule_workflow_ids(workflow)
+        assert result == IdPair(workflow_id=workflow.id, rule_id=rule.id)
+
+    def test_workflow_with_no_alert_rule_workflow(self) -> None:
+        workflow_triggers = self.create_data_condition_group()
+        workflow = self.create_workflow(
+            when_condition_group=workflow_triggers,
+            organization=self.organization,
+        )
+
+        result = get_rule_workflow_ids(workflow)
+        assert result == IdPair(workflow_id=workflow.id, rule_id=None)
+
+    def test_workflow_with_multiple_alert_rule_workflows(self) -> None:
+        """A workflow linked to both a rule_id and an alert_rule_id should resolve the rule_id."""
+        rule = self.create_project_rule(project=self.project)
+        workflow_triggers = self.create_data_condition_group()
+        workflow = self.create_workflow(
+            when_condition_group=workflow_triggers,
+            organization=self.organization,
+        )
+        AlertRuleWorkflow.objects.create(rule_id=rule.id, workflow=workflow)
+        AlertRuleWorkflow.objects.create(alert_rule_id=1, workflow=workflow)
+
+        result = get_rule_workflow_ids(workflow)
+        assert result == IdPair(workflow_id=workflow.id, rule_id=rule.id)
+
+    def test_workflow_with_multiple_rule_id_entries(self) -> None:
+        """Multiple AlertRuleWorkflow rows with rule_id for the same workflow should not crash."""
+        rule_1 = self.create_project_rule(project=self.project)
+        rule_2 = self.create_project_rule(project=self.project)
+        workflow_triggers = self.create_data_condition_group()
+        workflow = self.create_workflow(
+            when_condition_group=workflow_triggers,
+            organization=self.organization,
+        )
+        AlertRuleWorkflow.objects.create(rule_id=rule_1.id, workflow=workflow)
+        AlertRuleWorkflow.objects.create(rule_id=rule_2.id, workflow=workflow)
+
+        result = get_rule_workflow_ids(workflow)
+        assert result == IdPair(workflow_id=workflow.id, rule_id=None)
+
+    def test_rule_with_single_alert_rule_workflow(self) -> None:
+        rule = self.create_project_rule(project=self.project)
+        arw = AlertRuleWorkflow.objects.get(rule_id=rule.id)
+
+        result = get_rule_workflow_ids(rule)
+        assert result == IdPair(workflow_id=arw.workflow_id, rule_id=rule.id)
+
+    def test_rule_with_no_alert_rule_workflow(self) -> None:
+        rule = self.create_project_rule(project=self.project)
+        AlertRuleWorkflow.objects.filter(rule_id=rule.id).delete()
+
+        result = get_rule_workflow_ids(rule)
+        assert result == IdPair(workflow_id=None, rule_id=rule.id)

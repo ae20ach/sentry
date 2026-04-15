@@ -57,9 +57,17 @@ def get_rule_workflow_ids(target: Workflow | Rule) -> IdPair:
     if isinstance(target, Workflow):
         workflow_id = target.id
         try:
-            alert_rule_workflow = AlertRuleWorkflow.objects.get(workflow=target)
+            alert_rule_workflow = AlertRuleWorkflow.objects.get(
+                workflow=target, rule_id__isnull=False
+            )
             rule_id = alert_rule_workflow.rule_id
         except AlertRuleWorkflow.DoesNotExist:
+            rule_id = None
+        except AlertRuleWorkflow.MultipleObjectsReturned:
+            logger.warning(
+                "Multiple AlertRuleWorkflow entries for workflow",
+                extra={"workflow_id": target.id},
+            )
             rule_id = None
     else:
         rule_id = target.id
@@ -67,6 +75,12 @@ def get_rule_workflow_ids(target: Workflow | Rule) -> IdPair:
             alert_rule_workflow = AlertRuleWorkflow.objects.get(rule_id=target.id)
             workflow_id = alert_rule_workflow.workflow_id
         except AlertRuleWorkflow.DoesNotExist:
+            workflow_id = None
+        except AlertRuleWorkflow.MultipleObjectsReturned:
+            logger.warning(
+                "Multiple AlertRuleWorkflow entries for rule",
+                extra={"rule_id": target.id},
+            )
             workflow_id = None
     return IdPair(workflow_id=workflow_id, rule_id=rule_id)
 
