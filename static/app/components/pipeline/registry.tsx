@@ -1,6 +1,7 @@
 import {dummyIntegrationPipeline} from './pipelineDummyProvider';
 import {awsLambdaIntegrationPipeline} from './pipelineIntegrationAwsLambda';
 import {bitbucketIntegrationPipeline} from './pipelineIntegrationBitbucket';
+import {discordIntegrationPipeline} from './pipelineIntegrationDiscord';
 import {githubIntegrationPipeline} from './pipelineIntegrationGitHub';
 import {gitlabIntegrationPipeline} from './pipelineIntegrationGitLab';
 import {slackIntegrationPipeline} from './pipelineIntegrationSlack';
@@ -12,6 +13,7 @@ import {vstsIntegrationPipeline} from './pipelineIntegrationVsts';
 export const PIPELINE_REGISTRY = [
   awsLambdaIntegrationPipeline,
   bitbucketIntegrationPipeline,
+  discordIntegrationPipeline,
   dummyIntegrationPipeline,
   githubIntegrationPipeline,
   gitlabIntegrationPipeline,
