@@ -300,16 +300,12 @@ def run_llm_issue_detection() -> None:
         if dispatched >= MAX_ORGS_PER_CYCLE:
             break
 
-        if not _org_in_slot(org.id, current_slot):
-            continue
-
-        if not features.has("organizations:ai-issue-detection", org):
-            continue
-
-        if not features.has("organizations:gen-ai-features", org):
-            continue
-
-        if bool(org.get_option("sentry:hide_ai_features")):
+        if (
+            not _org_in_slot(org.id, current_slot)
+            or not features.has("organizations:ai-issue-detection", org)
+            or not features.has("organizations:gen-ai-features", org)
+            or org.get_option("sentry:hide_ai_features")
+        ):
             continue
 
         detect_llm_issues_for_org.apply_async(
