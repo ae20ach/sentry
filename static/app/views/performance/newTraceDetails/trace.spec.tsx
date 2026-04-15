@@ -4,6 +4,7 @@ import {TransactionEventFixture} from 'sentry-fixture/event';
 import {ProjectFixture} from 'sentry-fixture/project';
 
 import {
+  fireEvent,
   render,
   screen,
   userEvent,
@@ -779,7 +780,6 @@ const DRAWER_TABS_TEST_ID = 'trace-drawer-tab';
 const DRAWER_TABS_PIN_BUTTON_TEST_ID = 'trace-drawer-tab-pin-button';
 const VISIBLE_TRACE_ROW_SELECTOR = '.TraceRow:not(.Hidden)';
 const ACTIVE_SEARCH_HIGHLIGHT_ROW = '.TraceRow.SearchResult.Highlight:not(.Hidden)';
-const VISIBLE_SEARCH_RESULT_ROW_SELECTOR = `${VISIBLE_TRACE_ROW_SELECTOR}.SearchResult`;
 
 const searchToResolve = async (): Promise<void> => {
   await screen.findByTestId('trace-search-success', undefined, {timeout: 10_000});
@@ -1633,16 +1633,18 @@ describe('trace view', () => {
         // Wait for the search results to resolve
         await searchToResolve();
 
-        await waitFor(() => {
-          expect(
-            virtualizedContainer.querySelectorAll(VISIBLE_SEARCH_RESULT_ROW_SELECTOR)
-              .length
-          ).toBeGreaterThanOrEqual(2);
-        });
-        await userEvent.click(
-          virtualizedContainer.querySelectorAll(VISIBLE_SEARCH_RESULT_ROW_SELECTOR)[1]!
+        // Use iterator navigation instead of clicking the second visible virtualized row:
+        // the row at DOM index [1] is not always the second search match under CI timing.
+        await userEvent.click(searchInput);
+        await userEvent.keyboard('{arrowdown}');
+        await waitFor(
+          () => {
+            expect(screen.getByTestId('trace-search-result-iterator')).toHaveTextContent(
+              /2\/\d+/
+            );
+          },
+          {timeout: 10_000}
         );
-        await searchToResolve();
 
         let persistedTransactionOp = '';
         await waitFor(
@@ -1660,8 +1662,9 @@ describe('trace view', () => {
         );
 
         await userEvent.click(searchInput);
-        await userEvent.keyboard('{End}');
-        await userEvent.type(searchInput, 'act');
+        await waitFor(() => expect(searchInput).toHaveValue('trans'));
+        // Single change event avoids intermediate queries (transa, transac, …) resetting the match.
+        fireEvent.change(searchInput, {target: {value: 'transact'}});
         await waitFor(() => expect(searchInput).toHaveValue('transact'), {
           timeout: 10_000,
         });
