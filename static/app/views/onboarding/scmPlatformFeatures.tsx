@@ -27,6 +27,7 @@ import type {PlatformIntegration, PlatformKey} from 'sentry/types/project';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {isDisabledGamingPlatform} from 'sentry/utils/platform';
 import {useOrganization} from 'sentry/utils/useOrganization';
+import {useProjects} from 'sentry/utils/useProjects';
 import {useTeams} from 'sentry/utils/useTeams';
 import {ScmFeatureSelectionCards} from 'sentry/views/onboarding/components/scmFeatureSelectionCards';
 import {ScmPlatformCard} from 'sentry/views/onboarding/components/scmPlatformCard';
@@ -93,6 +94,7 @@ export function ScmPlatformFeatures({onComplete}: StepProps) {
   } = useOnboardingContext();
 
   const {teams} = useTeams();
+  const {projects} = useProjects();
   const createProject = useCreateProject();
   const hasProjectDetailsStep = organization.features.includes(
     'onboarding-scm-project-details'
@@ -335,6 +337,16 @@ export function ScmPlatformFeatures({onComplete}: StepProps) {
           ? toSelectedSdk(getPlatformInfo(currentPlatformKey)!)
           : undefined);
       if (!platform) {
+        return;
+      }
+
+      // If a project for this platform already exists (e.g. the user went
+      // back after the project had already received its first event), skip
+      // creation and reuse it — mirrors useConfigureSdk logic.
+      const existingProject = projects.find(p => p.slug === platform.key);
+      if (existingProject) {
+        setCreatedProjectSlug(existingProject.slug);
+        onComplete(undefined, {product: currentFeatures});
         return;
       }
 

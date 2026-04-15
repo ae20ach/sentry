@@ -16,6 +16,7 @@ import type {Team} from 'sentry/types/organization';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {slugify} from 'sentry/utils/slugify';
 import {useOrganization} from 'sentry/utils/useOrganization';
+import {useProjects} from 'sentry/utils/useProjects';
 import {useTeams} from 'sentry/utils/useTeams';
 import {
   DEFAULT_ISSUE_ALERT_OPTIONS_VALUES,
@@ -36,6 +37,7 @@ export function ScmProjectDetails({onComplete}: StepProps) {
   const {selectedPlatform, selectedFeatures, setCreatedProjectSlug} =
     useOnboardingContext();
   const {teams} = useTeams();
+  const {projects} = useProjects();
   const createProjectAndRules = useCreateProjectAndRules();
   useEffect(() => {
     trackAnalytics('onboarding.scm_project_details_step_viewed', {organization});
@@ -98,6 +100,16 @@ export function ScmProjectDetails({onComplete}: StepProps) {
 
   async function handleCreateProject() {
     if (!selectedPlatform || !canSubmit) {
+      return;
+    }
+
+    // If a project for this name already exists (e.g. the user went back
+    // after the project had already received its first event), skip
+    // creation and reuse it — mirrors useConfigureSdk logic.
+    const existingProject = projects.find(p => p.slug === projectNameResolved);
+    if (existingProject) {
+      setCreatedProjectSlug(existingProject.slug);
+      onComplete(undefined, selectedFeatures ? {product: selectedFeatures} : undefined);
       return;
     }
 
