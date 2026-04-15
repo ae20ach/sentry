@@ -365,6 +365,12 @@ def detect_llm_issues_for_org(org_id: int) -> None:
         return
 
     project_id = random.choice(projects)
+
+    project = Project.objects.get_from_cache(id=project_id)
+    perf_settings = project.get_option("sentry:performance_issue_settings", default={})
+    if not perf_settings.get("ai_issue_detection_enabled", True):
+        return
+
     evidence_traces = get_project_top_transaction_traces_for_llm_detection(
         project_id, limit=TRANSACTION_BATCH_SIZE, start_time_delta_minutes=START_TIME_DELTA_MINUTES
     )
