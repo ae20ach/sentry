@@ -206,6 +206,17 @@ class ProjectReplayDetailsTest(APITestCase, ReplaysSnubaTestCase):
 
         assert response.status_code == 403
 
+    def test_delete_denies_project_write_scope_for_api_tokens(self) -> None:
+        with assume_test_silo_mode(SiloMode.CONTROL):
+            token = ApiToken.objects.create(user=self.user, scope_list=["project:write"])
+
+        with self.feature(REPLAYS_FEATURES):
+            response = self.client.delete(
+                self.url, HTTP_AUTHORIZATION=f"Bearer {token.token}", format="json"
+            )
+
+        assert response.status_code == 403
+
     def test_delete_allows_event_write_scope_for_api_tokens(self) -> None:
         with assume_test_silo_mode(SiloMode.CONTROL):
             token = ApiToken.objects.create(user=self.user, scope_list=["event:write"])

@@ -2,6 +2,7 @@ from datetime import timedelta
 from unittest import mock
 
 import pytest
+from django.urls import reverse
 from django.utils import timezone
 
 from sentry import audit_log
@@ -13,6 +14,7 @@ from sentry.incidents.grouptype import MetricIssue
 from sentry.incidents.models.alert_rule import AlertRuleDetectionType
 from sentry.incidents.utils.constants import INCIDENTS_SNUBA_SUBSCRIPTION_TYPE
 from sentry.incidents.utils.subscription_limits import METRIC_SUBSCRIPTION_FEATURE_FLAGS
+from sentry.models.apitoken import ApiToken
 from sentry.models.auditlogentry import AuditLogEntry
 from sentry.silo.base import SiloMode
 from sentry.snuba.dataset import Dataset
@@ -267,6 +269,10 @@ class OrganizationDetectorDetailsPutTest(OrganizationDetectorDetailsBaseTest):
             "config": self.detector.config,
         }
         assert SnubaQuery.objects.get(id=self.snuba_query.id)
+
+    def _create_token(self, scope: str) -> ApiToken:
+        with assume_test_silo_mode(SiloMode.CONTROL):
+            return ApiToken.objects.create(user=self.user, scope_list=[scope])
 
     def assert_detector_updated(self, detector: Detector) -> None:
         assert detector.name == "Updated Detector"
@@ -549,6 +555,33 @@ class OrganizationDetectorDetailsPutTest(OrganizationDetectorDetailsBaseTest):
         detector = Detector.objects.get(id=response.data["id"])
         assert detector.enabled is False
         assert detector.status == ObjectStatus.DISABLED
+
+    def test_update_requires_alerts_write_scope_for_tokens(self) -> None:
+        token = self._create_token("org:read")
+
+        response = self.client.put(
+            reverse(self.endpoint, args=[self.organization.slug, self.detector.id]),
+            data={"enabled": False},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 403
+
+    def test_update_allows_alerts_write_scope_for_tokens(self) -> None:
+        token = self._create_token("alerts:write")
+
+        with self.tasks():
+            response = self.client.put(
+                reverse(self.endpoint, args=[self.organization.slug, self.detector.id]),
+                data={"enabled": False},
+                format="json",
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 200
+        self.detector.refresh_from_db()
+        assert self.detector.enabled is False
 
     def test_enable_detector(self) -> None:
         self.detector.update(enabled=False)
