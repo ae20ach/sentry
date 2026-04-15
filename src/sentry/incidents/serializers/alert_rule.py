@@ -45,6 +45,8 @@ from .alert_rule_trigger import AlertRuleTriggerSerializer
 
 logger = logging.getLogger(__name__)
 
+ALERT_RULE_PROJECT_SCOPES = ("project:read", "org:write", "org:admin", "alerts:write")
+
 
 class AlertRuleSerializer(SnubaQueryValidator, CamelSnakeModelSerializer[AlertRule]):
     """
@@ -56,7 +58,7 @@ class AlertRuleSerializer(SnubaQueryValidator, CamelSnakeModelSerializer[AlertRu
 
     environment = EnvironmentField(required=False, allow_null=True)
     projects = serializers.ListField(
-        child=ProjectField(scope="project:read"),
+        child=ProjectField(scope=ALERT_RULE_PROJECT_SCOPES),
         required=False,
         max_length=1,
     )

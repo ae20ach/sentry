@@ -11,6 +11,7 @@ import responses
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.test import override_settings
+from django.urls import reverse
 from httpx import HTTPError
 from rest_framework.exceptions import ErrorDetail
 from rest_framework.response import Response
@@ -44,6 +45,7 @@ from sentry.integrations.slack.tasks.find_channel_id_for_alert_rule import (
     find_channel_id_for_alert_rule,
 )
 from sentry.integrations.slack.utils.channel import SlackChannelIdData
+from sentry.models.apitoken import ApiToken
 from sentry.models.auditlogentry import AuditLogEntry
 from sentry.models.organizationmemberteam import OrganizationMemberTeam
 from sentry.models.project import Project
@@ -81,6 +83,10 @@ class AlertRuleDetailsBase(AlertRuleBase):
     __test__ = Abstract(__module__, __qualname__)
 
     endpoint = "sentry-api-0-organization-alert-rule-details"
+
+    def _create_token(self, scope: str) -> ApiToken:
+        with assume_test_silo_mode(SiloMode.CONTROL):
+            return ApiToken.objects.create(user=self.user, scope_list=[scope])
 
     @patch(
         "sentry.seer.anomaly_detection.store_data.seer_anomaly_detection_connection_pool.urlopen"
@@ -999,6 +1005,40 @@ class AlertRuleDetailsGetEndpointTest(AlertRuleDetailsBase):
 
 class AlertRuleDetailsPutEndpointTest(AlertRuleDetailsBase):
     method = "put"
+
+    def test_update_requires_alerts_write_scope_for_tokens(self) -> None:
+        self.create_member(
+            user=self.user, organization=self.organization, role="owner", teams=[self.team]
+        )
+        token = self._create_token("org:read")
+
+        with self.feature("organizations:incidents"):
+            response = self.client.put(
+                reverse(self.endpoint, args=[self.organization.slug, self.alert_rule.id]),
+                data=self.valid_params,
+                format="json",
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 403
+
+    def test_update_allows_alerts_write_scope_for_tokens(self) -> None:
+        self.create_member(
+            user=self.user, organization=self.organization, role="owner", teams=[self.team]
+        )
+        token = self._create_token("alerts:write")
+
+        with self.feature("organizations:incidents"):
+            response = self.client.put(
+                reverse(self.endpoint, args=[self.organization.slug, self.alert_rule.id]),
+                data=self.valid_params,
+                format="json",
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 200
+        self.alert_rule.refresh_from_db()
+        assert self.alert_rule.name == self.valid_params["name"]
 
     def test_simple(self) -> None:
         self.create_member(

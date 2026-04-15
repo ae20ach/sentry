@@ -6,20 +6,24 @@ from unittest.mock import MagicMock, patch
 
 from django.conf import settings
 from django.test.utils import override_settings
+from django.urls import reverse
 from rest_framework.exceptions import ErrorDetail
 
 from sentry import audit_log
 from sentry.analytics.events.cron_monitor_created import CronMonitorCreated, FirstCronMonitorCreated
 from sentry.constants import ObjectStatus
+from sentry.models.apitoken import ApiToken
 from sentry.models.projectteam import ProjectTeam
 from sentry.models.rule import Rule, RuleSource
 from sentry.monitors.models import Monitor, MonitorStatus, ScheduleType, is_monitor_muted
 from sentry.monitors.utils import get_detector_for_monitor
 from sentry.quotas.base import SeatAssignmentResult
+from sentry.silo.base import SiloMode
 from sentry.testutils.asserts import assert_org_audit_log_exists
 from sentry.testutils.cases import MonitorTestCase
 from sentry.testutils.helpers.analytics import assert_any_analytics_event
 from sentry.testutils.outbox import outbox_runner
+from sentry.testutils.silo import assume_test_silo_mode
 from sentry.utils.outcomes import Outcome
 from sentry.utils.slug import DEFAULT_SLUG_ERROR_MESSAGE
 
@@ -437,6 +441,49 @@ class CreateOrganizationMonitorTest(MonitorTestCase):
     def setUp(self) -> None:
         super().setUp()
         self.login_as(self.user)
+
+    def _create_token(self, scope: str) -> ApiToken:
+        with assume_test_silo_mode(SiloMode.CONTROL):
+            return ApiToken.objects.create(user=self.user, scope_list=[scope])
+
+    def test_create_requires_alerts_write_scope_for_tokens(self) -> None:
+        token = self._create_token("org:read")
+        data = {
+            "project": self.project.slug,
+            "name": "My Monitor",
+            "type": "cron_job",
+            "owner": f"user:{self.user.id}",
+            "config": {"schedule_type": "crontab", "schedule": "@daily"},
+        }
+
+        response = self.client.post(
+            reverse(self.endpoint, args=[self.organization.slug]),
+            data=data,
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 403
+
+    def test_create_allows_alerts_write_scope_for_tokens(self) -> None:
+        token = self._create_token("alerts:write")
+        data = {
+            "project": self.project.slug,
+            "name": "My Monitor",
+            "type": "cron_job",
+            "owner": f"user:{self.user.id}",
+            "config": {"schedule_type": "crontab", "schedule": "@daily"},
+        }
+
+        with outbox_runner():
+            response = self.client.post(
+                reverse(self.endpoint, args=[self.organization.slug]),
+                data=data,
+                format="json",
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 201
 
     @patch("sentry.analytics.record")
     def test_simple(self, mock_record: MagicMock) -> None:
