@@ -76,9 +76,6 @@ class TestSearchFiltersToQueryString:
         """All filters with no EAP equivalent are silently dropped."""
         filters = [
             SearchFilter(SearchKey("event.type"), "=", SearchValue("error")),
-            SearchFilter(SearchKey("times_seen"), ">", SearchValue("100")),
-            SearchFilter(SearchKey("last_seen"), ">", SearchValue("2024-01-01")),
-            SearchFilter(SearchKey("user_count"), ">", SearchValue("5")),
             SearchFilter(SearchKey("release.stage"), "=", SearchValue("adopted")),
             SearchFilter(SearchKey("release.version"), ">", SearchValue("1.0.0")),
             SearchFilter(SearchKey("release.package"), "=", SearchValue("com.example")),
@@ -88,6 +85,33 @@ class TestSearchFiltersToQueryString:
             SearchFilter(SearchKey("transaction.status"), "=", SearchValue("ok")),
         ]
         assert search_filters_to_query_string(filters) == ""
+
+    def test_aggregation_filters_translated(self):
+        """Legacy aggregation field names are translated to EAP function syntax
+        so the SearchResolver parses them as AggregateFilter (HAVING) conditions."""
+        dt = datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        cases = [
+            (
+                SearchFilter(SearchKey("times_seen"), ">", SearchValue("100")),
+                "count():>100",
+            ),
+            (
+                SearchFilter(SearchKey("times_seen"), "<=", SearchValue("50")),
+                "count():<=50",
+            ),
+            (
+                SearchFilter(SearchKey("last_seen"), ">", SearchValue(dt)),
+                "last_seen():>2024-01-15T12:00:00+00:00",
+            ),
+            (
+                SearchFilter(SearchKey("user_count"), ">", SearchValue("5")),
+                "count_unique(user.id):>5",
+            ),
+        ]
+        for sf, expected in cases:
+            assert search_filters_to_query_string([sf]) == expected, (
+                f"Failed for {sf.key.name}:{sf.operator}{sf.value.raw_value}"
+            )
 
     def test_error_unhandled_translation(self):
         """error.unhandled is inverted to use the EAP error.handled attribute."""
@@ -121,7 +145,7 @@ class TestSearchFiltersToQueryString:
     def test_realistic_mixed_query(self):
         """A realistic issue feed query mixing supported, skipped, and translated filters.
         Verifies that supported filters are converted, skipped filters are dropped,
-        and translated filters are rewritten — all in a single query string."""
+        aggregation filters are translated, and special filters are rewritten."""
         filters = [
             SearchFilter(SearchKey("level"), "=", SearchValue("error")),
             SearchFilter(SearchKey("error.unhandled"), "=", SearchValue("1")),
@@ -132,5 +156,6 @@ class TestSearchFiltersToQueryString:
         ]
         result = search_filters_to_query_string(filters)
         assert result == (
-            "level:error !error.handled:1 platform:[python, javascript] tags[browser]:chrome"
+            "level:error !error.handled:1 count():>50"
+            " platform:[python, javascript] tags[browser]:chrome"
         )
