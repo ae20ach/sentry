@@ -1,3 +1,5 @@
+import {useMemo} from 'react';
+
 import {Button} from '@sentry/scraps/button';
 import {Container} from '@sentry/scraps/layout';
 
@@ -38,14 +40,22 @@ const useApdex = (props: Props) => {
   const {projects, environments: environments, datetime} = selection;
   const {period} = datetime;
 
-  const {start: previousStart} = parseStatsPeriod(
-    getPeriod({period, start: undefined, end: undefined}, {shouldDoublePeriod: true})
-      .statsPeriod!
+  const {start: previousStart} = useMemo(
+    () =>
+      parseStatsPeriod(
+        getPeriod({period, start: undefined, end: undefined}, {shouldDoublePeriod: true})
+          .statsPeriod!
+      ),
+    [period]
   );
 
-  const {start: previousEnd} = parseStatsPeriod(
-    getPeriod({period, start: undefined, end: undefined}, {shouldDoublePeriod: false})
-      .statsPeriod!
+  const {start: previousEnd} = useMemo(
+    () =>
+      parseStatsPeriod(
+        getPeriod({period, start: undefined, end: undefined}, {shouldDoublePeriod: false})
+          .statsPeriod!
+      ),
+    [period]
   );
 
   const commonQuery = {
