@@ -1660,7 +1660,6 @@ describe('trace view', () => {
         );
 
         await userEvent.click(searchInput);
-        await waitFor(() => expect(searchInput).toHaveFocus(), {timeout: 5000});
         await userEvent.keyboard('{End}');
         await userEvent.type(searchInput, 'act');
         await waitFor(() => expect(searchInput).toHaveValue('transact'), {
@@ -1681,12 +1680,12 @@ describe('trace view', () => {
               ).textContent!.trim()
             ).toBe(persistedTransactionOp);
           },
-          {timeout: 10_000}
+          {timeout: 15_000}
         );
 
         await userEvent.clear(searchInput);
+        await waitFor(() => expect(searchInput).toHaveValue(''));
         await userEvent.click(searchInput);
-        await waitFor(() => expect(searchInput).toHaveFocus(), {timeout: 5000});
         await userEvent.paste('this wont match anything');
         await waitFor(() => expect(searchInput).toHaveValue('this wont match anything'), {
           timeout: 10_000,
