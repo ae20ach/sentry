@@ -246,6 +246,7 @@ const LogsSearchSection = memo(function LogsSearchSection({
 export function LogsTabContent({datePageFilterProps, tableExpando}: LogsTabProps) {
   const pageFilters = usePageFilters();
   const fields = useQueryParamsFields();
+  const logsSearch = useQueryParamsSearch();
   const mode = useQueryParamsMode();
   const topEventsLimit = useQueryParamsTopEventsLimit();
   const queryClient = useQueryClient();
@@ -258,7 +259,6 @@ export function LogsTabContent({datePageFilterProps, tableExpando}: LogsTabProps
   const logsExportThreshold = autorefreshEnabled
     ? QUERY_PAGE_LIMIT_WITH_AUTO_REFRESH
     : QUERY_PAGE_LIMIT;
-  const logsExportDownloadLocally = !tableData.isPending && !tableData.hasNextPage;
 
   const [timeseriesIngestDelay, setTimeseriesIngestDelay] = useState<bigint>(
     getMaxIngestDelayTimestamp()
@@ -279,7 +279,11 @@ export function LogsTabContent({datePageFilterProps, tableExpando}: LogsTabProps
     }
   }, [autorefreshEnabled]);
 
-  const rawLogCounts = useRawCounts({dataset: DiscoverDatasets.OURLOGS});
+  const rawLogCountsAll = useRawCounts({dataset: DiscoverDatasets.OURLOGS});
+  const rawLogCountsFiltered = useRawCounts({
+    dataset: DiscoverDatasets.OURLOGS,
+    query: logsSearch.formatString(),
+  });
 
   const yAxes = useMemo(() => {
     const uniqueYAxes = new Set(visualizes.map(visualize => visualize.yAxis));
@@ -465,8 +469,11 @@ export function LogsTabContent({datePageFilterProps, tableExpando}: LogsTabProps
                 isLoading={tableData.isPending}
                 tableData={tableData.data}
                 error={tableData.error}
-                downloadLocally={logsExportDownloadLocally}
                 threshold={logsExportThreshold}
+                estimatedRowCount={Math.max(
+                  tableData.data.length,
+                  rawLogCountsFiltered.total.count ?? 0
+                )}
               />
             </OverChartButtonGroup>
           )}
@@ -478,7 +485,7 @@ export function LogsTabContent({datePageFilterProps, tableExpando}: LogsTabProps
           {!tableExpando.expanded && (
             <LogsGraphContainer>
               <LogsGraph
-                rawLogCounts={rawLogCounts}
+                rawLogCounts={rawLogCountsAll}
                 timeseriesResult={timeseriesResult}
               />
             </LogsGraphContainer>

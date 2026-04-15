@@ -12,7 +12,7 @@ import {
 } from 'sentry/views/explore/queryParams/context';
 
 type LogsExportSwitchProps = {
-  downloadLocally: boolean;
+  estimatedRowCount: number;
   isLoading: boolean;
   tableData: OurLogsResponseItem[];
   threshold: number;
@@ -23,7 +23,7 @@ export function LogsExportSwitch({
   isLoading,
   tableData,
   error,
-  downloadLocally,
+  estimatedRowCount,
   threshold,
 }: LogsExportSwitchProps) {
   const organization = useOrganization();
@@ -51,16 +51,20 @@ export function LogsExportSwitch({
     environment: environments,
   };
 
-  const ButtonComponent = showModalExport ? LogsExportModalButton : LogsExportButton;
+  const exportButtonProps = {
+    queryInfo,
+    isLoading,
+    error,
+    tableData,
+  };
 
-  return (
-    <ButtonComponent
-      queryInfo={queryInfo}
-      isLoading={isLoading}
-      error={error}
-      tableData={tableData}
-      downloadLocally={downloadLocally}
+  return showModalExport ? (
+    <LogsExportModalButton
+      {...exportButtonProps}
+      estimatedRowCount={estimatedRowCount}
       threshold={threshold}
     />
+  ) : (
+    <LogsExportButton {...exportButtonProps} />
   );
 }

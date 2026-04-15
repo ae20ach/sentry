@@ -41,32 +41,25 @@ const exportModalFormSchema = z.object({
 
 type ExportModalFormValues = z.infer<typeof exportModalFormSchema>;
 
-const defaultExportModalValues: ExportModalFormValues = {
-  allColumns: false,
-  format: 'csv',
-  limit: 100,
-};
-
 type LogsExportModalProps = ModalRenderProps & {
-  downloadLocally: boolean;
+  estimatedRowCount: number;
   queryInfo: LogsQueryInfo;
   tableData: OurLogsResponseItem[];
   threshold: number;
 };
 
-function generateRowOptions(dataLength: number) {
-  let rowOptions = ROW_COUNT_VALUES.map(value => ({label: value, value}));
+function generateRowOptions(estimatedRowCount: number) {
+  const rowOptions = ROW_COUNT_VALUES.map(value => ({label: value, value})).filter(
+    ({value}) => value <= estimatedRowCount
+  );
 
-  // TODO: right now we only get up to the 1k page limit
-  // Next up I'll try to pipe through the actual logs result number
-  if (dataLength < ROW_COUNT_VALUE_SYNC_LIMIT) {
-    rowOptions = rowOptions.filter(({value}) => value <= dataLength);
-  }
-
-  if (!rowOptions.length || dataLength > rowOptions[rowOptions.length - 1]!.value) {
+  if (
+    !rowOptions.length ||
+    estimatedRowCount > rowOptions[rowOptions.length - 1]!.value
+  ) {
     rowOptions.push({
-      label: dataLength,
-      value: dataLength,
+      label: estimatedRowCount,
+      value: estimatedRowCount,
     });
   }
 
@@ -78,6 +71,7 @@ export function LogsExportModal({
   Footer,
   Header,
   closeModal,
+  estimatedRowCount,
   queryInfo,
   tableData,
 }: LogsExportModalProps) {
@@ -92,11 +86,16 @@ export function LogsExportModal({
     [queryInfo]
   );
   const handleDataExport = useDataExport({payload});
-  const rowOptions = generateRowOptions(tableData.length);
+  const rowOptions = generateRowOptions(estimatedRowCount);
+  const defaultValues: ExportModalFormValues = {
+    allColumns: false,
+    format: 'csv',
+    limit: rowOptions[0]!.value,
+  };
 
   const form = useScrapsForm({
     ...defaultFormOptions,
-    defaultValues: defaultExportModalValues,
+    defaultValues,
     validators: {
       onDynamic: exportModalFormSchema,
     },
