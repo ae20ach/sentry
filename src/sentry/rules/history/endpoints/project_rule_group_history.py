@@ -23,6 +23,7 @@ from sentry.models.rule import Rule
 from sentry.rules.history import fetch_rule_groups_paginated
 from sentry.rules.history.base import RuleGroupHistory
 from sentry.workflow_engine.models.workflow import Workflow
+from sentry.workflow_engine.utils.legacy_metric_tracking import track_alert_endpoint_execution
 
 
 class RuleGroupHistoryResponse(TypedDict):
@@ -78,6 +79,7 @@ class ProjectRuleGroupHistoryIndexEndpoint(WorkflowEngineRuleEndpoint):
             404: RESPONSE_NOT_FOUND,
         },
     )
+    @track_alert_endpoint_execution("GET", "sentry-api-0-project-rule-group-history-index")
     def get(self, request: Request, project: Project, rule: Rule | Workflow) -> Response:
         per_page = self.get_per_page(request)
         cursor = self.get_cursor_from_request(request)

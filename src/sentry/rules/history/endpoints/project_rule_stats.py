@@ -20,6 +20,7 @@ from sentry.models.rule import Rule
 from sentry.rules.history import fetch_rule_hourly_stats
 from sentry.rules.history.base import TimeSeriesValue
 from sentry.workflow_engine.models.workflow import Workflow
+from sentry.workflow_engine.utils.legacy_metric_tracking import track_alert_endpoint_execution
 
 
 class TimeSeriesValueResponse(TypedDict):
@@ -61,6 +62,7 @@ class ProjectRuleStatsIndexEndpoint(WorkflowEngineRuleEndpoint):
             404: RESPONSE_NOT_FOUND,
         },
     )
+    @track_alert_endpoint_execution("GET", "sentry-api-0-project-rule-stats-index")
     def get(self, request: Request, project: Project, rule: Rule | Workflow) -> Response:
         """
         Note that results are returned in hourly buckets.

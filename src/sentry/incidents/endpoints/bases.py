@@ -14,6 +14,7 @@ from sentry.models.organization import Organization
 from sentry.workflow_engine.endpoints.utils.ids import to_valid_int_id
 from sentry.workflow_engine.models.alertrule_detector import AlertRuleDetector
 from sentry.workflow_engine.models.detector import Detector
+from sentry.workflow_engine.utils.legacy_metric_tracking import report_used_legacy_models
 
 
 class OrganizationAlertRuleBaseEndpoint(OrganizationEndpoint):
@@ -150,6 +151,7 @@ class WorkflowEngineProjectAlertRuleEndpoint(ProjectAlertRuleEndpoint):
 
             return args, kwargs
 
+        report_used_legacy_models()
         try:
             kwargs["alert_rule"] = AlertRule.objects.get(
                 projects=project, id=validated_alert_rule_id
@@ -203,6 +205,7 @@ class WorkflowEngineOrganizationAlertRuleEndpoint(OrganizationAlertRuleEndpoint)
 
             return args, kwargs
 
+        report_used_legacy_models()
         try:
             kwargs["alert_rule"] = AlertRule.objects.get(
                 organization=organization, id=validated_alert_rule_id
