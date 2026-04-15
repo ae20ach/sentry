@@ -218,7 +218,7 @@ class RepoTreesIntegration(ABC):
                         "Caching empty files result for missing repo or ref",
                         extra={"repo": repo_full_name},
                     )
-                    cache.set(key, [], NOT_FOUND_CACHE_SECONDS)
+                    cache.set(key, [], NOT_FOUND_CACHE_SECONDS + shifted_seconds)
                     tree = None
                 else:
                     raise
