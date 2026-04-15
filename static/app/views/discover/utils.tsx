@@ -217,7 +217,7 @@ export function downloadAsCsv(tableData: any, columnOrder: any, filename: any) {
 
   // Create a download link then click it, this is so we can get a filename
   const now = new Date();
-  downloadFromHref(encodedDataUrl, `${filename} ${getUtcDateString(now)}.csv`);
+  downloadFromHref(`${filename} ${getUtcDateString(now)}.csv`, encodedDataUrl);
 
   // Make testing easier
   return encodedDataUrl;

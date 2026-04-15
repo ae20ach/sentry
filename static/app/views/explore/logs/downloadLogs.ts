@@ -6,8 +6,8 @@ interface DownloadLogsOptions {
   fields: OurLogFieldKey[];
   filename: string;
   format: 'csv' | 'json';
-  limit: number;
   tableData: OurLogsResponseItem[];
+  limit?: number;
 }
 
 export function downloadLogs({
