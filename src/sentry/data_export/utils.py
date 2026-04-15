@@ -8,35 +8,30 @@ from typing import Any, Iterator, Literal
 from google.protobuf.timestamp_pb2 import Timestamp
 from sentry_protos.snuba.v1.endpoint_trace_items_pb2 import ExportTraceItemsResponse
 from sentry_protos.snuba.v1.trace_item_pb2 import AnyValue, TraceItem
+
 from sentry.data_export.base import ExportError
 from sentry.search.eap.types import SupportedTraceItemType
-from sentry.search.eap.utils import (
-    INTERNAL_TO_PUBLIC_ALIAS_MAPPINGS,
-    can_expose_attribute,
-    translate_internal_to_public_alias,
-)
+from sentry.search.eap.utils import can_expose_attribute, translate_internal_to_public_alias
 from sentry.search.events.constants import TIMEOUT_ERROR_MESSAGE
 from sentry.snuba import discover
 from sentry.utils import metrics, snuba
 from sentry.utils.sdk import capture_exception
 from sentry.utils.snuba_rpc import SnubaRPCRateLimitExceeded
 
+_SCALAR_SEARCH_TYPES: list[Literal["string", "number", "boolean"]] = [
+    "string",
+    "number",
+    "boolean",
+]
 
+PROTOBUF_TYPE_TO_SEARCH_TYPE: dict[str, Literal["string", "number", "boolean"]] = {
+    "string_value": "string",
+    "bytes_value": "string",
+    "bool_value": "boolean",
+    "int_value": "number",
+    "double_value": "number",
+}
 
-def eap_storage_scalar_type_from_protobuf(
-    which: str | None,
-) -> Literal["string", "number", "boolean"] | None:
-    if which is None:
-        return None
-    if which in ("string_value", "bytes_value"):
-        return "string"
-    if which == "bool_value":
-        return "boolean"
-    if which in ("int_value", "double_value"):
-        return "number"
-    if which in ("array_value", "kvlist_value"):
-        return None
-    return None
 
 # Adapted into decorator from 'src/sentry/api/endpoints/organization_events.py'
 def handle_snuba_errors(
@@ -138,23 +133,15 @@ def _export_column_name_for_scalar_trace_attribute(
     eap_storage_type: Literal["string", "number", "boolean"],
     item_type: SupportedTraceItemType,
 ) -> str:
-    # eap_storage_type is not same as search_type used in translate_internal_to_public_alias
-    per_type = INTERNAL_TO_PUBLIC_ALIAS_MAPPINGS.get(item_type)
-    if per_type is not None:
-        for typ in ("string", "number", "boolean"):
-            if internal_key in per_type.get(typ, {}):
-                public_alias, public_name, _ = translate_internal_to_public_alias(
-                    internal_key, typ, item_type
-                )
-                if public_alias is not None and public_name is not None:
-                    return public_name
-                break
-    # column_to_alias still needs a type; use storage type.
-    public_alias, public_name, _ = translate_internal_to_public_alias(
-        internal_key, eap_storage_type, item_type
-    )
-    if public_alias is not None and public_name is not None:
-        return public_name
+    """Map a scalar trace item attribute to its public export column name."""
+    for storage_type in [eap_storage_type] + [
+        t for t in _SCALAR_SEARCH_TYPES if t != eap_storage_type
+    ]:
+        public_alias, public_name, _ = translate_internal_to_public_alias(
+            internal_key, storage_type, item_type
+        )
+        if public_alias is not None and public_name is not None:
+            return public_name
     return internal_key
 
 
@@ -174,7 +161,7 @@ def trace_item_to_row(
             continue
         which = av.WhichOneof("value")
         value = None if which is None else anyvalue_to_python(av)
-        eap_storage_type = eap_storage_scalar_type_from_protobuf(which)
+        eap_storage_type = PROTOBUF_TYPE_TO_SEARCH_TYPE.get(which) if which is not None else None
         if eap_storage_type is None:
             new_key = internal_key
         else:
