@@ -12,11 +12,20 @@ import {useOrganization} from 'sentry/utils/useOrganization';
 
 interface TroubleshootingSectionProps {
   project: Project;
+  sourcemapsDocsUrl: string;
 }
 
-export function TroubleshootingSection({project}: TroubleshootingSectionProps) {
+export function TroubleshootingSection({
+  sourcemapsDocsUrl,
+  project,
+}: TroubleshootingSectionProps) {
   const organization = useOrganization();
   const settingsUrl = `/settings/${organization.slug}/projects/${project.slug}/source-maps/`;
+
+  const troubleShootingDocUrl =
+    project.platform === 'react-native'
+      ? `${sourcemapsDocsUrl}troubleshooting/`
+      : `${sourcemapsDocsUrl}troubleshooting_js/`;
 
   return (
     <Stack gap="md" padding="lg">
@@ -125,7 +134,7 @@ export function TroubleshootingSection({project}: TroubleshootingSectionProps) {
         </Disclosure>
         <Flex paddingTop="sm" align="center" gap="sm">
           <Text variant="muted">{t('Not what you\u2019re looking for?')}</Text>
-          <ExternalLink href="https://docs.sentry.io/platforms/javascript/sourcemaps/troubleshooting_js/">
+          <ExternalLink href={troubleShootingDocUrl}>
             <Flex align="center" gap="xs">
               <IconDocs size="xs" />
               {t('Read all documentation')}
