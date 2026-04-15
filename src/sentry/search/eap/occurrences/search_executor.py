@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 # Filters that must be skipped because they have no EAP equivalent.
 # These would silently become dynamic tag lookups in the EAP SearchResolver
 # (resolver.py:1026-1060) and produce incorrect results.
+# TODO: these are potentially gaps between existing issue feed search behavior and EAP search behavior. May need to adddress.
 SKIP_FILTERS: frozenset[str] = frozenset(
     {
         # event.type is added internally by _query_params_for_error(), not from user filters.
@@ -52,7 +53,7 @@ TRANSLATE_KEYS: dict[str, str] = {
 AGGREGATION_FIELD_TO_EAP_FUNCTION: dict[str, str] = {
     "times_seen": "count()",
     "last_seen": "last_seen()",
-    "user_count": "count_unique(user.id)",
+    "user_count": "count_unique(user)",
 }
 
 
@@ -151,7 +152,7 @@ def _convert_aggregation_filter(sf: SearchFilter) -> str | None:
 
     e.g. times_seen:>100 → count():>100
          last_seen:>2024-01-01 → last_seen():>2024-01-01T00:00:00+00:00
-         user_count:>5 → count_unique(user.id):>5
+         user_count:>5 → count_unique(user):>5
     """
     eap_function = AGGREGATION_FIELD_TO_EAP_FUNCTION[sf.key.name]
     formatted_value = _format_value(sf.value.raw_value)

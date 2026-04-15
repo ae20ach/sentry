@@ -109,7 +109,7 @@ class TestSearchFiltersToQueryString:
             ),
             (
                 SearchFilter(SearchKey("user_count"), ">", SearchValue("5")),
-                "count_unique(user.id):>5",
+                "count_unique(user):>5",
             ),
         ]
         for sf, expected in cases:
