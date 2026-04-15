@@ -1825,5 +1825,8 @@ function dispatchJestScrollUpdate(container: HTMLElement) {
   if (process.env.NODE_ENV !== 'test') {
     return;
   }
-  container.dispatchEvent(new CustomEvent('scroll'));
+
+  window.requestAnimationFrame(() => {
+    container.dispatchEvent(new CustomEvent('scroll'));
+  });
 }
