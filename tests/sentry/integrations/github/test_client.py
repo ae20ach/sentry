@@ -379,6 +379,38 @@ class GitHubApiClientTest(TestCase):
             files = self.install.get_cached_repo_files(self.repo.name, "master", 0)
             assert files == ["src/foo.py"]
 
+    @responses.activate
+    def test_get_cached_repo_files_caches_not_found(self) -> None:
+        responses.add(
+            method=responses.GET,
+            url=f"https://api.github.com/repos/{self.repo.name}/git/trees/master?recursive=1",
+            status=404,
+            json={"message": "Not Found"},
+        )
+        repo_key = f"github:repo:{self.repo.name}:source-code"
+        assert cache.get(repo_key) is None
+
+        files = self.install.get_cached_repo_files(self.repo.name, "master", 0)
+        assert files == []
+        assert cache.get(repo_key) == []
+
+        # Negative-cache hit should avoid an additional API request.
+        files = self.install.get_cached_repo_files(self.repo.name, "master", 0)
+        assert files == []
+        assert len(responses.calls) == 1
+
+    @responses.activate
+    def test_get_cached_repo_files_raises_non_not_found_api_error(self) -> None:
+        responses.add(
+            method=responses.GET,
+            url=f"https://api.github.com/repos/{self.repo.name}/git/trees/master?recursive=1",
+            status=500,
+            json={"message": "Server Error"},
+        )
+
+        with pytest.raises(ApiError):
+            self.install.get_cached_repo_files(self.repo.name, "master", 0)
+
     @mock.patch("sentry.integrations.github.client.get_jwt", return_value="jwt_token_1")
     @responses.activate
     def test_update_comment(self, get_jwt) -> None:
