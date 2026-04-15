@@ -161,6 +161,8 @@ export enum SpanFields {
   APP_START_WARM = 'measurements.app_start_warm',
   MOBILE_FRAMES_DELAY = 'mobile.frames_delay',
   APP_START_TYPE = 'app_start_type',
+  FROZEN_FRAMES_RATE = 'measurements.frames_frozen_rate',
+  SLOW_FRAMES_RATE = 'measurements.frames_slow_rate',
   TTID = 'sentry.ttid',
   TTFD = 'sentry.ttfd',
 
