@@ -50,8 +50,9 @@ TRANSLATE_KEYS: dict[str, str] = {
 # The EAP SearchResolver parses function syntax like count():>100 as AggregateFilter objects
 # and routes them to the aggregation_filter field on the RPC request.
 AGGREGATION_FIELD_TO_EAP_FUNCTION: dict[str, str] = {
-    "times_seen": "count()",
     "last_seen": "last_seen()",
+    "times_seen": "count()",
+    "first_seen": "first_seen()",
     "user_count": "count_unique(user)",
 }
 
