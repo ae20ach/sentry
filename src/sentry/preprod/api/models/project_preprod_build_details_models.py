@@ -147,6 +147,7 @@ class BuildDetailsApiResponse(BaseModel):
     posted_status_checks: PostedStatusChecks | None = None
     base_artifact_id: str | None = None
     base_build_info: BuildDetailsAppInfo | None = None
+    objectstore_token: str | None = None
 
 
 def create_build_details_app_info(artifact: PreprodArtifact) -> BuildDetailsAppInfo:
@@ -264,6 +265,7 @@ def to_size_info(
 
 def transform_preprod_artifact_to_build_details(
     artifact: PreprodArtifact,
+    objectstore_token: str | None = None,
 ) -> BuildDetailsApiResponse:
     size_metrics_list = list(artifact.preprodartifactsizemetrics_set.all())
 
@@ -327,6 +329,7 @@ def transform_preprod_artifact_to_build_details(
         posted_status_checks=posted_status_checks,
         base_artifact_id=base_artifact.id if base_artifact else None,
         base_build_info=base_build_info,
+        objectstore_token=objectstore_token,
     )
 
 

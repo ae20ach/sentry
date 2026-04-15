@@ -96,5 +96,7 @@ class SnapshotDetailsApiResponse(BaseModel):
 
     approval_info: SnapshotApprovalInfo | None = None
 
+    objectstore_token: str | None = None
+
 
 # TODO: POST request in the future when we migrate away from current schemas

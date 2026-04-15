@@ -35,6 +35,7 @@ export function BuildDetailsSidebarContent(props: BuildDetailsSidebarContentProp
         projectId={buildDetailsData.project_id}
         projectSlug={buildDetailsData.project_slug}
         artifactId={artifactId}
+        objectstoreToken={buildDetailsData.objectstore_token}
       />
 
       {/* Status check info */}

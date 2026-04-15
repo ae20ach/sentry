@@ -10,6 +10,7 @@ from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import cell_silo_endpoint
 from sentry.models.project import Project
+from sentry.objectstore import mint_read_token
 from sentry.preprod.analytics import PreprodArtifactApiGetBuildDetailsEvent
 from sentry.preprod.api.bases.preprod_artifact_endpoint import PreprodArtifactEndpoint
 from sentry.preprod.api.models.project_preprod_build_details_models import (
@@ -70,5 +71,8 @@ class ProjectPreprodBuildDetailsEndpoint(PreprodArtifactEndpoint):
         if head_artifact.state == PreprodArtifact.ArtifactState.FAILED:
             return Response({"error": head_artifact.error_message}, status=400)
         else:
-            build_details = transform_preprod_artifact_to_build_details(head_artifact)
+            token = mint_read_token("preprod", org=project.organization_id, project=project.id)
+            build_details = transform_preprod_artifact_to_build_details(
+                head_artifact, objectstore_token=token
+            )
             return Response(build_details.dict())

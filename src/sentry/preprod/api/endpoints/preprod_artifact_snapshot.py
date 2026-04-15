@@ -22,7 +22,7 @@ from sentry.api.bases.project import ProjectEndpoint, ProjectReleasePermission
 from sentry.models.commitcomparison import CommitComparison
 from sentry.models.organization import Organization
 from sentry.models.project import Project
-from sentry.objectstore import get_preprod_session
+from sentry.objectstore import get_preprod_session, mint_read_token
 from sentry.preprod.analytics import (
     PreprodArtifactApiDeleteEvent,
     PreprodArtifactApiGetSnapshotDetailsEvent,
@@ -405,6 +405,8 @@ class OrganizationPreprodSnapshotEndpoint(OrganizationEndpoint):
                 approvers=[],
             )
 
+        token = mint_read_token("preprod", org=organization.id, project=artifact.project_id)
+
         return Response(
             SnapshotDetailsApiResponse(
                 head_artifact_id=str(artifact.id),
@@ -429,6 +431,7 @@ class OrganizationPreprodSnapshotEndpoint(OrganizationEndpoint):
                 errored_count=len(categorized.errored),
                 comparison_run_info=run_info,
                 approval_info=approval_info,
+                objectstore_token=token,
             ).dict()
         )
 

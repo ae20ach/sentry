@@ -18,6 +18,7 @@ import {DiffImageDisplay, type DiffMode} from './imageDisplay/diffImageDisplay';
 import {SingleImageDisplay} from './imageDisplay/singleImageDisplay';
 
 interface SnapshotMainContentProps {
+  authSuffix: string;
   diffImageBaseUrl: string;
   diffMode: DiffMode;
   imageBaseUrl: string;
@@ -37,6 +38,7 @@ export function SnapshotMainContent({
   onVariantChange,
   imageBaseUrl,
   diffImageBaseUrl,
+  authSuffix,
   showOverlay,
   onShowOverlayChange,
   overlayColor,
@@ -99,6 +101,7 @@ export function SnapshotMainContent({
           pair={currentPair}
           imageBaseUrl={imageBaseUrl}
           diffImageBaseUrl={diffImageBaseUrl}
+          authSuffix={authSuffix}
           showOverlay={showOverlay}
           overlayColor={overlayColor}
           diffMode={diffMode}
@@ -115,7 +118,7 @@ export function SnapshotMainContent({
     }
     const displayName = getImageName(currentImage);
     const totalVariants = selectedItem.images.length;
-    const imageUrl = `${imageBaseUrl}${currentImage.key}`;
+    const imageUrl = `${imageBaseUrl}${currentImage.key}${authSuffix}`;
 
     return (
       <Flex direction="column" gap="0" padding="0" height="100%" width="100%">
@@ -150,7 +153,7 @@ export function SnapshotMainContent({
       return null;
     }
     const totalVariants = selectedItem.pairs.length;
-    const imageUrl = `${imageBaseUrl}${currentPair.head_image.key}`;
+    const imageUrl = `${imageBaseUrl}${currentPair.head_image.key}${authSuffix}`;
     const displayName = getImageName(currentPair.head_image);
 
     return (
@@ -199,7 +202,7 @@ export function SnapshotMainContent({
     return null;
   }
   const displayName = getImageName(currentImage);
-  const imageUrl = `${imageBaseUrl}${currentImage.key}`;
+  const imageUrl = `${imageBaseUrl}${currentImage.key}${authSuffix}`;
   const totalVariants = selectedItem.images.length;
   const STATUS_LABELS: Record<string, string> = {
     added: t('Added'),

@@ -51,6 +51,8 @@ export interface SnapshotDetailsApiResponse {
 
   approval_info?: SnapshotApprovalInfo | null;
 
+  objectstore_token?: string | null;
+
   // Diff fields
   added: SnapshotImage[];
   added_count: number;

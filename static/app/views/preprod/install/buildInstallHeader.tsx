@@ -84,6 +84,7 @@ export function BuildInstallHeader(props: BuildInstallHeaderProps) {
                 appName={appInfo.name}
                 appIconId={appInfo.app_icon_id}
                 projectId={buildDetailsData.project_id}
+                objectstoreToken={buildDetailsData.objectstore_token}
               />
             ) : null}
             {appInfo.name ? <span>{appInfo.name}</span> : null}

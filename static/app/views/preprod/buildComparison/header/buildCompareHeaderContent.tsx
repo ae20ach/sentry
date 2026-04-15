@@ -86,6 +86,7 @@ export function BuildCompareHeaderContent(props: BuildCompareHeaderContentProps)
                 appName={buildDetails.app_info.name}
                 appIconId={buildDetails.app_info.app_icon_id}
                 projectId={buildDetails.project_id}
+                objectstoreToken={buildDetails.objectstore_token}
               />
               <Text>{buildDetails.app_info.name}</Text>
             </Flex>

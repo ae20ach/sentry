@@ -6,16 +6,20 @@ import {useOrganization} from 'sentry/utils/useOrganization';
 interface AppIconProps {
   appName: string;
   appIconId?: string | null;
+  objectstoreToken?: string | null;
   projectId?: number | null;
 }
 
-export function AppIcon({appName, appIconId, projectId}: AppIconProps) {
+export function AppIcon({appName, appIconId, projectId, objectstoreToken}: AppIconProps) {
   const organization = useOrganization();
   const [imageError, setImageError] = useState(false);
 
   let iconUrl = undefined;
   if (appIconId && projectId) {
-    iconUrl = `/api/0/organizations/${organization.slug}/objectstore/v1/objects/preprod/org=${organization.id};project=${projectId}/${organization.id}/${projectId}/${appIconId}`;
+    const authSuffix = objectstoreToken
+      ? `?X-Os-Auth=${encodeURIComponent(objectstoreToken)}`
+      : '';
+    iconUrl = `/api/0/organizations/${organization.slug}/objectstore/v1/objects/preprod/org=${organization.id};project=${projectId}/${organization.id}/${projectId}/${appIconId}${authSuffix}`;
   }
 
   return (

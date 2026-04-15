@@ -15,6 +15,7 @@ export interface BuildDetailsApiResponse {
   posted_status_checks?: PostedStatusChecks | null;
   base_artifact_id?: string | null;
   base_build_info?: BuildDetailsAppInfo | null;
+  objectstore_token?: string | null;
 }
 
 interface BuildDetailsDistributionInfo {

@@ -312,6 +312,9 @@ export default function SnapshotsPage() {
   const objectstoreBaseUrl = data
     ? `/api/0/organizations/${organization.slug}/objectstore/v1/objects/preprod/org=${organization.id};project=${data.project_id}/${organization.id}/${data.project_id}/`
     : '';
+  const authSuffix = data?.objectstore_token
+    ? `?X-Os-Auth=${encodeURIComponent(data.objectstore_token)}`
+    : '';
   const imageBaseUrl = objectstoreBaseUrl;
   const diffImageBaseUrl = objectstoreBaseUrl;
 
@@ -357,6 +360,7 @@ export default function SnapshotsPage() {
           onVariantChange={setVariantIndex}
           imageBaseUrl={imageBaseUrl}
           diffImageBaseUrl={diffImageBaseUrl}
+          authSuffix={authSuffix}
           showOverlay={showOverlay}
           onShowOverlayChange={setShowOverlay}
           overlayColor={overlayColor}

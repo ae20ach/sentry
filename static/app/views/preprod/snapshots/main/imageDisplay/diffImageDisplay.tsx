@@ -24,6 +24,7 @@ import {
 export type DiffMode = 'split' | 'wipe' | 'onion';
 
 interface DiffImageDisplayProps {
+  authSuffix: string;
   diffImageBaseUrl: string;
   diffMode: DiffMode;
   imageBaseUrl: string;
@@ -37,6 +38,7 @@ export function DiffImageDisplay({
   pair,
   imageBaseUrl,
   diffImageBaseUrl,
+  authSuffix,
   showOverlay,
   overlayColor,
   diffMode,
@@ -46,10 +48,10 @@ export function DiffImageDisplay({
   const [onionOpacity, setOnionOpacity] = useState(50);
   const blobUrlRef = useRef<string | null>(null);
 
-  const baseImageUrl = `${imageBaseUrl}${pair.base_image.key}`;
-  const headImageUrl = `${imageBaseUrl}${pair.head_image.key}`;
+  const baseImageUrl = `${imageBaseUrl}${pair.base_image.key}${authSuffix}`;
+  const headImageUrl = `${imageBaseUrl}${pair.head_image.key}${authSuffix}`;
   const diffImageUrl = pair.diff_image_key
-    ? `${diffImageBaseUrl}${pair.diff_image_key}`
+    ? `${diffImageBaseUrl}${pair.diff_image_key}${authSuffix}`
     : null;
 
   useEffect(() => {

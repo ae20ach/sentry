@@ -7,6 +7,7 @@ from django.conf import settings
 from objectstore_client import (
     Client,
     MetricsBackend,
+    Permission,
     Session,
     TimeToLive,
     TokenGenerator,
@@ -14,12 +15,15 @@ from objectstore_client import (
     parse_accept_encoding,
 )
 from objectstore_client.metrics import Tags
+from objectstore_client.scope import Scope
 
 from sentry import options
 from sentry.utils import metrics as sentry_metrics
 from sentry.utils.env import in_test_environment
 
-__all__ = ["get_attachments_session", "parse_accept_encoding"]
+__all__ = ["get_attachments_session", "mint_read_token", "parse_accept_encoding"]
+
+_READ_ONLY_TOKEN_EXPIRY_SECONDS = 300  # 5 minutes
 
 
 def default_attachment_retention() -> int:
@@ -117,6 +121,45 @@ def get_attachments_session(org: int, project: int) -> Session:
 
 def get_preprod_session(org: int, project: int) -> Session:
     return get_client().session(_PREPROD_USECASE, org=org, project=project)
+
+
+_READ_ONLY_TOKEN_GENERATOR: TokenGenerator | None = None
+
+
+def _get_read_only_token_generator() -> TokenGenerator | None:
+    """
+    Returns a TokenGenerator configured with read-only permissions and a short
+    expiry, suitable for minting tokens to pass to the frontend.
+    """
+    global _READ_ONLY_TOKEN_GENERATOR
+    if _READ_ONLY_TOKEN_GENERATOR is None:
+        from sentry import options as options_store
+
+        os_options = options_store.get("objectstore.config")
+        signing_key_options = os_options.get("token_generator")
+        if (
+            signing_key_options
+            and signing_key_options.get("kid")
+            and signing_key_options.get("secret_key")
+        ):
+            _READ_ONLY_TOKEN_GENERATOR = TokenGenerator(
+                kid=signing_key_options["kid"],
+                secret_key=signing_key_options["secret_key"],
+                expiry_seconds=_READ_ONLY_TOKEN_EXPIRY_SECONDS,
+                permissions=[Permission.OBJECT_READ],
+            )
+    return _READ_ONLY_TOKEN_GENERATOR
+
+
+def mint_read_token(usecase: str, **scopes: str | int | bool) -> str | None:
+    """
+    Mint a short-lived, read-only token for the given usecase and scope.
+    Returns None if token generation is not configured.
+    """
+    generator = _get_read_only_token_generator()
+    if generator is None:
+        return None
+    return generator.sign_for_scope(usecase, Scope(**scopes))
 
 
 _IS_SYMBOLICATOR_CONTAINER: bool | None = None

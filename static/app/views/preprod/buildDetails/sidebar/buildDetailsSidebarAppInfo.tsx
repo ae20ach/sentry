@@ -25,6 +25,7 @@ interface BuildDetailsSidebarAppInfoProps {
   artifactId: string;
   projectId: number | null;
   projectSlug: string | null;
+  objectstoreToken?: string | null;
 }
 
 export function BuildDetailsSidebarAppInfo(props: BuildDetailsSidebarAppInfoProps) {
@@ -44,6 +45,7 @@ export function BuildDetailsSidebarAppInfo(props: BuildDetailsSidebarAppInfoProp
               appName={props.appInfo.name}
               appIconId={props.appInfo.app_icon_id}
               projectId={props.projectId}
+              objectstoreToken={props.objectstoreToken}
             />
             <Heading as="h3">{props.appInfo.name}</Heading>
           </Fragment>
