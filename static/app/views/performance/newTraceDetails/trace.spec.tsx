@@ -1625,14 +1625,17 @@ describe('trace view', () => {
     it.isKnownFlake(
       'highlighted is persisted on node while it is part of the search results',
       async () => {
-        const {container} = await searchTestSetup();
+        const {container, virtualizedContainer} = await searchTestSetup();
         const searchInput = await screen.findByPlaceholderText('Search in trace');
         await userEvent.type(searchInput, 'trans');
         await waitFor(() => expect(searchInput).toHaveValue('trans'));
         // Wait for the search results to resolve
         await searchToResolve();
 
-        await userEvent.keyboard('{arrowdown}');
+        await waitFor(() => {
+          expect(getVirtualizedRows(virtualizedContainer)[2]).toBeTruthy();
+        });
+        await userEvent.click(getVirtualizedRows(virtualizedContainer)[2]!);
         await searchToResolve();
 
         await assertHighlightedRowAtIndex(container, 2, {timeout: 10_000});
