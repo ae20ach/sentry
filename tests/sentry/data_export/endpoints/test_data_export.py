@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.urls import reverse
+
 from sentry.data_export.base import ExportQueryType, ExportStatus
 from sentry.data_export.models import ExportedData
 from sentry.search.utils import parse_datetime_string
@@ -23,6 +25,7 @@ class DataExportTest(APITestCase):
         )
         self.create_member(user=self.user, organization=self.org, teams=[self.team])
         self.login_as(user=self.user)
+        self.url = reverse(self.endpoint, args=[self.org.slug])
 
     def make_payload(
         self, payload_type: str, extras: dict[str, Any] | None = None, overwrite: bool = False
@@ -76,6 +79,34 @@ class DataExportTest(APITestCase):
         # Without project permissions, the endpoint should 403
         with self.feature("organizations:discover-query"):
             self.get_error_response(self.org.slug, status_code=403, **modified_payload)
+
+    def test_post_requires_event_write_scope_for_api_keys(self) -> None:
+        payload = self.make_payload("issue")
+        api_key = self.create_api_key(organization=self.org, scope_list=["event:read"])
+
+        with self.feature("organizations:discover-query"):
+            response = self.client.post(
+                self.url,
+                data=payload,
+                format="json",
+                HTTP_AUTHORIZATION=self.create_basic_auth_header(api_key.key),
+            )
+
+        assert response.status_code == 403
+
+    def test_post_allows_event_write_scope_for_api_keys(self) -> None:
+        payload = self.make_payload("issue")
+        api_key = self.create_api_key(organization=self.org, scope_list=["event:write"])
+
+        with self.feature("organizations:discover-query"):
+            response = self.client.post(
+                self.url,
+                data=payload,
+                format="json",
+                HTTP_AUTHORIZATION=self.create_basic_auth_header(api_key.key),
+            )
+
+        assert response.status_code == 201
 
     def test_new_export(self) -> None:
         """
