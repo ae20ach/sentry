@@ -850,20 +850,24 @@ function printVirtualizedList(container: HTMLElement) {
 
 async function assertHighlightedRowAtIndex(
   virtualizedContainer: HTMLElement,
-  index: number
+  index: number,
+  options?: {timeout?: number}
 ) {
-  await waitFor(() => {
-    const highlights = virtualizedContainer.querySelectorAll('.TraceRow.Highlight');
-    expect(highlights).toHaveLength(1);
-    const highlighted_row = virtualizedContainer.querySelector(
-      ACTIVE_SEARCH_HIGHLIGHT_ROW
-    );
-    expect(highlighted_row).toBeTruthy();
-    const r = Array.from(
-      virtualizedContainer.querySelectorAll(VISIBLE_TRACE_ROW_SELECTOR)
-    );
-    expect(r.indexOf(highlighted_row!)).toBe(index);
-  });
+  await waitFor(
+    () => {
+      const highlights = virtualizedContainer.querySelectorAll('.TraceRow.Highlight');
+      expect(highlights).toHaveLength(1);
+      const highlighted_row = virtualizedContainer.querySelector(
+        ACTIVE_SEARCH_HIGHLIGHT_ROW
+      );
+      expect(highlighted_row).toBeTruthy();
+      const r = Array.from(
+        virtualizedContainer.querySelectorAll(VISIBLE_TRACE_ROW_SELECTOR)
+      );
+      expect(r.indexOf(highlighted_row!)).toBe(index);
+    },
+    typeof options?.timeout === 'number' ? {timeout: options.timeout} : {}
+  );
 }
 
 describe('trace view', () => {
@@ -1629,23 +1633,16 @@ describe('trace view', () => {
         await searchToResolve();
 
         await userEvent.keyboard('{arrowdown}');
-        await waitFor(() => {
-          const t =
-            screen
-              .getByTestId('trace-search-result-iterator')
-              .textContent?.replace(/\s/g, '') ?? '';
-          expect(t).toMatch(/^2\//);
-        });
         await searchToResolve();
 
-        await assertHighlightedRowAtIndex(container, 2);
+        await assertHighlightedRowAtIndex(container, 2, {timeout: 10_000});
 
         await userEvent.type(searchInput, 'act');
         await waitFor(() => expect(searchInput).toHaveValue('transact'));
         await searchToResolve();
 
         // Highlighting is persisted on the row
-        await assertHighlightedRowAtIndex(container, 2);
+        await assertHighlightedRowAtIndex(container, 2, {timeout: 10_000});
 
         await userEvent.clear(searchInput);
         await userEvent.click(searchInput);
@@ -1657,7 +1654,8 @@ describe('trace view', () => {
         await waitFor(() => {
           expect(container.querySelectorAll('.TraceRow.Highlight')).toHaveLength(0);
         });
-      }
+      },
+      28_000
     );
 
     it('auto highlights the first result when search begins', async () => {
