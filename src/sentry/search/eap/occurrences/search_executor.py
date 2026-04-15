@@ -19,13 +19,9 @@ logger = logging.getLogger(__name__)
 # Filters that must be skipped because they have no EAP equivalent.
 # These would silently become dynamic tag lookups in the EAP SearchResolver
 # (resolver.py:1026-1060) and produce incorrect results.
+# TODO: these are potentially gaps between existing issue feed search behavior and EAP search behavior. May need to adddress.
 SKIP_FILTERS: frozenset[str] = frozenset(
     {
-        # Aggregation fields — legacy routes these to HAVING clauses.
-        # Not EAP attributes; would silently become tag lookups.
-        "times_seen",
-        "last_seen",
-        "user_count",
         # event.type is added internally by _query_params_for_error(), not from user filters.
         # EAP occurrences don't use event.type — they're pre-typed.
         "event.type",
@@ -45,8 +41,19 @@ SKIP_FILTERS: frozenset[str] = frozenset(
 )
 
 # Filters that need key name translation from legacy Snuba names to EAP attribute names.
+# TODO: instead of translating this key, maybe we should just set the public alias for this attribute to "error.main_thread"?
 TRANSLATE_KEYS: dict[str, str] = {
     "error.main_thread": "exception_main_thread",
+}
+
+# Legacy aggregation field names → EAP aggregate function syntax.
+# In the legacy path these become HAVING clauses (e.g. times_seen:>100 → HAVING count() > 100).
+# The EAP SearchResolver parses function syntax like count():>100 as AggregateFilter objects
+# and routes them to the aggregation_filter field on the RPC request.
+AGGREGATION_FIELD_TO_EAP_FUNCTION: dict[str, str] = {
+    "times_seen": "count()",
+    "last_seen": "last_seen()",
+    "user_count": "count_unique(user)",
 }
 
 
@@ -73,6 +80,9 @@ def _convert_single_filter(sf: SearchFilter) -> str | None:
     key = sf.key.name
     op = sf.operator
     raw_value = sf.value.raw_value
+
+    if key in AGGREGATION_FIELD_TO_EAP_FUNCTION:
+        return _convert_aggregation_filter(sf)
 
     if key in SKIP_FILTERS:
         metrics.incr(
@@ -137,6 +147,26 @@ def _convert_error_unhandled(sf: SearchFilter) -> str | None:
         return "error.handled:1"
 
 
+def _convert_aggregation_filter(sf: SearchFilter) -> str | None:
+    """Convert a legacy aggregation field filter to EAP function syntax.
+
+    e.g. times_seen:>100 → count():>100
+         last_seen:>2024-01-01 → last_seen():>2024-01-01T00:00:00+00:00
+         user_count:>5 → count_unique(user):>5
+    """
+    eap_function = AGGREGATION_FIELD_TO_EAP_FUNCTION[sf.key.name]
+    formatted_value = _format_value(sf.value.raw_value)
+
+    if sf.operator in (">", ">=", "<", "<="):
+        return f"{eap_function}:{sf.operator}{formatted_value}"
+    elif sf.operator == "=":
+        return f"{eap_function}:{formatted_value}"
+    elif sf.operator == "!=":
+        return f"!{eap_function}:{formatted_value}"
+
+    return None
+
+
 # Maps legacy sort_field names (from PostgresSnubaQueryExecutor.sort_strategies values)
 # to (selected_columns, orderby) for EAP queries.
 #
@@ -151,6 +181,8 @@ def _convert_error_unhandled(sf: SearchFilter) -> str | None:
 EAP_SORT_STRATEGIES: dict[str, tuple[list[str], list[str]]] = {
     "last_seen": (["group_id", "last_seen()"], ["-last_seen()"]),
     "times_seen": (["group_id", "count()"], ["-count()"]),
+    "first_seen": (["group_id", "first_seen()"], ["-first_seen()"]),
+    "user_count": (["group_id", "count_unique(user)"], ["-count_unique(user)"]),
 }
 
 

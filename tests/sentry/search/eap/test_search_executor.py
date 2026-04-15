@@ -80,9 +80,6 @@ class TestSearchFiltersToQueryString:
         """All filters with no EAP equivalent are silently dropped."""
         filters = [
             SearchFilter(SearchKey("event.type"), "=", SearchValue("error")),
-            SearchFilter(SearchKey("times_seen"), ">", SearchValue("100")),
-            SearchFilter(SearchKey("last_seen"), ">", SearchValue("2024-01-01")),
-            SearchFilter(SearchKey("user_count"), ">", SearchValue("5")),
             SearchFilter(SearchKey("release.stage"), "=", SearchValue("adopted")),
             SearchFilter(SearchKey("release.version"), ">", SearchValue("1.0.0")),
             SearchFilter(SearchKey("release.package"), "=", SearchValue("com.example")),
@@ -92,6 +89,33 @@ class TestSearchFiltersToQueryString:
             SearchFilter(SearchKey("transaction.status"), "=", SearchValue("ok")),
         ]
         assert search_filters_to_query_string(filters) == ""
+
+    def test_aggregation_filters_translated(self):
+        """Legacy aggregation field names are translated to EAP function syntax
+        so the SearchResolver parses them as AggregateFilter (HAVING) conditions."""
+        dt = datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        cases = [
+            (
+                SearchFilter(SearchKey("times_seen"), ">", SearchValue("100")),
+                "count():>100",
+            ),
+            (
+                SearchFilter(SearchKey("times_seen"), "<=", SearchValue("50")),
+                "count():<=50",
+            ),
+            (
+                SearchFilter(SearchKey("last_seen"), ">", SearchValue(dt)),
+                "last_seen():>2024-01-15T12:00:00+00:00",
+            ),
+            (
+                SearchFilter(SearchKey("user_count"), ">", SearchValue("5")),
+                "count_unique(user):>5",
+            ),
+        ]
+        for sf, expected in cases:
+            assert search_filters_to_query_string([sf]) == expected, (
+                f"Failed for {sf.key.name}:{sf.operator}{sf.value.raw_value}"
+            )
 
     def test_error_unhandled_translation(self):
         """error.unhandled is inverted to use the EAP error.handled attribute."""
@@ -125,7 +149,7 @@ class TestSearchFiltersToQueryString:
     def test_realistic_mixed_query(self):
         """A realistic issue feed query mixing supported, skipped, and translated filters.
         Verifies that supported filters are converted, skipped filters are dropped,
-        and translated filters are rewritten — all in a single query string."""
+        aggregation filters are translated, and special filters are rewritten."""
         filters = [
             SearchFilter(SearchKey("level"), "=", SearchValue("error")),
             SearchFilter(SearchKey("error.unhandled"), "=", SearchValue("1")),
@@ -136,7 +160,8 @@ class TestSearchFiltersToQueryString:
         ]
         result = search_filters_to_query_string(filters)
         assert result == (
-            "level:error !error.handled:1 platform:[python, javascript] tags[browser]:chrome"
+            "level:error !error.handled:1 count():>50"
+            " platform:[python, javascript] tags[browser]:chrome"
         )
 
 
@@ -166,9 +191,22 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
         )
         self.store_eap_items([occ])
 
-    def test_sort_and_filter(self) -> None:
-        """Freq sort returns groups ordered by count, and level filter narrows results."""
-        # Freq sort — group1 (3 events) should come before group2 (1 event)
+    def test_last_seen_sort(self) -> None:
+        result, _ = run_eap_group_search(
+            start=self.start,
+            end=self.end,
+            project_ids=[self.project.id],
+            environment_ids=None,
+            sort_field="last_seen",
+            organization=self.organization,
+            referrer="test",
+        )
+        group_ids = [gid for gid, _ in result]
+        assert len(group_ids) == 2
+        assert group_ids[0] == self.group1.id
+        assert group_ids[1] == self.group2.id
+
+    def test_times_seen_sort(self) -> None:
         result, _ = run_eap_group_search(
             start=self.start,
             end=self.end,
@@ -179,10 +217,75 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
             referrer="test",
         )
         group_ids = [gid for gid, _ in result]
+        assert len(group_ids) == 2
         assert group_ids[0] == self.group1.id
-        assert self.group2.id in group_ids
+        assert group_ids[1] == self.group2.id
 
-        # Adding a level filter should exclude group2
+    def test_first_seen_sort(self) -> None:
+        result, _ = run_eap_group_search(
+            start=self.start,
+            end=self.end,
+            project_ids=[self.project.id],
+            environment_ids=None,
+            sort_field="first_seen",
+            organization=self.organization,
+            referrer="test",
+        )
+        group_ids = [gid for gid, _ in result]
+        assert len(group_ids) == 2
+        assert group_ids[0] == self.group1.id
+        assert group_ids[1] == self.group2.id
+
+    def test_user_count_sort(self) -> None:
+        group3 = self.create_group(project=self.project)
+        for i in range(3):
+            occ = self.create_eap_occurrence(
+                group_id=group3.id,
+                level="error",
+                timestamp=self.now - timedelta(minutes=3),
+                tags={"sentry:user": f"user-{i}@example.com"},
+            )
+            self.store_eap_items([occ])
+
+        occ = self.create_eap_occurrence(
+            group_id=self.group1.id,
+            level="error",
+            timestamp=self.now - timedelta(minutes=3),
+            tags={"sentry:user": "only-user@example.com"},
+        )
+        self.store_eap_items([occ])
+
+        result, _ = run_eap_group_search(
+            start=self.start,
+            end=self.end,
+            project_ids=[self.project.id],
+            environment_ids=None,
+            sort_field="user_count",
+            organization=self.organization,
+            referrer="test",
+        )
+        group_ids = [gid for gid, _ in result]
+        assert len(group_ids) == 2
+        assert group_ids[0] == group3.id
+        assert group_ids[1] == self.group1.id
+
+    def test_unsupported_sort_returns_empty(self) -> None:
+        """Unsupported sort strategies (trends, recommended) return empty
+        so the caller can fall back to the legacy result."""
+        result, total = run_eap_group_search(
+            start=self.start,
+            end=self.end,
+            project_ids=[self.project.id],
+            environment_ids=None,
+            sort_field="trends",
+            organization=self.organization,
+            referrer="test",
+        )
+        assert result == []
+        assert total == 0
+
+    def test_filter_narrows_results(self) -> None:
+        """A level filter excludes groups that don't match."""
         result, _ = run_eap_group_search(
             start=self.start,
             end=self.end,
@@ -193,8 +296,8 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
             search_filters=[SearchFilter(SearchKey("level"), "=", SearchValue("error"))],
             referrer="test",
         )
-        result_group_ids = {gid for gid, _ in result}
-        assert result_group_ids == {self.group1.id}
+        group_ids = {gid for gid, _ in result}
+        assert group_ids == {self.group1.id}
 
     def test_group_id_pre_filter(self) -> None:
         """Pre-filtered group_ids are passed as extra_conditions, narrowing results."""
@@ -242,17 +345,32 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
         assert self.group1.id in group_ids
         assert self.group2.id not in group_ids
 
-    def test_unsupported_sort_returns_empty(self) -> None:
-        """Unsupported sort strategies (trends, recommended) return empty
-        so the caller can fall back to the legacy result."""
-        result, total = run_eap_group_search(
+    def test_sort_and_filter(self) -> None:
+        """Combines sorting, filtering, and group_id pre-filtering in one query.
+        Creates 3 groups across 2 levels, pre-filters to 2 of them, filters by
+        level, and verifies the remaining group is returned with correct sort order."""
+        group3 = self.create_group(project=self.project)
+        for i in range(5):
+            occ = self.create_eap_occurrence(
+                group_id=group3.id,
+                level="error",
+                timestamp=self.now - timedelta(minutes=1 + i),
+            )
+            self.store_eap_items([occ])
+
+        result, _ = run_eap_group_search(
             start=self.start,
             end=self.end,
             project_ids=[self.project.id],
             environment_ids=None,
-            sort_field="trends",
+            sort_field="times_seen",
             organization=self.organization,
+            group_ids=[self.group1.id, group3.id],
+            search_filters=[SearchFilter(SearchKey("level"), "=", SearchValue("error"))],
             referrer="test",
         )
-        assert result == []
-        assert total == 0
+        group_ids = [gid for gid, _ in result]
+        assert len(group_ids) == 2
+        assert group_ids[0] == group3.id
+        assert group_ids[1] == self.group1.id
+        assert self.group2.id not in group_ids
