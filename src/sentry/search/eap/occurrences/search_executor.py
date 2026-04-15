@@ -173,11 +173,7 @@ def _format_single_value(value: str | int | float | datetime) -> str:
 
 
 def _format_string_value(s: str) -> str:
-    # Wildcard values pass through as-is for the SearchResolver to handle
-    if "*" in s:
-        return s
-
-    # Quote strings containing spaces or special characters
+    # Quote strings containing spaces or special characters.
     if " " in s or '"' in s or "," in s or "(" in s or ")" in s:
         escaped = s.replace("\\", "\\\\").replace('"', '\\"')
         return f'"{escaped}"'
