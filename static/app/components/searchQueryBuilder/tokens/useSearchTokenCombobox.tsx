@@ -155,6 +155,7 @@ export function useSearchTokenCombobox<T>(
       value: state.inputValue,
       onFocus: onFocus as (e: FocusEvent<Element, Element>) => void,
       autoComplete: 'off',
+      defaultValue: undefined,
       validate: undefined,
       [privateValidationStateProp]: state,
     },
