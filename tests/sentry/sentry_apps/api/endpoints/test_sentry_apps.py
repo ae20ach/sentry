@@ -810,6 +810,17 @@ class PostSentryAppsTest(SentryAppsTest):
         response = self.get_success_response(**data, status_code=201)
         assert response.data["scopes"] == ["project:distribution", "project:read"]
 
+    def test_create_integration_with_non_app_grantable_scopes(self) -> None:
+        data = self.get_data(events=(), scopes=("project:read", "user:preferences", "flags:write"))
+        response = self.get_error_response(**data, status_code=400)
+
+        assert response.data == {
+            "scopes": [
+                "Requested permission of user:preferences is not grantable to Sentry Apps.",
+                "Requested permission of flags:write is not grantable to Sentry Apps.",
+            ]
+        }
+
     def test_create_internal_integration_with_non_globally_unique_name(self) -> None:
         # Internal integration names should only need to be unique within an organization.
         self.create_project(organization=self.organization)

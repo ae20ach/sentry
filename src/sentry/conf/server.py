@@ -1817,7 +1817,9 @@ SENTRY_SCOPES = {
     "org:write",
     "org:admin",
     "org:integrations",
+    "org:searches",
     "org:ci",
+    "user:preferences",
     # "org:superuser",  Do not use for any type of superuser permission/access checks
     # Assigned to active SU sessions in src/sentry/auth/access.py to enable UI elements
     "member:invite",
@@ -1839,6 +1841,7 @@ SENTRY_SCOPES = {
     "event:admin",
     "alerts:read",
     "alerts:write",
+    "flags:write",
     # openid, profile, and email aren't prefixed to maintain compliance with the OIDC spec.
     # https://auth0.com/docs/get-started/apis/scopes/openid-connect-scopes.
     "openid",
@@ -1857,10 +1860,19 @@ SENTRY_READONLY_SCOPES = {
 
 SENTRY_SCOPE_HIERARCHY_MAPPING = {
     "org:read": {"org:read"},
-    "org:write": {"org:read", "org:write"},
-    "org:admin": {"org:read", "org:write", "org:admin", "org:integrations"},
+    "org:write": {"org:read", "org:write", "org:searches", "flags:write"},
+    "org:admin": {
+        "org:read",
+        "org:write",
+        "org:admin",
+        "org:integrations",
+        "org:searches",
+        "flags:write",
+    },
     "org:integrations": {"org:integrations"},
+    "org:searches": {"org:searches"},
     "org:ci": {"org:ci"},
+    "user:preferences": {"user:preferences"},
     "member:invite": {"member:read", "member:invite"},
     "member:read": {"member:read"},
     "member:write": {"member:read", "member:invite", "member:write"},
@@ -1891,6 +1903,7 @@ SENTRY_SCOPE_HIERARCHY_MAPPING = {
     "event:admin": {"event:read", "event:write", "event:admin"},
     "alerts:read": {"alerts:read"},
     "alerts:write": {"alerts:read", "alerts:write"},
+    "flags:write": {"flags:write"},
     "openid": {"openid"},
     "profile": {"profile"},
     "email": {"email"},
@@ -1902,6 +1915,15 @@ SENTRY_SCOPE_HIERARCHY_MAPPING = {
 SENTRY_TOKEN_ONLY_SCOPES = frozenset(
     [
         "project:distribution",  # App distribution/preprod artifacts
+    ]
+)
+
+# Scopes that are valid for first-party session flows and direct tokens, but
+# should not be grantable to third-party API applications or Sentry Apps.
+SENTRY_NON_APP_GRANTABLE_SCOPES = frozenset(
+    [
+        "flags:write",
+        "user:preferences",
     ]
 )
 
@@ -1917,6 +1939,8 @@ SENTRY_SCOPE_SETS = (
             "Read, write, and admin access to organization integrations.",
         ),
     ),
+    (("user:preferences", "Manage personal preferences and user-owned state."),),
+    (("org:searches", "Manage saved searches, saved queries, and custom views."),),
     (
         ("member:admin", "Read, write, and admin access to organization members."),
         ("member:write", "Read and write access to organization members."),
@@ -1946,6 +1970,7 @@ SENTRY_SCOPE_SETS = (
         ("alerts:write", "Read and write alerts"),
         ("alerts:read", "Read alerts"),
     ),
+    (("flags:write", "Manage feature flag webhook signing secrets."),),
     (("openid", "Confirms authentication status and provides basic information."),),
     (
         (
@@ -1973,6 +1998,9 @@ SENTRY_ROLES: tuple[RoleDict, ...] = (
             "event:read",
             "event:write",
             "event:admin",
+            "flags:write",
+            "org:searches",
+            "user:preferences",
             "project:releases",
             "project:create",
             "project:codeowners",
@@ -2002,6 +2030,8 @@ SENTRY_ROLES: tuple[RoleDict, ...] = (
             "event:read",
             "event:write",
             "event:admin",
+            "org:searches",
+            "user:preferences",
             "org:read",
             "member:read",
             "member:invite",
@@ -2027,6 +2057,8 @@ SENTRY_ROLES: tuple[RoleDict, ...] = (
             "event:read",
             "event:write",
             "event:admin",
+            "org:searches",
+            "user:preferences",
             "member:invite",
             "member:read",
             "member:write",
@@ -2062,6 +2094,8 @@ SENTRY_ROLES: tuple[RoleDict, ...] = (
             "org:write",
             "org:admin",
             "org:integrations",
+            "org:searches",
+            "user:preferences",
             "member:invite",
             "member:read",
             "member:write",

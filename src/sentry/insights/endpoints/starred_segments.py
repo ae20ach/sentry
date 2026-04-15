@@ -7,7 +7,7 @@ from sentry import features
 from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import cell_silo_endpoint
-from sentry.api.bases.organization import OrganizationEndpoint, OrganizationPermission
+from sentry.api.bases.organization import OrganizationEndpoint, OrganizationPreferencePermission
 from sentry.insights.models import InsightsStarredSegment
 from sentry.models.organization import Organization
 from sentry.utils.db import atomic_transaction
@@ -18,13 +18,6 @@ class StarSegmentSerializer(serializers.Serializer):
     project_id = serializers.IntegerField(required=True)
 
 
-class MemberPermission(OrganizationPermission):
-    scope_map = {
-        "POST": ["member:read", "member:write"],
-        "DELETE": ["member:read", "member:write"],
-    }
-
-
 @cell_silo_endpoint
 class InsightsStarredSegmentsEndpoint(OrganizationEndpoint):
     publish_status = {
@@ -32,7 +25,7 @@ class InsightsStarredSegmentsEndpoint(OrganizationEndpoint):
         "DELETE": ApiPublishStatus.EXPERIMENTAL,
     }
     owner = ApiOwner.DATA_BROWSING
-    permission_classes = (MemberPermission,)
+    permission_classes = (OrganizationPreferencePermission,)
 
     def has_feature(self, organization, request):
         return features.has(

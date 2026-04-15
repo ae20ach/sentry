@@ -1,5 +1,7 @@
 from unittest import mock
 
+from django.urls import reverse
+
 from sentry.testutils.cases import APITestCase
 
 
@@ -10,6 +12,7 @@ class OrganizationOnboardingContinuation(APITestCase):
     def setUp(self) -> None:
         super().setUp()
         self.login_as(self.user)
+        self.path = reverse(self.endpoint, args=[self.organization.slug])
 
     @mock.patch("sentry.api.endpoints.organization_onboarding_continuation_email.MessageBuilder")
     def test_basic(self, builder: mock.MagicMock) -> None:
@@ -41,6 +44,35 @@ class OrganizationOnboardingContinuation(APITestCase):
         data = {"platforms": "not a list"}
         resp = self.get_error_response(self.organization.slug, status_code=400, **data)
         assert resp.data["platforms"][0].code == "not_a_list"
+
+    @mock.patch("sentry.api.endpoints.organization_onboarding_continuation_email.MessageBuilder")
+    def test_basic_with_user_preferences_token(self, builder: mock.MagicMock) -> None:
+        builder.return_value.send_async = mock.Mock()
+        token = self.create_user_auth_token(user=self.user, scope_list=["user:preferences"])
+
+        response = self.client.post(
+            self.path,
+            {"platforms": ["javascript"]},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 202, response.content
+        builder.return_value.send_async.assert_called_with([self.user.email])
+
+    @mock.patch("sentry.api.endpoints.organization_onboarding_continuation_email.MessageBuilder")
+    def test_org_write_token_rejected(self, builder: mock.MagicMock) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["org:write"])
+
+        response = self.client.post(
+            self.path,
+            {"platforms": ["javascript"]},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 403, response.content
+        builder.assert_not_called()
 
     @mock.patch("sentry.api.endpoints.organization_onboarding_continuation_email.MessageBuilder")
     def test_non_member_rejected(self, builder: mock.MagicMock) -> None:

@@ -176,12 +176,18 @@ class SentryAppParser(Serializer):
         if not value:
             return value
 
-        from sentry.conf.server import SENTRY_TOKEN_ONLY_SCOPES
+        from sentry.conf.server import SENTRY_NON_APP_GRANTABLE_SCOPES, SENTRY_TOKEN_ONLY_SCOPES
 
         validation_errors = []
         for scope in value:
             # if the existing instance already has this scope, skip the check
             if self.instance and self.instance.has_scope(scope):
+                continue
+
+            if scope in SENTRY_NON_APP_GRANTABLE_SCOPES:
+                validation_errors.append(
+                    f"Requested permission of {scope} is not grantable to Sentry Apps."
+                )
                 continue
 
             # Token-only scopes can be granted even if the user doesn't have them.

@@ -137,6 +137,12 @@ class OAuthDeviceAuthorizationView(View):
                     name="invalid_scope",
                     description=f"Unknown scope: {scope}",
                 )
+            if scope in settings.SENTRY_NON_APP_GRANTABLE_SCOPES:
+                return self.error(
+                    request,
+                    name="invalid_scope",
+                    description=f"Scope '{scope}' is not grantable to API applications",
+                )
 
         # For org-level access apps, validate scopes against app's max scopes
         if application.requires_org_level_access:

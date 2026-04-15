@@ -96,32 +96,14 @@ class DynamicSamplingBiasSerializer(serializers.Serializer):
         return data
 
 
-class ProjectMemberSerializer(serializers.Serializer):
+PROJECT_PREFERENCE_FIELDS = frozenset({"isBookmarked"})
+
+
+class ProjectPreferenceSerializer(serializers.Serializer):
     isBookmarked = serializers.BooleanField(
-        help_text="Enables starring the project within the projects tab. Can be updated with **`project:read`** permission.",
+        help_text="Enables starring the project within the projects tab. Can be updated with **`user:preferences`** permission.",
         required=False,
     )
-    autofixAutomationTuning = serializers.ChoiceField(
-        choices=[item.value for item in AutofixAutomationTuningSettings],
-        required=False,
-    )
-    seerScannerAutomation = serializers.BooleanField(required=False)
-    preprodSizeStatusChecksEnabled = serializers.BooleanField(
-        help_text="Enable preprod size status checks. Can be updated with **`project:read`** permission.",
-        required=False,
-    )
-    preprodSizeStatusChecksRules = serializers.JSONField(required=False)
-    preprodSnapshotStatusChecksEnabled = serializers.BooleanField(required=False)
-    preprodSnapshotStatusChecksFailOnAdded = serializers.BooleanField(required=False)
-    preprodSnapshotStatusChecksFailOnRemoved = serializers.BooleanField(required=False)
-    preprodSizeEnabledByCustomer = serializers.BooleanField(required=False, allow_null=True)
-    preprodDistributionEnabledByCustomer = serializers.BooleanField(required=False, allow_null=True)
-    preprodDistributionPrCommentsEnabledByCustomer = serializers.BooleanField(
-        required=False, allow_null=True
-    )
-    preprodSnapshotPrCommentsEnabled = serializers.BooleanField(required=False, allow_null=True)
-    preprodSizeEnabledQuery = serializers.CharField(required=False, allow_null=True)
-    preprodDistributionEnabledQuery = serializers.CharField(required=False, allow_null=True)
 
 
 @extend_schema_serializer(
@@ -171,7 +153,29 @@ class ProjectMemberSerializer(serializers.Serializer):
         "preprodSnapshotPrCommentsEnabled",
     ]
 )
-class ProjectAdminSerializer(ProjectMemberSerializer):
+class ProjectAdminSerializer(ProjectPreferenceSerializer):
+    autofixAutomationTuning = serializers.ChoiceField(
+        choices=[item.value for item in AutofixAutomationTuningSettings],
+        required=False,
+    )
+    seerScannerAutomation = serializers.BooleanField(required=False)
+    preprodSizeStatusChecksEnabled = serializers.BooleanField(
+        help_text="Enable preprod size status checks. Can be updated with **`project:write`** permission.",
+        required=False,
+    )
+    preprodSizeStatusChecksRules = serializers.JSONField(required=False)
+    preprodSnapshotStatusChecksEnabled = serializers.BooleanField(required=False)
+    preprodSnapshotStatusChecksFailOnAdded = serializers.BooleanField(required=False)
+    preprodSnapshotStatusChecksFailOnRemoved = serializers.BooleanField(required=False)
+    preprodSizeEnabledByCustomer = serializers.BooleanField(required=False, allow_null=True)
+    preprodDistributionEnabledByCustomer = serializers.BooleanField(required=False, allow_null=True)
+    preprodDistributionPrCommentsEnabledByCustomer = serializers.BooleanField(
+        required=False, allow_null=True
+    )
+    preprodSnapshotPrCommentsEnabled = serializers.BooleanField(required=False, allow_null=True)
+    preprodSizeEnabledQuery = serializers.CharField(required=False, allow_null=True)
+    preprodDistributionEnabledQuery = serializers.CharField(required=False, allow_null=True)
+
     name = serializers.CharField(
         help_text="The name for the project",
         max_length=200,
@@ -501,10 +505,10 @@ E.g. `['release', 'environment']`""",
 
 class RelaxedProjectPermission(ProjectPermission):
     scope_map = {
-        "GET": ["project:read", "project:write", "project:admin"],
-        "POST": ["project:write", "project:admin"],
+        "GET": ["project:read"],
+        "POST": ["project:write"],
         # PUT checks for permissions based on fields
-        "PUT": ["project:read", "project:write", "project:admin"],
+        "PUT": ["project:write", "project:admin", "user:preferences"],
         "DELETE": ["project:admin"],
     }
 
@@ -595,27 +599,30 @@ class ProjectDetailsEndpoint(ProjectEndpoint):
         """
         Update various attributes and configurable settings for the given project.
 
-        Note that solely having the **`project:read`** scope restricts updatable settings to
-        `isBookmarked`, `autofixAutomationTuning`, `seerScannerAutomation`,
-        `preprodSizeStatusChecksEnabled`, `preprodSizeStatusChecksRules`,
-        `preprodSizeEnabledQuery`, `preprodDistributionEnabledQuery`,
-        `preprodSizeEnabledByCustomer`, `preprodDistributionEnabledByCustomer`,
-        and `preprodDistributionPrCommentsEnabledByCustomer`.
+        Note that the **`user:preferences`** scope only allows updating
+        `isBookmarked`. All project-wide settings require **`project:write`**.
         """
         if not request.user.is_authenticated:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
         old_data = serialize(project, request.user, DetailedProjectSerializer())
-        has_elevated_scopes = request.access and (
+        has_project_write_scope = request.access and (
             request.access.has_scope("project:write")
             or request.access.has_scope("project:admin")
             or request.access.has_any_project_scope(project, ["project:write", "project:admin"])
         )
+        requested_fields = set(request.data.keys())
 
-        if has_elevated_scopes:
-            serializer_cls: type[ProjectMemberSerializer] = ProjectAdminSerializer
+        if not has_project_write_scope and not requested_fields.issubset(PROJECT_PREFERENCE_FIELDS):
+            return Response(
+                {"detail": "You do not have permission to perform this action."},
+                status=403,
+            )
+
+        if has_project_write_scope:
+            serializer_cls: type[ProjectPreferenceSerializer] = ProjectAdminSerializer
         else:
-            serializer_cls = ProjectMemberSerializer
+            serializer_cls = ProjectPreferenceSerializer
 
         serializer = serializer_cls(
             data=request.data, partial=True, context={"project": project, "request": request}
@@ -631,14 +638,6 @@ class ProjectDetailsEndpoint(ProjectEndpoint):
             )
         if not serializer.is_valid():
             return Response(serializer.errors, status=400)
-
-        if not has_elevated_scopes:
-            for key in ProjectAdminSerializer().fields.keys():
-                if request.data.get(key) and not result.get(key):
-                    return Response(
-                        {"detail": "You do not have permission to perform this action."},
-                        status=403,
-                    )
         changed = False
         changed_proj_settings = {}
 
@@ -907,7 +906,7 @@ class ProjectDetailsEndpoint(ProjectEndpoint):
                 if project.update_option("sentry:debug_files_role", result["debugFilesRole"]):
                     changed_proj_settings["sentry:debug_files_role"] = result["debugFilesRole"]
 
-        if has_elevated_scopes:
+        if has_project_write_scope:
             options = result.get("options", {})
             if "sentry:origins" in options:
                 project.update_option(

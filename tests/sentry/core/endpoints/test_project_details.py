@@ -299,14 +299,14 @@ class ProjectUpdateTestTokenAuthenticated(APITestCase):
 
         self.platforms = ["rust", "java"]
 
-    def test_member_can_update_limited_project_details(self) -> None:
+    def test_member_can_update_bookmark_with_user_preferences_scope(self) -> None:
         self.create_member(
             user=self.user,
             organization=self.project.organization,
             teams=[self.team],
             role="member",
         )
-        token = self.create_user_auth_token(user=self.user, scope_list=["project:read"])
+        token = self.create_user_auth_token(user=self.user, scope_list=["user:preferences"])
 
         response = self.client.put(
             self.url,
@@ -316,6 +316,24 @@ class ProjectUpdateTestTokenAuthenticated(APITestCase):
         )
         assert response.status_code == 200
         assert response.data["isBookmarked"] is True
+
+    def test_member_cannot_update_project_settings_with_user_preferences_scope(self) -> None:
+        self.create_member(
+            user=self.user,
+            organization=self.project.organization,
+            teams=[self.team],
+            role="member",
+        )
+        token = self.create_user_auth_token(user=self.user, scope_list=["user:preferences"])
+
+        response = self.client.put(
+            self.url,
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            data={"platform": "rust"},
+        )
+        assert response.status_code == 403
+        assert response.data["detail"] == "You do not have permission to perform this action."
 
     def test_admin_update_allowed_with_correct_token_scope(self) -> None:
         self.create_member(
@@ -409,7 +427,7 @@ class ProjectUpdateTestTokenAuthenticated(APITestCase):
             teams=[self.team],
             role="member",
         )
-        # members are only allowed to update 'isBookmarked' fields
+        # members need a dedicated user preferences scope to update bookmarks
         token = self.create_user_auth_token(user=self.user, scope_list=["project:read"])
 
         response = self.client.put(
@@ -539,6 +557,25 @@ class ProjectUpdateTest(APITestCase):
 
         assert Project.objects.get(id=project.id).slug != "zzz"
         assert not ProjectBookmark.objects.filter(user_id=user.id, project_id=project.id).exists()
+
+    def test_member_can_bookmark_project(self) -> None:
+        project = self.create_project()
+        user = self.create_user("bar@example.com")
+        self.create_member(
+            user=user,
+            organization=project.organization,
+            teams=[project.teams.first()],
+            role="member",
+        )
+        self.login_as(user=user)
+
+        self.get_success_response(
+            project.organization.slug,
+            project.slug,
+            isBookmarked="true",
+        )
+
+        assert ProjectBookmark.objects.filter(user_id=user.id, project_id=project.id).exists()
 
     @with_feature("organizations:team-roles")
     def test_member_with_team_role(self) -> None:

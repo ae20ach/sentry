@@ -4,12 +4,11 @@ from sentry.models.organization import Organization
 
 
 class ExploreSavedQueryPermission(OrganizationPermission):
-    # Relaxed permissions for saved queries in Explore
     scope_map = {
-        "GET": ["org:read", "org:write", "org:admin"],
-        "POST": ["org:read", "org:write", "org:admin"],
-        "PUT": ["org:read", "org:write", "org:admin"],
-        "DELETE": ["org:read", "org:write", "org:admin"],
+        "GET": ["org:read", "org:searches"],
+        "POST": ["org:searches"],
+        "PUT": ["org:searches"],
+        "DELETE": ["org:searches"],
     }
 
     def has_object_permission(self, request, view, obj):

@@ -196,17 +196,26 @@ class OrganizationUserReportsPermission(OrganizationPermission):
 
 class OrganizationPinnedSearchPermission(OrganizationPermission):
     scope_map = {
-        "PUT": ["org:read", "org:write", "org:admin"],
-        "DELETE": ["org:read", "org:write", "org:admin"],
+        "PUT": ["user:preferences"],
+        "DELETE": ["user:preferences"],
     }
 
 
 class OrganizationSearchPermission(OrganizationPermission):
     scope_map = {
-        "GET": ["org:read", "org:write", "org:admin"],
-        "POST": ["org:read", "org:write", "org:admin"],
-        "PUT": ["org:read", "org:write", "org:admin"],
-        "DELETE": ["org:read", "org:write", "org:admin"],
+        "GET": ["org:read", "org:searches"],
+        "POST": ["org:searches"],
+        "PUT": ["org:searches"],
+        "DELETE": ["org:searches"],
+    }
+
+
+class OrganizationPreferencePermission(OrganizationPermission):
+    scope_map = {
+        "GET": ["user:preferences"],
+        "POST": ["user:preferences"],
+        "PUT": ["user:preferences"],
+        "DELETE": ["user:preferences"],
     }
 
 
@@ -281,8 +290,8 @@ class OrgAuthTokenPermission(OrganizationPermission):
 class OrganizationFlagWebHookSigningSecretPermission(OrganizationPermission):
     scope_map = {
         "GET": ["org:read", "org:write", "org:admin"],
-        "POST": ["org:read", "org:write", "org:admin"],
-        "DELETE": ["org:write", "org:admin"],
+        "POST": ["flags:write"],
+        "DELETE": ["flags:write"],
     }
 
 

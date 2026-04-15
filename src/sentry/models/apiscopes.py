@@ -49,6 +49,9 @@ class ApiScopes(Sequence):
     appended = (
         ("project:create"),
         ("project:codeowners"),
+        ("user:preferences"),
+        ("org:searches"),
+        ("flags:write"),
     )
 
     def __init__(self):
@@ -107,6 +110,9 @@ class HasApiScopes(models.Model):
             "project:distribution": bool,
             "project:create": bool,
             "project:codeowners": bool,
+            "user:preferences": bool,
+            "org:searches": bool,
+            "flags:write": bool,
         },
     )
     assert set(ScopesDict.__annotations__) == set(ApiScopes())

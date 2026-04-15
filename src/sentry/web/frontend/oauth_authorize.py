@@ -203,6 +203,15 @@ class OAuthAuthorizeView(AuthLoginView):
                     name="invalid_scope",
                     state=state,
                 )
+            if scope in settings.SENTRY_NON_APP_GRANTABLE_SCOPES:
+                return self.error(
+                    request=request,
+                    client_id=client_id,
+                    response_type=response_type,
+                    redirect_uri=redirect_uri,
+                    name="invalid_scope",
+                    state=state,
+                )
 
         # PKCE support (RFC 7636): accept code_challenge and code_challenge_method.
         # This implementation only supports S256 method (plain method not supported for security).
