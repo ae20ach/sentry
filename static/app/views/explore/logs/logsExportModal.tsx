@@ -105,11 +105,10 @@ export function LogsExportModal({
       }
 
       downloadLogs({
-        tableData,
+        rows: tableData.slice(0, value.limit),
         fields: queryInfo.field,
         filename: 'logs',
         format: value.format,
-        limit: value.limit,
       });
 
       addSuccessMessage(t('Downloading file to your browser.'));

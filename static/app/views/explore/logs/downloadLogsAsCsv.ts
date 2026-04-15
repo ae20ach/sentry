@@ -18,7 +18,7 @@ function disableMacros(value: string | null | boolean | number | undefined) {
 }
 
 export function downloadLogsAsCsv(
-  tableData: OurLogsResponseItem[],
+  rows: OurLogsResponseItem[],
   fields: OurLogFieldKey[],
   filename: string
 ) {
@@ -27,7 +27,7 @@ export function downloadLogsAsCsv(
 
   const csvContent = Papa.unparse({
     fields: headings,
-    data: tableData.map((row: OurLogsResponseItem) =>
+    data: rows.map((row: OurLogsResponseItem) =>
       keys.map((key: OurLogFieldKey) => {
         return disableMacros(row[key]);
       })

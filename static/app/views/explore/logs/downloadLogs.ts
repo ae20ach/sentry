@@ -7,21 +7,14 @@ interface DownloadLogsOptions {
   fields: OurLogFieldKey[];
   filename: string;
   format: DataExportFormat;
-  tableData: OurLogsResponseItem[];
-  limit?: number;
+  rows: OurLogsResponseItem[];
 }
 
-export function downloadLogs({
-  format,
-  tableData,
-  fields,
-  filename,
-  limit,
-}: DownloadLogsOptions) {
+export function downloadLogs({format, rows, fields, filename}: DownloadLogsOptions) {
   switch (format) {
     case 'csv':
-      return downloadLogsAsCsv(tableData.slice(0, limit), fields, filename);
+      return downloadLogsAsCsv(rows, fields, filename);
     case 'jsonl':
-      return downloadLogsAsJsonl(tableData, filename);
+      return downloadLogsAsJsonl(rows, filename);
   }
 }

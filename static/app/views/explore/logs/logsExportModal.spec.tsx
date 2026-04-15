@@ -12,7 +12,6 @@ import {
   ModalFooter,
 } from 'sentry/components/globalModal/components';
 import {QUERY_PAGE_LIMIT} from 'sentry/views/explore/logs/constants';
-import {downloadLogs} from 'sentry/views/explore/logs/downloadLogs';
 import {LogsExportModal} from 'sentry/views/explore/logs/logsExportModal';
 import {OurLogKnownFieldKey} from 'sentry/views/explore/logs/types';
 
@@ -53,13 +52,13 @@ const queryInfo: LogsQueryInfo = {
   sort: ['-timestamp'],
 };
 
-const tableData = [
+const tableData = new Array(500).map((_, i) =>
   LogFixture({
-    id: 'log-1',
-    [OurLogKnownFieldKey.PROJECT_ID]: '1',
+    id: `log-${i}`,
+    [OurLogKnownFieldKey.PROJECT_ID]: `${i}`,
     [OurLogKnownFieldKey.ORGANIZATION_ID]: Number(organization.id),
-  }),
-];
+  })
+);
 
 function renderModal(estimatedRowCount: number) {
   mockUseDataExport.mockReturnValue(mockHandleDataExport);
@@ -98,15 +97,14 @@ describe('LogsExportModal', () => {
     await userEvent.click(screen.getByRole('button', {name: 'Export'}));
 
     await waitFor(() => {
-      expect(downloadLogs).toHaveBeenCalledTimes(1);
+      expect(mockDownloadLogs).toHaveBeenCalledTimes(1);
     });
 
-    expect(downloadLogs).toHaveBeenCalledWith({
-      tableData,
+    expect(mockDownloadLogs).toHaveBeenCalledWith({
+      rows: tableData.slice(0, 100),
       fields: queryInfo.field,
       filename: 'logs',
       format: 'csv',
-      limit: 100,
     });
     expect(mockHandleDataExport).not.toHaveBeenCalled();
     expect(addSuccessMessage).toHaveBeenCalledWith('Downloading file to your browser.');

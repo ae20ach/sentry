@@ -29,44 +29,40 @@ describe('downloadLogs', () => {
     jest.clearAllMocks();
   });
 
-  it('delegates to downloadLogsAsCsv with limited rows when format is csv', () => {
-    const tableData = [row('a'), row('b'), row('c')];
+  it('delegates to downloadLogsAsCsv when format is csv', () => {
+    const rows = [row('a'), row('b'), row('c')];
     const expected = 'csv-result';
+
     mockDownloadLogsAsCsv.mockReturnValue(expected);
 
     const result = downloadLogs({
       format: 'csv',
-      tableData,
+      rows,
       fields,
       filename,
-      limit: 2,
     });
 
     expect(mockDownloadLogsAsCsv).toHaveBeenCalledTimes(1);
-    expect(mockDownloadLogsAsCsv).toHaveBeenCalledWith(
-      [row('a'), row('b')],
-      fields,
-      filename
-    );
+    expect(mockDownloadLogsAsCsv).toHaveBeenCalledWith(rows, fields, filename);
     expect(mockDownloadLogsAsJsonl).not.toHaveBeenCalled();
     expect(result).toBe(expected);
   });
 
   it('delegates to downloadLogsAsJsonl when format is json', () => {
-    const tableData = [row('a'), row('b'), row('c')];
+    const rows = [row('a'), row('b'), row('c')];
     const expected = 'json-result';
+
     mockDownloadLogsAsJsonl.mockReturnValue(expected);
 
     const result = downloadLogs({
       format: 'jsonl',
-      tableData,
+      rows,
       fields,
       filename,
-      limit: 2,
     });
 
     expect(mockDownloadLogsAsJsonl).toHaveBeenCalledTimes(1);
-    expect(mockDownloadLogsAsJsonl).toHaveBeenCalledWith(tableData, filename);
+    expect(mockDownloadLogsAsJsonl).toHaveBeenCalledWith(rows, filename);
     expect(mockDownloadLogsAsCsv).not.toHaveBeenCalled();
     expect(result).toBe(expected);
   });
