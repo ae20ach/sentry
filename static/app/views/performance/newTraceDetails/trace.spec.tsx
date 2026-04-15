@@ -853,12 +853,12 @@ async function assertHighlightedRowAtIndex(
   index: number
 ) {
   await waitFor(() => {
-    expect(virtualizedContainer.querySelectorAll('.TraceRow.Highlight')).toHaveLength(1);
-  });
-  await waitFor(() => {
+    const highlights = virtualizedContainer.querySelectorAll('.TraceRow.Highlight');
+    expect(highlights).toHaveLength(1);
     const highlighted_row = virtualizedContainer.querySelector(
       ACTIVE_SEARCH_HIGHLIGHT_ROW
     );
+    expect(highlighted_row).toBeTruthy();
     const r = Array.from(
       virtualizedContainer.querySelectorAll(VISIBLE_TRACE_ROW_SELECTOR)
     );
@@ -1629,6 +1629,13 @@ describe('trace view', () => {
         await searchToResolve();
 
         await userEvent.keyboard('{arrowdown}');
+        await waitFor(() => {
+          const t =
+            screen
+              .getByTestId('trace-search-result-iterator')
+              .textContent?.replace(/\s/g, '') ?? '';
+          expect(t).toMatch(/^2\//);
+        });
         await searchToResolve();
 
         await assertHighlightedRowAtIndex(container, 2);
@@ -1680,14 +1687,16 @@ describe('trace view', () => {
         await searchToResolve();
 
         await assertHighlightedRowAtIndex(container, 2);
-        const rows = getVirtualizedRows(virtualizedContainer);
         // By default, we highlight the first result
         expect(
           await screen.findByTestId('trace-search-result-iterator')
         ).toHaveTextContent('1/2');
 
         // Click on a random row in the list that is not a search result
-        await userEvent.click(rows[5]!);
+        await waitFor(() => {
+          expect(getVirtualizedRows(virtualizedContainer)[5]).toBeTruthy();
+        });
+        await userEvent.click(getVirtualizedRows(virtualizedContainer)[5]!);
         await waitFor(() => {
           expect(screen.queryByTestId('trace-search-result-iterator')).toHaveTextContent(
             '-/2'
@@ -1695,13 +1704,17 @@ describe('trace view', () => {
         });
 
         // Click on a the row in the list that is a search result
-        await userEvent.click(rows[2]!);
+        await waitFor(() => {
+          expect(getVirtualizedRows(virtualizedContainer)[2]).toBeTruthy();
+        });
+        await userEvent.click(getVirtualizedRows(virtualizedContainer)[2]!);
         await waitFor(() => {
           expect(screen.queryByTestId('trace-search-result-iterator')).toHaveTextContent(
             '1/2'
           );
         });
-      }
+      },
+      12_000
     );
 
     it.isKnownFlake('during search, expanding a row retriggers search', async () => {
