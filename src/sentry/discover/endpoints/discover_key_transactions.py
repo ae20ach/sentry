@@ -23,13 +23,30 @@ from sentry.models.projectteam import ProjectTeam
 from sentry.models.team import Team
 
 
+def _has_any_team_scope(request: Request, scopes: list[str]) -> bool:
+    if not request.access.team_ids_with_membership:
+        return False
+
+    teams = Team.objects.filter(id__in=request.access.team_ids_with_membership)
+    return any(
+        any(request.access.has_team_scope(team, scope) for scope in scopes) for team in teams
+    )
+
+
 class KeyTransactionPermission(OrganizationPermission):
     scope_map = {
-        "GET": ["org:read"],
-        "POST": ["org:read"],
-        "PUT": ["org:read"],
-        "DELETE": ["org:read"],
+        "GET": ["project:read"],
+        "POST": ["project:write"],
+        "PUT": ["project:write"],
+        "DELETE": ["project:write"],
     }
+
+    def has_object_permission(self, request: Request, view, obj: object) -> bool:
+        if super().has_object_permission(request, view, obj):
+            return True
+
+        allowed_scopes = self.scope_map.get(request.method or "", [])
+        return _has_any_team_scope(request, allowed_scopes)
 
 
 @cell_silo_endpoint

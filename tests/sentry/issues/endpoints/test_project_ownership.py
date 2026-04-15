@@ -220,6 +220,41 @@ class ProjectOwnershipEndpointTestCase(APITestCase):
             "schema": None,
         }
 
+    def test_get_with_project_codeowners_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["project:codeowners"])
+
+        response = self.client.get(
+            self.path,
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 200
+
+    def test_update_with_project_codeowners_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["project:codeowners"])
+
+        response = self.client.put(
+            self.path,
+            {"raw": "*.js admin@localhost #tiger-team"},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 200
+        assert response.data["raw"] == "*.js admin@localhost #tiger-team"
+
+    def test_update_rejects_project_read_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["project:read"])
+
+        response = self.client.put(
+            self.path,
+            {"raw": "*.js admin@localhost #tiger-team"},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 403
+
     def test_get_schema_empty_raw(self) -> None:
         # Create ProjectOwnership...
         self.client.put(self.path, {"raw": "*.js admin@localhost #tiger-team"})

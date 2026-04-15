@@ -29,6 +29,7 @@ from sentry.models.orgauthtoken import is_org_auth_token_auth
 from sentry.models.project import Project
 from sentry.models.release import Release
 from sentry.models.releases.release_project import ReleaseProject
+from sentry.models.team import Team
 from sentry.organizations.services.organization import (
     RpcOrganization,
     RpcUserOrganizationContext,
@@ -158,8 +159,8 @@ class OrganizationIntegrationsPermission(OrganizationPermission):
 class OrganizationIntegrationsLoosePermission(OrganizationPermission):
     scope_map = {
         "GET": ["org:read", "org:write", "org:admin", "org:integrations", "org:ci"],
-        "POST": ["org:read", "org:write", "org:admin", "org:integrations"],
-        "PUT": ["org:read", "org:write", "org:admin", "org:integrations"],
+        "POST": ["org:write", "org:admin", "org:integrations"],
+        "PUT": ["org:write", "org:admin", "org:integrations"],
         "DELETE": ["org:admin", "org:integrations"],
     }
 
@@ -167,7 +168,7 @@ class OrganizationIntegrationsLoosePermission(OrganizationPermission):
 class OrganizationCodeMappingsBulkPermission(OrganizationPermission):
     scope_map = {
         "GET": ["org:read", "org:write", "org:admin", "org:integrations", "org:ci"],
-        "POST": ["org:read", "org:write", "org:admin", "org:integrations", "org:ci"],
+        "POST": ["org:write", "org:admin", "org:integrations", "org:ci"],
     }
 
 
@@ -195,54 +196,93 @@ class OrganizationUserReportsPermission(OrganizationPermission):
 
 class OrganizationPinnedSearchPermission(OrganizationPermission):
     scope_map = {
-        "PUT": ["org:read", "org:write", "org:admin"],
-        "DELETE": ["org:read", "org:write", "org:admin"],
+        "PUT": ["org:searches"],
+        "DELETE": ["org:searches"],
     }
 
 
 class OrganizationSearchPermission(OrganizationPermission):
     scope_map = {
-        "GET": ["org:read", "org:write", "org:admin"],
-        "POST": ["org:read", "org:write", "org:admin"],
-        "PUT": ["org:read", "org:write", "org:admin"],
-        "DELETE": ["org:read", "org:write", "org:admin"],
+        "GET": ["org:read", "org:searches"],
+        "POST": ["org:searches"],
+        "PUT": ["org:searches"],
+        "DELETE": ["org:searches"],
+    }
+
+
+class OrganizationPreferencePermission(OrganizationPermission):
+    scope_map = {
+        "GET": ["user:preferences"],
+        "POST": ["user:preferences"],
+        "PUT": ["user:preferences"],
+        "DELETE": ["user:preferences"],
     }
 
 
 class OrganizationDataExportPermission(OrganizationPermission):
     scope_map = {
         "GET": ["event:read", "event:write", "event:admin"],
-        "POST": ["event:read", "event:write", "event:admin"],
+        "POST": ["event:write", "event:admin"],
     }
+
+
+def _has_any_team_scope(request: Request, scope: str) -> bool:
+    if not request.access.team_ids_with_membership:
+        return False
+
+    teams = Team.objects.filter(id__in=request.access.team_ids_with_membership)
+    return any(request.access.has_team_scope(team, scope) for team in teams)
 
 
 class OrganizationAlertRulePermission(OrganizationPermission):
     scope_map = {
         "GET": ["org:read", "org:write", "org:admin", "alerts:read"],
-        # grant org:read permission, but raise permission denied if the members aren't allowed
-        # to create alerts and the user isn't a team admin
-        "POST": ["org:read", "org:write", "org:admin", "alerts:write"],
+        "POST": ["org:write", "org:admin", "alerts:write"],
         "PUT": ["org:write", "org:admin", "alerts:write"],
         "DELETE": ["org:write", "org:admin", "alerts:write"],
     }
+
+    def has_object_permission(
+        self,
+        request: Request,
+        view: APIView,
+        organization: Organization | RpcOrganization | RpcUserOrganizationContext,
+    ) -> bool:
+        if super().has_object_permission(request, view, organization):
+            return True
+
+        return request.method in {"POST", "PUT", "DELETE"} and _has_any_team_scope(
+            request, "alerts:write"
+        )
 
 
 class OrganizationDetectorPermission(OrganizationPermission):
     scope_map = {
         "GET": ["org:read", "org:write", "org:admin", "alerts:read"],
-        # grant org:read permission, but raise permission denied if the members aren't allowed
-        # to create alerts and the user isn't a team admin
-        "POST": ["org:read", "org:write", "org:admin", "alerts:write"],
-        "PUT": ["org:read", "org:write", "org:admin", "alerts:write"],
-        "DELETE": ["org:read", "org:write", "org:admin", "alerts:write"],
+        "POST": ["org:write", "org:admin", "alerts:write"],
+        "PUT": ["org:write", "org:admin", "alerts:write"],
+        "DELETE": ["org:write", "org:admin", "alerts:write"],
     }
+
+    def has_object_permission(
+        self,
+        request: Request,
+        view: APIView,
+        organization: Organization | RpcOrganization | RpcUserOrganizationContext,
+    ) -> bool:
+        if super().has_object_permission(request, view, organization):
+            return True
+
+        return request.method in {"POST", "PUT", "DELETE"} and _has_any_team_scope(
+            request, "alerts:write"
+        )
 
 
 class OrgAuthTokenPermission(OrganizationPermission):
     scope_map = {
         "GET": ["org:read", "org:write", "org:admin"],
-        "POST": ["org:read", "org:write", "org:admin"],
-        "PUT": ["org:read", "org:write", "org:admin"],
+        "POST": ["org:write", "org:admin"],
+        "PUT": ["org:write", "org:admin"],
         "DELETE": ["org:write", "org:admin"],
     }
 
@@ -250,7 +290,7 @@ class OrgAuthTokenPermission(OrganizationPermission):
 class OrganizationFlagWebHookSigningSecretPermission(OrganizationPermission):
     scope_map = {
         "GET": ["org:read", "org:write", "org:admin"],
-        "POST": ["org:read", "org:write", "org:admin"],
+        "POST": ["flags:write", "org:write", "org:admin"],
         "DELETE": ["org:write", "org:admin"],
     }
 

@@ -69,3 +69,46 @@ class InsightsStarredSegmentTest(APITestCase, SnubaTestCase):
                 self.url, data={"segment_name": segment_name, "project_id": self.project_ids[0]}
             )
             assert response.status_code == 403
+
+    def test_post_with_user_preferences_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["user:preferences"])
+
+        with self.feature(self.feature_name):
+            response = self.client.post(
+                self.url,
+                data={"segment_name": "my_segment", "project_id": self.project_ids[0]},
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 200, response.content
+
+    def test_post_rejects_org_read_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["org:read"])
+
+        with self.feature(self.feature_name):
+            response = self.client.post(
+                self.url,
+                data={"segment_name": "my_segment", "project_id": self.project_ids[0]},
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 403, response.content
+
+    def test_delete_rejects_org_read_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["org:read"])
+
+        with self.feature(self.feature_name):
+            InsightsStarredSegment.objects.create(
+                segment_name="my_segment",
+                project_id=self.project_ids[0],
+                organization=self.org,
+                user_id=self.user.id,
+            )
+
+            response = self.client.delete(
+                self.url,
+                data={"segment_name": "my_segment", "project_id": self.project_ids[0]},
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 403, response.content

@@ -47,13 +47,9 @@ def fetch_slugifed_email_username(email: str) -> str:
     return slugify(Address(addr_spec=email).username)
 
 
-# This endpoint is intended to be available to all members of an
-# organization so we include "project:read" in the POST scopes.
-
-
 class OrgProjectPermission(OrganizationPermission):
     scope_map = {
-        "POST": ["project:read", "project:write", "project:admin"],
+        "POST": ["project:create", "project:write", "project:admin"],
     }
 
 

@@ -7,7 +7,7 @@ from sentry.analytics.events.onboarding_continuation_sent import OnboardingConti
 from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import cell_silo_endpoint
-from sentry.api.bases.organization import OrganizationEndpoint, OrganizationPermission
+from sentry.api.bases.organization import OrganizationEndpoint, OrganizationPreferencePermission
 from sentry.api.serializers.rest_framework.base import CamelSnakeSerializer
 from sentry.models.organization import Organization
 from sentry.users.models.user import User
@@ -41,17 +41,13 @@ def get_request_builder_args(user: User, organization: Organization, platforms: 
     }
 
 
-class OnboardingContinuationPermission(OrganizationPermission):
-    scope_map = {"POST": ["org:read", "org:write", "org:admin"]}
-
-
 @cell_silo_endpoint
 class OrganizationOnboardingContinuationEmail(OrganizationEndpoint):
     publish_status = {
         "POST": ApiPublishStatus.PRIVATE,
     }
     owner = ApiOwner.VALUE_DISCOVERY
-    permission_classes = (OnboardingContinuationPermission,)
+    permission_classes = (OrganizationPreferencePermission,)
 
     def post(self, request: Request, organization: Organization):
         serializer = OnboardingContinuationSerializer(data=request.data)

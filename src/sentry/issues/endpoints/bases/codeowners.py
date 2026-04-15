@@ -1,12 +1,14 @@
 from rest_framework.request import Request
 
 from sentry import features
-from sentry.api.bases.project import ProjectEndpoint
+from sentry.api.bases.project import ProjectCodeOwnersPermission, ProjectEndpoint
 from sentry.models.project import Project
 from sentry.utils import metrics
 
 
 class ProjectCodeOwnersBase(ProjectEndpoint):
+    permission_classes = (ProjectCodeOwnersPermission,)
+
     def has_feature(self, request: Request, project: Project) -> bool:
         return bool(
             features.has(

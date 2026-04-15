@@ -14,7 +14,7 @@ from sentry.models.organization import Organization
 
 class MemberPermission(OrganizationPermission):
     scope_map = {
-        "POST": ["member:read"],
+        "POST": ["org:searches"],
     }
 
 

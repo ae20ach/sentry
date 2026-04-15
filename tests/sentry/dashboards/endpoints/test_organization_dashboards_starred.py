@@ -132,6 +132,49 @@ class OrganizationDashboardsStarredOrderTest(StarredDashboardTestCase):
             self.dashboard_2.id,
         ]
 
+    def test_reorder_dashboards_with_user_preferences_token(self) -> None:
+        self.create_dashboard_favorite(self.dashboard_1, self.user, self.organization, 0)
+        self.create_dashboard_favorite(self.dashboard_2, self.user, self.organization, 1)
+        self.create_dashboard_favorite(self.dashboard_3, self.user, self.organization, 2)
+        token = self.create_user_auth_token(user=self.user, scope_list=["user:preferences"])
+
+        with self.feature("organizations:dashboards-starred-reordering"):
+            response = self.client.put(
+                self.url,
+                data={
+                    "dashboard_ids": [self.dashboard_3.id, self.dashboard_1.id, self.dashboard_2.id]
+                },
+                format="json",
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 204
+        assert list(
+            DashboardFavoriteUser.objects.filter(
+                organization=self.organization, user_id=self.user.id
+            )
+            .order_by("position")
+            .values_list("dashboard_id", flat=True)
+        ) == [self.dashboard_3.id, self.dashboard_1.id, self.dashboard_2.id]
+
+    def test_cannot_reorder_dashboards_with_org_read_token(self) -> None:
+        self.create_dashboard_favorite(self.dashboard_1, self.user, self.organization, 0)
+        self.create_dashboard_favorite(self.dashboard_2, self.user, self.organization, 1)
+        self.create_dashboard_favorite(self.dashboard_3, self.user, self.organization, 2)
+        token = self.create_user_auth_token(user=self.user, scope_list=["org:read"])
+
+        with self.feature("organizations:dashboards-starred-reordering"):
+            response = self.client.put(
+                self.url,
+                data={
+                    "dashboard_ids": [self.dashboard_3.id, self.dashboard_1.id, self.dashboard_2.id]
+                },
+                format="json",
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 403
+
     def test_throws_an_error_if_dashboard_ids_are_not_unique(self) -> None:
         self.create_dashboard_favorite(self.dashboard_1, self.user, self.organization, 0)
         self.create_dashboard_favorite(self.dashboard_2, self.user, self.organization, 1)

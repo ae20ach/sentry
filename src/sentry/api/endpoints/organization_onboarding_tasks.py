@@ -7,14 +7,10 @@ from sentry import onboarding_tasks
 from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import cell_silo_endpoint
-from sentry.api.bases.organization import OrganizationEndpoint, OrganizationPermission
+from sentry.api.bases.organization import OrganizationEndpoint, OrganizationPreferencePermission
 from sentry.api.serializers import serialize
 from sentry.models.organization import Organization
 from sentry.models.organizationonboardingtask import OnboardingTask, OnboardingTaskStatus
-
-
-class OnboardingTaskPermission(OrganizationPermission):
-    scope_map = {"POST": ["org:read"], "GET": ["org:read"]}
 
 
 @cell_silo_endpoint
@@ -24,7 +20,7 @@ class OrganizationOnboardingTaskEndpoint(OrganizationEndpoint):
         "GET": ApiPublishStatus.PRIVATE,
     }
     owner = ApiOwner.VALUE_DISCOVERY
-    permission_classes = (OnboardingTaskPermission,)
+    permission_classes = (OrganizationPreferencePermission,)
 
     def post(self, request: Request, organization) -> Response:
         task_id = onboarding_tasks.get_task_lookup_by_key(request.data["task"])
