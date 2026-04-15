@@ -1,4 +1,4 @@
-import {type LogsQueryInfo} from 'sentry/components/dataExport';
+import {type LogsQueryInfo} from 'sentry/components/exports/dataExport';
 import {ExploreExport} from 'sentry/views/explore/components/exploreExport';
 import {QUERY_PAGE_LIMIT} from 'sentry/views/explore/logs/constants';
 import {downloadLogsAsCsv} from 'sentry/views/explore/logs/downloadLogsAsCsv';

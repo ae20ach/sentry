@@ -1,7 +1,7 @@
 import {Button} from '@sentry/scraps/button';
 
 import {openModal} from 'sentry/actionCreators/modal';
-import {type LogsQueryInfo} from 'sentry/components/dataExport';
+import {type LogsQueryInfo} from 'sentry/components/exports/dataExport';
 import {IconDownload} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {getExportDisabledTooltip} from 'sentry/views/explore/components/getExportDisabledTooltip';

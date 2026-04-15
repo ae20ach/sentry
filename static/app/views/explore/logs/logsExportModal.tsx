@@ -8,8 +8,8 @@ import {Heading, Text} from '@sentry/scraps/text';
 
 import {addSuccessMessage} from 'sentry/actionCreators/indicator';
 import type {ModalRenderProps} from 'sentry/actionCreators/modal';
-import type {LogsQueryInfo} from 'sentry/components/dataExport';
-import {ExportQueryType, useDataExport} from 'sentry/components/useDataExport';
+import type {LogsQueryInfo} from 'sentry/components/exports/dataExport';
+import {ExportQueryType, useDataExport} from 'sentry/components/exports/useDataExport';
 import {t} from 'sentry/locale';
 import {QUERY_PAGE_LIMIT} from 'sentry/views/explore/logs/constants';
 import {downloadLogs} from 'sentry/views/explore/logs/downloadLogs';

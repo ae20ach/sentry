@@ -1,7 +1,7 @@
 import {Button} from '@sentry/scraps/button';
 
-import {DataExport} from 'sentry/components/dataExport';
-import {ExportQueryType} from 'sentry/components/useDataExport';
+import {DataExport} from 'sentry/components/exports/dataExport';
+import {ExportQueryType} from 'sentry/components/exports/useDataExport';
 import {IconDownload} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {trackAnalytics} from 'sentry/utils/analytics';

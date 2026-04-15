@@ -4,7 +4,10 @@ import debounce from 'lodash/debounce';
 import {Button} from '@sentry/scraps/button';
 
 import Feature from 'sentry/components/acl/feature';
-import {useDataExport, type DataExportPayload} from 'sentry/components/useDataExport';
+import {
+  useDataExport,
+  type DataExportPayload,
+} from 'sentry/components/exports/useDataExport';
 import {t} from 'sentry/locale';
 import type {OurLogFieldKey} from 'sentry/views/explore/logs/types';
 

@@ -1,4 +1,4 @@
-import type {LogsQueryInfo} from 'sentry/components/dataExport';
+import type {LogsQueryInfo} from 'sentry/components/exports/dataExport';
 import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useOrganization} from 'sentry/utils/useOrganization';
