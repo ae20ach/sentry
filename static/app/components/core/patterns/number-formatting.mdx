@@ -130,6 +130,13 @@ When the full unit is shown, it must be pluralized. When an abbreviated unit is 
 
 e.g., `"0 B"`, `"1.2E-8 B"`, `"0.001 B"`, `"12.3 MiB"`, `"16.7 pebibytes"`, `"1.4E4 PiB"`
 
+### Timestamp
+
+A timestamp is a point in time. For example, "June 8th, 1990" is a timestamp, but "12 hours" is not. Timestamps are usually represented in the data as Unix time, which is the number of milliseconds since the Unix epoch. There are a few common ways to format timestamps:
+
+1. Relative format. e.g., "5min ago". This is often used when the _recency_ of the date matters more than the exact date (e.g., creation dates, last seen dates, the date of a trace)
+2. Expanded format. e.g., "Jun 8". This is often used when the specific date is important (X-axis labels)
+
 ### Score
 
 A `score` is a positive integer value from 0 to 100. Scores are a synthetic measure, like Sentry's "Performance Score". This is very similar to an integer, except many parts of the UI give it special handling.
