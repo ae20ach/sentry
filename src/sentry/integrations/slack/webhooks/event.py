@@ -15,7 +15,6 @@ from sentry import analytics, features, options
 from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import all_silo_endpoint
-from sentry.constants import ObjectStatus
 from sentry.integrations.messaging.metrics import (
     MessagingInteractionEvent,
     MessagingInteractionType,
@@ -34,11 +33,8 @@ from sentry.integrations.slack.unfurl.handlers import link_handlers, match_link
 from sentry.integrations.slack.unfurl.types import LinkType, UnfurlableUrl
 from sentry.integrations.slack.views.link_identity import build_linking_url
 from sentry.integrations.types import IntegrationProviderSlug
-from sentry.models.organization import Organization, OrganizationStatus
 from sentry.organizations.services.organization import organization_service
 from sentry.organizations.services.organization.model import RpcOrganization
-from sentry.seer.entrypoints.slack.entrypoint import SlackExplorerEntrypoint
-from sentry.seer.entrypoints.slack.messaging import send_identity_link_prompt
 from sentry.seer.entrypoints.slack.tasks import process_mention_for_slack
 
 from .base import SlackDMEndpoint
@@ -368,74 +364,6 @@ class SlackEventEndpoint(SlackDMEndpoint):
 
         return True
 
-    def _resolve_seer_organization(self, slack_request: SlackEventRequest) -> SeerResolutionResult:
-        """
-        Resolve and validate an organization/user for a Seer Slack event.
-
-        If the initiating user is not linked, we will reply with a prompt to link their identity.
-
-        Then we search for an active, organization with Seer Explorer access. If the user does not
-        belong to any matched organization, their request will be dropped.
-
-        Note: There is a limitation here of only grabbing the first organization belonging to the user
-        with access to Seer. If a Slack installation corresponds to multiple organizations with Seer
-        access, this will not work as expected. This will be revisited.
-        """
-        result: SeerResolutionResult = {
-            "organization_id": None,
-            "installation": None,
-            "error_reason": None,
-        }
-
-        identity_user = slack_request.get_identity_user()
-        if not identity_user:
-            result["error_reason"] = SeerSlackHaltReason.IDENTITY_NOT_LINKED
-            send_identity_link_prompt(
-                integration=slack_request.integration,
-                slack_user_id=slack_request.user_id,
-                channel_id=slack_request.channel_id,
-                thread_ts=slack_request.thread_ts or None,
-                is_welcome_message=slack_request.is_assistant_thread_event,
-            )
-            return result
-
-        ois = integration_service.get_organization_integrations(
-            integration_id=slack_request.integration.id,
-            status=ObjectStatus.ACTIVE,
-            providers=SLACK_PROVIDERS,
-        )
-        if not ois:
-            result["error_reason"] = SeerSlackHaltReason.NO_VALID_INTEGRATION
-            return result
-
-        for oi in ois:
-            organization_id = oi.organization_id
-            try:
-                organization = Organization.objects.get_from_cache(id=organization_id)
-            except Organization.DoesNotExist:
-                continue
-
-            if organization.status != OrganizationStatus.ACTIVE:
-                continue
-
-            if not SlackExplorerEntrypoint.has_access(organization):
-                continue
-
-            if not organization.has_access(identity_user):
-                continue
-
-            installation = slack_request.integration.get_installation(
-                organization_id=organization_id
-            )
-            assert isinstance(installation, SlackIntegration)
-
-            result["organization_id"] = organization_id
-            result["installation"] = installation
-            return result
-
-        result["error_reason"] = SeerSlackHaltReason.NO_VALID_ORGANIZATION
-        return result
-
     def _handle_seer_prompt(
         self,
         slack_request: SlackEventRequest,
@@ -461,16 +389,17 @@ class SlackEventEndpoint(SlackDMEndpoint):
                 }
             )
 
-            result = self._resolve_seer_organization(slack_request)
-            if result["error_reason"]:
-                lifecycle.record_halt(result["error_reason"])
+            organization_id, error_reason = slack_request.resolve_seer_organization()
+            if error_reason:
+                lifecycle.record_halt(error_reason)
                 return self.respond()
 
-            if not result["organization_id"] or not result["installation"]:
+            if not organization_id:
                 return self.respond()
 
-            organization_id = result["organization_id"]
-            installation = result["installation"]
+            installation: SlackIntegration = slack_request.integration.get_installation(
+                organization_id=organization_id
+            )
 
             if not channel_id or not text or not ts or not slack_request.user_id:
                 lifecycle.record_halt(SeerSlackHaltReason.MISSING_EVENT_DATA)
@@ -523,15 +452,17 @@ class SlackEventEndpoint(SlackDMEndpoint):
             spec=SlackMessagingSpec(),
         ).capture() as lifecycle:
             lifecycle.add_extra("integration_id", slack_request.integration.id)
-            result = self._resolve_seer_organization(slack_request)
-            if result["error_reason"]:
-                lifecycle.record_halt(result["error_reason"])
+            organization_id, error_reason = slack_request.resolve_seer_organization()
+            if error_reason:
+                lifecycle.record_halt(error_reason)
                 return self.respond()
 
-            if not result["installation"]:
+            if not organization_id:
                 return self.respond()
 
-            installation = result["installation"]
+            installation: SlackIntegration = slack_request.integration.get_installation(
+                organization_id=organization_id
+            )
 
             channel_id = slack_request.channel_id
             thread_ts = slack_request.thread_ts
@@ -542,6 +473,7 @@ class SlackEventEndpoint(SlackDMEndpoint):
                     "channel_id": channel_id,
                     "thread_ts": thread_ts,
                     "context": assistant_thread.get("context"),
+                    "organization_id": organization_id,
                 }
             )
 

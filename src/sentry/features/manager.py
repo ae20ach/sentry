@@ -14,6 +14,7 @@ from django.conf import settings
 
 from sentry import options
 from sentry.options.rollout import in_random_rollout
+from sentry.organizations.services.organization.model import RpcOrganization
 from sentry.users.services.user.model import RpcUser
 from sentry.utils import metrics
 from sentry.utils.flag import record_feature_flag
@@ -321,7 +322,7 @@ class FeatureManager(RegisteredFeatureManager):
         feature_names: Sequence[str],
         actor: User | RpcUser | AnonymousUser | None = None,
         projects: Sequence[Project] | None = None,
-        organization: Organization | None = None,
+        organization: RpcOrganization | Organization | None = None,
     ) -> dict[str, dict[str, bool | None]] | None:
         """
         Determine if multiple features are enabled. Unhandled flags will not be in
