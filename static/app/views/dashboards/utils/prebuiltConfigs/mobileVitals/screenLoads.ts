@@ -5,7 +5,8 @@ import type {Widget} from 'sentry/views/dashboards/types';
 import type {PrebuiltDashboard} from 'sentry/views/dashboards/utils/prebuiltConfigs';
 import {SpanFields} from 'sentry/views/insights/types';
 
-const TRANSACTION_CONDITION = `is_transaction:true ${SpanFields.TRANSACTION_OP}:[ui.load,navigation]`;
+const TTID_CONDITION = `has:${SpanFields.APP_VITALS_TTID_VALUE} ${SpanFields.TRANSACTION_OP}:[ui.load,navigation]`;
+const TTFD_CONDITION = `has:${SpanFields.APP_VITALS_TTFD_VALUE} ${SpanFields.TRANSACTION_OP}:[ui.load,navigation]`;
 const SPAN_OPERATIONS_CONDITION = `${SpanFields.TRANSACTION_OP}:[ui.load,navigation] has:${SpanFields.SPAN_DESCRIPTION} ${SpanFields.SPAN_OP}:[file.read,file.write,ui.load,navigation,http.client,db,db.sql.room,db.sql.query,db.sql.transaction]`;
 
 const AVG_TTID_BIG_NUMBER_WIDGET: Widget = {
@@ -19,10 +20,10 @@ const AVG_TTID_BIG_NUMBER_WIDGET: Widget = {
   queries: [
     {
       name: '',
-      fields: [`avg(${SpanFields.MEASUREMENTS_TIME_TO_INITIAL_DISPLAY})`],
-      aggregates: [`avg(${SpanFields.MEASUREMENTS_TIME_TO_INITIAL_DISPLAY})`],
+      fields: [`avg(${SpanFields.APP_VITALS_TTID_VALUE})`],
+      aggregates: [`avg(${SpanFields.APP_VITALS_TTID_VALUE})`],
       columns: [],
-      conditions: TRANSACTION_CONDITION,
+      conditions: TTID_CONDITION,
       orderby: '',
     },
   ],
@@ -46,10 +47,10 @@ const AVG_TTFD_BIG_NUMBER_WIDGET: Widget = {
   queries: [
     {
       name: '',
-      fields: [`avg(${SpanFields.MEASUREMENTS_TIME_TO_FULL_DISPLAY})`],
-      aggregates: [`avg(${SpanFields.MEASUREMENTS_TIME_TO_FULL_DISPLAY})`],
+      fields: [`avg(${SpanFields.APP_VITALS_TTFD_VALUE})`],
+      aggregates: [`avg(${SpanFields.APP_VITALS_TTFD_VALUE})`],
       columns: [],
-      conditions: TRANSACTION_CONDITION,
+      conditions: TTFD_CONDITION,
       orderby: '',
     },
   ],
@@ -76,7 +77,7 @@ const TOTAL_COUNT_BIG_NUMBER_WIDGET: Widget = {
       fields: [`count(${SpanFields.SPAN_DURATION})`],
       aggregates: [`count(${SpanFields.SPAN_DURATION})`],
       columns: [],
-      conditions: TRANSACTION_CONDITION,
+      conditions: TTID_CONDITION,
       orderby: '',
     },
   ],
@@ -100,12 +101,12 @@ const AVG_TTID_LINE_WIDGET: Widget = {
   queries: [
     {
       name: 'TTID',
-      fields: [`avg(${SpanFields.MEASUREMENTS_TIME_TO_INITIAL_DISPLAY})`],
-      aggregates: [`avg(${SpanFields.MEASUREMENTS_TIME_TO_INITIAL_DISPLAY})`],
+      fields: [`avg(${SpanFields.APP_VITALS_TTID_VALUE})`],
+      aggregates: [`avg(${SpanFields.APP_VITALS_TTID_VALUE})`],
       columns: [],
       fieldAliases: [],
-      conditions: TRANSACTION_CONDITION,
-      orderby: 'avg(measurements.time_to_initial_display)',
+      conditions: TTID_CONDITION,
+      orderby: `avg(${SpanFields.APP_VITALS_TTID_VALUE})`,
     },
   ],
   layout: {
@@ -128,12 +129,12 @@ const AVG_TTFD_LINE_WIDGET: Widget = {
   queries: [
     {
       name: 'TTFD',
-      fields: [`avg(${SpanFields.MEASUREMENTS_TIME_TO_FULL_DISPLAY})`],
-      aggregates: [`avg(${SpanFields.MEASUREMENTS_TIME_TO_FULL_DISPLAY})`],
+      fields: [`avg(${SpanFields.APP_VITALS_TTFD_VALUE})`],
+      aggregates: [`avg(${SpanFields.APP_VITALS_TTFD_VALUE})`],
       columns: [],
       fieldAliases: [],
-      conditions: TRANSACTION_CONDITION,
-      orderby: 'avg(measurements.time_to_full_display)',
+      conditions: TTFD_CONDITION,
+      orderby: `avg(${SpanFields.APP_VITALS_TTFD_VALUE})`,
     },
   ],
   layout: {
@@ -160,7 +161,7 @@ const TOTAL_COUNT_LINE_WIDGET: Widget = {
       aggregates: [`count(${SpanFields.SPAN_DURATION})`],
       columns: [],
       fieldAliases: [],
-      conditions: TRANSACTION_CONDITION,
+      conditions: TTID_CONDITION,
       orderby: `count(${SpanFields.SPAN_DURATION})`,
     },
   ],
@@ -184,14 +185,11 @@ const TTID_BAR_CHART_WIDGET: Widget = {
   queries: [
     {
       name: '',
-      fields: [
-        SpanFields.DEVICE_CLASS,
-        `avg(${SpanFields.MEASUREMENTS_TIME_TO_INITIAL_DISPLAY})`,
-      ],
-      aggregates: [`avg(${SpanFields.MEASUREMENTS_TIME_TO_INITIAL_DISPLAY})`],
+      fields: [SpanFields.DEVICE_CLASS, `avg(${SpanFields.APP_VITALS_TTID_VALUE})`],
+      aggregates: [`avg(${SpanFields.APP_VITALS_TTID_VALUE})`],
       columns: [SpanFields.DEVICE_CLASS],
       fieldAliases: ['Device Class', 'AVG TTID'],
-      conditions: TRANSACTION_CONDITION,
+      conditions: TTID_CONDITION,
       orderby: `${SpanFields.DEVICE_CLASS}`,
     },
   ],
@@ -215,14 +213,11 @@ const TTFD_BAR_CHART_WIDGET: Widget = {
   queries: [
     {
       name: '',
-      fields: [
-        SpanFields.DEVICE_CLASS,
-        `avg(${SpanFields.MEASUREMENTS_TIME_TO_FULL_DISPLAY})`,
-      ],
-      aggregates: [`avg(${SpanFields.MEASUREMENTS_TIME_TO_FULL_DISPLAY})`],
+      fields: [SpanFields.DEVICE_CLASS, `avg(${SpanFields.APP_VITALS_TTFD_VALUE})`],
+      aggregates: [`avg(${SpanFields.APP_VITALS_TTFD_VALUE})`],
       columns: [SpanFields.DEVICE_CLASS],
       fieldAliases: ['Device Class', 'AVG TTFD'],
-      conditions: TRANSACTION_CONDITION,
+      conditions: TTFD_CONDITION,
       orderby: `${SpanFields.DEVICE_CLASS}`,
     },
   ],

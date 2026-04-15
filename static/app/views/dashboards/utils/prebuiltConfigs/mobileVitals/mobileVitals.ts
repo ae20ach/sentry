@@ -6,6 +6,10 @@ import type {PrebuiltDashboard} from 'sentry/views/dashboards/utils/prebuiltConf
 import {SpanFields} from 'sentry/views/insights/types';
 
 const TRANSACTION_OP_CONDITION = `${SpanFields.TRANSACTION_OP}:[ui.load,navigation]`;
+const COLD_START_CONDITION = `has:${SpanFields.APP_VITALS_START_COLD_VALUE}`;
+const WARM_START_CONDITION = `has:${SpanFields.APP_VITALS_START_WARM_VALUE}`;
+const TTID_CONDITION = `has:${SpanFields.APP_VITALS_TTID_VALUE}`;
+const TTFD_CONDITION = `has:${SpanFields.APP_VITALS_TTFD_VALUE}`;
 
 const COLD_START_BIG_NUMBER_WIDGET: Widget = {
   id: 'cold-start-big-number',
@@ -24,10 +28,10 @@ const COLD_START_BIG_NUMBER_WIDGET: Widget = {
   queries: [
     {
       name: '',
-      fields: [`avg(${SpanFields.APP_START_COLD})`],
-      aggregates: [`avg(${SpanFields.APP_START_COLD})`],
+      fields: [`avg(${SpanFields.APP_VITALS_START_COLD_VALUE})`],
+      aggregates: [`avg(${SpanFields.APP_VITALS_START_COLD_VALUE})`],
       columns: [],
-      conditions: TRANSACTION_OP_CONDITION,
+      conditions: COLD_START_CONDITION,
       orderby: '',
     },
   ],
@@ -57,10 +61,10 @@ const WARM_START_BIG_NUMBER_WIDGET: Widget = {
   queries: [
     {
       name: '',
-      fields: [`avg(${SpanFields.APP_START_WARM})`],
-      aggregates: [`avg(${SpanFields.APP_START_WARM})`],
+      fields: [`avg(${SpanFields.APP_VITALS_START_WARM_VALUE})`],
+      aggregates: [`avg(${SpanFields.APP_VITALS_START_WARM_VALUE})`],
       columns: [],
-      conditions: TRANSACTION_OP_CONDITION,
+      conditions: WARM_START_CONDITION,
       orderby: '',
     },
   ],
@@ -84,10 +88,10 @@ const AVG_TTID_BIG_NUMBER_WIDGET: Widget = {
   queries: [
     {
       name: '',
-      fields: [`avg(${SpanFields.MEASUREMENTS_TIME_TO_INITIAL_DISPLAY})`],
-      aggregates: [`avg(${SpanFields.MEASUREMENTS_TIME_TO_INITIAL_DISPLAY})`],
+      fields: [`avg(${SpanFields.APP_VITALS_TTID_VALUE})`],
+      aggregates: [`avg(${SpanFields.APP_VITALS_TTID_VALUE})`],
       columns: [],
-      conditions: TRANSACTION_OP_CONDITION,
+      conditions: TTID_CONDITION,
       orderby: '',
     },
   ],
@@ -111,10 +115,10 @@ const AVG_TTFD_BIG_NUMBER_WIDGET: Widget = {
   queries: [
     {
       name: '',
-      fields: [`avg(${SpanFields.MEASUREMENTS_TIME_TO_FULL_DISPLAY})`],
-      aggregates: [`avg(${SpanFields.MEASUREMENTS_TIME_TO_FULL_DISPLAY})`],
+      fields: [`avg(${SpanFields.APP_VITALS_TTFD_VALUE})`],
+      aggregates: [`avg(${SpanFields.APP_VITALS_TTFD_VALUE})`],
       columns: [],
-      conditions: TRANSACTION_OP_CONDITION,
+      conditions: TTFD_CONDITION,
       orderby: '',
     },
   ],
@@ -139,14 +143,14 @@ const SLOW_FRAME_RATE_WIDGET: Widget = {
     {
       name: '',
       fields: [
-        `sum(${SpanFields.MOBILE_SLOW_FRAMES})`,
-        `sum(${SpanFields.MOBILE_TOTAL_FRAMES})`,
-        `equation|sum(${SpanFields.MOBILE_SLOW_FRAMES}) / sum(${SpanFields.MOBILE_TOTAL_FRAMES})`,
+        `sum(${SpanFields.APP_VITALS_FRAMES_SLOW_COUNT})`,
+        `sum(${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT})`,
+        `equation|sum(${SpanFields.APP_VITALS_FRAMES_SLOW_COUNT}) / sum(${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT})`,
       ],
       aggregates: [
-        `sum(${SpanFields.MOBILE_SLOW_FRAMES})`,
-        `sum(${SpanFields.MOBILE_TOTAL_FRAMES})`,
-        `equation|sum(${SpanFields.MOBILE_SLOW_FRAMES}) / sum(${SpanFields.MOBILE_TOTAL_FRAMES})`,
+        `sum(${SpanFields.APP_VITALS_FRAMES_SLOW_COUNT})`,
+        `sum(${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT})`,
+        `equation|sum(${SpanFields.APP_VITALS_FRAMES_SLOW_COUNT}) / sum(${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT})`,
       ],
       fieldMeta: [
         null,
@@ -183,14 +187,14 @@ const FROZEN_FRAME_RATE_WIDGET: Widget = {
     {
       name: '',
       fields: [
-        `sum(${SpanFields.MOBILE_FROZEN_FRAMES})`,
-        `sum(${SpanFields.MOBILE_TOTAL_FRAMES})`,
-        `equation|sum(${SpanFields.MOBILE_FROZEN_FRAMES}) / sum(${SpanFields.MOBILE_TOTAL_FRAMES})`,
+        `sum(${SpanFields.APP_VITALS_FRAMES_FROZEN_COUNT})`,
+        `sum(${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT})`,
+        `equation|sum(${SpanFields.APP_VITALS_FRAMES_FROZEN_COUNT}) / sum(${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT})`,
       ],
       aggregates: [
-        `sum(${SpanFields.MOBILE_FROZEN_FRAMES})`,
-        `sum(${SpanFields.MOBILE_TOTAL_FRAMES})`,
-        `equation|sum(${SpanFields.MOBILE_FROZEN_FRAMES}) / sum(${SpanFields.MOBILE_TOTAL_FRAMES})`,
+        `sum(${SpanFields.APP_VITALS_FRAMES_FROZEN_COUNT})`,
+        `sum(${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT})`,
+        `equation|sum(${SpanFields.APP_VITALS_FRAMES_FROZEN_COUNT}) / sum(${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT})`,
       ],
       fieldMeta: [
         null,
@@ -226,8 +230,8 @@ const AVG_FRAME_DELAY_WIDGET: Widget = {
   queries: [
     {
       name: '',
-      fields: [`avg(${SpanFields.MOBILE_FRAMES_DELAY})`],
-      aggregates: [`avg(${SpanFields.MOBILE_FRAMES_DELAY})`],
+      fields: [`avg(${SpanFields.APP_VITALS_FRAMES_DELAY_VALUE})`],
+      aggregates: [`avg(${SpanFields.APP_VITALS_FRAMES_DELAY_VALUE})`],
       columns: [],
       conditions: TRANSACTION_OP_CONDITION,
       orderby: '',
@@ -255,18 +259,18 @@ const APP_START_TABLE: Widget = {
       name: '',
       fields: [
         SpanFields.TRANSACTION,
-        `avg(${SpanFields.APP_START_COLD})`,
-        `avg(${SpanFields.APP_START_WARM})`,
+        `avg(${SpanFields.APP_VITALS_START_COLD_VALUE})`,
+        `avg(${SpanFields.APP_VITALS_START_WARM_VALUE})`,
         `count(${SpanFields.SPAN_DURATION})`,
       ],
       aggregates: [
-        `avg(${SpanFields.APP_START_COLD})`,
-        `avg(${SpanFields.APP_START_WARM})`,
+        `avg(${SpanFields.APP_VITALS_START_COLD_VALUE})`,
+        `avg(${SpanFields.APP_VITALS_START_WARM_VALUE})`,
         `count(${SpanFields.SPAN_DURATION})`,
       ],
       columns: [SpanFields.TRANSACTION],
       fieldAliases: ['Screen', 'Cold Start', 'Warm Start', 'Screen Loads'],
-      conditions: '',
+      conditions: COLD_START_CONDITION,
       orderby: '-count(span.duration)',
       linkedDashboards: [
         {
@@ -299,13 +303,13 @@ const SCREEN_RENDERING_TABLE: Widget = {
       name: '',
       fields: [
         SpanFields.TRANSACTION,
-        `equation|sum(${SpanFields.MOBILE_SLOW_FRAMES})/sum(${SpanFields.MOBILE_TOTAL_FRAMES})`,
-        `equation|sum(${SpanFields.MOBILE_FROZEN_FRAMES})/sum(${SpanFields.MOBILE_TOTAL_FRAMES})`,
+        `equation|sum(${SpanFields.APP_VITALS_FRAMES_SLOW_COUNT})/sum(${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT})`,
+        `equation|sum(${SpanFields.APP_VITALS_FRAMES_FROZEN_COUNT})/sum(${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT})`,
         `count(${SpanFields.SPAN_DURATION})`,
       ],
       aggregates: [
-        `equation|sum(${SpanFields.MOBILE_SLOW_FRAMES})/sum(${SpanFields.MOBILE_TOTAL_FRAMES})`,
-        `equation|sum(${SpanFields.MOBILE_FROZEN_FRAMES})/sum(${SpanFields.MOBILE_TOTAL_FRAMES})`,
+        `equation|sum(${SpanFields.APP_VITALS_FRAMES_SLOW_COUNT})/sum(${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT})`,
+        `equation|sum(${SpanFields.APP_VITALS_FRAMES_FROZEN_COUNT})/sum(${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT})`,
         `count(${SpanFields.SPAN_DURATION})`,
       ],
       columns: [SpanFields.TRANSACTION],
@@ -349,18 +353,18 @@ const SCREEN_LOAD_TABLE: Widget = {
       name: '',
       fields: [
         SpanFields.TRANSACTION,
-        `avg(${SpanFields.MEASUREMENTS_TIME_TO_INITIAL_DISPLAY})`,
-        `avg(${SpanFields.MEASUREMENTS_TIME_TO_FULL_DISPLAY})`,
+        `avg(${SpanFields.APP_VITALS_TTID_VALUE})`,
+        `avg(${SpanFields.APP_VITALS_TTFD_VALUE})`,
         `count(${SpanFields.SPAN_DURATION})`,
       ],
       aggregates: [
-        `avg(${SpanFields.MEASUREMENTS_TIME_TO_INITIAL_DISPLAY})`,
-        `avg(${SpanFields.MEASUREMENTS_TIME_TO_FULL_DISPLAY})`,
+        `avg(${SpanFields.APP_VITALS_TTID_VALUE})`,
+        `avg(${SpanFields.APP_VITALS_TTFD_VALUE})`,
         `count(${SpanFields.SPAN_DURATION})`,
       ],
       columns: [SpanFields.TRANSACTION],
       fieldAliases: ['Screen', 'TTID', 'TTFD', 'Screen Loads'],
-      conditions: '',
+      conditions: TTID_CONDITION,
       orderby: '-count(span.duration)',
       linkedDashboards: [
         {

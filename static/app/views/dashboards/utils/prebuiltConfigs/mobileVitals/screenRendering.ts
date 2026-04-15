@@ -20,14 +20,14 @@ const SPAN_OPERATIONS_TABLE: Widget = {
       fields: [
         SpanFields.SPAN_OP,
         SpanFields.SPAN_DESCRIPTION,
-        `equation|sum(${SpanFields.MOBILE_SLOW_FRAMES})/sum(${SpanFields.MOBILE_TOTAL_FRAMES})`,
-        `equation|sum(${SpanFields.MOBILE_FROZEN_FRAMES})/sum(${SpanFields.MOBILE_TOTAL_FRAMES})`,
-        `avg(${SpanFields.MOBILE_FRAMES_DELAY})`,
+        `equation|sum(${SpanFields.APP_VITALS_FRAMES_SLOW_COUNT})/sum(${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT})`,
+        `equation|sum(${SpanFields.APP_VITALS_FRAMES_FROZEN_COUNT})/sum(${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT})`,
+        `avg(${SpanFields.APP_VITALS_FRAMES_DELAY_VALUE})`,
       ],
       aggregates: [
-        `equation|sum(${SpanFields.MOBILE_SLOW_FRAMES})/sum(${SpanFields.MOBILE_TOTAL_FRAMES})`,
-        `equation|sum(${SpanFields.MOBILE_FROZEN_FRAMES})/sum(${SpanFields.MOBILE_TOTAL_FRAMES})`,
-        `avg(${SpanFields.MOBILE_FRAMES_DELAY})`,
+        `equation|sum(${SpanFields.APP_VITALS_FRAMES_SLOW_COUNT})/sum(${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT})`,
+        `equation|sum(${SpanFields.APP_VITALS_FRAMES_FROZEN_COUNT})/sum(${SpanFields.APP_VITALS_FRAMES_TOTAL_COUNT})`,
+        `avg(${SpanFields.APP_VITALS_FRAMES_DELAY_VALUE})`,
       ],
       columns: [SpanFields.SPAN_OP, SpanFields.SPAN_DESCRIPTION],
       fieldAliases: [
@@ -45,7 +45,7 @@ const SPAN_OPERATIONS_TABLE: Widget = {
         null,
       ],
       conditions: SPAN_OPERATIONS_CONDITION,
-      orderby: '-avg(mobile.frames_delay)',
+      orderby: `-avg(${SpanFields.APP_VITALS_FRAMES_DELAY_VALUE})`,
     },
   ],
   layout: {
