@@ -13,7 +13,7 @@ Good numeric representation is accurate, familiar, consistent, and unambiguous. 
 
 There are three main factors that affect how numeric data is formatted:
 
-1. **Type and Unit**. Sentry supports several known data types and their units. The data type heavily influences the formatting. e.g., the number `1543` could become `"25min"` or `"1.5MiB"` depending on the type and unit.
+1. **Type and Unit**. Sentry supports several known data types and their units. The data type heavily influences the formatting. e.g., if the numeric value `1543` is a duration in seconds, we can format it as `"25min"`. If it's a size in bytes we can format it as `"1.5MiB"`.
 2. **UI Context**. We strive for consistent rendering, but there is some flexibility. In some contexts, we may choose to show more significant digits, or use full unit names as appropriate. This depends on how much space is available, and what the users expect.
 3. **Value**. The specific value of the number affects the rendering. Some values are excessively large, or small. Some values have very high precision. This affects how much space they might take up and what formatting is required.
 
