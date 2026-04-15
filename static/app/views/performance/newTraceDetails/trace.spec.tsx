@@ -1625,7 +1625,7 @@ describe('trace view', () => {
     it.isKnownFlake(
       'highlighted is persisted on node while it is part of the search results',
       async () => {
-        const {container, virtualizedContainer} = await searchTestSetup();
+        const {virtualizedContainer} = await searchTestSetup();
         const searchInput = await screen.findByPlaceholderText('Search in trace');
         await userEvent.type(searchInput, 'trans');
         await waitFor(() => expect(searchInput).toHaveValue('trans'));
@@ -1638,14 +1638,14 @@ describe('trace view', () => {
         await userEvent.click(getVirtualizedRows(virtualizedContainer)[2]!);
         await searchToResolve();
 
-        await assertHighlightedRowAtIndex(container, 2, {timeout: 10_000});
+        await assertHighlightedRowAtIndex(virtualizedContainer, 2, {timeout: 10_000});
 
         await userEvent.type(searchInput, 'act');
         await waitFor(() => expect(searchInput).toHaveValue('transact'));
         await searchToResolve();
 
         // Highlighting is persisted on the row
-        await assertHighlightedRowAtIndex(container, 2, {timeout: 10_000});
+        await assertHighlightedRowAtIndex(virtualizedContainer, 2, {timeout: 10_000});
 
         await userEvent.clear(searchInput);
         await userEvent.click(searchInput);
@@ -1655,7 +1655,9 @@ describe('trace view', () => {
 
         // When there is no match, the highlighting is removed
         await waitFor(() => {
-          expect(container.querySelectorAll('.TraceRow.Highlight')).toHaveLength(0);
+          expect(
+            virtualizedContainer.querySelectorAll('.TraceRow.Highlight')
+          ).toHaveLength(0);
         });
       },
       28_000
@@ -1679,7 +1681,7 @@ describe('trace view', () => {
     it.isKnownFlake(
       'clicking a row that is also a search result updates the result index',
       async () => {
-        const {container, virtualizedContainer} = await searchTestSetup();
+        const {virtualizedContainer} = await searchTestSetup();
 
         const searchInput = await screen.findByPlaceholderText('Search in trace');
         await userEvent.type(searchInput, 'transaction-op-1');
@@ -1687,7 +1689,7 @@ describe('trace view', () => {
 
         await searchToResolve();
 
-        await assertHighlightedRowAtIndex(container, 2);
+        await assertHighlightedRowAtIndex(virtualizedContainer, 2);
         // By default, we highlight the first result
         expect(
           await screen.findByTestId('trace-search-result-iterator')
