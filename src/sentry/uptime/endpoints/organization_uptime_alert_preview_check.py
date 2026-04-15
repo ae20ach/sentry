@@ -30,6 +30,8 @@ logger = logging.getLogger(__name__)
 @cell_silo_endpoint
 class OrganizationUptimeAlertPreviewCheckEndpoint(OrganizationEndpoint):
     owner = ApiOwner.CRONS
+    # This POST previews monitor creation and validation, so it intentionally
+    # uses the same permission surface as creating the alert itself.
     permission_classes = (OrganizationAlertRulePermission,)
 
     publish_status = {

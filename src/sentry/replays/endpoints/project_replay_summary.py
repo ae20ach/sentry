@@ -39,7 +39,7 @@ SEER_POLL_STATE_ENDPOINT_PATH = "/v1/automation/summarize/replay/breadcrumbs/sta
 class ReplaySummaryPermission(ProjectPermission):
     scope_map = {
         "GET": ["event:read", "event:write", "event:admin"],
-        "POST": ["event:write", "event:admin"],
+        "POST": ["event:read", "event:write", "event:admin"],
         "PUT": [],
         "DELETE": [],
     }
@@ -51,6 +51,13 @@ class ProjectReplaySummaryEndpoint(ProjectReplayEndpoint):
     publish_status = {
         "GET": ApiPublishStatus.EXPERIMENTAL,
         "POST": ApiPublishStatus.EXPERIMENTAL,
+    }
+    readonly_mutation_scope_exceptions = {
+        "POST": (
+            "POST starts replay-summary generation but only derives summary data from existing "
+            "replay/event data. It intentionally follows replay read access instead of requiring "
+            "a separate write capability."
+        )
     }
     permission_classes = (ReplaySummaryPermission,)
 
