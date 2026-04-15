@@ -15,7 +15,6 @@ type LogsExportSwitchProps = {
   estimatedRowCount: number;
   isLoading: boolean;
   tableData: OurLogsResponseItem[];
-  threshold: number;
   error?: Error | null;
 };
 
@@ -24,7 +23,6 @@ export function LogsExportSwitch({
   tableData,
   error,
   estimatedRowCount,
-  threshold,
 }: LogsExportSwitchProps) {
   const organization = useOrganization();
   const location = useLocation();
@@ -59,11 +57,7 @@ export function LogsExportSwitch({
   };
 
   return showModalExport ? (
-    <LogsExportModalButton
-      {...exportButtonProps}
-      estimatedRowCount={estimatedRowCount}
-      threshold={threshold}
-    />
+    <LogsExportModalButton {...exportButtonProps} estimatedRowCount={estimatedRowCount} />
   ) : (
     <LogsExportButton {...exportButtonProps} />
   );

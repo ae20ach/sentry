@@ -13,12 +13,11 @@ type LogsExportModalButtonProps = {
   isLoading: boolean;
   queryInfo: LogsQueryInfo;
   tableData: OurLogsResponseItem[];
-  threshold: number;
   error?: Error | null;
 };
 
 export function LogsExportModalButton(props: LogsExportModalButtonProps) {
-  const {estimatedRowCount, isLoading, tableData, error, queryInfo, threshold} = props;
+  const {estimatedRowCount, isLoading, tableData, error, queryInfo} = props;
   const isDataEmpty = !tableData?.length;
   const isDataError = error !== null;
 
@@ -41,7 +40,6 @@ export function LogsExportModalButton(props: LogsExportModalButtonProps) {
             queryInfo={queryInfo}
             estimatedRowCount={estimatedRowCount}
             tableData={tableData}
-            threshold={threshold}
           />
         ));
       }}

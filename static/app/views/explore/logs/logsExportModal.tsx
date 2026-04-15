@@ -45,7 +45,6 @@ type LogsExportModalProps = ModalRenderProps & {
   estimatedRowCount: number;
   queryInfo: LogsQueryInfo;
   tableData: OurLogsResponseItem[];
-  threshold: number;
 };
 
 function generateRowOptions(estimatedRowCount: number) {
