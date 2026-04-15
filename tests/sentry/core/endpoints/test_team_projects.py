@@ -241,6 +241,18 @@ class TeamProjectsCreateTest(APITestCase, TestCase):
         )
 
         assert response.status_code == 201, response.content
+
+    def test_create_with_project_write_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["project:write"])
+
+        response = self.client.post(
+            self.url,
+            self.data,
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 201, response.content
         project = Project.objects.get(id=response.data["id"])
         assert project.name == "foo"
         assert project.teams.first() == self.team

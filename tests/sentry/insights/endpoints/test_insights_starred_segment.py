@@ -82,8 +82,8 @@ class InsightsStarredSegmentTest(APITestCase, SnubaTestCase):
 
         assert response.status_code == 200, response.content
 
-    def test_post_rejects_org_read_token(self) -> None:
-        token = self.create_user_auth_token(user=self.user, scope_list=["org:read"])
+    def test_post_rejects_org_write_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["org:write"])
 
         with self.feature(self.feature_name):
             response = self.client.post(
@@ -94,8 +94,8 @@ class InsightsStarredSegmentTest(APITestCase, SnubaTestCase):
 
         assert response.status_code == 403, response.content
 
-    def test_delete_rejects_org_read_token(self) -> None:
-        token = self.create_user_auth_token(user=self.user, scope_list=["org:read"])
+    def test_delete_rejects_org_write_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["org:write"])
 
         with self.feature(self.feature_name):
             InsightsStarredSegment.objects.create(

@@ -196,8 +196,8 @@ class OrganizationUserReportsPermission(OrganizationPermission):
 
 class OrganizationPinnedSearchPermission(OrganizationPermission):
     scope_map = {
-        "PUT": ["org:searches"],
-        "DELETE": ["org:searches"],
+        "PUT": ["user:preferences"],
+        "DELETE": ["user:preferences"],
     }
 
 
@@ -290,8 +290,8 @@ class OrgAuthTokenPermission(OrganizationPermission):
 class OrganizationFlagWebHookSigningSecretPermission(OrganizationPermission):
     scope_map = {
         "GET": ["org:read", "org:write", "org:admin"],
-        "POST": ["flags:write", "org:write", "org:admin"],
-        "DELETE": ["org:write", "org:admin"],
+        "POST": ["flags:write"],
+        "DELETE": ["flags:write"],
     }
 
 

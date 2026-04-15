@@ -157,11 +157,11 @@ class OrganizationDashboardsStarredOrderTest(StarredDashboardTestCase):
             .values_list("dashboard_id", flat=True)
         ) == [self.dashboard_3.id, self.dashboard_1.id, self.dashboard_2.id]
 
-    def test_cannot_reorder_dashboards_with_org_read_token(self) -> None:
+    def test_cannot_reorder_dashboards_with_org_write_token(self) -> None:
         self.create_dashboard_favorite(self.dashboard_1, self.user, self.organization, 0)
         self.create_dashboard_favorite(self.dashboard_2, self.user, self.organization, 1)
         self.create_dashboard_favorite(self.dashboard_3, self.user, self.organization, 2)
-        token = self.create_user_auth_token(user=self.user, scope_list=["org:read"])
+        token = self.create_user_auth_token(user=self.user, scope_list=["org:write"])
 
         with self.feature("organizations:dashboards-starred-reordering"):
             response = self.client.put(

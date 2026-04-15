@@ -78,8 +78,8 @@ class OrganizationOnboardingTaskEndpointTest(APITestCase):
         assert task.status == OnboardingTaskStatus.COMPLETE
         assert task.user_id == self.member_user.id
 
-    def test_member_cannot_mark_complete_with_org_read_token(self) -> None:
-        token = self.create_user_auth_token(user=self.member_user, scope_list=["org:read"])
+    def test_member_cannot_mark_complete_with_org_write_token(self) -> None:
+        token = self.create_user_auth_token(user=self.member_user, scope_list=["org:write"])
 
         response = self.client.post(
             self.path,
@@ -100,8 +100,8 @@ class OrganizationOnboardingTaskEndpointTest(APITestCase):
         assert response.status_code == 200, response.content
         assert "onboardingTasks" in response.data
 
-    def test_member_cannot_get_tasks_with_org_read_token(self) -> None:
-        token = self.create_user_auth_token(user=self.member_user, scope_list=["org:read"])
+    def test_member_cannot_get_tasks_with_org_write_token(self) -> None:
+        token = self.create_user_auth_token(user=self.member_user, scope_list=["org:write"])
 
         response = self.client.get(
             self.path,

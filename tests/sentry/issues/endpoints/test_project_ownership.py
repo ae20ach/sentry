@@ -220,6 +220,18 @@ class ProjectOwnershipEndpointTestCase(APITestCase):
             "schema": None,
         }
 
+    def test_update_with_project_write_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["project:write"])
+
+        response = self.client.put(
+            self.path,
+            {"raw": "*.js admin@localhost #tiger-team"},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 200, response.content
+
     def test_get_with_project_codeowners_token(self) -> None:
         token = self.create_user_auth_token(user=self.user, scope_list=["project:codeowners"])
 

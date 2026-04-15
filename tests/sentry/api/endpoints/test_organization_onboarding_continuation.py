@@ -61,8 +61,8 @@ class OrganizationOnboardingContinuation(APITestCase):
         builder.return_value.send_async.assert_called_with([self.user.email])
 
     @mock.patch("sentry.api.endpoints.organization_onboarding_continuation_email.MessageBuilder")
-    def test_org_read_token_rejected(self, builder: mock.MagicMock) -> None:
-        token = self.create_user_auth_token(user=self.user, scope_list=["org:read"])
+    def test_org_write_token_rejected(self, builder: mock.MagicMock) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["org:write"])
 
         response = self.client.post(
             self.path,

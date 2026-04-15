@@ -1860,13 +1860,14 @@ SENTRY_READONLY_SCOPES = {
 
 SENTRY_SCOPE_HIERARCHY_MAPPING = {
     "org:read": {"org:read"},
-    "org:write": {"org:read", "org:write", "org:searches"},
+    "org:write": {"org:read", "org:write", "org:searches", "flags:write"},
     "org:admin": {
         "org:read",
         "org:write",
         "org:admin",
         "org:integrations",
         "org:searches",
+        "flags:write",
     },
     "org:integrations": {"org:integrations"},
     "org:searches": {"org:searches"},
@@ -1914,6 +1915,15 @@ SENTRY_SCOPE_HIERARCHY_MAPPING = {
 SENTRY_TOKEN_ONLY_SCOPES = frozenset(
     [
         "project:distribution",  # App distribution/preprod artifacts
+    ]
+)
+
+# Scopes that are valid for first-party session flows and direct tokens, but
+# should not be grantable to third-party API applications or Sentry Apps.
+SENTRY_NON_APP_GRANTABLE_SCOPES = frozenset(
+    [
+        "flags:write",
+        "user:preferences",
     ]
 )
 

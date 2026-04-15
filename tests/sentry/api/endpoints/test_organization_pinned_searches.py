@@ -138,6 +138,28 @@ class CreateOrganizationPinnedSearchTest(APITestCase):
             visibility=Visibility.OWNER_PINNED,
         ).exists()
 
+    def test_put_with_user_preferences_token(self) -> None:
+        token = self.create_user_auth_token(user=self.member, scope_list=["user:preferences"])
+
+        response = self.client.put(
+            self.get_path(self.organization.slug),
+            {"type": SearchType.ISSUE.value, "query": "test", "sort": SortOptions.DATE},
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 201, response.content
+
+    def test_put_rejects_org_write_token(self) -> None:
+        token = self.create_user_auth_token(user=self.member, scope_list=["org:write"])
+
+        response = self.client.put(
+            self.get_path(self.organization.slug),
+            {"type": SearchType.ISSUE.value, "query": "test", "sort": SortOptions.DATE},
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 403, response.content
+
 
 class DeleteOrganizationPinnedSearchTest(APITestCase):
     endpoint = "sentry-api-0-organization-pinned-searches"
@@ -200,3 +222,39 @@ class DeleteOrganizationPinnedSearchTest(APITestCase):
         resp = self.get_response(type=55)
         assert resp.status_code == 400
         assert "Invalid input for `type`" in resp.data["detail"]
+
+    def test_delete_with_user_preferences_token(self) -> None:
+        token = self.create_user_auth_token(user=self.member, scope_list=["user:preferences"])
+        saved_search = SavedSearch.objects.create(
+            organization=self.organization,
+            owner_id=self.member.id,
+            type=SearchType.ISSUE.value,
+            query="wat",
+            visibility=Visibility.OWNER_PINNED,
+        )
+
+        response = self.client.delete(
+            self.get_path(self.organization.slug),
+            {"type": saved_search.type},
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 204, response.content
+
+    def test_delete_rejects_org_write_token(self) -> None:
+        token = self.create_user_auth_token(user=self.member, scope_list=["org:write"])
+        saved_search = SavedSearch.objects.create(
+            organization=self.organization,
+            owner_id=self.member.id,
+            type=SearchType.ISSUE.value,
+            query="wat",
+            visibility=Visibility.OWNER_PINNED,
+        )
+
+        response = self.client.delete(
+            self.get_path(self.organization.slug),
+            {"type": saved_search.type},
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 403, response.content

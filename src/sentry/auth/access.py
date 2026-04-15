@@ -590,7 +590,9 @@ class RpcBackedAccess(Access):
 
 def _wrap_scopes(scopes_upper_bound: Iterable[str] | None) -> frozenset[str] | None:
     if scopes_upper_bound is not None:
-        return frozenset(scopes_upper_bound)
+        from sentry.models.apiscopes import add_scope_hierarchy
+
+        return frozenset(add_scope_hierarchy(list(scopes_upper_bound)))
     return None
 
 

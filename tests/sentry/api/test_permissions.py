@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from types import SimpleNamespace
 
 from django.test import SimpleTestCase
 from django.urls import URLPattern, URLResolver
@@ -6,6 +7,7 @@ from django.urls.resolvers import get_resolver
 from rest_framework.views import APIView
 
 from sentry.api.base import Endpoint
+from sentry.api.bases.organization import OrganizationSearchPermission
 from sentry.api.permissions import (
     DemoSafePermission,
     DisallowImpersonatedTokenCreation,
@@ -75,6 +77,20 @@ class PermissionsTest(DRFPermissionTestCase):
         assert self.superuser_staff_flagged_permission.has_permission(
             self.superuser_request, APIView()
         )
+
+    def test_org_write_scope_satisfies_org_searches_permissions(self) -> None:
+        user = self.create_user()
+        organization = self.create_organization(owner=user, flags=0)
+        permission = OrganizationSearchPermission()
+        auth = SimpleNamespace(get_scopes=lambda: ["org:write"])
+        request = self.make_request(user=user, auth=auth, method="POST")
+        rpc_context = organization_service.get_organization_by_id(
+            id=organization.id, user_id=user.id
+        )
+
+        assert rpc_context
+        assert permission.has_permission(request, APIView())
+        assert permission.has_object_permission(request, APIView(), rpc_context)
 
 
 class DisallowImpersonatedTokenCreationTest(DRFPermissionTestCase):

@@ -49,7 +49,7 @@ def fetch_slugifed_email_username(email: str) -> str:
 
 class OrgProjectPermission(OrganizationPermission):
     scope_map = {
-        "POST": ["project:create", "project:write", "project:admin"],
+        "POST": ["project:create"],
     }
 
 

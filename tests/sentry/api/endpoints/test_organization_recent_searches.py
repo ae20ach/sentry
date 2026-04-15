@@ -185,6 +185,28 @@ class RecentSearchesListTest(APITestCase):
         ]
         self.check_results(issue_recent_searches[1:], search_type=SearchType.ISSUE, query="lde")
 
+    def test_get_with_user_preferences_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["user:preferences"])
+
+        response = self.client.get(
+            self.get_path(self.organization.slug),
+            {"type": SearchType.ISSUE.value},
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 200, response.content
+
+    def test_get_rejects_org_write_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["org:write"])
+
+        response = self.client.get(
+            self.get_path(self.organization.slug),
+            {"type": SearchType.ISSUE.value},
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 403, response.content
+
 
 class RecentSearchesCreateTest(APITestCase):
     endpoint = "sentry-api-0-organization-recent-searches"
@@ -226,3 +248,25 @@ class RecentSearchesCreateTest(APITestCase):
                 query=query,
                 last_seen=the_date,
             ).exists()
+
+    def test_post_with_user_preferences_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["user:preferences"])
+
+        response = self.client.post(
+            self.get_path(self.organization.slug),
+            {"type": SearchType.ISSUE.value, "query": "something"},
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 201, response.content
+
+    def test_post_rejects_org_write_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["org:write"])
+
+        response = self.client.post(
+            self.get_path(self.organization.slug),
+            {"type": SearchType.ISSUE.value, "query": "something"},
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 403, response.content

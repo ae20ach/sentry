@@ -92,6 +92,15 @@ class OAuthDeviceAuthorizationTest(TestCase):
         data = json.loads(resp.content)
         assert data["error"] == "invalid_scope"
 
+    def test_non_app_grantable_scope(self) -> None:
+        resp = self.client.post(
+            self.path,
+            {"client_id": self.application.client_id, "scope": "user:preferences"},
+        )
+        assert resp.status_code == 400
+        data = json.loads(resp.content)
+        assert data["error"] == "invalid_scope"
+
     def test_user_code_format(self) -> None:
         """User code should be in XXXX-XXXX format."""
         resp = self.client.post(self.path, {"client_id": self.application.client_id})

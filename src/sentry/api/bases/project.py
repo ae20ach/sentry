@@ -128,19 +128,19 @@ class ProjectAlertRulePermission(ProjectPermission):
 
 class ProjectOwnershipPermission(ProjectPermission):
     scope_map = {
-        "GET": ["project:codeowners", "project:read", "project:write", "project:admin"],
+        "GET": ["project:codeowners", "project:read"],
         "POST": ["project:write", "project:admin"],
-        "PUT": ["project:codeowners", "project:write", "project:admin"],
+        "PUT": ["project:codeowners"],
         "DELETE": ["project:admin"],
     }
 
 
 class ProjectCodeOwnersPermission(ProjectPermission):
     scope_map = {
-        "GET": ["project:codeowners", "project:read", "project:write", "project:admin"],
-        "POST": ["project:codeowners", "project:write", "project:admin"],
-        "PUT": ["project:codeowners", "project:write", "project:admin"],
-        "DELETE": ["project:codeowners", "project:write", "project:admin"],
+        "GET": ["project:codeowners", "project:read"],
+        "POST": ["project:codeowners"],
+        "PUT": ["project:codeowners"],
+        "DELETE": ["project:codeowners"],
     }
 
 

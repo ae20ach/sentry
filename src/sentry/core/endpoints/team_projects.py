@@ -118,7 +118,7 @@ their own alerts to be notified of new issues.
 class TeamProjectPermission(TeamPermission):
     scope_map = {
         "GET": ["project:read", "project:write", "project:admin"],
-        "POST": ["project:create", "project:write", "project:admin"],
+        "POST": ["project:create"],
         "PUT": ["project:write", "project:admin"],
         "DELETE": ["project:admin"],
     }

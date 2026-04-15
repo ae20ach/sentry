@@ -23,7 +23,7 @@ class StarViewSerializer(serializers.Serializer):
 
 class MemberPermission(OrganizationPermission):
     scope_map = {
-        "POST": ["org:searches"],
+        "POST": ["user:preferences"],
     }
 
 

@@ -64,6 +64,17 @@ class OAuthAuthorizeCodeTest(TestCase):
         assert "code=" not in resp["Location"]
         assert not ApiGrant.objects.filter(user=self.user).exists()
 
+    def test_non_app_grantable_scope(self) -> None:
+        self.login_as(self.user)
+
+        resp = self.client.get(
+            f"{self.path}?response_type=code&client_id={self.application.client_id}&scope=user:preferences"
+        )
+
+        assert resp.status_code == 302
+        assert resp["Location"] == "https://example.com/?error=invalid_scope"
+        assert not ApiGrant.objects.filter(user=self.user).exists()
+
     def test_invalid_redirect_uri(self) -> None:
         self.login_as(self.user)
 
@@ -314,6 +325,17 @@ class OAuthAuthorizeTokenTest(TestCase):
         assert resp.status_code == 302
         assert resp["Location"] == "https://example.com/#error=invalid_scope"
         assert "access_token" not in resp["Location"]
+        assert not ApiToken.objects.filter(user=self.user).exists()
+
+    def test_non_app_grantable_scope(self) -> None:
+        self.login_as(self.user)
+
+        resp = self.client.get(
+            f"{self.path}?response_type=token&client_id={self.application.client_id}&scope=user:preferences"
+        )
+
+        assert resp.status_code == 302
+        assert resp["Location"] == "https://example.com/#error=invalid_scope"
         assert not ApiToken.objects.filter(user=self.user).exists()
 
     def test_minimal_params_approve_flow(self) -> None:
