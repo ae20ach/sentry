@@ -172,7 +172,24 @@ class OrganizationEventsAnomaliesEndpointTest(APITestCase):
     )
     def test_alerts_write_scope_allows_post(self, mock_seer_request: MagicMock) -> None:
         mock_seer_request.return_value = HTTPResponse(
-            orjson.dumps(DetectAnomaliesResponse(success=True, message="", timeseries=[])),
+            orjson.dumps(
+                DetectAnomaliesResponse(
+                    success=True,
+                    message="",
+                    timeseries=[
+                        TimeSeriesPoint(
+                            timestamp=self.current_timestamp_1,
+                            value=2,
+                            anomaly=Anomaly(anomaly_score=-0.1, anomaly_type="none"),
+                        ),
+                        TimeSeriesPoint(
+                            timestamp=self.current_timestamp_2,
+                            value=3,
+                            anomaly=Anomaly(anomaly_score=-0.2, anomaly_type="none"),
+                        ),
+                    ],
+                )
+            ),
             status=200,
         )
         token = self._create_token("alerts:write")

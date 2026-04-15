@@ -447,6 +447,8 @@ class AlertRuleCreateEndpointTest(AlertRuleIndexBase, SnubaTestCase):
         )
 
     def test_create_requires_alerts_write_scope_for_tokens(self) -> None:
+        team = self.create_team(organization=self.organization, members=[self.user])
+        ProjectTeam.objects.create(project=self.project, team=team)
         token = self._create_token("org:read")
 
         with self.feature(["organizations:incidents", "organizations:performance-view"]):
@@ -460,6 +462,8 @@ class AlertRuleCreateEndpointTest(AlertRuleIndexBase, SnubaTestCase):
         assert response.status_code == 403
 
     def test_create_allows_alerts_write_scope_for_tokens(self) -> None:
+        team = self.create_team(organization=self.organization, members=[self.user])
+        ProjectTeam.objects.create(project=self.project, team=team)
         token = self._create_token("alerts:write")
 
         with (
