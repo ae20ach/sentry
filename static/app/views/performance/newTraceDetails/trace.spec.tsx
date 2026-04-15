@@ -1547,8 +1547,7 @@ describe('trace view', () => {
       await assertHighlightedRowAtIndex(container, 1);
     });
 
-    // eslint-disable-next-line jest/no-disabled-tests
-    it.skip('supports roving with arrowup and arrowdown', async () => {
+    it.isKnownFlake('supports roving with arrowup and arrowdown', async () => {
       const {container} = await searchTestSetup();
 
       const searchInput = await screen.findByPlaceholderText('Search in trace');
@@ -1619,39 +1618,40 @@ describe('trace view', () => {
       await assertHighlightedRowAtIndex(container, 6);
     });
 
-    // TODO Abdullah Khan: This is flaky, we need to fix it
-    // eslint-disable-next-line jest/no-disabled-tests
-    it.skip('highlighted is persisted on node while it is part of the search results', async () => {
-      const {container} = await searchTestSetup();
-      const searchInput = await screen.findByPlaceholderText('Search in trace');
-      await userEvent.type(searchInput, 'trans');
-      await waitFor(() => expect(searchInput).toHaveValue('trans'));
-      // Wait for the search results to resolve
-      await searchToResolve();
+    it.isKnownFlake(
+      'highlighted is persisted on node while it is part of the search results',
+      async () => {
+        const {container} = await searchTestSetup();
+        const searchInput = await screen.findByPlaceholderText('Search in trace');
+        await userEvent.type(searchInput, 'trans');
+        await waitFor(() => expect(searchInput).toHaveValue('trans'));
+        // Wait for the search results to resolve
+        await searchToResolve();
 
-      await userEvent.keyboard('{arrowdown}');
-      await searchToResolve();
+        await userEvent.keyboard('{arrowdown}');
+        await searchToResolve();
 
-      await assertHighlightedRowAtIndex(container, 2);
+        await assertHighlightedRowAtIndex(container, 2);
 
-      await userEvent.type(searchInput, 'act');
-      await waitFor(() => expect(searchInput).toHaveValue('transact'));
-      await searchToResolve();
+        await userEvent.type(searchInput, 'act');
+        await waitFor(() => expect(searchInput).toHaveValue('transact'));
+        await searchToResolve();
 
-      // Highlighting is persisted on the row
-      await assertHighlightedRowAtIndex(container, 2);
+        // Highlighting is persisted on the row
+        await assertHighlightedRowAtIndex(container, 2);
 
-      await userEvent.clear(searchInput);
-      await userEvent.click(searchInput);
-      await userEvent.paste('this wont match anything');
-      await waitFor(() => expect(searchInput).toHaveValue('this wont match anything'));
-      await searchToResolve();
+        await userEvent.clear(searchInput);
+        await userEvent.click(searchInput);
+        await userEvent.paste('this wont match anything');
+        await waitFor(() => expect(searchInput).toHaveValue('this wont match anything'));
+        await searchToResolve();
 
-      // When there is no match, the highlighting is removed
-      await waitFor(() => {
-        expect(container.querySelectorAll('.TraceRow.Highlight')).toHaveLength(0);
-      });
-    });
+        // When there is no match, the highlighting is removed
+        await waitFor(() => {
+          expect(container.querySelectorAll('.TraceRow.Highlight')).toHaveLength(0);
+        });
+      }
+    );
 
     it('auto highlights the first result when search begins', async () => {
       const {container} = await searchTestSetup();
@@ -1668,44 +1668,43 @@ describe('trace view', () => {
       await assertHighlightedRowAtIndex(container, 1);
     });
 
-    // TODO Abdullah Khan: This is flaky, and when it flakes it takes over 90s to run
-    // eslint-disable-next-line jest/no-disabled-tests
-    it.skip('clicking a row that is also a search result updates the result index', async () => {
-      const {container, virtualizedContainer} = await searchTestSetup();
+    it.isKnownFlake(
+      'clicking a row that is also a search result updates the result index',
+      async () => {
+        const {container, virtualizedContainer} = await searchTestSetup();
 
-      const searchInput = await screen.findByPlaceholderText('Search in trace');
-      await userEvent.type(searchInput, 'transaction-op-1');
-      await waitFor(() => expect(searchInput).toHaveValue('transaction-op-1'));
+        const searchInput = await screen.findByPlaceholderText('Search in trace');
+        await userEvent.type(searchInput, 'transaction-op-1');
+        await waitFor(() => expect(searchInput).toHaveValue('transaction-op-1'));
 
-      await searchToResolve();
+        await searchToResolve();
 
-      await assertHighlightedRowAtIndex(container, 2);
-      const rows = getVirtualizedRows(virtualizedContainer);
-      // By default, we highlight the first result
-      expect(await screen.findByTestId('trace-search-result-iterator')).toHaveTextContent(
-        '1/2'
-      );
+        await assertHighlightedRowAtIndex(container, 2);
+        const rows = getVirtualizedRows(virtualizedContainer);
+        // By default, we highlight the first result
+        expect(
+          await screen.findByTestId('trace-search-result-iterator')
+        ).toHaveTextContent('1/2');
 
-      // Click on a random row in the list that is not a search result
-      await userEvent.click(rows[5]!);
-      await waitFor(() => {
-        expect(screen.queryByTestId('trace-search-result-iterator')).toHaveTextContent(
-          '-/2'
-        );
-      });
+        // Click on a random row in the list that is not a search result
+        await userEvent.click(rows[5]!);
+        await waitFor(() => {
+          expect(screen.queryByTestId('trace-search-result-iterator')).toHaveTextContent(
+            '-/2'
+          );
+        });
 
-      // Click on a the row in the list that is a search result
-      await userEvent.click(rows[2]!);
-      await waitFor(() => {
-        expect(screen.queryByTestId('trace-search-result-iterator')).toHaveTextContent(
-          '1/2'
-        );
-      });
-    });
+        // Click on a the row in the list that is a search result
+        await userEvent.click(rows[2]!);
+        await waitFor(() => {
+          expect(screen.queryByTestId('trace-search-result-iterator')).toHaveTextContent(
+            '1/2'
+          );
+        });
+      }
+    );
 
-    // Really flakey, blocking deploys
-    // eslint-disable-next-line jest/no-disabled-tests
-    it.skip('during search, expanding a row retriggers search', async () => {
+    it.isKnownFlake('during search, expanding a row retriggers search', async () => {
       mockPerformanceSubscriptionDetailsResponse();
       mockProjectDetailsResponse();
 
@@ -1979,37 +1978,38 @@ describe('trace view', () => {
       });
     });
 
-    // TODO Abdullah Khan: This is flaky, and when it flakes it takes over 90s to run
-    // eslint-disable-next-line jest/no-disabled-tests
-    it.skip('clicking a node that is already open in a tab switches to that tab and persists the previous node', async () => {
-      const {virtualizedContainer} = await simpleTestSetup();
-      const rows = getVirtualizedRows(virtualizedContainer);
-      expect(screen.queryAllByTestId(DRAWER_TABS_TEST_ID)).toHaveLength(0);
+    it.isKnownFlake(
+      'clicking a node that is already open in a tab switches to that tab and persists the previous node',
+      async () => {
+        const {virtualizedContainer} = await simpleTestSetup();
+        const rows = getVirtualizedRows(virtualizedContainer);
+        expect(screen.queryAllByTestId(DRAWER_TABS_TEST_ID)).toHaveLength(0);
 
-      await userEvent.click(rows[5]!);
-      await waitFor(() => {
-        expect(screen.queryAllByTestId(DRAWER_TABS_TEST_ID)).toHaveLength(1);
-      });
+        await userEvent.click(rows[5]!);
+        await waitFor(() => {
+          expect(screen.queryAllByTestId(DRAWER_TABS_TEST_ID)).toHaveLength(1);
+        });
 
-      await userEvent.click(await screen.findByTestId(DRAWER_TABS_PIN_BUTTON_TEST_ID));
-      await userEvent.click(rows[7]!);
+        await userEvent.click(await screen.findByTestId(DRAWER_TABS_PIN_BUTTON_TEST_ID));
+        await userEvent.click(rows[7]!);
 
-      await waitFor(() => {
-        expect(screen.queryAllByTestId(DRAWER_TABS_TEST_ID)).toHaveLength(2);
-      });
-      expect(screen.queryAllByTestId(DRAWER_TABS_TEST_ID)[1]).toHaveAttribute(
-        'aria-selected',
-        'true'
-      );
-
-      await userEvent.click(rows[5]!);
-      await waitFor(() => {
+        await waitFor(() => {
+          expect(screen.queryAllByTestId(DRAWER_TABS_TEST_ID)).toHaveLength(2);
+        });
         expect(screen.queryAllByTestId(DRAWER_TABS_TEST_ID)[1]).toHaveAttribute(
           'aria-selected',
           'true'
         );
-      });
-      expect(screen.queryAllByTestId(DRAWER_TABS_TEST_ID)).toHaveLength(2);
-    });
+
+        await userEvent.click(rows[5]!);
+        await waitFor(() => {
+          expect(screen.queryAllByTestId(DRAWER_TABS_TEST_ID)[1]).toHaveAttribute(
+            'aria-selected',
+            'true'
+          );
+        });
+        expect(screen.queryAllByTestId(DRAWER_TABS_TEST_ID)).toHaveLength(2);
+      }
+    );
   });
 });
