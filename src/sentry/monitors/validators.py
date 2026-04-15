@@ -74,6 +74,7 @@ IntervalNames = Literal["year", "month", "week", "day", "hour", "minute"]
 INTERVAL_NAMES = ("year", "month", "week", "day", "hour", "minute")
 
 CRONTAB_WHITESPACE = re.compile(r"\s+")
+MONITOR_PROJECT_SCOPES = ("project:read", "org:write", "org:admin", "alerts:write")
 
 # XXX(dcramer): @reboot is not supported (as it cannot be)
 NONSTANDARD_CRONTAB_SCHEDULES = {
@@ -312,7 +313,7 @@ class ConfigValidator(serializers.Serializer):
 @extend_schema_serializer(exclude_fields=["alert_rule"])
 class MonitorValidator(CamelSnakeSerializer):
     project = ProjectField(
-        scope="project:read",
+        scope=MONITOR_PROJECT_SCOPES,
         required=True,
         help_text="The project slug to associate the monitor to.",
     )
