@@ -527,80 +527,50 @@ class AbstractQueryExecutor(metaclass=ABCMeta):
         if get_sample:
             sort_field = "sample"
 
-        result = [(row["group_id"], row[sort_field]) for row in rows], total  # type: ignore[literal-required]
+        snuba_result = [(row["group_id"], row[sort_field]) for row in rows], total  # type: ignore[literal-required]
+        result = snuba_result
 
         # Double-read from EAP for supported sort strategies
-        if not get_sample and sort_field in EAP_SORT_STRATEGIES:
-            result = self._maybe_double_read_eap(
-                result,
-                start=start,
-                end=end,
-                project_ids=project_ids,
-                environment_ids=environment_ids,
-                sort_field=sort_field,
-                organization=organization,
-                group_ids=group_ids,
-                limit=limit,
-                offset=offset,
-                search_filters=snuba_search_filters,
-                referrer=referrer,
-            )
+        callsite = "PostgresSnubaQueryExecutor.snuba_search"
+        if (
+            not get_sample
+            and sort_field in EAP_SORT_STRATEGIES
+            and EAPOccurrencesComparator.should_check_experiment(callsite)
+        ):
+            try:
+                eap_result = run_eap_group_search(
+                    start=start,
+                    end=end,
+                    project_ids=project_ids,
+                    environment_ids=environment_ids,
+                    sort_field=sort_field,
+                    organization=organization,
+                    group_ids=group_ids,
+                    limit=limit,
+                    offset=offset,
+                    search_filters=snuba_search_filters,
+                    referrer=referrer,
+                )
+                result = EAPOccurrencesComparator.check_and_choose(
+                    snuba_result,
+                    eap_result,
+                    callsite,
+                    is_experimental_data_a_null_result=len(eap_result[0]) == 0,
+                    reasonable_match_comparator=_reasonable_search_result_match,
+                    debug_context={
+                        "sort_field": sort_field,
+                        "organization_id": organization.id,
+                        "num_group_ids": len(group_ids) if group_ids else 0,
+                        "num_filters": len(snuba_search_filters),
+                    },
+                )
+            except Exception:
+                logger.exception(
+                    "eap.double_read.snuba_search_failed",
+                    extra={"callsite": callsite, "sort_field": sort_field},
+                )
 
         return result
-
-    @staticmethod
-    def _maybe_double_read_eap(
-        legacy_result: tuple[list[tuple[int, Any]], int],
-        *,
-        start: datetime,
-        end: datetime,
-        project_ids: Sequence[int],
-        environment_ids: Sequence[int] | None,
-        sort_field: str,
-        organization: Organization,
-        group_ids: Sequence[int] | None,
-        limit: int | None,
-        offset: int,
-        search_filters: Sequence[SearchFilter],
-        referrer: str,
-    ) -> tuple[list[tuple[int, Any]], int]:
-        callsite = "PostgresSnubaQueryExecutor.snuba_search"
-        if not EAPOccurrencesComparator.should_check_experiment(callsite):
-            return legacy_result
-
-        try:
-            eap_result = run_eap_group_search(
-                start=start,
-                end=end,
-                project_ids=project_ids,
-                environment_ids=environment_ids,
-                sort_field=sort_field,
-                organization=organization,
-                group_ids=group_ids,
-                limit=limit,
-                offset=offset,
-                search_filters=search_filters,
-                referrer=referrer,
-            )
-            return EAPOccurrencesComparator.check_and_choose(
-                control_data=legacy_result,
-                experimental_data=eap_result,
-                callsite=callsite,
-                is_experimental_data_a_null_result=len(eap_result[0]) == 0,
-                reasonable_match_comparator=_reasonable_search_result_match,
-                debug_context={
-                    "sort_field": sort_field,
-                    "organization_id": organization.id,
-                    "num_group_ids": len(group_ids) if group_ids else 0,
-                    "num_filters": len(search_filters),
-                },
-            )
-        except Exception:
-            logger.exception(
-                "eap.double_read.snuba_search_failed",
-                extra={"sort_field": sort_field},
-            )
-            return legacy_result
 
     def has_sort_strategy(self, sort_by: str) -> bool:
         return sort_by in self.sort_strategies.keys()
