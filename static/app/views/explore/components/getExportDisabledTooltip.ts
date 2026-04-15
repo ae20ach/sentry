@@ -6,9 +6,7 @@ interface ExportDisabledTooltipOptions {
   isDataLoading?: boolean;
 }
 
-export function getExportDisabledTooltip(
-  props: ExportDisabledTooltipOptions
-): string | undefined {
+export function getExportDisabledTooltip(props: ExportDisabledTooltipOptions) {
   if (props.isDataLoading) {
     return t('Loading...');
   }

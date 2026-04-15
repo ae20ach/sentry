@@ -363,11 +363,11 @@ describe('LogsPage', () => {
       expect(switchInput).not.toBeChecked();
       expect(switchInput).toBeEnabled();
 
-      // 3 calls total
+      // 5 calls total
       // - one for the table
-      // - one for the normal sample mode count
-      // - one for the high accuracy sample mode count
-      expect(eventTableMock).toHaveBeenCalledTimes(3);
+      // - two for raw counts (normal + high accuracy) with no search query
+      // - two for raw counts (normal + high accuracy) with the current search query
+      expect(eventTableMock).toHaveBeenCalledTimes(5);
 
       eventTableMock.mockClear();
       eventTableMock = setupEventsMock(autorefreshBaseFixtures.slice(0, 5));
