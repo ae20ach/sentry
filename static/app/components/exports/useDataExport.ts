@@ -26,7 +26,7 @@ interface DataExportOptions {
   unmountedRef?: React.RefObject<boolean>;
 }
 
-type DataExportFormat = 'csv' | 'json';
+export type DataExportFormat = 'csv' | 'jsonl';
 
 interface DataExportData {
   checksum: null;

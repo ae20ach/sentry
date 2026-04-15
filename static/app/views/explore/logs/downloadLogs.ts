@@ -1,11 +1,12 @@
+import type {DataExportFormat} from 'sentry/components/exports/useDataExport';
 import {downloadLogsAsCsv} from 'sentry/views/explore/logs/downloadLogsAsCsv';
-import {downloadLogsAsJson} from 'sentry/views/explore/logs/downloadLogsAsJson';
+import {downloadLogsAsJsonl} from 'sentry/views/explore/logs/downloadLogsAsJsonl';
 import type {OurLogFieldKey, OurLogsResponseItem} from 'sentry/views/explore/logs/types';
 
 interface DownloadLogsOptions {
   fields: OurLogFieldKey[];
   filename: string;
-  format: 'csv' | 'json';
+  format: DataExportFormat;
   tableData: OurLogsResponseItem[];
   limit?: number;
 }
@@ -20,7 +21,7 @@ export function downloadLogs({
   switch (format) {
     case 'csv':
       return downloadLogsAsCsv(tableData.slice(0, limit), fields, filename);
-    case 'json':
-      return downloadLogsAsJson(tableData, filename);
+    case 'jsonl':
+      return downloadLogsAsJsonl(tableData, filename);
   }
 }

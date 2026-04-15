@@ -35,7 +35,7 @@ const ROW_COUNT_VALUES = [
 
 const exportModalFormSchema = z.object({
   allColumns: z.boolean(),
-  format: z.enum(['csv', 'json']),
+  format: z.enum(['csv', 'jsonl']),
   limit: z.number(),
 });
 
@@ -139,7 +139,7 @@ export function LogsExportModal({
               >
                 <field.Layout.Stack label={t('Format')}>
                   <field.Radio.Item value="csv">{t('CSV')}</field.Radio.Item>
-                  <field.Radio.Item value="json">{t('JSON')}</field.Radio.Item>
+                  <field.Radio.Item value="jsonl">{t('JSONL')}</field.Radio.Item>
                 </field.Layout.Stack>
               </field.Radio.Group>
             )}
