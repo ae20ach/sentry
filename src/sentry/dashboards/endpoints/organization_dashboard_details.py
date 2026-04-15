@@ -43,6 +43,52 @@ DASHBOARD_REVISION_SNAPSHOT_SCHEMA_VERSION = 1
 DASHBOARD_REVISION_RETENTION_LIMIT = 10
 
 
+def _take_dashboard_snapshot(
+    organization: Organization,
+    dashboard: Dashboard | dict[Any, Any] | None,
+    user: Any,
+) -> dict[str, Any] | None:
+    """
+    Serialize the current dashboard state as a snapshot, or return None if the
+    revisions feature is disabled or the dashboard has no DB record to snapshot.
+
+    Must be called outside any transaction.atomic block because the serializer
+    makes hybrid-cloud RPC calls (user_service.serialize_many) that cannot run
+    inside a transaction.
+    """
+    if not isinstance(dashboard, Dashboard):
+        return None
+    if not features.has(REVISIONS_FEATURE, organization, actor=user):
+        return None
+    return serialize(dashboard, user)
+
+
+def _save_dashboard_revision(
+    dashboard: Dashboard,
+    user: Any,
+    snapshot: dict[str, Any],
+) -> None:
+    """
+    Create a DashboardRevision for the given snapshot and prune any revisions
+    beyond the retention limit. Must be called inside a transaction.atomic block.
+    """
+    revision = DashboardRevision.objects.create(
+        dashboard=dashboard,
+        created_by_id=user.id if user.is_authenticated else None,
+        title=dashboard.title,
+        snapshot=snapshot,
+        snapshot_schema_version=DASHBOARD_REVISION_SNAPSHOT_SCHEMA_VERSION,
+    )
+    old_revision_ids = list(
+        DashboardRevision.objects.filter(dashboard=dashboard)
+        .exclude(id=revision.id)
+        .order_by("-date_added")
+        .values_list("id", flat=True)[DASHBOARD_REVISION_RETENTION_LIMIT - 1 :]
+    )
+    if old_revision_ids:
+        DashboardRevision.objects.filter(id__in=old_revision_ids).delete()
+
+
 class OrganizationDashboardBase(OrganizationEndpoint):
     owner = ApiOwner.DASHBOARDS
     permission_classes = (OrganizationDashboardsPermission,)
@@ -212,32 +258,12 @@ class OrganizationDashboardDetailsEndpoint(OrganizationDashboardBase):
                     {"detail": "Cannot change the title of prebuilt Dashboards."}, status=409
                 )
 
-        # Serialize outside the transaction to avoid making RPC calls inside a transaction.
-        # The snapshot captures the dashboard state before the update is applied.
-        create_revision = features.has(
-            REVISIONS_FEATURE, organization, actor=request.user
-        ) and isinstance(dashboard, Dashboard)
-        snapshot = serialize(dashboard, request.user) if create_revision else None
+        snapshot = _take_dashboard_snapshot(organization, dashboard, request.user)
 
         try:
             with transaction.atomic(router.db_for_write(DashboardTombstone)):
-                if create_revision and snapshot is not None:
-                    revision = DashboardRevision.objects.create(
-                        dashboard=dashboard,
-                        created_by_id=(request.user.id if request.user.is_authenticated else None),
-                        title=dashboard.title,
-                        snapshot=snapshot,
-                        snapshot_schema_version=DASHBOARD_REVISION_SNAPSHOT_SCHEMA_VERSION,
-                    )
-                    # Keep only the most recent revisions; delete the rest
-                    old_revision_ids = list(
-                        DashboardRevision.objects.filter(dashboard=dashboard)
-                        .exclude(id=revision.id)
-                        .order_by("-date_added")
-                        .values_list("id", flat=True)[DASHBOARD_REVISION_RETENTION_LIMIT - 1 :]
-                    )
-                    if old_revision_ids:
-                        DashboardRevision.objects.filter(id__in=old_revision_ids).delete()
+                if snapshot is not None:
+                    _save_dashboard_revision(dashboard, request.user, snapshot)
                 serializer.save()
                 if tombstone:
                     DashboardTombstone.objects.get_or_create(
