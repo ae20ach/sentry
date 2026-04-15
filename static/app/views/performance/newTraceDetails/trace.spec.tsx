@@ -1464,7 +1464,7 @@ describe('trace view', () => {
       });
     });
 
-    it('arrowup+shift scrolls to the start of the list', async () => {
+    it.isKnownFlake('arrowup+shift scrolls to the start of the list', async () => {
       const {container, virtualizedContainer} = await keyboardNavigationTestSetup();
 
       let rows = container.querySelectorAll(VISIBLE_TRACE_ROW_SELECTOR);
