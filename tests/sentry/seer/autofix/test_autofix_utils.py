@@ -1342,6 +1342,15 @@ class TestReadPreferenceFromSentryDb(TestCase):
         assert result.autofix_automation_tuning == AutofixAutomationTuningSettings.HIGH
         assert result.repositories == []
 
+    def test_autofix_automation_tuning_default_alone_returns_none(self):
+        """Setting autofix_automation_tuning to its default (OFF) should not count as configured."""
+        self.project.update_option(
+            "sentry:autofix_automation_tuning", AutofixAutomationTuningSettings.OFF
+        )
+
+        result = read_preference_from_sentry_db(self.project)
+        assert result is None
+
     def test_project_with_stopping_point_only(self):
         self.project.update_option("sentry:seer_automated_run_stopping_point", "open_pr")
 
@@ -1538,6 +1547,15 @@ class TestBulkReadPreferencesFromSentryDb(TestCase):
         pref = result[self.project1.id]
         assert pref is not None
         assert pref.autofix_automation_tuning == AutofixAutomationTuningSettings.OFF
+
+    def test_autofix_automation_tuning_default_alone_returns_none(self):
+        """Setting autofix_automation_tuning to its default (OFF) should not count as configured."""
+        self.project1.update_option(
+            "sentry:autofix_automation_tuning", AutofixAutomationTuningSettings.OFF
+        )
+
+        result = bulk_read_preferences_from_sentry_db(self.organization.id, [self.project1.id])
+        assert result[self.project1.id] is None
 
     def test_wrong_organization_excluded(self):
         other_org = self.create_organization()

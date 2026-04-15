@@ -750,7 +750,8 @@ def read_preference_from_sentry_db(project: Project) -> SeerProjectPreference | 
     ]
 
     has_configured_options = any(
-        ProjectOption.objects.isset(project, key) for key in SEER_PROJECT_PREFERENCE_OPTION_KEYS
+        project.get_option(key) != projectoptions.get_well_known_default(key, project=project)
+        for key in SEER_PROJECT_PREFERENCE_OPTION_KEYS
     )
     if not repo_definitions and not has_configured_options:
         return None
@@ -797,6 +798,8 @@ def bulk_read_preferences_from_sentry_db(
     for project in projects:
         has_configured_options = any(
             project_options[key][project.id] is not None
+            and project_options[key][project.id]
+            != projectoptions.get_well_known_default(key, project=project)
             for key in SEER_PROJECT_PREFERENCE_OPTION_KEYS
         )
         if project.id not in repo_definitions_by_project and not has_configured_options:
