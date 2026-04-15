@@ -35,6 +35,7 @@ MAX_CONNECTION_ERRORS = 10
 # When the number of remaining API requests is less than this value, it will
 # fall back to the cache.
 MINIMUM_REQUESTS_REMAINING = 200
+NOT_FOUND_CACHE_SECONDS = 3600 * 24
 
 
 class RepoTreesIntegration(ABC):
@@ -211,6 +212,16 @@ class RepoTreesIntegration(ABC):
                 )
                 cache.set(key, [], self.CACHE_SECONDS + shifted_seconds)
                 tree = None
+            except ApiError as error:
+                if _is_not_found_error(error):
+                    logger.info(
+                        "Caching empty files result for missing repo or ref",
+                        extra={"repo": repo_full_name},
+                    )
+                    cache.set(key, [], NOT_FOUND_CACHE_SECONDS)
+                    tree = None
+                else:
+                    raise
             if tree:
                 # Keep files; discard directories
                 repo_files = [node["path"] for node in tree if node["type"] == "blob"]
@@ -296,3 +307,11 @@ def should_include(file_path: str) -> bool:
     if any(file_path.startswith(path) for path in EXCLUDED_PATHS):
         return False
     return True
+
+
+def _is_not_found_error(error: ApiError) -> bool:
+    if error.code == 404:
+        return True
+
+    error_message = error.json.get("message") if error.json else error.text
+    return error_message in ("Not Found", "Not Found.")
