@@ -30,6 +30,7 @@ from sentry.models.dashboard import (
     Dashboard,
     DashboardFavoriteUser,
     DashboardLastVisited,
+    DashboardRevision,
     DashboardTombstone,
 )
 from sentry.models.organization import Organization
@@ -37,6 +38,9 @@ from sentry.models.organizationmember import OrganizationMember
 
 EDIT_FEATURE = "organizations:dashboards-edit"
 READ_FEATURE = "organizations:dashboards-basic"
+REVISIONS_FEATURE = "organizations:dashboards-revisions"
+DASHBOARD_REVISION_SNAPSHOT_SCHEMA_VERSION = 1
+DASHBOARD_REVISION_RETENTION_LIMIT = 10
 
 
 class OrganizationDashboardBase(OrganizationEndpoint):
@@ -208,8 +212,32 @@ class OrganizationDashboardDetailsEndpoint(OrganizationDashboardBase):
                     {"detail": "Cannot change the title of prebuilt Dashboards."}, status=409
                 )
 
+        # Serialize outside the transaction to avoid making RPC calls inside a transaction.
+        # The snapshot captures the dashboard state before the update is applied.
+        create_revision = features.has(
+            REVISIONS_FEATURE, organization, actor=request.user
+        ) and isinstance(dashboard, Dashboard)
+        snapshot = serialize(dashboard, request.user) if create_revision else None
+
         try:
             with transaction.atomic(router.db_for_write(DashboardTombstone)):
+                if create_revision and snapshot is not None:
+                    revision = DashboardRevision.objects.create(
+                        dashboard=dashboard,
+                        created_by_id=(request.user.id if request.user.is_authenticated else None),
+                        title=dashboard.title,
+                        snapshot=snapshot,
+                        snapshot_schema_version=DASHBOARD_REVISION_SNAPSHOT_SCHEMA_VERSION,
+                    )
+                    # Keep only the most recent revisions; delete the rest
+                    old_revision_ids = list(
+                        DashboardRevision.objects.filter(dashboard=dashboard)
+                        .exclude(id=revision.id)
+                        .order_by("-date_added")
+                        .values_list("id", flat=True)[DASHBOARD_REVISION_RETENTION_LIMIT - 1 :]
+                    )
+                    if old_revision_ids:
+                        DashboardRevision.objects.filter(id__in=old_revision_ids).delete()
                 serializer.save()
                 if tombstone:
                     DashboardTombstone.objects.get_or_create(
