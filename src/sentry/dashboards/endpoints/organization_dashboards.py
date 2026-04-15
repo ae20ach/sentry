@@ -303,9 +303,9 @@ def sync_prebuilt_dashboards(organization: Organization) -> None:
 class OrganizationDashboardsPermission(OrganizationPermission):
     scope_map = {
         "GET": ["org:read", "org:write", "org:admin"],
-        "POST": ["org:write", "org:admin"],
-        "PUT": ["org:write", "org:admin"],
-        "DELETE": ["org:write", "org:admin"],
+        "POST": ["org:read", "org:write", "org:admin"],
+        "PUT": ["org:read", "org:write", "org:admin"],
+        "DELETE": ["org:read", "org:write", "org:admin"],
     }
 
     def has_object_permission(
