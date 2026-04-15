@@ -250,8 +250,6 @@ export function AggregatesTab({traceMetric, isMetricOptionsEmpty}: AggregatesTab
           }
 
           const direction = sorts.find(s => s.field === field)?.kind;
-          const canSort =
-            displayColumns.find(column => column.key === field)?.isSortable !== false;
 
           function updateSort() {
             const kind = direction === 'desc' ? 'asc' : 'desc';
@@ -268,7 +266,7 @@ export function AggregatesTab({traceMetric, isMetricOptionsEmpty}: AggregatesTab
               }
               isSticky={isLastColumn(i)}
               sort={direction}
-              handleSortClick={canSort ? updateSort : undefined}
+              handleSortClick={updateSort}
             >
               <Tooltip showOnlyOnOverflow title={label}>
                 {label}
