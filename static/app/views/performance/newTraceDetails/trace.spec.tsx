@@ -779,6 +779,7 @@ const DRAWER_TABS_TEST_ID = 'trace-drawer-tab';
 const DRAWER_TABS_PIN_BUTTON_TEST_ID = 'trace-drawer-tab-pin-button';
 const VISIBLE_TRACE_ROW_SELECTOR = '.TraceRow:not(.Hidden)';
 const ACTIVE_SEARCH_HIGHLIGHT_ROW = '.TraceRow.SearchResult.Highlight:not(.Hidden)';
+const VISIBLE_SEARCH_RESULT_ROW_SELECTOR = `${VISIBLE_TRACE_ROW_SELECTOR}.SearchResult`;
 
 const searchToResolve = async (): Promise<void> => {
   await screen.findByTestId('trace-search-success', undefined, {timeout: 10_000});
@@ -1633,19 +1634,37 @@ describe('trace view', () => {
         await searchToResolve();
 
         await waitFor(() => {
-          expect(getVirtualizedRows(virtualizedContainer)[2]).toBeTruthy();
+          expect(
+            virtualizedContainer.querySelectorAll(VISIBLE_SEARCH_RESULT_ROW_SELECTOR)
+              .length
+          ).toBeGreaterThanOrEqual(2);
         });
-        await userEvent.click(getVirtualizedRows(virtualizedContainer)[2]!);
+        await userEvent.click(
+          virtualizedContainer.querySelectorAll(VISIBLE_SEARCH_RESULT_ROW_SELECTOR)[1]!
+        );
         await searchToResolve();
 
-        await assertHighlightedRowAtIndex(virtualizedContainer, 2, {timeout: 10_000});
+        let persistedTransactionOp = '';
+        await waitFor(() => {
+          const active = virtualizedContainer.querySelector(ACTIVE_SEARCH_HIGHLIGHT_ROW);
+          expect(active).toBeTruthy();
+          persistedTransactionOp = (
+            active!.querySelector('.TraceOperation') as HTMLElement
+          ).textContent!.trim();
+        });
 
         await userEvent.type(searchInput, 'act');
         await waitFor(() => expect(searchInput).toHaveValue('transact'));
         await searchToResolve();
 
         // Highlighting is persisted on the row
-        await assertHighlightedRowAtIndex(virtualizedContainer, 2, {timeout: 10_000});
+        await waitFor(() => {
+          const active = virtualizedContainer.querySelector(ACTIVE_SEARCH_HIGHLIGHT_ROW);
+          expect(active).toBeTruthy();
+          expect(
+            (active!.querySelector('.TraceOperation') as HTMLElement).textContent!.trim()
+          ).toBe(persistedTransactionOp);
+        });
 
         await userEvent.clear(searchInput);
         await userEvent.click(searchInput);
