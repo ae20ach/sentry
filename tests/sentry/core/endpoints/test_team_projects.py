@@ -1,6 +1,8 @@
 from unittest import TestCase, mock
 from unittest.mock import MagicMock, Mock, patch
 
+from django.urls import reverse
+
 from sentry.constants import RESERVED_PROJECT_SLUGS
 from sentry.ingest import inbound_filters
 from sentry.models.options.project_option import ProjectOption
@@ -51,6 +53,13 @@ class TeamProjectsCreateTest(APITestCase, TestCase):
         self.team = self.create_team(members=[self.user])
         self.data = {"name": "foo", "slug": "bar", "platform": "python"}
         self.login_as(user=self.user)
+        self.url = reverse(
+            self.endpoint,
+            kwargs={
+                "organization_id_or_slug": self.organization.slug,
+                "team_id_or_slug": self.team.slug,
+            },
+        )
 
     def test_simple(self) -> None:
         response = self.get_success_response(
@@ -220,6 +229,45 @@ class TeamProjectsCreateTest(APITestCase, TestCase):
             slug="test-3",
             platform="python",
         )
+
+    def test_create_with_project_create_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["project:create"])
+
+        response = self.client.post(
+            self.url,
+            self.data,
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 201, response.content
+
+    def test_create_with_project_write_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["project:write"])
+
+        response = self.client.post(
+            self.url,
+            self.data,
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 201, response.content
+        project = Project.objects.get(id=response.data["id"])
+        assert project.name == "foo"
+        assert project.teams.first() == self.team
+
+    def test_create_rejects_project_read_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["project:read"])
+
+        response = self.client.post(
+            self.url,
+            self.data,
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 403, response.content
 
     def test_default_inbound_filters(self) -> None:
         filters = ["browser-extensions", "legacy-browsers", "web-crawlers", "filtered-transaction"]

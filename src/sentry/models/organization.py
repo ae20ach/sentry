@@ -537,6 +537,8 @@ class Organization(ReplicatedCellModel):
             scopes.discard("event:admin")
         if not self.get_option("sentry:alerts_member_write", ALERTS_MEMBER_WRITE_DEFAULT):
             scopes.discard("alerts:write")
+        if role.id == "member" and self.flags.disable_member_project_creation:
+            scopes.discard("project:create")
         return frozenset(scopes)
 
     def get_option(

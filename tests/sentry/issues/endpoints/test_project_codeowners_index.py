@@ -50,6 +50,47 @@ class ProjectCodeOwnersEndpointTestCase(APITestCase):
         assert resp.status_code == 403
         assert resp.data == {"detail": "You do not have permission to perform this action."}
 
+    def test_get_with_project_codeowners_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["project:codeowners"])
+
+        with self.feature({"organizations:integrations-codeowners": True}):
+            response = self.client.get(
+                self.url,
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 200
+
+    @patch(
+        "sentry.integrations.source_code_management.repository.RepositoryIntegration.get_codeowner_file",
+        return_value={"html_url": "https://github.com/test/CODEOWNERS"},
+    )
+    def test_post_with_project_codeowners_token(self, get_codeowner_mock_file: MagicMock) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["project:codeowners"])
+
+        with self.feature({"organizations:integrations-codeowners": True}):
+            response = self.client.post(
+                self.url,
+                self.data,
+                format="json",
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 201, response.content
+
+    def test_post_rejects_project_read_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["project:read"])
+
+        with self.feature({"organizations:integrations-codeowners": True}):
+            response = self.client.post(
+                self.url,
+                self.data,
+                format="json",
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 403
+
     @patch(
         "sentry.integrations.source_code_management.repository.RepositoryIntegration.get_codeowner_file",
         return_value={"html_url": "https://github.com/test/CODEOWNERS"},

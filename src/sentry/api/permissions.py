@@ -19,6 +19,7 @@ from sentry.auth.superuser import SUPERUSER_ORG_ID, is_active_superuser
 from sentry.auth.system import is_system_auth
 from sentry.demo_mode.utils import get_readonly_scopes, is_demo_mode_enabled, is_demo_user
 from sentry.hybridcloud.rpc import extract_id_from
+from sentry.models.apiscopes import add_scope_hierarchy
 from sentry.models.orgauthtoken import is_org_auth_token_auth, update_org_auth_token_last_used
 from sentry.organizations.services.organization import (
     RpcOrganization,
@@ -120,7 +121,7 @@ class ScopedPermission(BasePermission):
 
         assert request.method is not None
         allowed_scopes = set(self.scope_map.get(request.method, []))
-        current_scopes = request.auth.get_scopes()
+        current_scopes = add_scope_hierarchy(request.auth.get_scopes())
         return any(s in allowed_scopes for s in current_scopes)
 
     def has_object_permission(self, request: Request, view: APIView, obj: Any) -> bool:

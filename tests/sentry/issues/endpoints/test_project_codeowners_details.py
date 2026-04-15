@@ -63,6 +63,29 @@ class ProjectCodeOwnersDetailsEndpointTestCase(APITestCase):
         assert response.status_code == 204
         assert not ProjectCodeOwners.objects.filter(id=str(self.codeowners.id)).exists()
 
+    def test_delete_with_project_codeowners_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["project:codeowners"])
+
+        with self.feature({"organizations:integrations-codeowners": True}):
+            response = self.client.delete(
+                self.url,
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 204
+        assert not ProjectCodeOwners.objects.filter(id=str(self.codeowners.id)).exists()
+
+    def test_delete_rejects_project_read_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["project:read"])
+
+        with self.feature({"organizations:integrations-codeowners": True}):
+            response = self.client.delete(
+                self.url,
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 403
+
     @freeze_time("2023-10-03 00:00:00")
     def test_basic_update(self) -> None:
         self.create_external_team(external_name="@getsentry/frontend", integration=self.integration)
@@ -88,6 +111,20 @@ class ProjectCodeOwnersDetailsEndpointTestCase(APITestCase):
         assert response.data["raw"] == raw.strip()
         codeowner = ProjectCodeOwners.objects.get(id=self.codeowners.id)
         assert codeowner.date_updated.strftime("%Y-%m-%d %H:%M:%S") == "2023-10-03 00:00:00"
+
+    def test_update_with_project_codeowners_token(self) -> None:
+        token = self.create_user_auth_token(user=self.user, scope_list=["project:codeowners"])
+
+        with self.feature({"organizations:integrations-codeowners": True}):
+            response = self.client.put(
+                self.url,
+                self.data,
+                format="json",
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 200
+        assert response.data["id"] == str(self.codeowners.id)
 
     def test_wrong_codeowners_id(self) -> None:
         self.url = reverse(

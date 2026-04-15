@@ -21,6 +21,8 @@ def add_scope_hierarchy(curr_scopes: Sequence[str]) -> list[str]:
 
 
 class ApiScopes(Sequence):
+    # Append new scopes to the end of the overall bitfield ordering. Legacy
+    # tokens can still fall back to the bitfield when `scope_list` is empty.
     project = (
         ("project:read"),
         ("project:write"),
@@ -33,11 +35,21 @@ class ApiScopes(Sequence):
 
     event = (("event:read"), ("event:write"), ("event:admin"))
 
-    org = (("org:read"), ("org:write"), ("org:integrations"), ("org:admin"))
+    org = (
+        ("org:read"),
+        ("org:write"),
+        ("org:integrations"),
+        ("org:admin"),
+    )
 
     member = (("member:read"), ("member:write"), ("member:admin"), ("member:invite"))
 
     alerts = (("alerts:read"), ("alerts:write"))
+
+    appended = (
+        ("project:create"),
+        ("project:codeowners"),
+    )
 
     def __init__(self):
         self.scopes = (
@@ -47,6 +59,7 @@ class ApiScopes(Sequence):
             + self.__class__.org
             + self.__class__.member
             + self.__class__.alerts
+            + self.__class__.appended
         )
 
     def __getitem__(self, value):
@@ -92,6 +105,8 @@ class HasApiScopes(models.Model):
             "alerts:write": bool,
             "member:invite": bool,
             "project:distribution": bool,
+            "project:create": bool,
+            "project:codeowners": bool,
         },
     )
     assert set(ScopesDict.__annotations__) == set(ApiScopes())

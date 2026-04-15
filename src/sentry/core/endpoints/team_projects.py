@@ -118,10 +118,16 @@ their own alerts to be notified of new issues.
 class TeamProjectPermission(TeamPermission):
     scope_map = {
         "GET": ["project:read", "project:write", "project:admin"],
-        "POST": ["project:write", "project:admin"],
+        "POST": ["project:create"],
         "PUT": ["project:write", "project:admin"],
         "DELETE": ["project:admin"],
     }
+
+    def has_object_permission(self, request: Request, view, team) -> bool:
+        if request.method == "POST" and request.access.has_scope("project:create"):
+            return request.access.has_team_access(team)
+
+        return super().has_object_permission(request, view, team)
 
 
 class AuditData(TypedDict):
