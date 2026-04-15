@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import logging
 from typing import Any
 
 import sentry_sdk
@@ -40,6 +43,8 @@ EDIT_FEATURE = "organizations:dashboards-edit"
 READ_FEATURE = "organizations:dashboards-basic"
 REVISIONS_FEATURE = "organizations:dashboards-revisions"
 
+logger = logging.getLogger(__name__)
+
 
 def _take_dashboard_snapshot(
     organization: Organization,
@@ -48,7 +53,8 @@ def _take_dashboard_snapshot(
 ) -> dict[str, Any] | None:
     """
     Serialize the current dashboard state as a snapshot, or return None if the
-    revisions feature is disabled or the dashboard has no DB record to snapshot.
+    revisions feature is disabled, the dashboard has no DB record to snapshot,
+    or serialization fails.
 
     Must be called outside any transaction.atomic block because the serializer
     makes hybrid-cloud RPC calls (user_service.serialize_many) that cannot run
@@ -58,7 +64,15 @@ def _take_dashboard_snapshot(
         return None
     if not features.has(REVISIONS_FEATURE, organization, actor=user):
         return None
-    return serialize(dashboard, user)
+    try:
+        return serialize(dashboard, user)
+    except Exception:
+        # Snapshot failures must not block the dashboard save. Log and skip.
+        logger.exception(
+            "Failed to serialize dashboard snapshot; proceeding without creating revision",
+            extra={"dashboard_id": dashboard.id},
+        )
+        return None
 
 
 class OrganizationDashboardBase(OrganizationEndpoint):
