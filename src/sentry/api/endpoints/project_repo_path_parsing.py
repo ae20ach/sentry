@@ -96,7 +96,7 @@ class ProjectRepoPathParsingEndpointLoosePermission(ProjectPermission):
     """
 
     scope_map = {
-        "POST": ["project:write"],
+        "POST": ["org:read", "project:write", "project:admin"],
     }
 
 

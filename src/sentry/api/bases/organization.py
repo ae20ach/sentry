@@ -159,8 +159,8 @@ class OrganizationIntegrationsPermission(OrganizationPermission):
 class OrganizationIntegrationsLoosePermission(OrganizationPermission):
     scope_map = {
         "GET": ["org:read", "org:write", "org:admin", "org:integrations", "org:ci"],
-        "POST": ["org:write", "org:admin", "org:integrations"],
-        "PUT": ["org:write", "org:admin", "org:integrations"],
+        "POST": ["org:read", "org:write", "org:admin", "org:integrations"],
+        "PUT": ["org:read", "org:write", "org:admin", "org:integrations"],
         "DELETE": ["org:admin", "org:integrations"],
     }
 
@@ -168,7 +168,7 @@ class OrganizationIntegrationsLoosePermission(OrganizationPermission):
 class OrganizationCodeMappingsBulkPermission(OrganizationPermission):
     scope_map = {
         "GET": ["org:read", "org:write", "org:admin", "org:integrations", "org:ci"],
-        "POST": ["org:write", "org:admin", "org:integrations", "org:ci"],
+        "POST": ["org:read", "org:write", "org:admin", "org:integrations", "org:ci"],
     }
 
 
@@ -272,8 +272,8 @@ class OrganizationDetectorPermission(OrganizationPermission):
 class OrgAuthTokenPermission(OrganizationPermission):
     scope_map = {
         "GET": ["org:read", "org:write", "org:admin"],
-        "POST": ["org:write", "org:admin"],
-        "PUT": ["org:write", "org:admin"],
+        "POST": ["org:read", "org:write", "org:admin"],
+        "PUT": ["org:read", "org:write", "org:admin"],
         "DELETE": ["org:write", "org:admin"],
     }
 
