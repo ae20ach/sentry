@@ -11,6 +11,7 @@ class GitLabPullRequestUser(msgspec.Struct, gc=False):
 
 
 class GitLabPullRequestProject(msgspec.Struct, gc=False):
+    id: int
     visibility_level: int
 
 
@@ -61,6 +62,7 @@ def deserialize_gitlab_event(event: SubscriptionEvent) -> EventType | None:
         return PullRequestEvent(
             action=action,
             pull_request={
+                "repo_id": str(e.project.id),
                 "id": str(e.object_attributes.iid),
                 "title": e.object_attributes.title,
                 "description": e.object_attributes.description,

@@ -1,3 +1,4 @@
+from sentry.integrations.models import Integration
 from sentry.scm.actions import SourceCodeManager
 from sentry.scm.private.event_stream import scm_event_stream
 from sentry.scm.types import CreatePullRequestReactionProtocol, PullRequestEvent
@@ -20,17 +21,20 @@ def handle_pull_request_via_scm_stream(e: PullRequestEvent) -> None:
 
     # Process the event
 
-    sentry_meta = e.subscription_event["sentry_meta"]
-    assert sentry_meta is not None
-    assert len(sentry_meta) == 1
-    organization_id = sentry_meta[0]["organization_id"]
-    assert organization_id is not None
-    # integration_id = sentry_meta[0]["integration_id"]
-    # assert integration_id is not None
-    # integration = Integration.objects.get(id=integration_id)
-    # @todo(NOW) Find the actual repository ID from the event
-    repository_id = ("gitlab", "gitlab.com:79787061")
-    # print(f"VJA: {organization_id=} {integration_id=} {repository_id=}", flush=True)
+    if e.subscription_event["type"] == "gitlab":
+        sentry_meta = e.subscription_event["sentry_meta"]
+        assert sentry_meta is not None
+        assert len(sentry_meta) == 1
+        organization_id = sentry_meta[0]["organization_id"]
+        assert organization_id is not None
+        integration_id = sentry_meta[0]["integration_id"]
+        assert integration_id is not None
+        integration = Integration.objects.get(id=integration_id)
+        # @todo(NOW) Use the actual hostname for this GitLab instance.
+        repository_id = (integration.provider, f"gitlab.com:{e.pull_request['repo_id']}")
+    else:
+        assert False
+
     scm = SourceCodeManager.make_from_repository_id(
         organization_id=organization_id, repository_id=repository_id
     )

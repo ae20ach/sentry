@@ -90,6 +90,7 @@ class PullRequestBranchParser(msgspec.Struct, gc=False, frozen=True):
 
 
 class PullRequestEventDataParser(msgspec.Struct, gc=False, frozen=True):
+    repo_id: str
     id: str
     title: str
     description: str | None
@@ -189,6 +190,7 @@ def deserialize_pull_request_event(event_data: str) -> PullRequestEvent:
     return PullRequestEvent(
         action=parsed.action,
         pull_request={
+            "repo_id": parsed.pull_request.repo_id,
             "id": parsed.pull_request.id,
             "title": parsed.pull_request.title,
             "description": parsed.pull_request.description,
@@ -247,6 +249,7 @@ def serialize_comment_event(event: CommentEvent) -> str:
 
 def serialize_pull_request_event(event: PullRequestEvent) -> str:
     pull_request_data = PullRequestEventDataParser(
+        repo_id=event.pull_request["repo_id"],
         id=event.pull_request["id"],
         title=event.pull_request["title"],
         description=event.pull_request["description"],
