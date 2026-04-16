@@ -491,7 +491,10 @@ class ScmOnboardingTest(AcceptanceTestCase):
 
             # Switch alerts from "High priority issues" to "create later".
             self.browser.click(
-                xpath='//div[@role="radio"][contains(., "create my own alerts later")]'
+                xpath='//button[@role="radio"][contains(., "create my own alerts later")]'
+            )
+            self.browser.wait_until(
+                xpath='//button[@role="radio"][@aria-checked="true"][contains(., "create my own alerts later")]'
             )
             self.browser.wait_until_clickable(xpath='//button[contains(., "Create project")]')
             self.browser.click(xpath='//button[contains(., "Create project")]')
