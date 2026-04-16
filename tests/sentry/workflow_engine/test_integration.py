@@ -385,6 +385,56 @@ class TestWorkflowEngineIntegrationFromErrorPostProcess(BaseWorkflowIntegrationT
             process_delayed_workflows(list(project_ids.keys())[0])
             mock_trigger.assert_called_once()
 
+    def test_slow_condition_legacy_trigger(self, mock_trigger: MagicMock) -> None:
+        """
+        Test that a migrated legacy rule with a slow condition and tagged filter isn't triggered
+        when the tag condition is not met
+        """
+
+        # disable self.workflow to prevent it firing for every event (it has no conditions)
+        self.workflow.update(enabled=False)
+
+        # create a legacy rule with a frequency trigger and tag filter - this gets migrated to wfe objects
+        self.create_project_rule(
+            project=self.project,
+            condition_data=[
+                {
+                    "id": "sentry.rules.conditions.event_frequency.EventFrequencyCondition",
+                    "value": 1,
+                    "interval": "1h",
+                },
+                {
+                    "id": "sentry.rules.conditions.tagged_event.TaggedEventCondition",
+                    "key": "foo",
+                    "match": MatchType.EQUAL,
+                    "value": "bar",
+                },
+            ],
+        )
+
+        now = timezone.now()
+
+        with freeze_time(now):
+            # Create 2 events without foo=bar tags — frequency condition will pass (2 > 1),
+            # but the tag filter should prevent the workflow from firing.
+            event_1 = self.create_error_event()
+            self.post_process_error(event_1)
+            assert not mock_trigger.called
+
+            event_2 = self.create_error_event()
+            self.post_process_error(event_2)
+            assert not mock_trigger.called
+
+            batch_client = DelayedWorkflowClient()
+            project_ids = batch_client.get_project_ids(
+                min=0,
+                max=now.timestamp() + 1,
+            )
+            assert project_ids, "Expected data to be buffered for delayed processing"
+
+            process_delayed_workflows(list(project_ids.keys())[0])
+            assert not mock_trigger.called
+
     def test_slow_condition_subqueries(self, mock_trigger: MagicMock) -> None:
         env = self.create_environment(self.project, name="production")
         self.workflow.update(environment=env)
