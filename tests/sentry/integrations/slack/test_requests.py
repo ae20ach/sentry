@@ -78,7 +78,6 @@ class SlackRequestTest(TestCase):
             "slack_user_id": "2",
         }
 
-    @pytest.mark.xfail(strict=True, reason="crashes in _log_request before validation can occur")
     def test_returns_400_on_invalid_data(self) -> None:
         type(self.request).data = mock.PropertyMock(side_effect=ValueError())
 
