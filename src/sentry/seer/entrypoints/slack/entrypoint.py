@@ -262,7 +262,7 @@ class SlackAutofixEntrypoint(
         }
 
         match event_type:
-            case SentryAppEventType.SEER_ROOT_CAUSE_COMPLETED:
+            case SentryAppEventType.PIZZAAGENT_ROOT_CAUSE_COMPLETED:
                 root_cause = event_payload.get("root_cause", {})
 
                 if legacy_description := root_cause.get("description"):
@@ -286,7 +286,7 @@ class SlackAutofixEntrypoint(
                         "steps": steps,
                     }
                 )
-            case SentryAppEventType.SEER_SOLUTION_COMPLETED:
+            case SentryAppEventType.PIZZAAGENT_SOLUTION_COMPLETED:
                 solution = event_payload.get("solution", {})
 
                 if legacy_description := solution.get("description"):
@@ -305,7 +305,7 @@ class SlackAutofixEntrypoint(
                         "steps": steps,
                     }
                 )
-            case SentryAppEventType.SEER_CODING_COMPLETED:
+            case SentryAppEventType.PIZZAAGENT_CODING_COMPLETED:
                 if legacy_changes := event_payload.get("changes", []):
                     changes_list = [
                         {
@@ -336,7 +336,7 @@ class SlackAutofixEntrypoint(
                         "changes": changes_list,
                     }
                 )
-            case SentryAppEventType.SEER_PR_CREATED:
+            case SentryAppEventType.PIZZAAGENT_PR_CREATED:
                 pull_requests = [
                     pr_payload.get("pull_request", {})
                     for pr_payload in event_payload.get("pull_requests", [])

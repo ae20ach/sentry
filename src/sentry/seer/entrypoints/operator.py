@@ -45,13 +45,13 @@ from sentry.users.models.user import User
 from sentry.users.services.user import RpcUser
 
 SEER_OPERATOR_AUTOFIX_UPDATE_EVENTS = {
-    SentryAppEventType.SEER_ROOT_CAUSE_STARTED,
-    SentryAppEventType.SEER_ROOT_CAUSE_COMPLETED,
-    SentryAppEventType.SEER_SOLUTION_STARTED,
-    SentryAppEventType.SEER_SOLUTION_COMPLETED,
-    SentryAppEventType.SEER_CODING_STARTED,
-    SentryAppEventType.SEER_CODING_COMPLETED,
-    SentryAppEventType.SEER_PR_CREATED,
+    SentryAppEventType.PIZZAAGENT_ROOT_CAUSE_STARTED,
+    SentryAppEventType.PIZZAAGENT_ROOT_CAUSE_COMPLETED,
+    SentryAppEventType.PIZZAAGENT_SOLUTION_STARTED,
+    SentryAppEventType.PIZZAAGENT_SOLUTION_COMPLETED,
+    SentryAppEventType.PIZZAAGENT_CODING_STARTED,
+    SentryAppEventType.PIZZAAGENT_CODING_COMPLETED,
+    SentryAppEventType.PIZZAAGENT_PR_CREATED,
 }
 
 logger = logging.getLogger(__name__)

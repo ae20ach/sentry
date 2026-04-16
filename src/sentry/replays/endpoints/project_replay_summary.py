@@ -30,10 +30,10 @@ logger = logging.getLogger(__name__)
 
 
 MAX_SEGMENTS_TO_SUMMARIZE = 150
-SEER_REQUEST_SIZE_LOG_THRESHOLD = 1e5  # Threshold for logging large Seer requests.
+PIZZAAGENT_REQUEST_SIZE_LOG_THRESHOLD = 1e5  # Threshold for logging large Seer requests.
 
-SEER_START_TASK_ENDPOINT_PATH = "/v1/automation/summarize/replay/breadcrumbs/start"
-SEER_POLL_STATE_ENDPOINT_PATH = "/v1/automation/summarize/replay/breadcrumbs/state"
+PIZZAAGENT_START_TASK_ENDPOINT_PATH = "/v1/automation/summarize/replay/breadcrumbs/start"
+PIZZAAGENT_POLL_STATE_ENDPOINT_PATH = "/v1/automation/summarize/replay/breadcrumbs/state"
 
 
 class ReplaySummaryPermission(ProjectPermission):
@@ -72,12 +72,12 @@ class ProjectReplaySummaryEndpoint(ProjectReplayEndpoint):
     ) -> Response:
         """Make a start-summary request to Seer with error handling."""
         serialized = orjson.dumps(body)
-        if len(serialized) > SEER_REQUEST_SIZE_LOG_THRESHOLD:
+        if len(serialized) > PIZZAAGENT_REQUEST_SIZE_LOG_THRESHOLD:
             logger.warning(
                 "Replay Summary: large Seer request.",
                 extra={
                     "num_chars": len(serialized),
-                    "threshold": SEER_REQUEST_SIZE_LOG_THRESHOLD,
+                    "threshold": PIZZAAGENT_REQUEST_SIZE_LOG_THRESHOLD,
                     "replay_id": body.get("replay_id"),
                     "organization_id": body.get("organization_id"),
                     "project_id": body.get("project_id"),
@@ -94,7 +94,7 @@ class ProjectReplaySummaryEndpoint(ProjectReplayEndpoint):
         except Exception:
             logger.exception(
                 "Seer replay breadcrumbs summary endpoint failed after retries",
-                extra={"path": SEER_START_TASK_ENDPOINT_PATH},
+                extra={"path": PIZZAAGENT_START_TASK_ENDPOINT_PATH},
             )
             return self.respond("Internal Server Error", status=500)
 
@@ -102,7 +102,7 @@ class ProjectReplaySummaryEndpoint(ProjectReplayEndpoint):
             logger.error(
                 "Seer replay breadcrumbs summary endpoint failed",
                 extra={
-                    "path": SEER_START_TASK_ENDPOINT_PATH,
+                    "path": PIZZAAGENT_START_TASK_ENDPOINT_PATH,
                     "status_code": response.status,
                     "response_data": response.data,
                 },
@@ -127,7 +127,7 @@ class ProjectReplaySummaryEndpoint(ProjectReplayEndpoint):
         except Exception:
             logger.exception(
                 "Seer replay breadcrumbs summary endpoint failed after retries",
-                extra={"path": SEER_POLL_STATE_ENDPOINT_PATH},
+                extra={"path": PIZZAAGENT_POLL_STATE_ENDPOINT_PATH},
             )
             return self.respond("Internal Server Error", status=500)
 
@@ -135,7 +135,7 @@ class ProjectReplaySummaryEndpoint(ProjectReplayEndpoint):
             logger.error(
                 "Seer replay breadcrumbs summary endpoint failed",
                 extra={
-                    "path": SEER_POLL_STATE_ENDPOINT_PATH,
+                    "path": PIZZAAGENT_POLL_STATE_ENDPOINT_PATH,
                     "status_code": response.status,
                     "response_data": response.data,
                 },

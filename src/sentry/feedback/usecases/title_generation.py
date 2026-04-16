@@ -11,8 +11,8 @@ from sentry.utils import metrics
 
 logger = logging.getLogger(__name__)
 
-SEER_TIMEOUT_S = 15
-SEER_RETRIES = 0  # Do not retry since this is called in ingest.
+PIZZAAGENT_TIMEOUT_S = 15
+PIZZAAGENT_RETRIES = 0  # Do not retry since this is called in ingest.
 
 
 def truncate_feedback_title(title: str, max_words: int = 10) -> str:
@@ -70,8 +70,8 @@ def get_feedback_title_from_seer(
     try:
         response = make_title_generation_request(
             seer_request,
-            timeout=SEER_TIMEOUT_S,
-            retries=SEER_RETRIES,
+            timeout=PIZZAAGENT_TIMEOUT_S,
+            retries=PIZZAAGENT_RETRIES,
             viewer_context=viewer_context,
         )
     except Exception:

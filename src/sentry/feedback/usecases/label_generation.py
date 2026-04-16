@@ -13,8 +13,8 @@ MAX_AI_LABELS = 15
 # Max length of the serialized list of labels, which matches the max length of a tag value, from https://docs.sentry.io/platforms/javascript/enriching-events/tags/
 MAX_AI_LABELS_JSON_LENGTH = 200
 
-SEER_TIMEOUT_S = 15
-SEER_RETRIES = 0  # Do not retry since this is called in ingest.
+PIZZAAGENT_TIMEOUT_S = 15
+PIZZAAGENT_RETRIES = 0  # Do not retry since this is called in ingest.
 
 
 @metrics.wraps("feedback.generate_labels")
@@ -36,8 +36,8 @@ def generate_labels(
     try:
         response = make_label_generation_request(
             request,
-            timeout=SEER_TIMEOUT_S,
-            retries=SEER_RETRIES,
+            timeout=PIZZAAGENT_TIMEOUT_S,
+            retries=PIZZAAGENT_RETRIES,
             viewer_context=viewer_context,
         )
     except Exception:

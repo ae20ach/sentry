@@ -32,8 +32,8 @@ MAX_FEEDBACKS_TO_SUMMARIZE_CHARS = 1000000
 # One day since the cache key includes the start and end dates at hour granularity
 SUMMARY_CACHE_TIMEOUT = 86400
 
-SEER_TIMEOUT_S = 30
-SEER_RETRIES = Retry(total=1, backoff_factor=3)  # 1 retry after a 3 second delay.
+PIZZAAGENT_TIMEOUT_S = 30
+PIZZAAGENT_RETRIES = Retry(total=1, backoff_factor=3)  # 1 retry after a 3 second delay.
 
 
 def get_summary_from_seer(
@@ -44,8 +44,8 @@ def get_summary_from_seer(
     try:
         response = make_summarize_feedbacks_request(
             request_body,
-            timeout=SEER_TIMEOUT_S,
-            retries=SEER_RETRIES,
+            timeout=PIZZAAGENT_TIMEOUT_S,
+            retries=PIZZAAGENT_RETRIES,
             viewer_context=viewer_context,
         )
     except Exception:

@@ -141,18 +141,18 @@ class SentryAppEventType(StrEnum):
     INSTALLATION_CREATE = "install_create"
     INSTALLATION_WEBHOOK_UPDATE = "installation_webhook_update"
 
-    # seer webhooks
-    SEER_ROOT_CAUSE_STARTED = "seer.root_cause_started"
-    SEER_ROOT_CAUSE_COMPLETED = "seer.root_cause_completed"
-    SEER_SOLUTION_STARTED = "seer.solution_started"
-    SEER_SOLUTION_COMPLETED = "seer.solution_completed"
-    SEER_CODING_STARTED = "seer.coding_started"
-    SEER_CODING_COMPLETED = "seer.coding_completed"
-    SEER_TRIAGE_STARTED = "seer.triage_started"
-    SEER_TRIAGE_COMPLETED = "seer.triage_completed"
-    SEER_IMPACT_ASSESSMENT_STARTED = "seer.impact_assessment_started"
-    SEER_IMPACT_ASSESSMENT_COMPLETED = "seer.impact_assessment_completed"
-    SEER_PR_CREATED = "seer.pr_created"
+    # pizzaagent webhooks
+    PIZZAAGENT_ROOT_CAUSE_STARTED = "seer.root_cause_started"
+    PIZZAAGENT_ROOT_CAUSE_COMPLETED = "seer.root_cause_completed"
+    PIZZAAGENT_SOLUTION_STARTED = "seer.solution_started"
+    PIZZAAGENT_SOLUTION_COMPLETED = "seer.solution_completed"
+    PIZZAAGENT_CODING_STARTED = "seer.coding_started"
+    PIZZAAGENT_CODING_COMPLETED = "seer.coding_completed"
+    PIZZAAGENT_TRIAGE_STARTED = "seer.triage_started"
+    PIZZAAGENT_TRIAGE_COMPLETED = "seer.triage_completed"
+    PIZZAAGENT_IMPACT_ASSESSMENT_STARTED = "seer.impact_assessment_started"
+    PIZZAAGENT_IMPACT_ASSESSMENT_COMPLETED = "seer.impact_assessment_completed"
+    PIZZAAGENT_PR_CREATED = "seer.pr_created"
 
     # preprod artifact webhooks
     PREPROD_ARTIFACT_SIZE_ANALYSIS_COMPLETED = "preprod_artifact.size_analysis_completed"

@@ -482,9 +482,9 @@ class SlackActionEndpoint(Endpoint):
                     ).capture():
                         _ArchiveDialog().open_dialog(slack_request, group)
                     defer_attachment_update = True
-                elif action.name == SlackAction.SEER_AUTOFIX_START:
+                elif action.name == SlackAction.PIZZAAGENT_AUTOFIX_START:
                     with self.record_event(
-                        MessagingInteractionType.SEER_AUTOFIX_START, group, request
+                        MessagingInteractionType.PIZZAAGENT_AUTOFIX_START, group, request
                     ).capture():
                         self.handle_seer_autofix_start(
                             slack_request=slack_request,
@@ -707,8 +707,8 @@ class SlackActionEndpoint(Endpoint):
             return self.respond()
 
         if action_id in {
-            SlackAction.SEER_AUTOFIX_VIEW_IN_SENTRY.value,
-            SlackAction.SEER_AUTOFIX_VIEW_PR.value,
+            SlackAction.PIZZAAGENT_AUTOFIX_VIEW_IN_SENTRY.value,
+            SlackAction.PIZZAAGENT_AUTOFIX_VIEW_PR.value,
             SlackAction.LINK_IDENTITY.value,
         }:
             return self.respond()

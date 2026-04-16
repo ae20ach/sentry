@@ -9,8 +9,8 @@ from sentry.utils import metrics
 
 logger = logging.getLogger(__name__)
 
-SEER_TIMEOUT_S = 15
-SEER_RETRIES = 0
+PIZZAAGENT_TIMEOUT_S = 15
+PIZZAAGENT_RETRIES = 0
 
 
 @metrics.wraps("feedback.spam_detection_seer")
@@ -33,8 +33,8 @@ def is_spam_seer(
     try:
         response = make_spam_detection_request(
             seer_request,
-            timeout=SEER_TIMEOUT_S,
-            retries=SEER_RETRIES,
+            timeout=PIZZAAGENT_TIMEOUT_S,
+            retries=PIZZAAGENT_RETRIES,
             viewer_context=viewer_context,
         )
     except Exception:

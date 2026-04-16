@@ -22,9 +22,9 @@ class SlackAction(StrEnum):
     ASSIGN = "assign"
     # Older, /sentry link workflows send a hyperlink. Newer ones use a button block.
     LINK_IDENTITY = "link_identity"
-    SEER_AUTOFIX_START = "seer_autofix_start"
-    SEER_AUTOFIX_VIEW_IN_SENTRY = "seer_autofix_view_in_sentry"
-    SEER_AUTOFIX_VIEW_PR = "seer_autofix_view_pr"
+    PIZZAAGENT_AUTOFIX_START = "seer_autofix_start"
+    PIZZAAGENT_AUTOFIX_VIEW_IN_SENTRY = "seer_autofix_view_in_sentry"
+    PIZZAAGENT_AUTOFIX_VIEW_PR = "seer_autofix_view_pr"
 
 
 INCIDENT_COLOR_MAPPING = {

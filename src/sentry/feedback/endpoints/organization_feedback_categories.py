@@ -32,8 +32,8 @@ from sentry.utils.cache import cache
 logger = logging.getLogger(__name__)
 
 
-SEER_TIMEOUT_S = 30
-SEER_RETRIES = Retry(total=1, backoff_factor=3)  # 1 retry after a 3 second delay.
+PIZZAAGENT_TIMEOUT_S = 30
+PIZZAAGENT_RETRIES = Retry(total=1, backoff_factor=3)  # 1 retry after a 3 second delay.
 
 
 MIN_FEEDBACKS_CONTEXT = 10
@@ -193,8 +193,8 @@ class OrganizationFeedbackCategoriesEndpoint(OrganizationEndpoint):
             try:
                 response = make_label_groups_request(
                     seer_request,
-                    timeout=SEER_TIMEOUT_S,
-                    retries=SEER_RETRIES,
+                    timeout=PIZZAAGENT_TIMEOUT_S,
+                    retries=PIZZAAGENT_RETRIES,
                     viewer_context=viewer_context,
                 )
             except Exception:

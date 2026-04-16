@@ -117,7 +117,7 @@ class SeerSlackRenderer(NotificationRenderer[SlackRenderable]):
             style="primary",
             value=data.stopping_point,
             action_id=encode_action_id(
-                action=SlackAction.SEER_AUTOFIX_START.value,
+                action=SlackAction.PIZZAAGENT_AUTOFIX_START.value,
                 organization_id=data.organization_id,
                 project_id=data.project_id,
             ),
@@ -175,7 +175,7 @@ class SeerSlackRenderer(NotificationRenderer[SlackRenderable]):
                 blocks.append(SectionBlock(text=MarkdownTextObject(text="\n".join(change_mrkdwn))))
         if data.pull_requests:
             action_id = encode_action_id(
-                action=SlackAction.SEER_AUTOFIX_VIEW_PR.value,
+                action=SlackAction.PIZZAAGENT_AUTOFIX_VIEW_PR.value,
                 organization_id=data.organization_id,
                 project_id=data.project_id,
             )
@@ -238,7 +238,7 @@ class SeerSlackRenderer(NotificationRenderer[SlackRenderable]):
             text=text,
             url=group_link,
             action_id=encode_action_id(
-                action=SlackAction.SEER_AUTOFIX_VIEW_IN_SENTRY.value,
+                action=SlackAction.PIZZAAGENT_AUTOFIX_VIEW_IN_SENTRY.value,
                 organization_id=organization_id,
                 project_id=project_id,
             ),
