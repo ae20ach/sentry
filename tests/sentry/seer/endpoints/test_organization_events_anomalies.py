@@ -48,9 +48,9 @@ class OrganizationEventsAnomaliesEndpointTest(APITestCase):
     current_timestamp_1 = one_week_ago.timestamp()
     current_timestamp_2 = (one_week_ago + timedelta(minutes=10)).timestamp()
 
-    def _create_token(self, scope: str) -> ApiToken:
+    def _create_token(self, scope: str, user=None) -> ApiToken:
         with assume_test_silo_mode(SiloMode.CONTROL):
-            return ApiToken.objects.create(user=self.user, scope_list=[scope])
+            return ApiToken.objects.create(user=user or self.user, scope_list=[scope])
 
     def get_test_data(self, project_id: int) -> dict:
         return {
@@ -211,6 +211,35 @@ class OrganizationEventsAnomaliesEndpointTest(APITestCase):
     def test_org_read_scope_cannot_post(self) -> None:
         token = self._create_token("org:read")
         data = self.get_test_data(self.project.id)
+        url = reverse(self.endpoint, args=[self.organization.slug])
+
+        with outbox_runner():
+            response = self.client.post(
+                url,
+                data=orjson.dumps(data),
+                content_type="application/json",
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 403
+
+    @with_feature("organizations:anomaly-detection-alerts")
+    @with_feature("organizations:incidents")
+    def test_alerts_write_scope_denies_other_team_projects(self) -> None:
+        team_admin_user = self.create_user(is_superuser=False)
+        self.create_member(
+            user=team_admin_user,
+            organization=self.organization,
+            role="member",
+            team_roles=[(self.team, "admin")],
+        )
+
+        other_team = self.create_team(organization=self.organization, name="other-team")
+        other_project = self.create_project(
+            organization=self.organization, teams=[other_team], name="other-project"
+        )
+        token = self._create_token("alerts:write", user=team_admin_user)
+        data = self.get_test_data(other_project.id)
         url = reverse(self.endpoint, args=[self.organization.slug])
 
         with outbox_runner():

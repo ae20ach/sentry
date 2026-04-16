@@ -123,6 +123,34 @@ def get_detector_validator(
 @cell_silo_endpoint
 @extend_schema(tags=["Monitors"])
 class OrganizationDetectorDetailsEndpoint(OrganizationEndpoint):
+    def get_alert_mutation_projects(
+        self, request: Request, organization: Organization
+    ) -> list[Project] | None:
+        if request.method not in {"PUT", "DELETE"}:
+            return None
+
+        raw_detector_id = self.kwargs.get("detector_id")
+        if raw_detector_id is None:
+            return None
+
+        try:
+            validated_detector_id = to_valid_int_id("detector_id", raw_detector_id)
+        except ValidationError:
+            return None
+
+        detector = (
+            Detector.objects.select_related("project")
+            .filter(
+                id=validated_detector_id,
+                project__organization_id=organization.id,
+            )
+            .first()
+        )
+        if detector is None:
+            return None
+
+        return [detector.project]
+
     def convert_args(
         self, request: Request, detector_id: str, *args: Any, **kwargs: Any
     ) -> tuple[tuple[Any, ...], dict[str, Organization | Detector]]:

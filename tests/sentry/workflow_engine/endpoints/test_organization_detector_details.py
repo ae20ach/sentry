@@ -270,9 +270,9 @@ class OrganizationDetectorDetailsPutTest(OrganizationDetectorDetailsBaseTest):
         }
         assert SnubaQuery.objects.get(id=self.snuba_query.id)
 
-    def _create_token(self, scope: str) -> ApiToken:
+    def _create_token(self, scope: str, user=None) -> ApiToken:
         with assume_test_silo_mode(SiloMode.CONTROL):
-            return ApiToken.objects.create(user=self.user, scope_list=[scope])
+            return ApiToken.objects.create(user=user or self.user, scope_list=[scope])
 
     def assert_detector_updated(self, detector: Detector) -> None:
         assert detector.name == "Updated Detector"
@@ -582,6 +582,32 @@ class OrganizationDetectorDetailsPutTest(OrganizationDetectorDetailsBaseTest):
         assert response.status_code == 200
         self.detector.refresh_from_db()
         assert self.detector.enabled is False
+
+    def test_update_denies_alerts_write_scope_for_other_team_projects(self) -> None:
+        team_admin_user = self.create_user(is_superuser=False)
+        self.create_member(
+            user=team_admin_user,
+            organization=self.organization,
+            role="member",
+            team_roles=[(self.team, "admin")],
+        )
+
+        other_team = self.create_team(organization=self.organization, name="other-team")
+        other_project = self.create_project(
+            organization=self.organization, teams=[other_team], name="other-project"
+        )
+        other_detector = self.create_detector(project=other_project, name="Other Detector")
+
+        token = self._create_token("alerts:write", user=team_admin_user)
+
+        response = self.client.put(
+            reverse(self.endpoint, args=[self.organization.slug, other_detector.id]),
+            data={"enabled": False},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 403
 
     def test_enable_detector(self) -> None:
         self.detector.update(enabled=False)
@@ -1110,6 +1136,30 @@ class OrganizationDetectorDetailsPutTest(OrganizationDetectorDetailsBaseTest):
 @cell_silo_test
 class OrganizationDetectorDetailsDeleteTest(OrganizationDetectorDetailsBaseTest):
     method = "DELETE"
+
+    def test_delete_denies_alerts_write_scope_for_other_team_projects(self) -> None:
+        team_admin_user = self.create_user(is_superuser=False)
+        self.create_member(
+            user=team_admin_user,
+            organization=self.organization,
+            role="member",
+            team_roles=[(self.team, "admin")],
+        )
+
+        other_team = self.create_team(organization=self.organization, name="other-team")
+        other_project = self.create_project(
+            organization=self.organization, teams=[other_team], name="other-project"
+        )
+        other_detector = self.create_detector(project=other_project, name="Other Detector")
+
+        token = self._create_token("alerts:write", user=team_admin_user)
+
+        response = self.client.delete(
+            reverse(self.endpoint, args=[self.organization.slug, other_detector.id]),
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 403
 
     @mock.patch(
         "sentry.workflow_engine.endpoints.organization_detector_details.schedule_update_project_config"

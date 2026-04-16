@@ -888,6 +888,10 @@ class BulkEditOrganizationMonitorTest(MonitorTestCase):
         super().setUp()
         self.login_as(self.user)
 
+    def _create_token(self, scope: str, user=None) -> ApiToken:
+        with assume_test_silo_mode(SiloMode.CONTROL):
+            return ApiToken.objects.create(user=user or self.user, scope_list=[scope])
+
     def test_valid_ids(self) -> None:
         monitor_one = self._create_monitor(slug="monitor_one")
         self._create_monitor(slug="monitor_two")
@@ -980,6 +984,33 @@ class BulkEditOrganizationMonitorTest(MonitorTestCase):
         monitor_two.refresh_from_db()
         assert monitor_one.status == ObjectStatus.ACTIVE
         assert monitor_two.status == ObjectStatus.ACTIVE
+
+    def test_bulk_edit_denies_alerts_write_scope_for_other_team_projects(self) -> None:
+        team_admin_user = self.create_user(is_superuser=False)
+        self.create_member(
+            user=team_admin_user,
+            organization=self.organization,
+            role="member",
+            team_roles=[(self.team, "admin")],
+        )
+
+        other_team = self.create_team(organization=self.organization, name="other-team")
+        other_project = self.create_project(
+            organization=self.organization, teams=[other_team], name="other-project"
+        )
+        other_monitor = self._create_monitor(project=other_project, slug="other-monitor")
+        token = self._create_token("alerts:write", user=team_admin_user)
+
+        response = self.client.put(
+            reverse(self.endpoint, args=[self.organization.slug]),
+            data={"ids": [other_monitor.guid], "status": "disabled"},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 403
+        other_monitor.refresh_from_db()
+        assert other_monitor.status == ObjectStatus.ACTIVE
 
     @patch("sentry.quotas.backend.check_assign_seats")
     def test_enable_no_quota(self, check_assign_seats: MagicMock) -> None:
