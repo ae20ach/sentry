@@ -132,20 +132,20 @@ function AlertsMonitorsShowcase(props: ModalRenderProps) {
       <FeatureShowcase.Step>
         <FeatureShowcase.Image
           src={monitorsTourAlertsImage}
-          alt={t('Alerts notify your team')}
+          alt={t('Alerts notify your team of issues')}
         />
         <FeatureShowcase.StepTitle>
-          {t('Alerts notify your team')}
+          {t('Alerts notify your team of issues')}
         </FeatureShowcase.StepTitle>
         <FeatureShowcase.StepContent>
           <Text>
             {t(
-              'Alerts notify your team. Define who gets paged, when, and how — via Slack, email, PagerDuty, and more.'
+              'Issues created by Monitors trigger Alerts. Alerts define who gets paged, when, and how — via Slack, email, PagerDuty, and more.'
             )}
           </Text>
           <Text>
             {t(
-              'Scale and connect to many monitors, projects, and issue types. Configure your routing so the right people get notified when it matters.'
+              'One alert can connect to many monitors, projects, and issue types. Configure your routing once and the right people get notified everywhere it matters.'
             )}
           </Text>
         </FeatureShowcase.StepContent>
@@ -162,12 +162,12 @@ function AlertsMonitorsShowcase(props: ModalRenderProps) {
         <FeatureShowcase.StepContent>
           <Text>
             {t(
-              'When creating a Monitor you have the option of setting up a new Alert or connecting to an existing Alert at the same time.'
+              "When creating a Monitor you have the option of creating a new Alert or connecting an existing Alert. This ensures your team is notified about issues created by the monitor, when and how you'd like."
             )}
           </Text>
           <Text>
             {t(
-              'When creating or editing Alerts you can connect to existing routing without ever touching your Monitor logic.'
+              'To change notification routing, edit Alerts without needing to touch Monitor logic.'
             )}
           </Text>
           <Text>
