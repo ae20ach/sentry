@@ -13,11 +13,13 @@ import responses
 from django.urls import reverse
 
 import sentry
+from fixtures.github import INSTALLATION_EVENT_EXAMPLE
 from sentry.constants import ObjectStatus
 from sentry.integrations.github import client
 from sentry.integrations.github.client import (
     MINIMUM_REQUESTS,
     GitHubApiClient,
+    GitHubBaseClient,
     GithubSetupApiClient,
 )
 from sentry.integrations.github.integration import (
@@ -589,7 +591,7 @@ class GitHubIntegrationTest(IntegrationTestCase):
             GitHubIntegration, integration, self.organization.id
         )
 
-        with patch.object(sentry.integrations.github.client.GitHubBaseClient, "page_size", 1):
+        with patch.object(GitHubBaseClient, "page_size", 1):
             result = installation.get_repositories()
             assert result == [
                 {
@@ -624,10 +626,8 @@ class GitHubIntegrationTest(IntegrationTestCase):
         )
 
         with (
-            patch.object(
-                sentry.integrations.github.client.GitHubBaseClient, "page_number_limit", 1
-            ),
-            patch.object(sentry.integrations.github.client.GitHubBaseClient, "page_size", 1),
+            patch.object(GitHubBaseClient, "page_number_limit", 1),
+            patch.object(GitHubBaseClient, "page_size", 1),
         ):
             result = installation.get_repositories()
             assert result == [
