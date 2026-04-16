@@ -3,6 +3,8 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
+from sentry_protos.snuba.v1.trace_item_filter_pb2 import TraceItemFilter
+
 from sentry.api.event_search import SearchFilter
 from sentry.models.environment import Environment
 from sentry.models.organization import Organization
@@ -281,7 +283,48 @@ def run_eap_group_search(
         if group_id is not None:
             tuples.append((int(group_id), score))
 
-    # TODO: the EAP RPC TraceItemTableResponse does not include a total count
-    # (unlike Snuba's totals=True). During double-reading the legacy result
-    # provides the real total, so we return 0 here.
-    return (tuples, 0)
+    # The EAP RPC TraceItemTableResponse does not include a total count
+    # (unlike Snuba's totals=True), so we issue a separate aggregate query.
+    # TODO: this total hit calculation may be an overestimate
+    total = _get_total_count(
+        snuba_params=snuba_params,
+        query_string=query_string,
+        extra_conditions=extra_conditions,
+        referrer=referrer,
+        organization_id=organization.id,
+    )
+
+    return (tuples, total)
+
+
+def _get_total_count(
+    *,
+    snuba_params: SnubaParams,
+    query_string: str,
+    extra_conditions: TraceItemFilter | None,
+    referrer: str,
+    organization_id: int,
+) -> int:
+    """
+    Calculate the total count of matching groups for the given query.
+    """
+    try:
+        count_result = Occurrences.run_table_query(
+            params=snuba_params,
+            query_string=query_string,
+            selected_columns=["count_unique(group_id)"],
+            orderby=None,
+            offset=0,
+            limit=1,
+            referrer=referrer,
+            config=SearchResolverConfig(),
+            extra_conditions=extra_conditions,
+        )
+        if count_result["data"]:
+            return int(count_result["data"][0].get("count_unique(group_id)", 0))
+    except Exception:
+        logger.exception(
+            "eap.search_executor.count_query_failed",
+            extra={"organization_id": organization_id, "referrer": referrer},
+        )
+    return 0

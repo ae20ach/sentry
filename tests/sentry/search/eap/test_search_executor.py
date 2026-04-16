@@ -180,7 +180,7 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
         self.store_eap_items([occ])
 
     def test_last_seen_sort(self) -> None:
-        result, _ = run_eap_group_search(
+        result, total = run_eap_group_search(
             start=self.start,
             end=self.end,
             project_ids=[self.project.id],
@@ -193,9 +193,10 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
         assert len(group_ids) == 2
         assert group_ids[0] == self.group1.id
         assert group_ids[1] == self.group2.id
+        assert total == 2
 
     def test_times_seen_sort(self) -> None:
-        result, _ = run_eap_group_search(
+        result, total = run_eap_group_search(
             start=self.start,
             end=self.end,
             project_ids=[self.project.id],
@@ -208,9 +209,10 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
         assert len(group_ids) == 2
         assert group_ids[0] == self.group1.id
         assert group_ids[1] == self.group2.id
+        assert total == 2
 
     def test_first_seen_sort(self) -> None:
-        result, _ = run_eap_group_search(
+        result, total = run_eap_group_search(
             start=self.start,
             end=self.end,
             project_ids=[self.project.id],
@@ -223,6 +225,7 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
         assert len(group_ids) == 2
         assert group_ids[0] == self.group1.id
         assert group_ids[1] == self.group2.id
+        assert total == 2
 
     def test_user_count_sort(self) -> None:
         group3 = self.create_group(project=self.project)
@@ -243,7 +246,7 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
         )
         self.store_eap_items([occ])
 
-        result, _ = run_eap_group_search(
+        result, total = run_eap_group_search(
             start=self.start,
             end=self.end,
             project_ids=[self.project.id],
@@ -256,6 +259,7 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
         assert len(group_ids) == 2
         assert group_ids[0] == group3.id
         assert group_ids[1] == self.group1.id
+        assert total == 3
 
     def test_unsupported_sort_returns_empty(self) -> None:
         result, total = run_eap_group_search(
@@ -271,7 +275,7 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
         assert total == 0
 
     def test_filter_narrows_results(self) -> None:
-        result, _ = run_eap_group_search(
+        result, total = run_eap_group_search(
             start=self.start,
             end=self.end,
             project_ids=[self.project.id],
@@ -283,9 +287,10 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
         )
         group_ids = {gid for gid, _ in result}
         assert group_ids == {self.group1.id}
+        assert total == 1
 
     def test_group_id_pre_filter(self) -> None:
-        result, _ = run_eap_group_search(
+        result, total = run_eap_group_search(
             start=self.start,
             end=self.end,
             project_ids=[self.project.id],
@@ -296,6 +301,7 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
             referrer="test",
         )
         assert {gid for gid, _ in result} == {self.group1.id}
+        assert total == 1
 
     def test_environment_filter(self) -> None:
         env = self.create_environment(project=self.project, name="production")
@@ -315,7 +321,7 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
         )
         self.store_eap_items([occ2])
 
-        result, _ = run_eap_group_search(
+        result, total = run_eap_group_search(
             start=self.start,
             end=self.end,
             project_ids=[self.project.id],
@@ -327,6 +333,7 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
         group_ids = {gid for gid, _ in result}
         assert self.group1.id in group_ids
         assert self.group2.id not in group_ids
+        assert total == 1
 
     def test_sort_and_filter(self) -> None:
         group3 = self.create_group(project=self.project)
@@ -338,7 +345,7 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
             )
             self.store_eap_items([occ])
 
-        result, _ = run_eap_group_search(
+        result, total = run_eap_group_search(
             start=self.start,
             end=self.end,
             project_ids=[self.project.id],
@@ -354,3 +361,4 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
         assert group_ids[0] == group3.id
         assert group_ids[1] == self.group1.id
         assert self.group2.id not in group_ids
+        assert total == 2
