@@ -430,9 +430,7 @@ class TestWorkflowEngineIntegrationFromErrorPostProcess(BaseWorkflowIntegrationT
                 min=0,
                 max=now.timestamp() + 1,
             )
-            assert project_ids, "Expected data to be buffered for delayed processing"
-
-            process_delayed_workflows(list(project_ids.keys())[0])
+            assert not project_ids
             assert not mock_trigger.called
 
     def test_slow_condition_subqueries(self, mock_trigger: MagicMock) -> None:
