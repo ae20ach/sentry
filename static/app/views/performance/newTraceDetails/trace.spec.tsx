@@ -1653,9 +1653,9 @@ describe('trace view', () => {
               ACTIVE_SEARCH_HIGHLIGHT_ROW
             );
             expect(active).toBeTruthy();
-            persistedTransactionOp = (
-              active!.querySelector('.TraceOperation') as HTMLElement
-            ).textContent!.trim();
+            persistedTransactionOp = active!
+              .querySelector('.TraceOperation')!
+              .textContent.trim();
             expect(persistedTransactionOp.length).toBeGreaterThan(0);
           },
           {timeout: 10_000}
@@ -1677,11 +1677,9 @@ describe('trace view', () => {
               ACTIVE_SEARCH_HIGHLIGHT_ROW
             );
             expect(active).toBeTruthy();
-            expect(
-              (
-                active!.querySelector('.TraceOperation') as HTMLElement
-              ).textContent!.trim()
-            ).toBe(persistedTransactionOp);
+            expect(active!.querySelector('.TraceOperation')!.textContent.trim()).toBe(
+              persistedTransactionOp
+            );
           },
           {timeout: 15_000}
         );
@@ -1944,7 +1942,6 @@ describe('trace view', () => {
       await userEvent.paste('transaction-op-none');
       await searchToResolve();
       await waitFor(() => {
-        // eslint-disable-next-line testing-library/no-container
         expect(container.querySelectorAll('.TraceRow.Highlight')).toHaveLength(0);
       });
     }, 20_000);
