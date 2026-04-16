@@ -345,3 +345,83 @@ def test_S015_current_or_future_year() -> None:
         )
         == []
     )
+
+
+def test_S018_raw_set_outside_module() -> None:
+    src = "_viewer_context_var.set(ctx)\n"
+    errors = _run(src, filename="src/sentry/some/other/module.py")
+    assert errors == [
+        "t.py:1:0: S018 Use `viewer_context_scope(...)` instead of `_viewer_context_var.set(...)`."
+        " The scope manager guarantees `reset(token)` cleanup; raw `.set()` leaves the"
+        " ContextVar unbalanced and can leak viewer identity across requests."
+    ]
+
+
+def test_S018_kwargs_form_flagged() -> None:
+    src = "_viewer_context_var.set(value=ctx)\n"
+    errors = _run(src, filename="src/sentry/foo.py")
+    assert len(errors) == 1
+    assert "S018" in errors[0]
+
+
+def test_S018_allowlisted_module() -> None:
+    # The contextvar's own module legitimately calls .set() inside the scope manager
+    # and inside set_viewer_context_organization.
+    src = "_viewer_context_var.set(ctx)\n"
+    assert _run(src, filename="src/sentry/viewer_context.py") == []
+    # Match works for any path ending at sentry/viewer_context.py
+    assert _run(src, filename="/abs/path/src/sentry/viewer_context.py") == []
+
+
+def test_S018_middleware_module_not_allowlisted() -> None:
+    # The middleware lives at sentry/middleware/viewer_context.py and is NOT the
+    # allowlisted module — it is expected to use viewer_context_scope.
+    src = "_viewer_context_var.set(ctx)\n"
+    errors = _run(src, filename="src/sentry/middleware/viewer_context.py")
+    assert len(errors) == 1
+    assert "S018" in errors[0]
+
+
+def test_S018_get_method_not_flagged() -> None:
+    src = "x = _viewer_context_var.get()\n"
+    assert _run(src, filename="src/sentry/foo.py") == []
+
+
+def test_S018_reset_method_not_flagged() -> None:
+    src = "_viewer_context_var.reset(tok)\n"
+    assert _run(src, filename="src/sentry/foo.py") == []
+
+
+def test_S018_other_set_calls_not_flagged() -> None:
+    # .set() on anything other than the exact name `_viewer_context_var` is fine
+    assert _run("my_set.set(x)\n", filename="src/sentry/foo.py") == []
+    assert _run("ctx_var.set(x)\n", filename="src/sentry/foo.py") == []
+    assert _run("_other_var.set(x)\n", filename="src/sentry/foo.py") == []
+    # Common ContextVar names shouldn't accidentally trigger
+    assert _run("_request_var.set(req)\n", filename="src/sentry/foo.py") == []
+
+
+def test_S018_attribute_chain_receiver_not_flagged() -> None:
+    # `obj._viewer_context_var.set(x)` — receiver is Attribute, not Name —
+    # so the check (which requires isinstance Name) does not fire.
+    src = "obj._viewer_context_var.set(x)\n"
+    assert _run(src, filename="src/sentry/foo.py") == []
+
+
+def test_S018_string_literal_not_flagged() -> None:
+    # mock.patch passing the dotted path as a string is not a `.set(` call;
+    # the AST is `mock.patch(Constant("..."))`, not `_viewer_context_var.set(...)`.
+    src = 'from unittest import mock\nmock.patch("sentry.viewer_context._viewer_context_var.set")\n'
+    assert _run(src, filename="tests/sentry/test_foo.py") == []
+
+
+def test_S018_dict_set_not_flagged() -> None:
+    # `set` as a dict key, set comprehension, etc. — no false positive
+    src = "data = {'set': 1}\nresult = {x.set for x in items}\n"
+    assert _run(src, filename="src/sentry/foo.py") == []
+
+
+def test_S018_method_named_set_not_flagged() -> None:
+    # A class with its own .set() method should not trip the rule
+    src = "class Foo:\n    def set(self, x): pass\n\nFoo().set(1)\n"
+    assert _run(src, filename="src/sentry/foo.py") == []

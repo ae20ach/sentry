@@ -48,6 +48,25 @@ S017_msg = (
     "billing/platform/. Use only getsentry.billing.platform.* imports."
 )
 
+S018_msg = (
+    "S018 Use `viewer_context_scope(...)` instead of `_viewer_context_var.set(...)`. "
+    "The scope manager guarantees `reset(token)` cleanup; raw `.set()` leaves the "
+    "ContextVar unbalanced and can leak viewer identity across requests."
+)
+
+
+def _is_viewer_context_module(filename: str) -> bool:
+    """The single file allowed to call `_viewer_context_var.set()` directly.
+
+    Matches `src/sentry/viewer_context.py` exactly; the middleware at
+    `src/sentry/middleware/viewer_context.py` goes through the scope manager
+    and is not allowlisted.
+    """
+    normalized = filename.replace("\\", "/")
+    return normalized == "sentry/viewer_context.py" or normalized.endswith(
+        "/sentry/viewer_context.py"
+    )
+
 
 # --- S015: do not hardcode current or future UTC year as test "now" ---
 # Flag year >= current UTC year at lint time. Module/class scope + freeze_time(datetime(...)).
@@ -257,6 +276,16 @@ class SentryVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_Call(self, node: ast.Call) -> None:
+        # S018: raw `_viewer_context_var.set(...)` outside the viewer_context module
+        if (
+            isinstance(node.func, ast.Attribute)
+            and node.func.attr == "set"
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "_viewer_context_var"
+            and not _is_viewer_context_module(self.filename)
+        ):
+            self.errors.append((node.lineno, node.col_offset, S018_msg))
+
         if _is_tests_path(self.filename):
             if (
                 isinstance(node.func, ast.Name)
