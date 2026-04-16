@@ -6,6 +6,7 @@ import {cursorIntegrationPipeline} from './pipelineIntegrationCursor';
 import {discordIntegrationPipeline} from './pipelineIntegrationDiscord';
 import {githubIntegrationPipeline} from './pipelineIntegrationGitHub';
 import {gitlabIntegrationPipeline} from './pipelineIntegrationGitLab';
+import {opsgenieIntegrationPipeline} from './pipelineIntegrationOpsgenie';
 import {pagerDutyIntegrationPipeline} from './pipelineIntegrationPagerDuty';
 import {slackIntegrationPipeline} from './pipelineIntegrationSlack';
 import {vstsIntegrationPipeline} from './pipelineIntegrationVsts';
@@ -22,6 +23,7 @@ export const PIPELINE_REGISTRY = [
   dummyIntegrationPipeline,
   githubIntegrationPipeline,
   gitlabIntegrationPipeline,
+  opsgenieIntegrationPipeline,
   pagerDutyIntegrationPipeline,
   slackIntegrationPipeline,
   vstsIntegrationPipeline,
