@@ -1,4 +1,5 @@
 from datetime import timedelta
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import orjson
@@ -12,6 +13,7 @@ from sentry.incidents.models.alert_rule import (
     AlertRuleThresholdType,
 )
 from sentry.models.apitoken import ApiToken
+from sentry.organizations.services.organization import RpcOrganization, RpcUserOrganizationContext
 from sentry.seer.anomaly_detection.types import (
     Anomaly,
     AnomalyDetectionConfig,
@@ -20,6 +22,7 @@ from sentry.seer.anomaly_detection.types import (
     TimeSeriesPoint,
 )
 from sentry.seer.anomaly_detection.utils import translate_direction
+from sentry.seer.endpoints.organization_events_anomalies import OrganizationEventsAnomaliesEndpoint
 from sentry.silo.base import SiloMode
 from sentry.testutils.cases import APITestCase
 from sentry.testutils.helpers.datetime import before_now, freeze_time
@@ -89,6 +92,15 @@ class OrganizationEventsAnomaliesEndpointTest(APITestCase):
                 ),
             ],
         )
+
+    def test_get_alert_mutation_projects_accepts_rpc_org_context(self) -> None:
+        endpoint = OrganizationEventsAnomaliesEndpoint()
+        request = SimpleNamespace(data={"project_id": str(self.project.id)})
+        organization = RpcUserOrganizationContext(
+            organization=RpcOrganization(id=self.organization.id)
+        )
+
+        assert endpoint.get_alert_mutation_projects(request, organization) == [self.project]
 
     @with_feature("organizations:anomaly-detection-alerts")
     @with_feature("organizations:incidents")
