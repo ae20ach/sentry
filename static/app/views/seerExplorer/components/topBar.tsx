@@ -36,6 +36,7 @@ interface TopBarProps {
   onOverrideCodeModeEnableToggle: () => void;
   onOverrideCtxEngEnableToggle: () => void;
   onSessionHistoryClick: (buttonRef: React.RefObject<HTMLElement | null>) => void;
+  onShowThinkingToggle: () => void;
   onSizeToggleClick: () => void;
   overrideCodeModeEnable: boolean;
   overrideCtxEngEnable: boolean;
@@ -43,6 +44,8 @@ interface TopBarProps {
   sessionHistoryButtonRef: React.RefObject<HTMLButtonElement | null>;
   showCodeModeToggle: boolean;
   showContextEngineToggle: boolean;
+  showThinking: boolean;
+  showThinkingToggle: boolean;
 }
 
 export function TopBar({
@@ -59,10 +62,13 @@ export function TopBar({
   onSizeToggleClick,
   onOverrideCtxEngEnableToggle,
   onOverrideCodeModeEnableToggle,
+  onShowThinkingToggle,
   overrideCtxEngEnable,
   overrideCodeModeEnable,
   showContextEngineToggle,
   showCodeModeToggle,
+  showThinking,
+  showThinkingToggle,
   panelSize,
   isCopySessionEnabled,
   isCopyLinkEnabled,
@@ -158,6 +164,27 @@ export function TopBar({
               />
               <Text size="sm" variant="muted">
                 {t('CM')}
+              </Text>
+            </Flex>
+          </Tooltip>
+        )}
+        {showThinkingToggle && (
+          <Tooltip
+            title={
+              showThinking
+                ? t('Hide thinking blocks (click to hide)')
+                : t('Show thinking blocks (click to show)')
+            }
+          >
+            <Flex align="center" gap="xs" padding="xs sm" height="100%">
+              <Switch
+                size="sm"
+                checked={showThinking}
+                onChange={onShowThinkingToggle}
+                aria-label={t('Toggle thinking blocks')}
+              />
+              <Text size="sm" variant="muted">
+                {t('Show thinking (debug)')}
               </Text>
             </Flex>
           </Tooltip>

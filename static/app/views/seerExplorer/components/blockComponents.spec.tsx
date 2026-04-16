@@ -278,6 +278,73 @@ describe('BlockComponent', () => {
     expect(downButton).toBeEnabled();
   });
 
+  describe('Thinking Content', () => {
+    it('renders a collapsible thinking section when showThinking is true and thinking_content is present', async () => {
+      const block = createResponseBlock({
+        message: {
+          role: 'assistant',
+          content: 'The answer is 42.',
+          thinking_content: 'Let me reason through this step by step.',
+        },
+      });
+      render(
+        <BlockComponent
+          block={block}
+          blockIndex={0}
+          onClick={mockOnClick}
+          runId={runId}
+          showThinking
+        />
+      );
+
+      expect(screen.getByText('Thinking')).toBeInTheDocument();
+      expect(screen.getByText('The answer is 42.')).toBeInTheDocument();
+
+      // Expand the thinking section
+      await userEvent.click(screen.getByText('Thinking'));
+      expect(
+        screen.getByText('Let me reason through this step by step.')
+      ).toBeInTheDocument();
+    });
+
+    it('does not render thinking section when showThinking is false', () => {
+      const block = createResponseBlock({
+        message: {
+          role: 'assistant',
+          content: 'The answer is 42.',
+          thinking_content: 'Let me reason through this step by step.',
+        },
+      });
+      render(
+        <BlockComponent
+          block={block}
+          blockIndex={0}
+          onClick={mockOnClick}
+          runId={runId}
+          showThinking={false}
+        />
+      );
+
+      expect(screen.queryByText('Thinking')).not.toBeInTheDocument();
+      expect(screen.getByText('The answer is 42.')).toBeInTheDocument();
+    });
+
+    it('does not render thinking section when thinking_content is absent', () => {
+      const block = createResponseBlock();
+      render(
+        <BlockComponent
+          block={block}
+          blockIndex={0}
+          onClick={mockOnClick}
+          runId={runId}
+          showThinking
+        />
+      );
+
+      expect(screen.queryByText('Thinking')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Markdown Content', () => {
     it('renders markdown content in response blocks', () => {
       const block = createResponseBlock({

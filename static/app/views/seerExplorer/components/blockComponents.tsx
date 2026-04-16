@@ -5,6 +5,7 @@ import type {LocationDescriptor} from 'history';
 
 import {Button} from '@sentry/scraps/button';
 import {inlineCodeStyles} from '@sentry/scraps/code';
+import {Disclosure} from '@sentry/scraps/disclosure';
 import {Flex, Stack} from '@sentry/scraps/layout';
 import {Text} from '@sentry/scraps/text';
 import {Tooltip} from '@sentry/scraps/tooltip';
@@ -51,6 +52,7 @@ interface BlockProps {
   readOnly?: boolean;
   ref?: React.Ref<HTMLDivElement>;
   runId?: number;
+  showThinking?: boolean;
 }
 
 function hasValidContent(content: string): boolean {
@@ -156,6 +158,7 @@ export function BlockComponent({
   onRegisterEnterHandler,
   readOnly = false,
   ref,
+  showThinking = false,
 }: BlockProps) {
   const {copy} = useCopyToClipboard();
   const organization = useOrganization();
@@ -165,9 +168,18 @@ export function BlockComponent({
   const toolsUsed = getToolsStringFromBlock(block);
   const hasTools = toolsUsed.length > 0;
   const hasContent = hasValidContent(block.message.content);
+  const hasThinkingContentToShow =
+    showThinking && hasValidContent(block.message.thinking_content ?? '');
   const processedContent = useMemo(
     () => postProcessLLMMarkdown(block.message.content),
     [block.message.content]
+  );
+  const processedThinkingContent = useMemo(
+    () =>
+      hasThinkingContentToShow
+        ? postProcessLLMMarkdown(block.message.thinking_content ?? '')
+        : '',
+    [block.message.thinking_content, hasThinkingContentToShow]
   );
 
   // State to track selected tool link (for navigation)
@@ -386,9 +398,23 @@ export function BlockComponent({
           <Flex align="start" width="100%">
             <ResponseDot
               status={getToolStatus(block)}
-              hasOnlyTools={!hasContent && hasTools}
+              hasOnlyTools={!hasContent && !hasThinkingContentToShow && hasTools}
             />
-            <BlockContentWrapper hasOnlyTools={!hasContent && hasTools}>
+            <BlockContentWrapper
+              hasOnlyTools={!hasContent && !hasThinkingContentToShow && hasTools}
+            >
+              {hasThinkingContentToShow && (
+                <ThinkingDisclosure>
+                  <Disclosure.Title>
+                    <Text size="xs" variant="muted" monospace>
+                      {t('Thinking')}
+                    </Text>
+                  </Disclosure.Title>
+                  <Disclosure.Content>
+                    <ThinkingContent text={processedThinkingContent} />
+                  </Disclosure.Content>
+                </ThinkingDisclosure>
+              )}
               {hasContent && (
                 <BlockContent
                   text={processedContent}
@@ -762,4 +788,30 @@ const TodoListContent = styled(MarkedText)`
   font-size: ${p => p.theme.font.size.xs};
   font-family: ${p => p.theme.font.family.mono};
   color: ${p => p.theme.tokens.content.secondary};
+`;
+
+const ThinkingDisclosure = styled(Disclosure)`
+  margin-bottom: ${p => p.theme.space.md};
+`;
+
+const ThinkingContent = styled(MarkedText)`
+  font-size: ${p => p.theme.font.size.sm};
+  color: ${p => p.theme.tokens.content.secondary};
+  white-space: pre-wrap;
+  word-wrap: break-word;
+
+  code:not(pre code) {
+    ${p => inlineCodeStyles(p.theme)};
+  }
+
+  p,
+  li,
+  ul,
+  ol {
+    margin: -${p => p.theme.space.md} 0;
+  }
+
+  p:first-child {
+    margin-top: 0;
+  }
 `;

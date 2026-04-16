@@ -65,6 +65,7 @@ export function ExplorerPanel() {
   const isSeerDrawerOpen = !!location.query?.seerDrawer;
 
   const [inputValue, setInputValue] = useState('');
+  const [showThinking, setShowThinking] = useState(false);
   const [focusedBlockIndex, setFocusedBlockIndex] = useState(-1); // -1 means input is focused
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -619,6 +620,9 @@ export function ExplorerPanel() {
         sessionHistoryButtonRef={sessionHistoryButtonRef}
         overrideCtxEngEnable={overrideCtxEngEnable}
         onOverrideCtxEngEnableToggle={() => setOverrideCtxEngEnable(v => !v)}
+        showThinking={showThinking}
+        onShowThinkingToggle={() => setShowThinking(v => !v)}
+        showThinkingToggle={user.isStaff}
         showContextEngineToggle={
           !!organization?.features.includes(
             'seer-explorer-context-engine-fe-override-ui-flag'
@@ -653,6 +657,7 @@ export function ExplorerPanel() {
                 isAwaitingFileApproval={isFileApprovalPending}
                 isAwaitingQuestion={isQuestionPending}
                 isLatestTodoBlock={index === latestTodoBlockIndex}
+                showThinking={showThinking}
                 isLast={
                   index === blocks.length - 1 && !(isAwaitingUserInput && pendingInput)
                 }
