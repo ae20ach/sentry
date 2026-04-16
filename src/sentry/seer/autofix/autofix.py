@@ -35,6 +35,7 @@ from sentry.seer.autofix.types import (
 )
 from sentry.seer.autofix.utils import (
     AutofixStoppingPoint,
+    get_autofix_repos_from_project_code_mappings,
     get_org_default_seer_automation_handoff,
     get_project_seer_preferences,
     make_autofix_start_request,
@@ -737,6 +738,9 @@ def trigger_autofix(
         return _respond_with_error("Cannot fix issues without an event.", 400)
 
     code_mappings = get_sorted_code_mapping_configs(group.project)
+    code_mappings_repos = get_autofix_repos_from_project_code_mappings(
+        group.project, code_mappings=code_mappings
+    )
 
     # Resolve the project preference, or create a new one with org defaults.
     # Preference repos are the source of truth (even if empty).
@@ -744,7 +748,7 @@ def trigger_autofix(
     if preference:
         repos = [repo.dict() for repo in preference.repositories]
     else:
-        repos = []
+        repos = code_mappings_repos
 
     # Pre-resolve stacktrace frame paths using code mappings so Seer can skip
     # expensive git tree fetches for large repos.
