@@ -504,6 +504,28 @@ class OrganizationDetectorDetailsPutTest(OrganizationDetectorDetailsBaseTest):
 
         assert response.status_code == 403
 
+    def test_team_admin_can_update_with_project_scoped_alerts_write(self) -> None:
+        team_admin_user = self.create_user(is_superuser=False)
+        self.create_member(
+            user=team_admin_user,
+            organization=self.organization,
+            role="member",
+            team_roles=[(self.team, "admin")],
+        )
+        self.organization.update_option("sentry:alerts_member_write", False)
+        self.login_as(team_admin_user)
+
+        with self.tasks():
+            response = self.client.put(
+                reverse(self.endpoint, args=[self.organization.slug, self.detector.id]),
+                data={"enabled": False},
+                format="json",
+            )
+
+        assert response.status_code == 200
+        self.detector.refresh_from_db()
+        assert self.detector.enabled is False
+
     def test_update_allows_alerts_write_scope_for_tokens(self) -> None:
         token = self._create_token("alerts:write")
 
@@ -1028,6 +1050,24 @@ class OrganizationDetectorDetailsPutTest(OrganizationDetectorDetailsBaseTest):
 @cell_silo_test
 class OrganizationDetectorDetailsDeleteTest(OrganizationDetectorDetailsBaseTest):
     method = "DELETE"
+
+    def test_team_admin_can_delete_with_project_scoped_alerts_write(self) -> None:
+        team_admin_user = self.create_user(is_superuser=False)
+        self.create_member(
+            user=team_admin_user,
+            organization=self.organization,
+            role="member",
+            team_roles=[(self.team, "admin")],
+        )
+        self.organization.update_option("sentry:alerts_member_write", False)
+        self.login_as(team_admin_user)
+
+        with outbox_runner():
+            response = self.client.delete(
+                reverse(self.endpoint, args=[self.organization.slug, self.detector.id])
+            )
+
+        assert response.status_code == 204
 
     def test_delete_denies_alerts_write_scope_for_other_team_projects(self) -> None:
         team_admin_user = self.create_user(is_superuser=False)
