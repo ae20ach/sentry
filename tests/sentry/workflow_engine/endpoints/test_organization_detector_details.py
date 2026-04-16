@@ -25,6 +25,7 @@ from sentry.testutils.helpers import with_feature
 from sentry.testutils.outbox import outbox_runner
 from sentry.testutils.silo import assume_test_silo_mode, cell_silo_test
 from sentry.testutils.skips import requires_kafka, requires_snuba
+from sentry.users.models.user import User
 from sentry.workflow_engine.models import (
     AlertRuleDetector,
     DataCondition,
@@ -96,7 +97,7 @@ class OrganizationDetectorDetailsBaseTest(APITestCase):
         )
         assert self.detector.data_sources is not None
 
-    def _create_token(self, scope: str, user=None) -> ApiToken:
+    def _create_token(self, scope: str, user: User | None = None) -> ApiToken:
         with assume_test_silo_mode(SiloMode.CONTROL):
             return ApiToken.objects.create(user=user or self.user, scope_list=[scope])
 

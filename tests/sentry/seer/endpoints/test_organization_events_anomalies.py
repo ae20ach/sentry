@@ -1,12 +1,15 @@
 from datetime import timedelta
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import MagicMock, patch
 
 import orjson
 from django.urls import reverse
+from rest_framework.request import Request
 from urllib3 import HTTPResponse
 from urllib3.exceptions import TimeoutError
 
+from sentry.api.bases.organization import ALERT_MUTATION_LOOKUP_MISS
 from sentry.incidents.models.alert_rule import (
     AlertRuleSeasonality,
     AlertRuleSensitivity,
@@ -29,6 +32,7 @@ from sentry.testutils.helpers.datetime import before_now, freeze_time
 from sentry.testutils.helpers.features import with_feature
 from sentry.testutils.outbox import outbox_runner
 from sentry.testutils.silo import assume_test_silo_mode
+from sentry.users.models.user import User
 
 
 @freeze_time()
@@ -51,7 +55,7 @@ class OrganizationEventsAnomaliesEndpointTest(APITestCase):
     current_timestamp_1 = one_week_ago.timestamp()
     current_timestamp_2 = (one_week_ago + timedelta(minutes=10)).timestamp()
 
-    def _create_token(self, scope: str, user=None) -> ApiToken:
+    def _create_token(self, scope: str, user: User | None = None) -> ApiToken:
         with assume_test_silo_mode(SiloMode.CONTROL):
             return ApiToken.objects.create(user=user or self.user, scope_list=[scope])
 
@@ -95,12 +99,36 @@ class OrganizationEventsAnomaliesEndpointTest(APITestCase):
 
     def test_get_alert_mutation_projects_accepts_rpc_org_context(self) -> None:
         endpoint = OrganizationEventsAnomaliesEndpoint()
-        request = SimpleNamespace(data={"project_id": str(self.project.id)})
+        request = cast(Request, SimpleNamespace(data={"project_id": str(self.project.id)}))
         organization = RpcUserOrganizationContext(
             organization=RpcOrganization(id=self.organization.id)
         )
 
         assert endpoint.get_alert_mutation_projects(request, organization) == [self.project]
+
+    def test_get_alert_mutation_projects_returns_lookup_miss_for_invalid_project_id(self) -> None:
+        endpoint = OrganizationEventsAnomaliesEndpoint()
+        request = cast(Request, SimpleNamespace(data={"project_id": "not-a-project"}))
+        organization = RpcUserOrganizationContext(
+            organization=RpcOrganization(id=self.organization.id)
+        )
+
+        assert (
+            endpoint.get_alert_mutation_projects(request, organization)
+            is ALERT_MUTATION_LOOKUP_MISS
+        )
+
+    def test_get_alert_mutation_projects_returns_lookup_miss_for_missing_project(self) -> None:
+        endpoint = OrganizationEventsAnomaliesEndpoint()
+        request = cast(Request, SimpleNamespace(data={"project_id": "999999999"}))
+        organization = RpcUserOrganizationContext(
+            organization=RpcOrganization(id=self.organization.id)
+        )
+
+        assert (
+            endpoint.get_alert_mutation_projects(request, organization)
+            is ALERT_MUTATION_LOOKUP_MISS
+        )
 
     @with_feature("organizations:anomaly-detection-alerts")
     @with_feature("organizations:incidents")

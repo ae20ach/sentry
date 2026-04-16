@@ -294,7 +294,7 @@ class OrganizationAlertRulePermission(OrganizationPermission):
             if _has_any_team_scope(request, "alerts:write"):
                 raise ResourceDoesNotExist
             return False
-        if project_scoped_access is not None:
+        if isinstance(project_scoped_access, bool):
             return project_scoped_access
 
         return bool(getattr(view, "allow_any_team_alert_write_fallback", False)) and (

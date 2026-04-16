@@ -1,4 +1,5 @@
 from drf_spectacular.utils import extend_schema
+from rest_framework.exceptions import ValidationError as RestFrameworkValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -7,7 +8,9 @@ from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import cell_silo_endpoint
 from sentry.api.bases.organization import (
+    ALERT_MUTATION_LOOKUP_MISS,
     ALERT_MUTATION_SCOPES,
+    AlertMutationProjectLookup,
     OrganizationAlertRulePermission,
     _get_organization_id,
 )
@@ -48,20 +51,25 @@ class OrganizationEventsAnomaliesEndpoint(OrganizationEventsEndpointBase):
         self,
         request: Request,
         organization: Organization | RpcOrganization | RpcUserOrganizationContext,
-    ):
+    ) -> AlertMutationProjectLookup:
         raw_project_id = request.data.get("project_id")
         if raw_project_id is None:
             return None
 
         try:
             project_id = to_valid_int_id("project_id", raw_project_id)
-            return list(
-                Project.objects.filter(
-                    id=project_id, organization_id=_get_organization_id(organization)
-                )
+        except RestFrameworkValidationError:
+            return ALERT_MUTATION_LOOKUP_MISS
+
+        projects = list(
+            Project.objects.filter(
+                id=project_id, organization_id=_get_organization_id(organization)
             )
-        except Exception:
-            return None
+        )
+        if not projects:
+            return ALERT_MUTATION_LOOKUP_MISS
+
+        return projects
 
     @extend_schema(
         operation_id="Identify anomalies in historical data",
