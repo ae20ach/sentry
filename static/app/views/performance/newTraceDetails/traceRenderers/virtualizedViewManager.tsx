@@ -102,7 +102,7 @@ export class VirtualizedViewManager {
 
   row_depth_padding = 22;
 
-  private scrollbar_width = 0;
+  scrollbar_width = 0;
   // the transformation matrix that is used to render scaled elements to the DOM
   private span_to_px: mat3 = mat3.create();
   private readonly ROW_PADDING_PX = 16;
@@ -259,6 +259,20 @@ export class VirtualizedViewManager {
       return;
     }
     this.scrollbar_width = width;
+
+    // Re-dispatch the container physical space so that the trace_physical_space
+    // is recomputed accounting for the new scrollbar width. Without this, bars
+    // are positioned relative to a wider space than the actual column, shifting
+    // them to the right.
+    if (this.container) {
+      const rect = this.container.getBoundingClientRect();
+      this.scheduler.dispatch('set container physical space', [
+        0,
+        0,
+        rect.width,
+        rect.height,
+      ]);
+    }
   }
 
   registerContainerRef(container: HTMLElement | null) {
