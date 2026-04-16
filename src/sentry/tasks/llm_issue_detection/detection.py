@@ -348,12 +348,6 @@ def run_llm_issue_detection() -> None:
         )
         dispatched += 1
 
-    sentry_sdk.metrics.count(
-        "llm_issue_detection.orgs_dispatched",
-        dispatched,
-        attributes={"slot": current_slot},
-    )
-
 
 @instrumented_task(
     name="sentry.tasks.llm_issue_detection.detect_llm_issues_for_org",
