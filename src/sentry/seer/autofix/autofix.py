@@ -743,7 +743,6 @@ def trigger_autofix(
     )
 
     # Resolve the project preference, or create a new one with org defaults.
-    # Preference repos are the source of truth (even if empty).
     preference = _resolve_project_preference(group.organization, group.project)
 
     # Pre-resolve stacktrace frame paths using code mappings so Seer can skip
