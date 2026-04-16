@@ -108,9 +108,7 @@ class TestQueryCoverage:
 class TestMain:
     @pytest.fixture(autouse=True)
     def _patch_find_test_importers(self):
-        with mock.patch(
-            "compute_sentry_selected_tests.find_test_importers", return_value=set()
-        ):
+        with mock.patch("compute_sentry_selected_tests.find_test_importers", return_value=set()):
             yield
 
     def test_no_changed_files_falls_back_to_full_suite(self, tmp_path):
