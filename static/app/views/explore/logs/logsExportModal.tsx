@@ -20,7 +20,6 @@ const ROW_COUNT_VALUE_DEFAULT = 100;
 
 /**
  * Keep this in sync with data_export.py on the backend
- * (TODO: Saraj is looking into updating this)
  */
 const ROW_COUNT_VALUE_SYNC_LIMIT = QUERY_PAGE_LIMIT;
 
@@ -121,7 +120,7 @@ export function LogsExportModal({
         <Heading as="h2">{t('Logs Export')}</Heading>
       </Header>
       <Body>
-        <Stack gap="lg">
+        <Stack gap="xl">
           <Text>
             {t(
               'If you select more than %s rows or to export all columns of data your file will be sent to your email address.',
@@ -158,7 +157,12 @@ export function LogsExportModal({
           </form.AppField>
           <form.AppField name="allColumns">
             {field => (
-              <field.Layout.Stack label={t('All columns')}>
+              <field.Layout.Stack
+                hintText={t(
+                  'Whether to add data from all columns to output rows, not just those specified in your table.'
+                )}
+                label={t('All columns')}
+              >
                 <field.Switch
                   checked={field.state.value ?? false}
                   onChange={field.handleChange}

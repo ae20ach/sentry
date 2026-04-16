@@ -10,7 +10,7 @@ interface DownloadLogsOptions {
   rows: OurLogsResponseItem[];
 }
 
-export function downloadLogs({format, rows, fields, filename}: DownloadLogsOptions) {
+export function downloadLogs({fields, filename, format, rows}: DownloadLogsOptions) {
   switch (format) {
     case 'csv':
       return downloadLogsAsCsv(rows, fields, filename);

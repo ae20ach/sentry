@@ -15,9 +15,15 @@ export enum ExportQueryType {
   EXPLORE = 'Explore',
 }
 
+// NOTE: Coordinate with data_export's OutputMode (src/sentry/data_export/writers.py)
+export type DataExportFormat = 'csv' | 'jsonl';
+
 export interface DataExportPayload {
+  /**
+   * TODO(LOGS-702): Formalize different possible payloads
+   */
   queryInfo: any;
-  queryType: ExportQueryType; // TODO(ts): Formalize different possible payloads
+  queryType: ExportQueryType;
 }
 
 interface DataExportOptions {
@@ -25,8 +31,6 @@ interface DataExportOptions {
   inProgressCallback?: (inProgress: boolean) => void;
   unmountedRef?: React.RefObject<boolean>;
 }
-
-export type DataExportFormat = 'csv' | 'jsonl';
 
 interface DataExportData {
   checksum: null;
@@ -71,6 +75,9 @@ function handleDataExportResponse(
   addSuccessMessage(t("Downloading '%s' to your browser.", data.fileName));
 }
 
+/**
+ * @todo(LOGS-698): Modernize this into using a useApiQuery call.
+ */
 export function useDataExport({
   payload,
   inProgressCallback,
@@ -89,6 +96,7 @@ export function useDataExport({
           includeAllArgs: true,
           method: 'POST',
           data: {
+            format,
             query_type: payload.queryType,
             query_info: payload.queryInfo,
           },
@@ -113,7 +121,6 @@ export function useDataExport({
           inProgressCallback?.(false);
         });
 
-      // TODO: We'll turn this whole function into a useApiQuery call soon.
       return result!;
     },
     [

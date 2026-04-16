@@ -16,14 +16,16 @@ type LogsExportModalButtonProps = {
   error?: Error | null;
 };
 
-export function LogsExportModalButton(props: LogsExportModalButtonProps) {
-  const {estimatedRowCount, isLoading, tableData, error, queryInfo} = props;
-  const isDataEmpty = !tableData?.length;
-  const isDataError = error !== null;
-
+export function LogsExportModalButton({
+  error,
+  estimatedRowCount,
+  isLoading,
+  queryInfo,
+  tableData,
+}: LogsExportModalButtonProps) {
   const disabledTooltip = getExportDisabledTooltip({
-    isDataEmpty,
-    isDataError,
+    isDataEmpty: !tableData?.length,
+    isDataError: error !== null,
     isDataLoading: isLoading,
   });
 
