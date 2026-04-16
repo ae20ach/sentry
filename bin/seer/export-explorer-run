@@ -1,0 +1,156 @@
+#!/usr/bin/env python
+
+from sentry.runner import configure
+
+configure()
+
+import argparse
+import os
+import sys
+import uuid
+from collections import deque
+from collections.abc import Sequence
+
+from sentry.models.organization import Organization
+from sentry.seer.explorer.client_models import MemoryBlock
+from sentry.seer.explorer.client_utils import fetch_run_status
+from sentry.utils import json
+
+
+def blocks_to_jsonl_lines(
+    blocks: Sequence[MemoryBlock],
+    session_id: str,
+) -> list[dict]:
+    """Convert Explorer MemoryBlocks into Claude Code JSONL transcript lines.
+
+    In the Claude Code JSONL format each line is a separate message with
+    session metadata.  Assistant tool_use and the following tool_result
+    blocks are coalesced into a single assistant line so the content array
+    mirrors what Claude Code would produce.
+    """
+    pending_tool_ids: deque[str] = deque()
+    lines: list[dict] = []
+
+    # Buffer for coalescing tool results into the preceding assistant line.
+    current_assistant_content: list[dict] | None = None
+
+    def _flush_assistant() -> None:
+        """Emit the buffered assistant line (if any)."""
+        nonlocal current_assistant_content
+        if current_assistant_content is not None:
+            lines.append(_make_line(session_id, "assistant", current_assistant_content))
+            current_assistant_content = None
+
+    for block in blocks:
+        if block.loading:
+            continue
+
+        msg = block.message
+
+        if msg.role == "user":
+            _flush_assistant()
+            lines.append(_make_line(session_id, "user", msg.content or ""))
+
+        elif msg.role == "assistant":
+            # A new assistant turn — flush any previous one first.
+            _flush_assistant()
+
+            content_blocks: list[dict] = []
+            if msg.content:
+                content_blocks.append({"type": "text", "text": msg.content})
+
+            if msg.tool_calls:
+                for i, tc in enumerate(msg.tool_calls):
+                    tool_id = f"toolu_{block.id}_{i}"
+                    pending_tool_ids.append(tool_id)
+                    try:
+                        input_data = json.loads(tc.args)
+                    except (json.JSONDecodeError, TypeError):
+                        input_data = {"_raw": tc.args}
+                    content_blocks.append(
+                        {
+                            "type": "tool_use",
+                            "id": tool_id,
+                            "name": tc.function,
+                            "input": input_data,
+                        }
+                    )
+                # Keep the buffer open so following tool_use blocks get appended.
+                current_assistant_content = content_blocks
+            else:
+                # Plain text assistant message — emit immediately.
+                lines.append(
+                    _make_line(session_id, "assistant", content_blocks or msg.content or "")
+                )
+
+        else:
+            # role == "tool_use" → tool result; append to current assistant line.
+            tool_use_id = pending_tool_ids.popleft() if pending_tool_ids else "toolu_unknown"
+            result_block = {
+                "type": "tool_result",
+                "tool_use_id": tool_use_id,
+                "content": msg.content or "",
+            }
+            if current_assistant_content is not None:
+                current_assistant_content.append(result_block)
+            else:
+                # Orphaned tool result — emit as assistant line anyway.
+                lines.append(_make_line(session_id, "assistant", [result_block]))
+
+    _flush_assistant()
+    return lines
+
+
+def _make_line(session_id: str, msg_type: str, content: str | list[dict]) -> dict:
+    return {
+        "sessionId": session_id,
+        "parentUuid": uuid.uuid4().hex,
+        "type": msg_type,
+        "message": {"content": content},
+    }
+
+
+def main(run_id: int, org_id: int, output: str | None) -> None:
+    organization = Organization.objects.get(id=org_id)
+    sys.stderr.write(f"> Fetching explorer run {run_id} (org {org_id})...\n")
+
+    state = fetch_run_status(run_id, organization)
+    sys.stderr.write(f"> Run status: {state.status}, {len(state.blocks)} blocks\n")
+
+    session_id = f"explorer-run-{run_id}-{uuid.uuid4().hex[:8]}"
+
+    # Root metadata line — required by claudescope parser (cwd must be non-empty).
+    root_line: dict = {
+        "sessionId": session_id,
+        "parentUuid": None,
+        "cwd": os.getcwd(),
+        "isSidechain": False,
+    }
+
+    content_lines = blocks_to_jsonl_lines(state.blocks, session_id)
+
+    out = open(output, "a") if output else sys.stdout
+    try:
+        out.write(json.dumps(root_line) + "\n")
+        for line in content_lines:
+            out.write(json.dumps(line) + "\n")
+    finally:
+        if output:
+            out.close()
+
+    sys.stderr.write(f"> Wrote {1 + len(content_lines)} lines (sessionId={session_id})\n")
+    if output:
+        sys.stderr.write(f"> Appended to {output}\n")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Export an explorer run's conversation history to Claude Code JSONL format."
+    )
+    parser.add_argument("run_id", type=int, help="Explorer run ID to export")
+    parser.add_argument("--org-id", type=int, default=1, help="Organization ID (default: 1)")
+    parser.add_argument(
+        "-o", "--output", type=str, default=None, help="Output file path (default: stdout)"
+    )
+    args = parser.parse_args()
+    main(args.run_id, args.org_id, args.output)
