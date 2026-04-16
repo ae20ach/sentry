@@ -14,6 +14,7 @@ import {TeamStore} from 'sentry/stores/teamStore';
 import type {OnboardingSelectedSDK} from 'sentry/types/onboarding';
 import * as analytics from 'sentry/utils/analytics';
 import {sessionStorageWrapper} from 'sentry/utils/sessionStorage';
+import {MetricValues, RuleAction} from 'sentry/views/projectInstall/issueAlertOptions';
 
 import {ScmProjectDetails} from './scmProjectDetails';
 
@@ -376,6 +377,7 @@ describe('ScmProjectDetails', () => {
   });
 
   it('reuses existing project when nothing changed on back-nav', async () => {
+    const trackAnalyticsSpy = jest.spyOn(analytics, 'trackAnalytics');
     const existingProject = ProjectFixture({
       slug: 'javascript-nextjs',
       name: 'javascript-nextjs',
@@ -405,9 +407,9 @@ describe('ScmProjectDetails', () => {
             projectName: 'javascript-nextjs',
             teamSlug: teamWithAccess.slug,
             alertRuleConfig: {
-              alertSetting: 0,
+              alertSetting: RuleAction.DEFAULT_ALERT,
               interval: '1m',
-              metric: 0,
+              metric: MetricValues.ERRORS,
               threshold: '10',
             },
           },
@@ -421,6 +423,10 @@ describe('ScmProjectDetails', () => {
       expect(onComplete).toHaveBeenCalled();
     });
     expect(createRequest).not.toHaveBeenCalled();
+    expect(trackAnalyticsSpy).toHaveBeenCalledWith(
+      'onboarding.scm_project_details_create_succeeded',
+      expect.objectContaining({project_slug: existingProject.slug})
+    );
   });
 
   it('creates a new project when the user edits after restoring form state', async () => {
@@ -465,9 +471,9 @@ describe('ScmProjectDetails', () => {
             projectName: 'javascript-nextjs',
             teamSlug: teamWithAccess.slug,
             alertRuleConfig: {
-              alertSetting: 0,
+              alertSetting: RuleAction.DEFAULT_ALERT,
               interval: '1m',
-              metric: 0,
+              metric: MetricValues.ERRORS,
               threshold: '10',
             },
           },
@@ -527,9 +533,9 @@ describe('ScmProjectDetails', () => {
             projectName: 'javascript-nextjs',
             teamSlug: teamWithAccess.slug,
             alertRuleConfig: {
-              alertSetting: 0,
+              alertSetting: RuleAction.DEFAULT_ALERT,
               interval: '1m',
-              metric: 0,
+              metric: MetricValues.ERRORS,
               threshold: '10',
             },
           },

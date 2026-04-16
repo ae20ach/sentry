@@ -136,7 +136,11 @@ export function ScmProjectDetails({onComplete}: StepProps) {
     // User navigated back and clicked Create without changing anything; skip
     // to setup-docs without creating a duplicate. Any actual change abandons
     // the previous project and creates a new one, matching legacy onboarding.
-    if (projectStillExists && nothingChanged) {
+    if (projectStillExists && createdProjectSlug && nothingChanged) {
+      trackAnalytics('onboarding.scm_project_details_create_succeeded', {
+        organization,
+        project_slug: createdProjectSlug,
+      });
       onComplete(undefined, selectedFeatures ? {product: selectedFeatures} : undefined);
       return;
     }
