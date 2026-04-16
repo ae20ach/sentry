@@ -12,6 +12,8 @@ from django.urls import reverse
 from rest_framework import status
 
 from sentry.hybridcloud.models.outbox import outbox_context
+from sentry.hybridcloud.services.organization_mapping.model import RpcOrganizationMapping
+from sentry.hybridcloud.services.organization_mapping.service import organization_mapping_service
 from sentry.integrations.messaging.metrics import SeerSlackHaltReason
 from sentry.integrations.middleware.hybrid_cloud.parser import create_async_request_payload
 from sentry.integrations.models.organization_integration import OrganizationIntegration
@@ -21,7 +23,6 @@ from sentry.integrations.slack.requests.event import SeerResolutionResult
 from sentry.integrations.slack.utils.auth import _encode_data
 from sentry.integrations.slack.views import SALT
 from sentry.middleware.integrations.parsers.slack import SlackRequestParser
-from sentry.models.organizationmapping import OrganizationMapping
 from sentry.testutils.cases import TestCase
 from sentry.testutils.outbox import assert_no_webhook_payloads
 from sentry.testutils.silo import assume_test_silo_mode_of, control_silo_test, create_test_cells
@@ -40,9 +41,37 @@ class SlackRequestParserTest(TestCase):
         self.integration = self.create_integration(
             organization=self.organization, external_id="TXXXXXXX1", provider="slack"
         )
+        self.org_mapping = organization_mapping_service.get(organization_id=self.organization.id)
+        patcher = patch(
+            "sentry.integrations.slack.requests.base.SlackRequest._check_signing_secret",
+            return_value=True,
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def get_response(self, request: HttpRequest) -> HttpResponse:
         return HttpResponse(status=200, content="passthrough")
+
+    def _make_parser_with_seer_event(self, event_type: str = "app_mention"):
+        data = {
+            "type": "event_callback",
+            "team_id": self.integration.external_id,
+            "api_app_id": "AXXXXXXXX1",
+            "event_id": "E1",
+            "event": {
+                "type": event_type,
+                "channel": "C1234567890",
+                "user": "U1234567890",
+                "text": "hello",
+                "ts": "1234567890.123456",
+            },
+        }
+        request = self.factory.post(
+            reverse("sentry-integration-slack-event"),
+            data=orjson.dumps(data),
+            content_type="application/json",
+        )
+        return SlackRequestParser(request, self.get_response)
 
     @responses.activate
     @patch(
@@ -114,14 +143,8 @@ class SlackRequestParserTest(TestCase):
         assert len(responses.calls) == 0
         assert_no_webhook_payloads()
 
-    @patch(
-        "sentry.integrations.slack.requests.base.SlackRequest._check_signing_secret",
-        return_value=True,
-    )
     @patch("sentry.middleware.integrations.parsers.slack.convert_to_async_slack_response")
-    def test_triggers_async_response(
-        self, mock_slack_task: MagicMock, mock_signing_secret: MagicMock
-    ) -> None:
+    def test_triggers_async_response(self, mock_slack_task: MagicMock) -> None:
         response_url = "https://hooks.slack.com/commands/TXXXXXXX1/1234567890123/something"
         data = {
             "payload": json.dumps(
@@ -140,14 +163,8 @@ class SlackRequestParserTest(TestCase):
         )
         assert response.status_code == status.HTTP_200_OK
 
-    @patch(
-        "sentry.integrations.slack.requests.base.SlackRequest._check_signing_secret",
-        return_value=True,
-    )
     @patch("sentry.middleware.integrations.parsers.slack.convert_to_async_slack_response")
-    def test_skips_async_response_if_org_integration_missing(
-        self, mock_slack_task, mock_signing_secret
-    ):
+    def test_skips_async_response_if_org_integration_missing(self, mock_slack_task):
         response_url = "https://hooks.slack.com/commands/TXXXXXXX1/1234567890123/something"
         data = {
             "payload": json.dumps(
@@ -207,6 +224,7 @@ class SlackRequestParserTest(TestCase):
                 content_type="application/x-www-form-urlencoded",
             )
             parser = SlackRequestParser(request, self.get_response)
+            parser.get_integration_from_request()
             organizations = parser.get_organizations_from_integration(self.integration)
             organization_ids = {org.id for org in organizations}
             assert len(organization_ids) == 2
@@ -232,6 +250,7 @@ class SlackRequestParserTest(TestCase):
                 content_type="application/x-www-form-urlencoded",
             )
             parser = SlackRequestParser(request, self.get_response)
+            parser.get_integration_from_request()
             organizations = parser.get_organizations_from_integration(self.integration)
 
             assert len(organizations) == 1
@@ -258,6 +277,7 @@ class SlackRequestParserTest(TestCase):
                 content_type="application/x-www-form-urlencoded",
             )
             parser = SlackRequestParser(request, self.get_response)
+            parser.get_integration_from_request()
             organizations = parser.get_organizations_from_integration(self.integration)
             organization_ids = {org.id for org in organizations}
             assert len(organization_ids) == 2
@@ -285,6 +305,7 @@ class SlackRequestParserTest(TestCase):
             content_type="application/x-www-form-urlencoded",
         )
         parser = SlackRequestParser(request, self.get_response)
+        parser.get_integration_from_request()
         organizations = parser.get_organizations_from_integration(self.integration)
         organization_ids = {org.id for org in organizations}
         assert len(organization_ids) == 2
@@ -314,6 +335,7 @@ class SlackRequestParserTest(TestCase):
             content_type="application/x-www-form-urlencoded",
         )
         parser = SlackRequestParser(request, self.get_response)
+        parser.get_integration_from_request()
         organizations = parser.get_organizations_from_integration(self.integration)
         organization_ids = {org.id for org in organizations}
         assert len(organization_ids) == 1
@@ -343,121 +365,63 @@ class SlackRequestParserTest(TestCase):
             content_type="application/x-www-form-urlencoded",
         )
         parser = SlackRequestParser(request, self.get_response)
+        parser.get_integration_from_request()
         organizations = parser.get_organizations_from_integration(self.integration)
         organization_ids = {org.id for org in organizations}
         assert len(organization_ids) == 2
         assert self.organization.id in organization_ids
         assert other_organization.id in organization_ids
 
-
-@control_silo_test(cells=create_test_cells("us"))
-class SlackRequestParserSeerEventRoutingTest(TestCase):
-    """Tests for _maybe_get_response_from_event_request cell routing."""
-
-    factory = RequestFactory()
-
-    def setUp(self) -> None:
-        self.user = self.create_user()
-        self.organization = self.create_organization(owner=self.user)
-        self.integration = self.create_integration(
-            organization=self.organization, external_id="TXXXXXXX1", provider="slack"
-        )
-
-    def get_response(self, request: HttpRequest) -> HttpResponse:
-        return HttpResponse(status=200, content="passthrough")
-
-    def _make_event_request(self, event_type: str = "app_mention"):
-        data = {
-            "type": "event_callback",
-            "team_id": self.integration.external_id,
-            "api_app_id": "AXXXXXXXX1",
-            "event_id": "E1",
-            "event": {
-                "type": event_type,
-                "channel": "C1234567890",
-                "user": "U1234567890",
-                "text": "hello",
-                "ts": "1234567890.123456",
-            },
-        }
-        return self.factory.post(
-            reverse("sentry-integration-slack-event"),
-            data=orjson.dumps(data),
-            content_type="application/json",
-        )
-
-    def test_returns_none_for_non_event_endpoint(self):
-        data = urlencode({"team_id": self.integration.external_id}).encode("utf-8")
+    def test_seer_filter_returns_orgs_unchanged_when_no_slack_request(self):
         request = self.factory.post(
             path=reverse("sentry-integration-slack-commands"),
-            data=data,
+            data=urlencode({"team_id": self.integration.external_id}).encode("utf-8"),
             content_type="application/x-www-form-urlencoded",
         )
         parser = SlackRequestParser(request, self.get_response)
-        assert parser._maybe_get_response_from_event_request() is None
+        orgs = [self.org_mapping]
+        assert parser._filter_organizations_for_seer_event(orgs) is orgs
 
-    @patch(
-        "sentry.integrations.slack.requests.base.SlackRequest._check_signing_secret",
-        return_value=True,
-    )
-    def test_returns_none_for_non_seer_event(self, mock_signing):
-        request = self._make_event_request(event_type="link_shared")
-        parser = SlackRequestParser(request, self.get_response)
-        assert parser._maybe_get_response_from_event_request() is None
+    def test_seer_filter_returns_orgs_unchanged_for_non_seer_event(self):
+        parser = self._make_parser_with_seer_event(event_type="link_shared")
+        parser.get_integration_from_request()
+        orgs = [self.org_mapping]
+        assert parser._filter_organizations_for_seer_event(orgs) is orgs
 
-    @patch(
-        "sentry.integrations.slack.requests.base.SlackRequest._check_signing_secret",
-        return_value=True,
-    )
     @patch(
         "sentry.integrations.slack.requests.event.SlackEventRequest.resolve_seer_organization",
     )
-    def test_routes_seer_event_to_correct_cell(self, mock_resolve, mock_signing):
+    def test_seer_filter_filters_to_resolved_organization(self, mock_resolve):
         mock_resolve.return_value = SeerResolutionResult(
             organization_id=self.organization.id, error_reason=None
         )
-        mapping = OrganizationMapping.objects.get(organization_id=self.organization.id)
-        assert mapping.cell_name == "us"
+        other_org = RpcOrganizationMapping(id=99999, slug="other")
+        parser = self._make_parser_with_seer_event(event_type="app_mention")
+        parser.get_integration_from_request()
 
-        cell_response = HttpResponse(status=200, content="cell_response")
-        request = self._make_event_request(event_type="app_mention")
-        parser = SlackRequestParser(request, self.get_response)
+        result = parser._filter_organizations_for_seer_event([other_org, self.org_mapping])
+        assert result == [self.org_mapping]
 
-        with patch.object(
-            parser, "get_response_from_cell_silo", return_value=cell_response
-        ) as mock_cell:
-            result = parser._maybe_get_response_from_event_request()
-
-        assert result is not None
-        assert result.status_code == 200
-        mock_cell.assert_called_once()
-        cell_arg = mock_cell.call_args[1]["cell"]
-        assert cell_arg.name == "us"
-
-    @patch(
-        "sentry.integrations.slack.requests.base.SlackRequest._check_signing_secret",
-        return_value=True,
-    )
     @patch(
         "sentry.integrations.slack.requests.event.SlackEventRequest.resolve_seer_organization",
     )
-    def test_returns_none_on_org_resolution_error(self, mock_resolve, mock_signing):
+    def test_seer_filter_returns_orgs_unchanged_on_resolution_error(self, mock_resolve):
         mock_resolve.return_value = SeerResolutionResult(
             organization_id=None, error_reason=SeerSlackHaltReason.NO_VALID_ORGANIZATION
         )
-        request = self._make_event_request(event_type="app_mention")
-        parser = SlackRequestParser(request, self.get_response)
-        assert parser._maybe_get_response_from_event_request() is None
+        parser = self._make_parser_with_seer_event(event_type="app_mention")
+        parser.get_integration_from_request()
+        orgs = [self.org_mapping]
+        assert parser._filter_organizations_for_seer_event(orgs) is orgs
 
-    @patch(
-        "sentry.integrations.slack.requests.base.SlackRequest._check_signing_secret",
-        return_value=True,
-    )
     @patch(
         "sentry.integrations.slack.requests.event.SlackEventRequest.resolve_seer_organization",
     )
-    def test_returns_none_on_missing_org_mapping(self, mock_resolve, mock_signing):
-        mock_resolve.return_value = SeerResolutionResult(organization_id=99999, error_reason=None)
-        request = self._make_event_request(event_type="app_mention")
-        parser = SlackRequestParser(request, self.get_response)
-        assert parser._maybe_get_response_from_event_request() is None
+    def test_seer_filter_returns_orgs_unchanged_when_mapping_not_in_list(self, mock_resolve):
+        mock_resolve.return_value = SeerResolutionResult(
+            organization_id=self.organization.id, error_reason=None
+        )
+        parser = self._make_parser_with_seer_event(event_type="app_mention")
+        parser.get_integration_from_request()
+        other_orgs = [RpcOrganizationMapping(id=99999, slug="other")]
+        assert parser._filter_organizations_for_seer_event(other_orgs) is other_orgs

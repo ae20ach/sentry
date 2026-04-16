@@ -7,13 +7,16 @@ import pytest
 from django.utils.functional import cached_property
 
 from sentry import options
+from sentry.integrations.models.integration import Integration
+from sentry.integrations.services.integration.service import integration_service
 from sentry.integrations.slack.requests.action import SlackActionRequest
 from sentry.integrations.slack.requests.base import SlackRequest, SlackRequestError
 from sentry.integrations.slack.requests.event import SlackEventRequest
 from sentry.integrations.slack.utils.auth import set_signing_secret
+from sentry.integrations.slack.utils.constants import SlackScope
 from sentry.testutils.cases import TestCase
 from sentry.testutils.helpers import override_options
-from sentry.testutils.silo import control_silo_test
+from sentry.testutils.silo import assume_test_silo_mode_of, control_silo_test
 
 
 @control_silo_test
@@ -116,6 +119,9 @@ class SlackEventRequestTest(TestCase):
     def setUp(self) -> None:
         super().setUp()
 
+        self.integration = self.create_integration(
+            organization=self.organization, external_id="T001", provider="slack"
+        )
         self.request = mock.Mock()
         self.request.data = {
             "type": "foo",
@@ -193,6 +199,78 @@ class SlackEventRequestTest(TestCase):
             self.request.body = orjson.dumps(self.request.data)
 
             self.slack_request.validate()
+
+    def test_is_seer_agent_request(self) -> None:
+        self.request.data["event"] = {"type": "app_mention"}
+        assert SlackEventRequest(self.request).is_seer_agent_request is True
+
+        self.request.data["event"] = {"type": "assistant_thread_started"}
+        assert SlackEventRequest(self.request).is_seer_agent_request is True
+
+        self.request.data["event"] = {"type": "link_shared"}
+        assert SlackEventRequest(self.request).is_seer_agent_request is False
+
+    def test_is_seer_agent_request_dm_checks_assistant_scope(self) -> None:
+        self.request.data["event"] = {"type": "message"}
+
+        with assume_test_silo_mode_of(Integration):
+            self.integration.metadata["scopes"] = [SlackScope.ASSISTANT_WRITE.value]
+            self.integration.save()
+        rpc_integration = integration_service.get_integration(integration_id=self.integration.id)
+
+        req = SlackEventRequest(self.request)
+        req._integration = rpc_integration
+        assert req.is_seer_agent_request is True
+
+        with assume_test_silo_mode_of(Integration):
+            self.integration.metadata["scopes"] = []
+            self.integration.save()
+        rpc_integration = integration_service.get_integration(integration_id=self.integration.id)
+
+        req = SlackEventRequest(self.request)
+        req._integration = rpc_integration
+        assert req.is_seer_agent_request is False
+
+    def test_is_assistant_thread_event(self) -> None:
+        self.request.data["event"] = {"type": "assistant_thread_started"}
+        assert SlackEventRequest(self.request).is_assistant_thread_event is True
+
+        self.request.data["event"] = {"type": "app_mention"}
+        assert SlackEventRequest(self.request).is_assistant_thread_event is False
+
+    def test_channel_id(self) -> None:
+        self.request.data["event"] = {
+            "type": "message",
+            "channel": "C_REGULAR",
+            "assistant_thread": {"channel_id": "C_ASSISTANT", "user_id": "U1", "thread_ts": "1.0"},
+        }
+        assert SlackEventRequest(self.request).channel_id == "C_REGULAR"
+        self.request.data["event"]["type"] = "assistant_thread_started"
+        assert SlackEventRequest(self.request).channel_id == "C_ASSISTANT"
+
+    def test_user_id(self) -> None:
+        self.request.data["event"] = {
+            "type": "message",
+            "user": "U_REGULAR",
+            "assistant_thread": {
+                "channel_id": "C1",
+                "user_id": "U_ASSISTANT",
+                "thread_ts": "1.0",
+            },
+        }
+        assert SlackEventRequest(self.request).user_id == "U_REGULAR"
+        self.request.data["event"]["type"] = "assistant_thread_started"
+        assert SlackEventRequest(self.request).user_id == "U_ASSISTANT"
+
+    def test_thread_ts(self) -> None:
+        self.request.data["event"] = {
+            "type": "app_mention",
+            "thread_ts": "111.222",
+            "assistant_thread": {"channel_id": "C1", "user_id": "U1", "thread_ts": "333.444"},
+        }
+        assert SlackEventRequest(self.request).thread_ts == "111.222"
+        self.request.data["event"]["type"] = "assistant_thread_started"
+        assert SlackEventRequest(self.request).thread_ts == "333.444"
 
 
 class SlackActionRequestTest(TestCase):
