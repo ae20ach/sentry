@@ -1,9 +1,13 @@
 import {dummyIntegrationPipeline} from './pipelineDummyProvider';
 import {awsLambdaIntegrationPipeline} from './pipelineIntegrationAwsLambda';
 import {bitbucketIntegrationPipeline} from './pipelineIntegrationBitbucket';
+import {cursorIntegrationPipeline} from './pipelineIntegrationCursor';
+import {discordIntegrationPipeline} from './pipelineIntegrationDiscord';
 import {githubIntegrationPipeline} from './pipelineIntegrationGitHub';
 import {gitlabIntegrationPipeline} from './pipelineIntegrationGitLab';
+import {pagerDutyIntegrationPipeline} from './pipelineIntegrationPagerDuty';
 import {slackIntegrationPipeline} from './pipelineIntegrationSlack';
+import {vstsIntegrationPipeline} from './pipelineIntegrationVsts';
 
 /**
  * All registered pipeline definitions.
@@ -11,10 +15,14 @@ import {slackIntegrationPipeline} from './pipelineIntegrationSlack';
 export const PIPELINE_REGISTRY = [
   awsLambdaIntegrationPipeline,
   bitbucketIntegrationPipeline,
+  cursorIntegrationPipeline,
+  discordIntegrationPipeline,
   dummyIntegrationPipeline,
   githubIntegrationPipeline,
   gitlabIntegrationPipeline,
+  pagerDutyIntegrationPipeline,
   slackIntegrationPipeline,
+  vstsIntegrationPipeline,
 ] as const;
 
 type AllPipelines = (typeof PIPELINE_REGISTRY)[number];
