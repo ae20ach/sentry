@@ -791,12 +791,13 @@ class GitHubIntegrationTest(IntegrationTestCase):
 
     def _expected_trees(self, repo_info_list=None):
         result = {}
-        # bar (409 empty repo) returns an empty RepoTree since we cache the result
-        # baz (404) still fails and is excluded
+        # bar (409 empty repo) and baz (404 missing repo/ref) both return empty
+        # RepoTrees since those responses are negative-cached.
         list = repo_info_list or [
             ("xyz", "master", ["src/xyz.py"]),
             ("foo", "master", ["src/sentry/api/endpoints/auth_login.py"]),
             ("bar", "main", []),
+            ("baz", "master", []),
         ]
         for repo, branch, files in list:
             result[f"{self.gh_org}/{repo}"] = RepoTree(
@@ -878,6 +879,7 @@ class GitHubIntegrationTest(IntegrationTestCase):
                     # Now that the rate limit is reset we should get files for foo
                     ("foo", "master", ["src/sentry/api/endpoints/auth_login.py"]),
                     ("bar", "main", []),
+                    ("baz", "master", []),
                 ]
             )
 
@@ -902,7 +904,8 @@ class GitHubIntegrationTest(IntegrationTestCase):
         )
 
         # This time the rate limit will not fail, thus, it will fetch the trees
-        # bar (409 empty repo) now returns an empty RepoTree since we cache the empty result
+        # bar (409) and baz (404) now return empty RepoTrees because those
+        # responses are cached as empty results.
         self.set_rate_limit()
         trees = installation.get_trees_for_org()
         assert trees == self._expected_trees(
@@ -910,6 +913,7 @@ class GitHubIntegrationTest(IntegrationTestCase):
                 ("xyz", "master", ["src/xyz.py"]),
                 ("foo", "master", ["src/sentry/api/endpoints/auth_login.py"]),
                 ("bar", "main", []),
+                ("baz", "master", []),
             ]
         )
 
@@ -956,9 +960,10 @@ class GitHubIntegrationTest(IntegrationTestCase):
                     # xyz is missing because its request errors
                     # foo has data because its API request is made in spite of xyz's error
                     ("foo", "master", ["src/sentry/api/endpoints/auth_login.py"]),
-                    # bar (409 empty repo) is present with empty files since we cache the result
-                    # baz (404) is missing because its API request throws an error
+                    # bar (409) and baz (404) are present with empty files
+                    # because both outcomes are cached as empty results.
                     ("bar", "main", []),
+                    ("baz", "master", []),
                 ]
             )
 
