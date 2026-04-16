@@ -1,4 +1,3 @@
-from collections.abc import Sequence
 from typing import Any
 
 from rest_framework.exceptions import PermissionDenied
@@ -7,7 +6,12 @@ from rest_framework.request import Request
 
 from sentry import features
 from sentry.api.api_owners import ApiOwner
-from sentry.api.bases.organization import OrganizationAlertRulePermission, OrganizationEndpoint
+from sentry.api.bases.organization import (
+    ALERT_MUTATION_LOOKUP_MISS,
+    AlertMutationProjectLookup,
+    OrganizationAlertRulePermission,
+    OrganizationEndpoint,
+)
 from sentry.api.bases.project import ProjectAlertRulePermission, ProjectEndpoint
 from sentry.api.exceptions import ResourceDoesNotExist
 from sentry.incidents.endpoints.serializers.utils import get_object_id_from_fake_id
@@ -102,7 +106,7 @@ class OrganizationAlertRuleEndpoint(OrganizationEndpoint):
         self,
         request: Request,
         organization: Organization | RpcOrganization | RpcUserOrganizationContext,
-    ) -> Sequence[Project] | None:
+    ) -> AlertMutationProjectLookup:
         if request.method not in {"PUT", "DELETE"}:
             return None
 
@@ -113,7 +117,7 @@ class OrganizationAlertRuleEndpoint(OrganizationEndpoint):
         try:
             validated_alert_rule_id = to_valid_int_id("alert_rule_id", raw_alert_rule_id)
         except RestFrameworkValidationError:
-            return None
+            return ALERT_MUTATION_LOOKUP_MISS
 
         try:
             organization_id = _get_organization_id(organization)
@@ -127,7 +131,7 @@ class OrganizationAlertRuleEndpoint(OrganizationEndpoint):
             Project.DoesNotExist,
             Project.MultipleObjectsReturned,
         ):
-            return None
+            return ALERT_MUTATION_LOOKUP_MISS
 
     def convert_args(
         self, request: Request, alert_rule_id: int, *args: Any, **kwargs: Any
@@ -215,7 +219,7 @@ class WorkflowEngineOrganizationAlertRuleEndpoint(OrganizationAlertRuleEndpoint)
         self,
         request: Request,
         organization: Organization | RpcOrganization | RpcUserOrganizationContext,
-    ) -> Sequence[Project] | None:
+    ) -> AlertMutationProjectLookup:
         projects = super().get_alert_mutation_projects(request, organization)
         if projects is not None:
             return projects
@@ -230,7 +234,7 @@ class WorkflowEngineOrganizationAlertRuleEndpoint(OrganizationAlertRuleEndpoint)
         try:
             validated_alert_rule_id = to_valid_int_id("alert_rule_id", raw_alert_rule_id)
         except RestFrameworkValidationError:
-            return None
+            return ALERT_MUTATION_LOOKUP_MISS
 
         organization_id = _get_organization_id(organization)
         ard = (
@@ -247,7 +251,7 @@ class WorkflowEngineOrganizationAlertRuleEndpoint(OrganizationAlertRuleEndpoint)
         try:
             detector_id = get_object_id_from_fake_id(validated_alert_rule_id)
         except ValueError:
-            return None
+            return ALERT_MUTATION_LOOKUP_MISS
 
         detector = (
             Detector.objects.select_related("project")
@@ -258,7 +262,7 @@ class WorkflowEngineOrganizationAlertRuleEndpoint(OrganizationAlertRuleEndpoint)
             .first()
         )
         if detector is None:
-            return None
+            return ALERT_MUTATION_LOOKUP_MISS
 
         return [detector.project]
 

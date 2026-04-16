@@ -1144,6 +1144,26 @@ class AlertRuleDetailsPutEndpointTest(AlertRuleDetailsBase):
 
         assert response.status_code == 403
 
+    def test_update_missing_target_preserves_404_for_project_scoped_alerts_write(self) -> None:
+        team_admin_user = self.create_user()
+        self.create_member(
+            user=team_admin_user,
+            organization=self.organization,
+            role="member",
+            team_roles=[(self.team, "admin")],
+        )
+        self.organization.update_option("sentry:alerts_member_write", False)
+        self.login_as(team_admin_user)
+
+        with self.feature("organizations:incidents"):
+            response = self.client.put(
+                reverse(self.endpoint, args=[self.organization.slug, 999999999]),
+                data=self.valid_params,
+                format="json",
+            )
+
+        assert response.status_code == 404
+
     def test_simple(self) -> None:
         self.create_member(
             user=self.user, organization=self.organization, role="owner", teams=[self.team]
@@ -2822,6 +2842,24 @@ class AlertRuleDetailsDeleteEndpointTest(AlertRuleDetailsBase):
             )
 
         assert response.status_code == 403
+
+    def test_delete_missing_target_preserves_404_for_project_scoped_alerts_write(self) -> None:
+        team_admin_user = self.create_user()
+        self.create_member(
+            user=team_admin_user,
+            organization=self.organization,
+            role="member",
+            team_roles=[(self.team, "admin")],
+        )
+        self.organization.update_option("sentry:alerts_member_write", False)
+        self.login_as(team_admin_user)
+
+        with self.feature("organizations:incidents"):
+            response = self.client.delete(
+                reverse(self.endpoint, args=[self.organization.slug, 999999999]),
+            )
+
+        assert response.status_code == 404
 
     def test_simple(self) -> None:
         self.create_member(

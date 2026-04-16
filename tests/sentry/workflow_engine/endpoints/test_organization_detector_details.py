@@ -611,6 +611,25 @@ class OrganizationDetectorDetailsPutTest(OrganizationDetectorDetailsBaseTest):
 
         assert response.status_code == 403
 
+    def test_update_missing_target_preserves_404_for_project_scoped_alerts_write(self) -> None:
+        team_admin_user = self.create_user(is_superuser=False)
+        self.create_member(
+            user=team_admin_user,
+            organization=self.organization,
+            role="member",
+            team_roles=[(self.team, "admin")],
+        )
+        self.organization.update_option("sentry:alerts_member_write", False)
+        self.login_as(team_admin_user)
+
+        response = self.client.put(
+            reverse(self.endpoint, args=[self.organization.slug, 999999999]),
+            data={"enabled": False},
+            format="json",
+        )
+
+        assert response.status_code == 404
+
     def test_enable_detector(self) -> None:
         self.detector.update(enabled=False)
         self.detector.update(status=ObjectStatus.DISABLED)
@@ -1183,6 +1202,23 @@ class OrganizationDetectorDetailsDeleteTest(OrganizationDetectorDetailsBaseTest)
         )
 
         assert response.status_code == 403
+
+    def test_delete_missing_target_preserves_404_for_project_scoped_alerts_write(self) -> None:
+        team_admin_user = self.create_user(is_superuser=False)
+        self.create_member(
+            user=team_admin_user,
+            organization=self.organization,
+            role="member",
+            team_roles=[(self.team, "admin")],
+        )
+        self.organization.update_option("sentry:alerts_member_write", False)
+        self.login_as(team_admin_user)
+
+        response = self.client.delete(
+            reverse(self.endpoint, args=[self.organization.slug, 999999999]),
+        )
+
+        assert response.status_code == 404
 
     @mock.patch(
         "sentry.workflow_engine.endpoints.organization_detector_details.schedule_update_project_config"

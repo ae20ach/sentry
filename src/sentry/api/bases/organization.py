@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from datetime import datetime
-from typing import Any, Literal, NotRequired, TypedDict, overload
+from typing import Any, Literal, NotRequired, TypeAlias, TypedDict, overload
 
 import sentry_sdk
 from django.core.cache import cache
@@ -228,6 +228,14 @@ def _has_any_team_scope(request: Request, scope: str) -> bool:
 ALERT_MUTATION_SCOPES = frozenset({"org:write", "alerts:write"})
 
 
+class _AlertMutationLookupMiss:
+    pass
+
+
+ALERT_MUTATION_LOOKUP_MISS = _AlertMutationLookupMiss()
+AlertMutationProjectLookup: TypeAlias = Sequence[Project] | None | _AlertMutationLookupMiss
+
+
 def _has_project_alert_write_access(request: Request, projects: Sequence[Project]) -> bool:
     return bool(projects) and all(
         request.access.has_any_project_scope(project, ALERT_MUTATION_SCOPES) for project in projects
@@ -238,12 +246,14 @@ def _has_view_project_scoped_alert_write(
     request: Request,
     view: APIView,
     organization: Organization | RpcOrganization | RpcUserOrganizationContext,
-) -> bool | None:
+) -> bool | None | _AlertMutationLookupMiss:
     get_projects = getattr(view, "get_alert_mutation_projects", None)
     if not callable(get_projects):
         return None
 
     projects = get_projects(request, organization)
+    if projects is ALERT_MUTATION_LOOKUP_MISS:
+        return ALERT_MUTATION_LOOKUP_MISS
     if projects is None:
         return None
 
@@ -271,6 +281,10 @@ class OrganizationAlertRulePermission(OrganizationPermission):
             return False
 
         project_scoped_access = _has_view_project_scoped_alert_write(request, view, organization)
+        if project_scoped_access is ALERT_MUTATION_LOOKUP_MISS:
+            if _has_any_team_scope(request, "alerts:write"):
+                raise ResourceDoesNotExist
+            return False
         if project_scoped_access is not None:
             return project_scoped_access
 
@@ -300,6 +314,10 @@ class OrganizationDetectorPermission(OrganizationPermission):
             return False
 
         project_scoped_access = _has_view_project_scoped_alert_write(request, view, organization)
+        if project_scoped_access is ALERT_MUTATION_LOOKUP_MISS:
+            if _has_any_team_scope(request, "alerts:write"):
+                raise ResourceDoesNotExist
+            return False
         if project_scoped_access is not None:
             return project_scoped_access
 

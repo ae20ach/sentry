@@ -11,6 +11,7 @@ from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import cell_silo_endpoint
 from sentry.api.bases import OrganizationDetectorPermission, OrganizationEndpoint
+from sentry.api.bases.organization import ALERT_MUTATION_LOOKUP_MISS, AlertMutationProjectLookup
 from sentry.api.exceptions import ResourceDoesNotExist
 from sentry.api.serializers import serialize
 from sentry.apidocs.constants import (
@@ -109,7 +110,7 @@ class OrganizationDetectorDetailsEndpoint(OrganizationEndpoint):
         self,
         request: Request,
         organization: Organization | RpcOrganization | RpcUserOrganizationContext,
-    ) -> list[Project] | None:
+    ) -> AlertMutationProjectLookup:
         if request.method not in {"PUT", "DELETE"}:
             return None
 
@@ -120,7 +121,7 @@ class OrganizationDetectorDetailsEndpoint(OrganizationEndpoint):
         try:
             validated_detector_id = to_valid_int_id("detector_id", raw_detector_id)
         except ValidationError:
-            return None
+            return ALERT_MUTATION_LOOKUP_MISS
 
         organization_id = _get_organization_id(organization)
         detector = (
@@ -132,7 +133,7 @@ class OrganizationDetectorDetailsEndpoint(OrganizationEndpoint):
             .first()
         )
         if detector is None:
-            return None
+            return ALERT_MUTATION_LOOKUP_MISS
 
         return [detector.project]
 
