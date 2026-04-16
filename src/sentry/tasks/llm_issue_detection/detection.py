@@ -265,7 +265,7 @@ def create_issue_occurrence_from_detection(
 
 
 ELIGIBLE_ORGS_CACHE_KEY = "llm_detection:eligible_org_ids"
-ELIGIBLE_ORGS_CACHE_TTL_SECONDS = NUM_DISPATCH_SLOTS * DISPATCH_INTERVAL_MINUTES * 60 * 2
+ELIGIBLE_ORGS_CACHE_TTL_SECONDS = NUM_DISPATCH_SLOTS * DISPATCH_INTERVAL_MINUTES * 60
 
 
 def _get_current_dispatch_slot() -> int:
