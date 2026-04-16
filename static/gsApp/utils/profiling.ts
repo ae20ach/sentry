@@ -19,7 +19,7 @@ export function checkBudgetUsageFor(
   }
 
   if (
-    (category.reserved && category.reserved > 0) ||
+    (category.reserved ?? 0) !== 0 ||
     (category.free && category.free > 0) ||
     (category.onDemandBudget && category.onDemandBudget > 0) ||
     (category.onDemandQuantity && category.onDemandQuantity > 0)
