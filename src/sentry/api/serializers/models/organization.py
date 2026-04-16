@@ -78,6 +78,7 @@ from sentry.models.options.organization_option import OrganizationOption
 from sentry.models.options.project_option import ProjectOption
 from sentry.models.organization import Organization, OrganizationStatus
 from sentry.models.organizationaccessrequest import OrganizationAccessRequest
+from sentry.models.organizationmapping import OrganizationMapping
 from sentry.models.organizationonboardingtask import OrganizationOnboardingTask
 from sentry.models.project import Project
 from sentry.models.team import Team, TeamStatus
@@ -88,6 +89,7 @@ from sentry.seer.autofix.utils import get_valid_automated_run_stopping_points
 from sentry.users.models.user import User
 from sentry.users.services.user.model import RpcUser
 from sentry.users.services.user.service import user_service
+from sentry.utils.display_name_filter import is_spam_display_name
 
 if TYPE_CHECKING:
     from sentry.api.serializers.models.project import OrganizationProjectResponse
@@ -168,6 +170,19 @@ class BaseOrganizationSerializer(serializers.Serializer):
         org_slug=True,
         max_length=DEFAULT_SLUG_MAX_LENGTH,
     )
+
+    def validate_name(self, value: str) -> str:
+        if "://" in value:
+            raise serializers.ValidationError(
+                "Organization name cannot contain URL schemes (e.g. http:// or https://)."
+            )
+
+        if is_spam_display_name(value):
+            raise serializers.ValidationError(
+                "This name contains disallowed content. Please choose a different name."
+            )
+
+        return value
 
     def validate_slug(self, value: str) -> str:
         # Historically, the only check just made sure there was more than 1
@@ -280,6 +295,23 @@ class ControlSiloOrganizationSerializer(Serializer):
     ) -> ControlSiloOrganizationSerializerResponse:
         return dict(
             id=str(obj.id),
+            slug=obj.slug,
+            name=obj.name,
+        )
+
+
+class ControlSiloOrganizationMappingSerializer(Serializer):
+    # TODO(cells): Add the `avatar` to this serializer
+    # once it is available in the control silo
+    def serialize(
+        self,
+        obj: OrganizationMapping,
+        attrs: Mapping[str, Any],
+        user: User | RpcUser | AnonymousUser,
+        **kwargs: Any,
+    ) -> ControlSiloOrganizationSerializerResponse:
+        return dict(
+            id=str(obj.organization_id),
             slug=obj.slug,
             name=obj.name,
         )
