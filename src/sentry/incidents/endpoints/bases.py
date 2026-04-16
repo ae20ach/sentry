@@ -14,9 +14,19 @@ from sentry.incidents.endpoints.serializers.utils import get_object_id_from_fake
 from sentry.incidents.models.alert_rule import AlertRule
 from sentry.models.organization import Organization
 from sentry.models.project import Project
+from sentry.organizations.services.organization import RpcOrganization, RpcUserOrganizationContext
 from sentry.workflow_engine.endpoints.utils.ids import to_valid_int_id
 from sentry.workflow_engine.models.alertrule_detector import AlertRuleDetector
 from sentry.workflow_engine.models.detector import Detector
+
+
+def _get_organization_id(
+    organization: Organization | RpcOrganization | RpcUserOrganizationContext,
+) -> int:
+    if isinstance(organization, RpcUserOrganizationContext):
+        return organization.organization.id
+
+    return organization.id
 
 
 class OrganizationAlertRuleBaseEndpoint(OrganizationEndpoint):
@@ -89,7 +99,9 @@ class OrganizationAlertRuleEndpoint(OrganizationEndpoint):
     permission_classes = (OrganizationAlertRulePermission,)
 
     def get_alert_mutation_projects(
-        self, request: Request, organization: Organization
+        self,
+        request: Request,
+        organization: Organization | RpcOrganization | RpcUserOrganizationContext,
     ) -> Sequence[Project] | None:
         if request.method not in {"PUT", "DELETE"}:
             return None
@@ -104,8 +116,9 @@ class OrganizationAlertRuleEndpoint(OrganizationEndpoint):
             return None
 
         try:
+            organization_id = _get_organization_id(organization)
             alert_rule = AlertRule.objects.prefetch_related("projects").get(
-                organization=organization, id=validated_alert_rule_id
+                organization_id=organization_id, id=validated_alert_rule_id
             )
             return [alert_rule.projects.get()]
         except (
@@ -199,7 +212,9 @@ class WorkflowEngineOrganizationAlertRuleEndpoint(OrganizationAlertRuleEndpoint)
     workflow_engine_method_flags: dict[str, str] = {}
 
     def get_alert_mutation_projects(
-        self, request: Request, organization: Organization
+        self,
+        request: Request,
+        organization: Organization | RpcOrganization | RpcUserOrganizationContext,
     ) -> Sequence[Project] | None:
         projects = super().get_alert_mutation_projects(request, organization)
         if projects is not None:
@@ -217,11 +232,12 @@ class WorkflowEngineOrganizationAlertRuleEndpoint(OrganizationAlertRuleEndpoint)
         except RestFrameworkValidationError:
             return None
 
+        organization_id = _get_organization_id(organization)
         ard = (
             AlertRuleDetector.objects.select_related("detector__project")
             .filter(
                 alert_rule_id=validated_alert_rule_id,
-                detector__project__organization=organization,
+                detector__project__organization_id=organization_id,
             )
             .first()
         )
@@ -237,7 +253,7 @@ class WorkflowEngineOrganizationAlertRuleEndpoint(OrganizationAlertRuleEndpoint)
             Detector.objects.select_related("project")
             .filter(
                 id=detector_id,
-                project__organization=organization,
+                project__organization_id=organization_id,
             )
             .first()
         )

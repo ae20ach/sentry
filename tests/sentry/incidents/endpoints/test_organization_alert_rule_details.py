@@ -1052,6 +1052,28 @@ class AlertRuleDetailsGetEndpointTest(AlertRuleDetailsBase):
 class AlertRuleDetailsPutEndpointTest(AlertRuleDetailsBase):
     method = "put"
 
+    def test_team_admin_can_update_with_project_scoped_alerts_write(self) -> None:
+        team_admin_user = self.create_user()
+        self.create_member(
+            user=team_admin_user,
+            organization=self.organization,
+            role="member",
+            team_roles=[(self.team, "admin")],
+        )
+        self.organization.update_option("sentry:alerts_member_write", False)
+        self.login_as(team_admin_user)
+
+        with self.feature("organizations:incidents"):
+            response = self.client.put(
+                reverse(self.endpoint, args=[self.organization.slug, self.alert_rule.id]),
+                data=self.valid_params,
+                format="json",
+            )
+
+        assert response.status_code == 200
+        self.alert_rule.refresh_from_db()
+        assert self.alert_rule.name == self.valid_params["name"]
+
     def test_update_requires_alerts_write_scope_for_tokens(self) -> None:
         self.create_member(
             user=self.user, organization=self.organization, role="owner", teams=[self.team]
@@ -2741,6 +2763,27 @@ class AlertRuleDetailsSentryAppPutEndpointTest(AlertRuleDetailsBase):
 
 class AlertRuleDetailsDeleteEndpointTest(AlertRuleDetailsBase):
     method = "delete"
+
+    def test_team_admin_can_delete_workflow_engine_detector_with_project_scoped_alerts_write(
+        self,
+    ) -> None:
+        team_admin_user = self.create_user()
+        self.create_member(
+            user=team_admin_user,
+            organization=self.organization,
+            role="member",
+            team_roles=[(self.team, "admin")],
+        )
+        self.organization.update_option("sentry:alerts_member_write", False)
+        self.login_as(team_admin_user)
+
+        detector = self.create_detector(project=self.project, type=MetricIssue.slug)
+        data_source = self.create_data_source()
+        self.create_data_source_detector(data_source, detector)
+        fake_detector_id = get_fake_id_from_object_id(detector.id)
+
+        with self.feature({"organizations:workflow-engine-rule-serializers": True}):
+            self.get_success_response(self.organization.slug, fake_detector_id, status_code=204)
 
     def test_delete_denies_alerts_write_scope_for_other_team_projects(self) -> None:
         team_admin_user = self.create_user()

@@ -32,6 +32,8 @@ from sentry.issues import grouptype
 from sentry.models.organization import Organization
 from sentry.models.project import Project
 from sentry.snuba.models import SnubaQuery
+from sentry.organizations.services.organization import RpcOrganization, RpcUserOrganizationContext
+from sentry.snuba.models import SnubaQuery
 from sentry.utils.audit import create_audit_entry
 from sentry.workflow_engine.endpoints.serializers.detector_serializer import DetectorSerializer
 from sentry.workflow_engine.endpoints.utils.ids import to_valid_int_id
@@ -65,6 +67,15 @@ def _check_metric_detector_allowed(detector: Detector, organization: Organizatio
         return
     if not is_metric_subscription_allowed(dataset, organization):
         raise ResourceDoesNotExist
+
+
+def _get_organization_id(
+    organization: Organization | RpcOrganization | RpcUserOrganizationContext,
+) -> int:
+    if isinstance(organization, RpcUserOrganizationContext):
+        return organization.organization.id
+
+    return organization.id
 
 
 def remove_detector(request: Request, organization: Organization, detector: Detector) -> Response:
@@ -124,7 +135,9 @@ def get_detector_validator(
 @extend_schema(tags=["Monitors"])
 class OrganizationDetectorDetailsEndpoint(OrganizationEndpoint):
     def get_alert_mutation_projects(
-        self, request: Request, organization: Organization
+        self,
+        request: Request,
+        organization: Organization | RpcOrganization | RpcUserOrganizationContext,
     ) -> list[Project] | None:
         if request.method not in {"PUT", "DELETE"}:
             return None
@@ -138,11 +151,12 @@ class OrganizationDetectorDetailsEndpoint(OrganizationEndpoint):
         except ValidationError:
             return None
 
+        organization_id = _get_organization_id(organization)
         detector = (
             Detector.objects.select_related("project")
             .filter(
                 id=validated_detector_id,
-                project__organization_id=organization.id,
+                project__organization_id=organization_id,
             )
             .first()
         )
