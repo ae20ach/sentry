@@ -1,3 +1,7 @@
+import {Flex} from '@sentry/scraps/layout';
+import {Text} from '@sentry/scraps/text';
+
+import {IconSeer} from 'sentry/icons';
 import {t} from 'sentry/locale';
 
 export function SeerRCA() {
@@ -5,7 +9,12 @@ export function SeerRCA() {
 }
 
 export function SeerRCANode() {
-  return t('Send to Seer for Root Cause Analysis.');
+  return (
+    <Flex>
+      <IconSeer />
+      <Text>{t('Send to Seer for Root Cause Analysis.')}</Text>
+    </Flex>
+  );
 }
 
 export function validateSeerRCA() {
