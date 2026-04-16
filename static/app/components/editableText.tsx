@@ -234,7 +234,7 @@ const Label = styled('div')<{isDisabled: boolean}>`
 const InnerLabel = styled(TextOverflow)`
   border-top: 1px solid transparent;
   border-bottom: 1px dotted ${p => p.theme.tokens.border.primary};
-  line-height: 38px;
+  line-height: 34px;
 `;
 
 const InputWrapper = styled('div')<{isEmpty: boolean}>`
@@ -249,8 +249,6 @@ const InputWrapper = styled('div')<{isEmpty: boolean}>`
 const StyledInput = styled(Input)`
   border: none !important;
   background: transparent;
-  height: auto;
-  min-height: 40px;
   padding: 0;
   font-size: inherit;
   &,
@@ -270,6 +268,7 @@ const InputLabel = styled('div')`
 
 const Wrapper = styled('div')<{isDisabled: boolean; isEditing: boolean}>`
   display: flex;
+  align-items: center;
 
   ${p =>
     p.isDisabled &&
