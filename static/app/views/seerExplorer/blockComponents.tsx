@@ -14,6 +14,7 @@ import {IconChevron, IconCopy, IconLink, IconThumb} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {MarkedText} from 'sentry/utils/marked/markedText';
+import {locationDescriptorToTo} from 'sentry/utils/reactRouter6Compat/location';
 import {useCopyToClipboard} from 'sentry/utils/useCopyToClipboard';
 import {useNavigate} from 'sentry/utils/useNavigate';
 import {useOrganization} from 'sentry/utils/useOrganization';
@@ -30,6 +31,20 @@ import {
   getValidToolLinks,
   postProcessLLMMarkdown,
 } from './utils';
+
+function prefixWithOrg(url: LocationDescriptor, orgSlug: string): LocationDescriptor {
+  if (typeof url === 'string') {
+    if (url.startsWith('/') && !url.startsWith('/organizations/')) {
+      return `/organizations/${orgSlug}${url}`;
+    }
+    return url;
+  }
+  const {pathname} = url;
+  if (pathname?.startsWith('/') && !pathname.startsWith('/organizations/')) {
+    return {...url, pathname: `/organizations/${orgSlug}${pathname}`};
+  }
+  return url;
+}
 
 interface BlockProps {
   block: Block;
@@ -348,12 +363,21 @@ export function BlockComponent({
       return;
     }
 
-    // Navigate to the clicked link
     const selectedLink = sortedToolLinks[linkIndex];
     if (selectedLink) {
       const url = buildToolLinkUrl(selectedLink, organization.slug, projects);
       if (url) {
-        navigateToToolLink(url, selectedLink.kind);
+        const prefixed = prefixWithOrg(url, organization.slug);
+        if (e.metaKey || e.ctrlKey) {
+          const to = locationDescriptorToTo(prefixed);
+          const path =
+            typeof to === 'string'
+              ? to
+              : `${to.pathname ?? ''}${to.search ?? ''}${to.hash ?? ''}`;
+          window.open(path, '_blank', 'noopener,noreferrer');
+          return;
+        }
+        navigateToToolLink(prefixed, selectedLink.kind);
       }
     }
   };
