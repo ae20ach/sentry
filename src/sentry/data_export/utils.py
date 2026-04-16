@@ -10,6 +10,7 @@ from sentry_protos.snuba.v1.endpoint_trace_items_pb2 import ExportTraceItemsResp
 from sentry_protos.snuba.v1.trace_item_pb2 import AnyValue, TraceItem
 
 from sentry.data_export.base import ExportError
+from sentry.search.eap.constants import PROTOBUF_TYPE_TO_SEARCH_TYPE
 from sentry.search.eap.types import SupportedTraceItemType
 from sentry.search.eap.utils import can_expose_attribute, translate_internal_to_public_alias
 from sentry.search.events.constants import TIMEOUT_ERROR_MESSAGE
@@ -23,14 +24,6 @@ _SCALAR_SEARCH_TYPES: list[Literal["string", "number", "boolean"]] = [
     "number",
     "boolean",
 ]
-
-PROTOBUF_TYPE_TO_SEARCH_TYPE: dict[str, Literal["string", "number", "boolean"]] = {
-    "string_value": "string",
-    "bytes_value": "string",
-    "bool_value": "boolean",
-    "int_value": "number",
-    "double_value": "number",
-}
 
 
 # Adapted into decorator from 'src/sentry/api/endpoints/organization_events.py'
@@ -128,12 +121,17 @@ def _merge_trace_export_cell(out: dict[str, Any], new_key: str, value: Any) -> N
         out[new_key] = value
 
 
-def _export_column_name_for_scalar_trace_attribute(
+def _export_column_name_for_trace_attribute(
     internal_key: str,
     eap_storage_type: Literal["string", "number", "boolean"],
     item_type: SupportedTraceItemType,
 ) -> str:
-    """Map a scalar trace item attribute to its public export column name."""
+    """Map a scalar trace item attribute to its public export column name.
+    Use search_type as type to filter public name for attribute.
+    Usually search_type is same as eap_storage_type, so start with eap_storage_type.
+    Else fallback to remaining types.
+    """
+
     for storage_type in [eap_storage_type] + [
         t for t in _SCALAR_SEARCH_TYPES if t != eap_storage_type
     ]:
@@ -160,12 +158,12 @@ def trace_item_to_row(
         if not can_expose_attribute(internal_key, item_type, include_internal=False):
             continue
         which = av.WhichOneof("value")
-        value = None if which is None else anyvalue_to_python(av)
-        eap_storage_type = PROTOBUF_TYPE_TO_SEARCH_TYPE.get(which) if which is not None else None
+        value = anyvalue_to_python(av)
+        eap_storage_type = PROTOBUF_TYPE_TO_SEARCH_TYPE.get(which)
         if eap_storage_type is None:
             new_key = internal_key
         else:
-            new_key = _export_column_name_for_scalar_trace_attribute(
+            new_key = _export_column_name_for_trace_attribute(
                 internal_key, eap_storage_type, item_type
             )
         _merge_trace_export_cell(row, new_key, value)
