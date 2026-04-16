@@ -260,19 +260,39 @@ export class VirtualizedViewManager {
     }
     this.scrollbar_width = width;
 
-    // Re-dispatch the container physical space so that the trace_physical_space
-    // is recomputed accounting for the new scrollbar width. Without this, bars
-    // are positioned relative to a wider space than the actual column, shifting
-    // them to the right.
-    if (this.container) {
-      const rect = this.container.getBoundingClientRect();
-      this.scheduler.dispatch('set container physical space', [
-        0,
-        0,
-        rect.width,
-        rect.height,
-      ]);
+    // Re-dispatch the container content box so that the trace_physical_space is
+    // recomputed accounting for the new scrollbar width using the same box
+    // model as ResizeObserver's contentRect.
+    const containerPhysicalSpace = this.getContainerContentPhysicalSpace();
+    if (containerPhysicalSpace) {
+      this.scheduler.dispatch('set container physical space', containerPhysicalSpace);
     }
+  }
+
+  private getContainerContentPhysicalSpace():
+    | [x: number, y: number, width: number, height: number]
+    | null {
+    if (!this.container) {
+      return null;
+    }
+
+    const rect = this.container.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      return null;
+    }
+
+    const getBoxSize = (value: string) => Number.parseFloat(value) || 0;
+    const styles = window.getComputedStyle(this.container);
+    const paddingX = getBoxSize(styles.paddingLeft) + getBoxSize(styles.paddingRight);
+    const paddingY = getBoxSize(styles.paddingTop) + getBoxSize(styles.paddingBottom);
+    const borderX =
+      getBoxSize(styles.borderLeftWidth) + getBoxSize(styles.borderRightWidth);
+    const borderY =
+      getBoxSize(styles.borderTopWidth) + getBoxSize(styles.borderBottomWidth);
+    const width = Math.max(rect.width - paddingX - borderX, 0);
+    const height = Math.max(rect.height - paddingY - borderY, 0);
+
+    return [0, 0, width, height];
   }
 
   registerContainerRef(container: HTMLElement | null) {
