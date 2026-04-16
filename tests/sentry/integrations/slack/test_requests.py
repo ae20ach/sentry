@@ -4,16 +4,21 @@ from urllib.parse import urlencode
 
 import orjson
 import pytest
+from django.test import RequestFactory
 from django.utils.functional import cached_property
 
 from sentry import options
+from sentry.integrations.messaging.metrics import SeerSlackHaltReason
 from sentry.integrations.models.integration import Integration
+from sentry.integrations.models.organization_integration import OrganizationIntegration
 from sentry.integrations.services.integration.service import integration_service
 from sentry.integrations.slack.requests.action import SlackActionRequest
 from sentry.integrations.slack.requests.base import SlackRequest, SlackRequestError
 from sentry.integrations.slack.requests.event import SlackEventRequest
 from sentry.integrations.slack.utils.auth import set_signing_secret
 from sentry.integrations.slack.utils.constants import SlackScope
+from sentry.integrations.slack.webhooks.base import SlackDMEndpoint
+from sentry.models.organization import OrganizationStatus
 from sentry.testutils.cases import TestCase
 from sentry.testutils.helpers import override_options
 from sentry.testutils.silo import assume_test_silo_mode_of, control_silo_test
@@ -271,6 +276,107 @@ class SlackEventRequestTest(TestCase):
         assert SlackEventRequest(self.request).thread_ts == "111.222"
         self.request.data["event"]["type"] = "assistant_thread_started"
         assert SlackEventRequest(self.request).thread_ts == "333.444"
+
+
+class SlackEventRequestSeerResolutionTest(TestCase):
+    factory = RequestFactory()
+
+    def setUp(self) -> None:
+        self.slack_user = self.create_user()
+        self.organization = self.create_organization(owner=self.slack_user)
+        self.integration = self.create_integration(
+            organization=self.organization, external_id="T_SEER", provider="slack"
+        )
+        self.identity_provider = self.create_identity_provider(integration=self.integration)
+        self.identity = self.create_identity(
+            user=self.slack_user,
+            identity_provider=self.identity_provider,
+            external_id="U_SLACK",
+        )
+        patcher = patch(
+            "sentry.integrations.slack.requests.base.SlackRequest._check_signing_secret",
+            return_value=True,
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+        data = {
+            "type": "event_callback",
+            "team_id": "T_SEER",
+            "event_id": "E1",
+            "api_app_id": "A1",
+            "event": {
+                "type": "app_mention",
+                "channel": "C1",
+                "user": "U_SLACK",
+                "ts": "1.0",
+            },
+        }
+        request = self.factory.post(
+            "/extensions/slack/event/",
+            data=orjson.dumps(data),
+            content_type="application/json",
+        )
+        drf_request = SlackDMEndpoint().initialize_request(request)
+        self.slack_request = SlackEventRequest(drf_request)
+        self.slack_request.authorize()
+        self.slack_request.validate_integration()
+
+    @patch(
+        "sentry.integrations.slack.requests.event.send_identity_link_prompt",
+    )
+    def test_identity_not_linked(self, mock_prompt):
+        with assume_test_silo_mode_of(self.identity):
+            self.identity.delete()
+        result = self.slack_request.resolve_seer_organization()
+        assert result.organization_id is None
+        assert result.error_reason == SeerSlackHaltReason.IDENTITY_NOT_LINKED
+        mock_prompt.assert_called_once()
+
+    def test_no_organization_integrations(self):
+        with assume_test_silo_mode_of(OrganizationIntegration):
+            OrganizationIntegration.objects.filter(integration_id=self.integration.id).delete()
+        result = self.slack_request.resolve_seer_organization()
+        assert result.organization_id is None
+        assert result.error_reason == SeerSlackHaltReason.NO_VALID_INTEGRATION
+
+    def test_org_not_found(self):
+        self.organization.delete()
+        result = self.slack_request.resolve_seer_organization()
+        assert result.organization_id is None
+        assert result.error_reason == SeerSlackHaltReason.NO_VALID_ORGANIZATION
+
+    def test_org_not_active(self):
+        self.organization.update(status=OrganizationStatus.PENDING_DELETION)
+        result = self.slack_request.resolve_seer_organization()
+        assert result.organization_id is None
+        assert result.error_reason == SeerSlackHaltReason.NO_VALID_ORGANIZATION
+
+    @patch(
+        "sentry.integrations.slack.requests.event.SlackExplorerEntrypoint.has_access",
+        return_value=False,
+    )
+    def test_org_no_seer_access(self, mock_access):
+        result = self.slack_request.resolve_seer_organization()
+        assert result.organization_id is None
+        assert result.error_reason == SeerSlackHaltReason.NO_VALID_ORGANIZATION
+
+    def test_user_not_member(self):
+        non_member = self.create_user()
+        with assume_test_silo_mode_of(self.identity):
+            self.identity.update(user=non_member)
+        result = self.slack_request.resolve_seer_organization()
+        assert result.organization_id is None
+        assert result.error_reason == SeerSlackHaltReason.NO_VALID_ORGANIZATION
+
+    @patch(
+        "sentry.integrations.slack.requests.event.SlackExplorerEntrypoint.has_access",
+        return_value=True,
+    )
+    def test_resolves_valid_organization(self, mock_access):
+        result = self.slack_request.resolve_seer_organization()
+        assert result.organization_id == self.organization.id
+        assert result.error_reason is None
 
 
 class SlackActionRequestTest(TestCase):
