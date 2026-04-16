@@ -87,7 +87,11 @@ def schedule_night_shift() -> None:
     namespace=seer_tasks,
     processing_deadline_duration=5 * 60,
 )
-def run_night_shift_for_org(organization_id: int, dry_run: bool = False) -> None:
+def run_night_shift_for_org(
+    organization_id: int,
+    dry_run: bool = False,
+    max_candidates: int | None = None,
+) -> None:
     try:
         organization = Organization.objects.get(
             id=organization_id, status=OrganizationStatus.ACTIVE
@@ -126,15 +130,21 @@ def run_night_shift_for_org(organization_id: int, dry_run: bool = False) -> None
 
     sentry_sdk.metrics.distribution("night_shift.eligible_projects", len(eligible_projects))
 
-    triage_strategy = "agentic_triage"
+    resolved_max_candidates = (
+        max_candidates
+        if max_candidates is not None
+        else options.get("seer.night_shift.issues_per_org")
+    )
     run = SeerNightShiftRun.objects.create(
         organization=organization,
-        triage_strategy=triage_strategy,
+        triage_strategy="agentic_triage",
     )
 
     agent_run_id = None
     try:
-        candidates, agent_run_id = agentic_triage_strategy(eligible_projects, organization)
+        candidates, agent_run_id = agentic_triage_strategy(
+            eligible_projects, organization, resolved_max_candidates
+        )
 
         if candidates:
             SeerNightShiftRunIssue.objects.bulk_create(
