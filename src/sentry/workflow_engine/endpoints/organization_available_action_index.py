@@ -161,7 +161,7 @@ class OrganizationAvailableActionIndexEndpoint(OrganizationEndpoint):
                     )
 
             elif action_type == Action.Type.SEER_RCA and features.has(
-                "organizations:workflow-engine-seer-rca"
+                "organizations:workflow-engine-seer-rca", organization
             ):
                 actions.append(
                     serialize(
