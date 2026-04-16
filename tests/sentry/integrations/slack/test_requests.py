@@ -321,16 +321,12 @@ class SlackEventRequestSeerResolutionTest(TestCase):
         self.slack_request.authorize()
         self.slack_request.validate_integration()
 
-    @patch(
-        "sentry.integrations.slack.requests.event.send_identity_link_prompt",
-    )
-    def test_identity_not_linked(self, mock_prompt):
+    def test_identity_not_linked(self):
         with assume_test_silo_mode_of(self.identity):
             self.identity.delete()
         result = self.slack_request.resolve_seer_organization()
         assert result.organization_id is None
         assert result.error_reason == SeerSlackHaltReason.IDENTITY_NOT_LINKED
-        mock_prompt.assert_called_once()
 
     def test_no_organization_integrations(self):
         with assume_test_silo_mode_of(OrganizationIntegration):

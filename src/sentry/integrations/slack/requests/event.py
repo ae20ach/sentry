@@ -14,7 +14,6 @@ from sentry.integrations.types import IntegrationProviderSlug
 from sentry.models.organization import OrganizationStatus
 from sentry.organizations.services.organization.service import organization_service
 from sentry.seer.entrypoints.slack.entrypoint import SlackExplorerEntrypoint
-from sentry.seer.entrypoints.slack.messaging import send_identity_link_prompt
 from sentry.silo.base import all_silo_function
 
 COMMANDS = ["link", "unlink", "link team", "unlink team"]
@@ -83,10 +82,8 @@ class SlackEventRequest(SlackDMRequest):
         """
         Resolve and validate an organization/user for a Seer Slack event.
 
-        If the initiating user is not linked, we will reply with a prompt to link their identity.
-
-        Then we search for an active, organization with Seer Explorer access. If the user does not
-        belong to any matched organization, their request will be dropped.
+        We require a linked identity, then search for an active, organization they belong to with
+        Seer Agent access.
 
         Note: There is a limitation here of only grabbing the first organization belonging to the user
         with access to Seer. If a Slack installation corresponds to multiple organizations with Seer
@@ -94,13 +91,6 @@ class SlackEventRequest(SlackDMRequest):
         """
         identity_user = self.get_identity_user()
         if not identity_user:
-            send_identity_link_prompt(
-                integration=self.integration,
-                slack_user_id=self.user_id,
-                channel_id=self.channel_id,
-                thread_ts=self.thread_ts or None,
-                is_welcome_message=self.is_assistant_thread_event,
-            )
             return SeerResolutionResult(
                 organization_id=None, error_reason=SeerSlackHaltReason.IDENTITY_NOT_LINKED
             )

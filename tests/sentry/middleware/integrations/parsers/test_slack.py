@@ -41,7 +41,9 @@ class SlackRequestParserTest(TestCase):
         self.integration = self.create_integration(
             organization=self.organization, external_id="TXXXXXXX1", provider="slack"
         )
-        self.org_mapping = organization_mapping_service.get(organization_id=self.organization.id)
+        org_mapping = organization_mapping_service.get(organization_id=self.organization.id)
+        assert org_mapping is not None
+        self.org_mapping = org_mapping
         patcher = patch(
             "sentry.integrations.slack.requests.base.SlackRequest._check_signing_secret",
             return_value=True,

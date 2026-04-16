@@ -54,7 +54,7 @@ class AssistantThreadStartedEventTest(BaseEventTest):
             assert prompt["message"]
 
     @patch("sentry.integrations.utils.metrics.EventLifecycle.record_event")
-    @patch("sentry.integrations.slack.requests.event.send_identity_link_prompt")
+    @patch("sentry.integrations.slack.webhooks.event.send_identity_link_prompt")
     @patch("sentry.integrations.slack.integration.SlackIntegration.set_suggested_prompts")
     def test_identity_not_linked(self, mock_set_prompts, mock_send_link, mock_record):
         self.unlink_identity()
