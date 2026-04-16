@@ -21,7 +21,6 @@ from sentry.integrations.source_code_management.commit_context import (
     FileBlameInfo,
     SourceLineInfo,
 )
-from sentry.integrations.source_code_management.repo_trees import NOT_FOUND_CACHE_SECONDS
 from sentry.integrations.types import EventLifecycleOutcome
 from sentry.models.pullrequest import PullRequest, PullRequestComment
 from sentry.models.repository import Repository
@@ -419,7 +418,7 @@ class GitHubApiClientTest(TestCase):
         cache_set.assert_called_once_with(
             repo_key,
             [],
-            NOT_FOUND_CACHE_SECONDS + shifted_seconds,
+            self.install.CACHE_SECONDS + shifted_seconds,
         )
 
     @responses.activate

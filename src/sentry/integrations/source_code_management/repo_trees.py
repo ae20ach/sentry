@@ -35,7 +35,6 @@ MAX_CONNECTION_ERRORS = 10
 # When the number of remaining API requests is less than this value, it will
 # fall back to the cache.
 MINIMUM_REQUESTS_REMAINING = 200
-NOT_FOUND_CACHE_SECONDS = 3600 * 24
 
 
 class RepoTreesIntegration(ABC):
@@ -191,6 +190,8 @@ class RepoTreesIntegration(ABC):
 
         repo_full_name: e.g. getsentry/sentry
         tree_sha: A branch or a commit sha
+        shifted_seconds: Staggers cache expiration times across repositories
+            so cache misses and API refreshes are spread out over time.
         only_source_code_files: Include all files or just the source code files
         only_use_cache: Do not hit the network but use the value from the cache
             if any. This is useful if the remaining API requests are low
@@ -211,14 +212,12 @@ class RepoTreesIntegration(ABC):
                     "Caching empty files result for repo",
                     extra={"repo": repo_full_name},
                 )
-                cache.set(key, [], self.CACHE_SECONDS + shifted_seconds)
             except ApiError as error:
                 if _is_not_found_error(error):
                     logger.info(
                         "Caching empty files result for missing repo or ref",
                         extra={"repo": repo_full_name},
                     )
-                    cache.set(key, [], NOT_FOUND_CACHE_SECONDS + shifted_seconds)
                 else:
                     raise
             if tree:
@@ -235,6 +234,8 @@ class RepoTreesIntegration(ABC):
                 # repositories is a single API network request, thus,
                 # being acceptable to sometimes not having everything cached
                 cache.set(key, repo_files, self.CACHE_SECONDS + shifted_seconds)
+            else:
+                cache.set(key, [], self.CACHE_SECONDS + shifted_seconds)
 
             metrics.incr(
                 f"{METRICS_KEY_PREFIX}.get_tree",
