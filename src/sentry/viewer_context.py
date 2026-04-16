@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 import jwt as pyjwt
 import orjson
+import sentry_sdk
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -92,6 +93,15 @@ def viewer_context_scope(ctx: ViewerContext) -> Generator[None]:
     it guarantees cleanup via ``reset(token)`` even on exceptions.
     """
     tok = _viewer_context_var.set(ctx)
+    # Tag the isolation scope so the current transaction and all spans carry
+    # viewer identity. Enables post-hoc detection of misattribution by alerting
+    # on traces that contain conflicting viewer identities (RFC Appendix B).
+    scope = sentry_sdk.get_isolation_scope()
+    if ctx.user_id is not None:
+        scope.set_tag("viewer.user_id", ctx.user_id)
+    if ctx.organization_id is not None:
+        scope.set_tag("viewer.org_id", ctx.organization_id)
+    scope.set_tag("viewer.actor_type", ctx.actor_type.value)
     try:
         yield
     finally:
