@@ -47,8 +47,10 @@ function UnstyledSettingsPageHeader({
   const hasPageFrame = useHasPageFrameFeature();
   const routes = useRoutes();
   const hasTitle = !!title;
+  const hasStringTitle = typeof title === 'string';
   const hasSubtitle = !!subtitle;
-  const showVisibleTitle = hasPageFrame ? false : hasTitle;
+  const showTopBarTitle = hasPageFrame && hasTitle && !hasStringTitle;
+  const showVisibleTitle = !hasPageFrame && hasTitle;
   const hasInlineHeaderText = showVisibleTitle || hasSubtitle;
   // If Header is narrow, use align-items to center <Action>.
   // Otherwise, use a fixed margin to prevent an odd alignment.
@@ -56,9 +58,14 @@ function UnstyledSettingsPageHeader({
   const isNarrow = hasSubtitle ? false : true;
 
   return (
-    <HeaderRoot hasInlineHeaderText={hasInlineHeaderText} {...props}>
-      {hasPageFrame && typeof title === 'string' ? (
+    <HeaderRoot {...props}>
+      {hasPageFrame && hasStringTitle ? (
         <BreadcrumbTitle routes={routes} title={title} />
+      ) : null}
+      {showTopBarTitle ? (
+        // TODO: Split breadcrumb labels from page-frame titles instead of
+        // branching on string vs. node titles in this shared header.
+        <Layout.Title>{title}</Layout.Title>
       ) : null}
       <TitleAndActions isNarrow={isNarrow}>
         <TitleWrapper>
@@ -94,9 +101,7 @@ interface TitleProps extends React.HTMLAttributes<HTMLDivElement> {
   tabs?: React.ReactNode;
 }
 
-const HeaderRoot = styled('div')<{hasInlineHeaderText: boolean}>`
-  margin-top: ${p => (p.hasInlineHeaderText ? `-${p.theme.space['3xl']}` : 0)};
-`;
+const HeaderRoot = styled('div')``;
 
 const TitleAndActions = styled('div')<{isNarrow?: boolean}>`
   display: flex;
@@ -132,6 +137,7 @@ export const SettingsPageHeader = styled(UnstyledSettingsPageHeader)<
   Omit<React.HTMLProps<HTMLDivElement>, keyof Props> & Props
 >`
   font-size: 14px;
+  margin-top: -${p => p.theme.space['3xl']};
 `;
 
 const BodyWrapper = styled('div')`
