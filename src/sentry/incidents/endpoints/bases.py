@@ -11,6 +11,7 @@ from sentry.api.bases.organization import (
     AlertMutationProjectLookup,
     OrganizationAlertRulePermission,
     OrganizationEndpoint,
+    _get_organization_id,
 )
 from sentry.api.bases.project import ProjectAlertRulePermission, ProjectEndpoint
 from sentry.api.exceptions import ResourceDoesNotExist
@@ -22,15 +23,6 @@ from sentry.organizations.services.organization import RpcOrganization, RpcUserO
 from sentry.workflow_engine.endpoints.utils.ids import to_valid_int_id
 from sentry.workflow_engine.models.alertrule_detector import AlertRuleDetector
 from sentry.workflow_engine.models.detector import Detector
-
-
-def _get_organization_id(
-    organization: Organization | RpcOrganization | RpcUserOrganizationContext,
-) -> int:
-    if isinstance(organization, RpcUserOrganizationContext):
-        return organization.organization.id
-
-    return organization.id
 
 
 class OrganizationAlertRuleBaseEndpoint(OrganizationEndpoint):
@@ -221,7 +213,7 @@ class WorkflowEngineOrganizationAlertRuleEndpoint(OrganizationAlertRuleEndpoint)
         organization: Organization | RpcOrganization | RpcUserOrganizationContext,
     ) -> AlertMutationProjectLookup:
         projects = super().get_alert_mutation_projects(request, organization)
-        if projects is not None:
+        if projects is not None and projects is not ALERT_MUTATION_LOOKUP_MISS:
             return projects
 
         if request.method not in {"PUT", "DELETE"}:

@@ -46,6 +46,15 @@ class NoProjects(Exception):
     pass
 
 
+def _get_organization_id(
+    organization: Organization | RpcOrganization | RpcUserOrganizationContext,
+) -> int:
+    if isinstance(organization, RpcUserOrganizationContext):
+        return organization.organization.id
+
+    return organization.id
+
+
 class OrganizationPermission(DemoSafePermission):
     scope_map = {
         "GET": ["org:read", "org:write", "org:admin"],
@@ -293,37 +302,8 @@ class OrganizationAlertRulePermission(OrganizationPermission):
         )
 
 
-class OrganizationDetectorPermission(OrganizationPermission):
-    scope_map = {
-        "GET": ["org:read", "org:write", "org:admin", "alerts:read"],
-        "POST": ["org:write", "org:admin", "alerts:write"],
-        "PUT": ["org:write", "org:admin", "alerts:write"],
-        "DELETE": ["org:write", "org:admin", "alerts:write"],
-    }
-
-    def has_object_permission(
-        self,
-        request: Request,
-        view: APIView,
-        organization: Organization | RpcOrganization | RpcUserOrganizationContext,
-    ) -> bool:
-        if super().has_object_permission(request, view, organization):
-            return True
-
-        if request.method not in {"POST", "PUT", "DELETE"}:
-            return False
-
-        project_scoped_access = _has_view_project_scoped_alert_write(request, view, organization)
-        if project_scoped_access is ALERT_MUTATION_LOOKUP_MISS:
-            if _has_any_team_scope(request, "alerts:write"):
-                raise ResourceDoesNotExist
-            return False
-        if project_scoped_access is not None:
-            return project_scoped_access
-
-        return bool(getattr(view, "allow_any_team_alert_write_fallback", False)) and (
-            _has_any_team_scope(request, "alerts:write")
-        )
+class OrganizationDetectorPermission(OrganizationAlertRulePermission):
+    pass
 
 
 class OrgAuthTokenPermission(OrganizationPermission):

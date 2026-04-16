@@ -11,7 +11,11 @@ from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import cell_silo_endpoint
 from sentry.api.bases import OrganizationDetectorPermission, OrganizationEndpoint
-from sentry.api.bases.organization import ALERT_MUTATION_LOOKUP_MISS, AlertMutationProjectLookup
+from sentry.api.bases.organization import (
+    ALERT_MUTATION_LOOKUP_MISS,
+    AlertMutationProjectLookup,
+    _get_organization_id,
+)
 from sentry.api.exceptions import ResourceDoesNotExist
 from sentry.api.serializers import serialize
 from sentry.apidocs.constants import (
@@ -39,15 +43,6 @@ from sentry.workflow_engine.endpoints.validators.utils import (
     get_unknown_detector_type_error,
 )
 from sentry.workflow_engine.models import Detector
-
-
-def _get_organization_id(
-    organization: Organization | RpcOrganization | RpcUserOrganizationContext,
-) -> int:
-    if isinstance(organization, RpcUserOrganizationContext):
-        return organization.organization.id
-
-    return organization.id
 
 
 def remove_detector(request: Request, organization: Organization, detector: Detector) -> Response:

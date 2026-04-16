@@ -1077,6 +1077,36 @@ class AlertRuleDetailsPutEndpointTest(AlertRuleDetailsBase):
         self.alert_rule.refresh_from_db()
         assert self.alert_rule.name == self.valid_params["name"]
 
+    @with_feature("organizations:workflow-engine-rule-serializers")
+    def test_team_admin_can_reach_workflow_engine_detector_update_with_project_scoped_alerts_write(
+        self,
+    ) -> None:
+        self.create_member(
+            user=self.user, organization=self.organization, role="owner", teams=[self.team]
+        )
+        team_admin_user = self.create_user()
+        self.create_member(
+            user=team_admin_user,
+            organization=self.organization,
+            role="member",
+            team_roles=[(self.team, "admin")],
+        )
+        self.organization.update_option("sentry:alerts_member_write", False)
+        self.login_as(team_admin_user)
+
+        ard = AlertRuleDetector.objects.get(alert_rule_id=self.alert_rule.id)
+        detector = Detector.objects.get(id=ard.detector_id)
+        fake_detector_id = get_fake_id_from_object_id(detector.id)
+
+        with self.feature("organizations:incidents"), outbox_runner():
+            response = self.client.put(
+                reverse(self.endpoint, args=[self.organization.slug, fake_detector_id]),
+                data=self.valid_params,
+                format="json",
+            )
+
+        assert response.status_code == 400
+
     def test_update_requires_alerts_write_scope_for_tokens(self) -> None:
         self.create_member(
             user=self.user, organization=self.organization, role="owner", teams=[self.team]
