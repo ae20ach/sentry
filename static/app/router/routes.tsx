@@ -2349,6 +2349,10 @@ function buildRoutes(): RouteObject[] {
           index: true,
           component: make(() => import('sentry/views/explore/attributes/content')),
         },
+        {
+          path: ':attributeKey/',
+          component: make(() => import('sentry/views/explore/attributes/detail')),
+        },
       ],
     },
   ];

@@ -5,6 +5,7 @@ import {useQueries} from '@tanstack/react-query';
 import {Tag} from '@sentry/scraps/badge';
 import {Button} from '@sentry/scraps/button';
 import {CompactSelect} from '@sentry/scraps/compactSelect';
+import {Link} from '@sentry/scraps/link';
 
 import * as Layout from 'sentry/components/layouts/thirds';
 import {PageFiltersContainer} from 'sentry/components/pageFilters/container';
@@ -18,6 +19,7 @@ import {IconChevron} from 'sentry/icons/iconChevron';
 import {IconSearch} from 'sentry/icons/iconSearch';
 import {IconStar} from 'sentry/icons/iconStar';
 import {t} from 'sentry/locale';
+import {normalizeUrl} from 'sentry/utils/url/normalizeUrl';
 import {useApi} from 'sentry/utils/useApi';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
@@ -88,6 +90,7 @@ export default function AttributesContent() {
 
   const sharedQuery = {
     project: selection.projects,
+    environment: selection.environments,
     itemType: 'spans',
     ...normalizeDateTimeParams(selection.datetime),
   };
@@ -248,7 +251,13 @@ export default function AttributesContent() {
                             />
                           </StarCell>
                           <DataCell flex={3}>
-                            <AttributeName>{attr.name}</AttributeName>
+                            <AttributeName
+                              to={normalizeUrl(
+                                `/organizations/${organization.slug}/explore/attributes/${encodeURIComponent(attr.key)}/?type=${attr.type}`
+                              )}
+                            >
+                              {attr.name}
+                            </AttributeName>
                           </DataCell>
                           <DataCell flex={5}>
                             <Muted>—</Muted>
@@ -438,7 +447,7 @@ const DataCell = styled('td')<{flex?: number}>`
   white-space: nowrap;
 `;
 
-const AttributeName = styled('span')`
+const AttributeName = styled(Link)`
   font-size: ${p => p.theme.form.sm.fontSize};
   color: ${p => p.theme.tokens.content.accent};
 `;
