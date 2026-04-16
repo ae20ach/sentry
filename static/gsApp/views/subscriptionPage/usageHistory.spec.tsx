@@ -8,7 +8,7 @@ import {
   Am3DsEnterpriseSubscriptionFixture,
   SubscriptionFixture,
 } from 'getsentry-test/fixtures/subscription';
-import {render, screen, userEvent} from 'sentry-test/reactTestingLibrary';
+import {render, screen, userEvent, within} from 'sentry-test/reactTestingLibrary';
 
 import {ProjectsStore} from 'sentry/stores/projectsStore';
 import {DataCategory} from 'sentry/types/core';
@@ -191,8 +191,6 @@ describe('Subscription > UsageHistory', () => {
               prepaid: 1,
             }),
           },
-          reserved: {errors: UNLIMITED_RESERVED, transactions: 1000, attachments: 1},
-          usage: {errors: 12345, transactions: 0, attachments: 0},
         }),
       ],
     });
@@ -206,8 +204,8 @@ describe('Subscription > UsageHistory', () => {
 
     render(<UsageHistory />, {organization});
 
-    // Errors row renders ∞ in both the Reserved and Used (%) cells.
-    expect(await screen.findAllByRole('cell', {name: UNLIMITED})).toHaveLength(2);
+    const errorsRow = await screen.findByRole('row', {name: /^Errors/});
+    expect(within(errorsRow).getAllByRole('cell', {name: UNLIMITED})).toHaveLength(2);
     expect(screen.queryByText('>100%')).not.toBeInTheDocument();
   });
 
@@ -234,8 +232,6 @@ describe('Subscription > UsageHistory', () => {
               prepaid: 1,
             }),
           },
-          reserved: {errors: 1000, transactions: 1000, attachments: 1},
-          usage: {errors: 9999, transactions: 0, attachments: 0},
         }),
       ],
     });
@@ -249,8 +245,8 @@ describe('Subscription > UsageHistory', () => {
 
     render(<UsageHistory />, {organization});
 
-    // Only the Used (%) cell for Errors renders ∞ — Reserved renders the positive number.
-    expect(await screen.findByRole('cell', {name: UNLIMITED})).toBeInTheDocument();
+    const errorsRow = await screen.findByRole('row', {name: /^Errors/});
+    expect(within(errorsRow).getByRole('cell', {name: UNLIMITED})).toBeInTheDocument();
     expect(screen.queryByText('>100%')).not.toBeInTheDocument();
   });
 
