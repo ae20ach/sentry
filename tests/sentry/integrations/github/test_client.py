@@ -21,6 +21,7 @@ from sentry.integrations.source_code_management.commit_context import (
     FileBlameInfo,
     SourceLineInfo,
 )
+from sentry.integrations.source_code_management.repo_trees import NOT_FOUND_CACHE_SECONDS
 from sentry.integrations.types import EventLifecycleOutcome
 from sentry.models.pullrequest import PullRequest, PullRequestComment
 from sentry.models.repository import Repository
@@ -398,6 +399,28 @@ class GitHubApiClientTest(TestCase):
         files = self.install.get_cached_repo_files(self.repo.name, "master", 0)
         assert files == []
         assert len(responses.calls) == 1
+
+    @responses.activate
+    def test_get_cached_repo_files_not_found_cache_ttl_is_staggered(self) -> None:
+        responses.add(
+            method=responses.GET,
+            url=f"https://api.github.com/repos/{self.repo.name}/git/trees/master?recursive=1",
+            status=404,
+            json={"message": "Not Found"},
+        )
+
+        shifted_seconds = 3600
+        repo_key = f"github:repo:{self.repo.name}:source-code"
+        with mock.patch(
+            "sentry.integrations.source_code_management.repo_trees.cache.set"
+        ) as cache_set:
+            self.install.get_cached_repo_files(self.repo.name, "master", shifted_seconds)
+
+        cache_set.assert_called_once_with(
+            repo_key,
+            [],
+            NOT_FOUND_CACHE_SECONDS + shifted_seconds,
+        )
 
     @responses.activate
     def test_get_cached_repo_files_raises_non_not_found_api_error(self) -> None:
