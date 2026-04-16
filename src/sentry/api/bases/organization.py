@@ -29,6 +29,7 @@ from sentry.models.orgauthtoken import is_org_auth_token_auth
 from sentry.models.project import Project
 from sentry.models.release import Release
 from sentry.models.releases.release_project import ReleaseProject
+from sentry.models.team import Team
 from sentry.organizations.services.organization import (
     RpcOrganization,
     RpcUserOrganizationContext,
@@ -212,30 +213,99 @@ class OrganizationSearchPermission(OrganizationPermission):
 class OrganizationDataExportPermission(OrganizationPermission):
     scope_map = {
         "GET": ["event:read", "event:write", "event:admin"],
-        "POST": ["event:read", "event:write", "event:admin"],
+        "POST": ["event:write", "event:admin"],
     }
+
+
+def _has_any_team_scope(request: Request, scope: str) -> bool:
+    if not request.access.team_ids_with_membership:
+        return False
+
+    teams = Team.objects.filter(id__in=request.access.team_ids_with_membership)
+    return any(request.access.has_team_scope(team, scope) for team in teams)
+
+
+ALERT_MUTATION_SCOPES = frozenset({"org:write", "alerts:write"})
+
+
+def _has_project_alert_write_access(request: Request, projects: Sequence[Project]) -> bool:
+    return bool(projects) and all(
+        request.access.has_any_project_scope(project, ALERT_MUTATION_SCOPES) for project in projects
+    )
+
+
+def _has_view_project_scoped_alert_write(
+    request: Request,
+    view: APIView,
+    organization: Organization | RpcOrganization | RpcUserOrganizationContext,
+) -> bool | None:
+    get_projects = getattr(view, "get_alert_mutation_projects", None)
+    if not callable(get_projects):
+        return None
+
+    projects = get_projects(request, organization)
+    if projects is None:
+        return None
+
+    return _has_project_alert_write_access(request, projects)
 
 
 class OrganizationAlertRulePermission(OrganizationPermission):
     scope_map = {
         "GET": ["org:read", "org:write", "org:admin", "alerts:read"],
-        # grant org:read permission, but raise permission denied if the members aren't allowed
-        # to create alerts and the user isn't a team admin
-        "POST": ["org:read", "org:write", "org:admin", "alerts:write"],
+        "POST": ["org:write", "org:admin", "alerts:write"],
         "PUT": ["org:write", "org:admin", "alerts:write"],
         "DELETE": ["org:write", "org:admin", "alerts:write"],
     }
+
+    def has_object_permission(
+        self,
+        request: Request,
+        view: APIView,
+        organization: Organization | RpcOrganization | RpcUserOrganizationContext,
+    ) -> bool:
+        if super().has_object_permission(request, view, organization):
+            return True
+
+        if request.method not in {"POST", "PUT", "DELETE"}:
+            return False
+
+        project_scoped_access = _has_view_project_scoped_alert_write(request, view, organization)
+        if project_scoped_access is not None:
+            return project_scoped_access
+
+        return bool(getattr(view, "allow_any_team_alert_write_fallback", False)) and (
+            _has_any_team_scope(request, "alerts:write")
+        )
 
 
 class OrganizationDetectorPermission(OrganizationPermission):
     scope_map = {
         "GET": ["org:read", "org:write", "org:admin", "alerts:read"],
-        # grant org:read permission, but raise permission denied if the members aren't allowed
-        # to create alerts and the user isn't a team admin
-        "POST": ["org:read", "org:write", "org:admin", "alerts:write"],
-        "PUT": ["org:read", "org:write", "org:admin", "alerts:write"],
-        "DELETE": ["org:read", "org:write", "org:admin", "alerts:write"],
+        "POST": ["org:write", "org:admin", "alerts:write"],
+        "PUT": ["org:write", "org:admin", "alerts:write"],
+        "DELETE": ["org:write", "org:admin", "alerts:write"],
     }
+
+    def has_object_permission(
+        self,
+        request: Request,
+        view: APIView,
+        organization: Organization | RpcOrganization | RpcUserOrganizationContext,
+    ) -> bool:
+        if super().has_object_permission(request, view, organization):
+            return True
+
+        if request.method not in {"POST", "PUT", "DELETE"}:
+            return False
+
+        project_scoped_access = _has_view_project_scoped_alert_write(request, view, organization)
+        if project_scoped_access is not None:
+            return project_scoped_access
+
+        return bool(getattr(view, "allow_any_team_alert_write_fallback", False)) and (
+            _has_any_team_scope(request, "alerts:write")
+        )
 
 
 class OrgAuthTokenPermission(OrganizationPermission):

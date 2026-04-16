@@ -13,6 +13,7 @@ from rest_framework.response import Response
 from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import cell_silo_endpoint
+from sentry.api.bases.organization import ALERT_MUTATION_SCOPES
 from sentry.api.fields.actor import OwnerActorField
 from sentry.api.serializers import serialize
 from sentry.api.serializers.rest_framework.project import ProjectField
@@ -321,6 +322,11 @@ def _check_project_access[T](
             return Response(status=status.HTTP_404_NOT_FOUND)
 
         if not request.access.has_project_access(project):
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
+        if request.method in {"PUT", "DELETE"} and not request.access.has_any_project_scope(
+            project, ALERT_MUTATION_SCOPES
+        ):
             return Response(status=status.HTTP_403_FORBIDDEN)
 
         return func(self, request, organization, alert_rule)

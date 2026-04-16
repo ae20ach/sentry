@@ -134,3 +134,27 @@ class OrganizationUptimeAlertPreview(UptimeAlertBaseEndpointTest):
         )
 
         assert response.status_code == 200, response.content
+
+    def test_org_read_scope_cannot_run_preview_check(self) -> None:
+        api_key = self.create_api_key(organization=self.organization, scope_list=["org:read"])
+
+        url = reverse(
+            "sentry-api-0-organization-uptime-alert-preview-check",
+            kwargs={"organization_id_or_slug": self.organization.slug},
+        )
+        response = self.client.post(
+            url,
+            data={
+                "name": "test",
+                "environment": "uptime-prod",
+                "owner": f"user:{self.user.id}",
+                "url": "http://sentry.io",
+                "timeoutMs": 1500,
+                "body": None,
+                "region": "default",
+            },
+            format="json",
+            HTTP_AUTHORIZATION=self.create_basic_auth_header(api_key.key),
+        )
+
+        assert response.status_code == 403

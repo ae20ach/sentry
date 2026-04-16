@@ -6,20 +6,24 @@ from unittest.mock import MagicMock, patch
 
 from django.conf import settings
 from django.test.utils import override_settings
+from django.urls import reverse
 from rest_framework.exceptions import ErrorDetail
 
 from sentry import audit_log
 from sentry.analytics.events.cron_monitor_created import CronMonitorCreated, FirstCronMonitorCreated
 from sentry.constants import ObjectStatus
+from sentry.models.apitoken import ApiToken
 from sentry.models.projectteam import ProjectTeam
 from sentry.models.rule import Rule, RuleSource
 from sentry.monitors.models import Monitor, MonitorStatus, ScheduleType, is_monitor_muted
 from sentry.monitors.utils import get_detector_for_monitor
 from sentry.quotas.base import SeatAssignmentResult
+from sentry.silo.base import SiloMode
 from sentry.testutils.asserts import assert_org_audit_log_exists
 from sentry.testutils.cases import MonitorTestCase
 from sentry.testutils.helpers.analytics import assert_any_analytics_event
 from sentry.testutils.outbox import outbox_runner
+from sentry.testutils.silo import assume_test_silo_mode
 from sentry.utils.outcomes import Outcome
 from sentry.utils.slug import DEFAULT_SLUG_ERROR_MESSAGE
 
@@ -438,6 +442,49 @@ class CreateOrganizationMonitorTest(MonitorTestCase):
         super().setUp()
         self.login_as(self.user)
 
+    def _create_token(self, scope: str) -> ApiToken:
+        with assume_test_silo_mode(SiloMode.CONTROL):
+            return ApiToken.objects.create(user=self.user, scope_list=[scope])
+
+    def test_create_requires_alerts_write_scope_for_tokens(self) -> None:
+        token = self._create_token("org:read")
+        data = {
+            "project": self.project.slug,
+            "name": "My Monitor",
+            "type": "cron_job",
+            "owner": f"user:{self.user.id}",
+            "config": {"schedule_type": "crontab", "schedule": "@daily"},
+        }
+
+        response = self.client.post(
+            reverse(self.endpoint, args=[self.organization.slug]),
+            data=data,
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 403
+
+    def test_create_allows_alerts_write_scope_for_tokens(self) -> None:
+        token = self._create_token("alerts:write")
+        data = {
+            "project": self.project.slug,
+            "name": "My Monitor",
+            "type": "cron_job",
+            "owner": f"user:{self.user.id}",
+            "config": {"schedule_type": "crontab", "schedule": "@daily"},
+        }
+
+        with outbox_runner():
+            response = self.client.post(
+                reverse(self.endpoint, args=[self.organization.slug]),
+                data=data,
+                format="json",
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 201
+
     @patch("sentry.analytics.record")
     def test_simple(self, mock_record: MagicMock) -> None:
         data = {
@@ -841,6 +888,10 @@ class BulkEditOrganizationMonitorTest(MonitorTestCase):
         super().setUp()
         self.login_as(self.user)
 
+    def _create_token(self, scope: str, user=None) -> ApiToken:
+        with assume_test_silo_mode(SiloMode.CONTROL):
+            return ApiToken.objects.create(user=user or self.user, scope_list=[scope])
+
     def test_valid_ids(self) -> None:
         monitor_one = self._create_monitor(slug="monitor_one")
         self._create_monitor(slug="monitor_two")
@@ -934,6 +985,35 @@ class BulkEditOrganizationMonitorTest(MonitorTestCase):
         assert monitor_one.status == ObjectStatus.ACTIVE
         assert monitor_two.status == ObjectStatus.ACTIVE
 
+    def test_bulk_edit_denies_alerts_write_scope_for_other_team_projects(self) -> None:
+        team_admin_user = self.create_user(is_superuser=False)
+        self.create_member(
+            user=team_admin_user,
+            organization=self.organization,
+            role="member",
+            team_roles=[(self.team, "admin")],
+        )
+        self.organization.update_option("sentry:alerts_member_write", False)
+
+        other_team = self.create_team(organization=self.organization, name="other-team")
+        other_project = self.create_project(
+            organization=self.organization, teams=[other_team], name="other-project"
+        )
+        other_monitor = self._create_monitor(slug="other-monitor")
+        other_monitor.update(project_id=other_project.id)
+        token = self._create_token("alerts:write", user=team_admin_user)
+
+        response = self.client.put(
+            reverse(self.endpoint, args=[self.organization.slug]),
+            data={"ids": [other_monitor.guid], "status": "disabled"},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 403
+        other_monitor.refresh_from_db()
+        assert other_monitor.status == ObjectStatus.ACTIVE
+
     @patch("sentry.quotas.backend.check_assign_seats")
     def test_enable_no_quota(self, check_assign_seats: MagicMock) -> None:
         monitor_one = self._create_monitor(slug="monitor_one", status=ObjectStatus.DISABLED)
@@ -977,9 +1057,7 @@ class BulkEditOrganizationMonitorTest(MonitorTestCase):
             "ids": [monitor.guid],
             "isMuted": True,
         }
-        response = self.get_success_response(self.organization.slug, **data)
-        assert response.status_code == 200
-        assert response.data == {"updated": [], "errored": []}
+        self.get_error_response(self.organization.slug, status_code=403, **data)
 
         monitor.refresh_from_db()
         env.refresh_from_db()

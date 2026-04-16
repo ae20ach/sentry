@@ -150,6 +150,7 @@ class OrganizationDetectorIndexEndpoint(OrganizationEndpoint):
         "DELETE": ApiPublishStatus.PUBLIC,
     }
     owner = ApiOwner.ISSUES
+    allow_any_team_alert_write_fallback = True
 
     permission_classes = (OrganizationDetectorPermission,)
 

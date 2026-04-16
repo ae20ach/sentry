@@ -50,6 +50,9 @@ class OrganizationUptimeAssertionSuggestionsEndpoint(OrganizationEndpoint):
     """
 
     owner = ApiOwner.CRONS
+    allow_any_team_alert_write_fallback = True
+    # This POST is part of the uptime monitor authoring flow, so it should
+    # track the same alert-write permission as the monitor it helps create.
     permission_classes = (OrganizationAlertRulePermission,)
 
     publish_status = {

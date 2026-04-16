@@ -6,7 +6,7 @@ from sentry import features
 from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import cell_silo_endpoint
-from sentry.api.bases.organization import OrganizationAlertRulePermission
+from sentry.api.bases.organization import ALERT_MUTATION_SCOPES, OrganizationAlertRulePermission
 from sentry.api.bases.organization_events import OrganizationEventsEndpointBase
 from sentry.api.exceptions import ResourceDoesNotExist
 from sentry.api.serializers.base import serialize
@@ -20,6 +20,7 @@ from sentry.apidocs.examples.organization_examples import OrganizationExamples
 from sentry.apidocs.parameters import GlobalParams
 from sentry.apidocs.utils import inline_sentry_response_serializer
 from sentry.models.organization import Organization
+from sentry.models.project import Project
 from sentry.seer.anomaly_detection.get_historical_anomalies import (
     get_historical_anomaly_data_from_seer_preview,
 )
@@ -33,7 +34,21 @@ class OrganizationEventsAnomaliesEndpoint(OrganizationEventsEndpointBase):
     publish_status = {
         "POST": ApiPublishStatus.EXPERIMENTAL,
     }
+    allow_any_team_alert_write_fallback = True
+    # This POST previews anomaly-detection config used while authoring metric
+    # alerts/detectors, so it intentionally follows alert-write permissions.
     permission_classes = (OrganizationAlertRulePermission,)
+
+    def get_alert_mutation_projects(self, request: Request, organization: Organization):
+        raw_project_id = request.data.get("project_id")
+        if raw_project_id is None:
+            return None
+
+        try:
+            project_id = to_valid_int_id("project_id", raw_project_id)
+            return list(Project.objects.filter(id=project_id, organization_id=organization.id))
+        except Exception:
+            return None
 
     @extend_schema(
         operation_id="Identify anomalies in historical data",
@@ -89,9 +104,17 @@ class OrganizationEventsAnomaliesEndpoint(OrganizationEventsEndpointBase):
             )
 
         project_id = to_valid_int_id("project_id", raw_project_id)
-        projects = self.get_projects(request, organization, project_ids={project_id})
+        projects = list(Project.objects.filter(id=project_id, organization_id=organization.id))
         if not projects:
-            return Response({"detail": "Invalid project"}, status=400)
+            return Response(
+                {"detail": "You do not have permission to perform this action."},
+                status=403,
+            )
+        if not all(
+            request.access.has_any_project_scope(project, ALERT_MUTATION_SCOPES)
+            for project in projects
+        ):
+            return Response(status=403)
 
         anomalies = get_historical_anomaly_data_from_seer_preview(
             current_data=current_data,
