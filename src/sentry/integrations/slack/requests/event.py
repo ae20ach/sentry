@@ -71,7 +71,7 @@ class SlackEventRequest(SlackDMRequest):
         return is_event_challenge(self.request.data)
 
     @property
-    def is_seer_explorer_request(self) -> bool:
+    def is_seer_agent_request(self) -> bool:
         return (
             self.type == "app_mention"
             or self.type == "assistant_thread_started"

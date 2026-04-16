@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from collections import defaultdict
 from collections.abc import Mapping
-from typing import Any, TypedDict
+from typing import Any
 
 import orjson
 import sentry_sdk
@@ -71,12 +71,6 @@ _SEER_LOADING_MESSAGES = [
     "It worked on my machine...",
 ]
 SLACK_PROVIDERS = [IntegrationProviderSlug.SLACK, IntegrationProviderSlug.SLACK_STAGING]
-
-
-class SeerResolutionResult(TypedDict):
-    organization_id: int | None
-    installation: SlackIntegration | None
-    error_reason: SeerSlackHaltReason | None
 
 
 @all_silo_endpoint  # Only challenge verification is handled at control
@@ -397,9 +391,11 @@ class SlackEventEndpoint(SlackDMEndpoint):
             if not organization_id:
                 return self.respond()
 
-            installation: SlackIntegration = slack_request.integration.get_installation(
+            installation = slack_request.integration.get_installation(
                 organization_id=organization_id
             )
+            if not isinstance(installation, SlackIntegration):
+                return self.respond()
 
             if not channel_id or not text or not ts or not slack_request.user_id:
                 lifecycle.record_halt(SeerSlackHaltReason.MISSING_EVENT_DATA)
@@ -460,9 +456,11 @@ class SlackEventEndpoint(SlackDMEndpoint):
             if not organization_id:
                 return self.respond()
 
-            installation: SlackIntegration = slack_request.integration.get_installation(
+            installation = slack_request.integration.get_installation(
                 organization_id=organization_id
             )
+            if not isinstance(installation, SlackIntegration):
+                return self.respond()
 
             channel_id = slack_request.channel_id
             thread_ts = slack_request.thread_ts
