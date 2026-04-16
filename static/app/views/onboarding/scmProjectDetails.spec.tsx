@@ -9,6 +9,7 @@ import {
   OnboardingContextProvider,
   type OnboardingSessionState,
 } from 'sentry/components/onboarding/onboardingContext';
+import {ProjectsStore} from 'sentry/stores/projectsStore';
 import {TeamStore} from 'sentry/stores/teamStore';
 import type {OnboardingSelectedSDK} from 'sentry/types/onboarding';
 import * as analytics from 'sentry/utils/analytics';
@@ -44,6 +45,7 @@ describe('ScmProjectDetails', () => {
   beforeEach(() => {
     sessionStorageWrapper.clear();
     TeamStore.loadInitialData([teamWithAccess]);
+    ProjectsStore.loadInitialData([]);
 
     // useCreateNotificationAction queries messaging integrations on mount
     MockApiClient.addMockResponse({
