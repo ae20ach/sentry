@@ -535,6 +535,7 @@ class AbstractQueryExecutor(metaclass=ABCMeta):
         if (
             not get_sample
             and sort_field in EAP_SORT_STRATEGIES
+            and features.has("organizations:issue-feed.eap-search", organization)
             and EAPOccurrencesComparator.should_check_experiment(callsite)
         ):
             try:
