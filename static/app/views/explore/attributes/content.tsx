@@ -1,15 +1,15 @@
 import {useMemo, useState} from 'react';
-
 import styled from '@emotion/styled';
 import {useQueries} from '@tanstack/react-query';
 
 import {Tag} from '@sentry/scraps/badge';
+import {CompactSelect} from '@sentry/scraps/compactSelect';
+
 import * as Layout from 'sentry/components/layouts/thirds';
-import {normalizeDateTimeParams} from 'sentry/components/pageFilters/parse';
 import {PageFiltersContainer} from 'sentry/components/pageFilters/container';
 import {EnvironmentPageFilter} from 'sentry/components/pageFilters/environment/environmentPageFilter';
+import {normalizeDateTimeParams} from 'sentry/components/pageFilters/parse';
 import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
-import {CompactSelect} from '@sentry/scraps/compactSelect';
 import {SentryDocumentTitle} from 'sentry/components/sentryDocumentTitle';
 import {IconSearch} from 'sentry/icons/iconSearch';
 import {IconStar} from 'sentry/icons/iconStar';
@@ -55,12 +55,7 @@ export default function AttributesContent() {
 
   const results = useQueries({
     queries: ATTRIBUTE_TYPES.map(attributeType => ({
-      queryKey: [
-        'attributes',
-        organization.slug,
-        attributeType,
-        sharedQuery,
-      ],
+      queryKey: ['attributes', organization.slug, attributeType, sharedQuery],
       queryFn: () =>
         api.requestPromise(
           `/organizations/${organization.slug}/trace-items/attributes/`,
@@ -267,7 +262,8 @@ const SearchInput = styled('input')`
 
   &:focus {
     border-color: ${p => p.theme.tokens.focus.default};
-    box-shadow: inset 0 2px 0 0 ${p => p.theme.tokens.border.primary},
+    box-shadow:
+      inset 0 2px 0 0 ${p => p.theme.tokens.border.primary},
       0 0 0 3px ${p => p.theme.tokens.focus.default};
   }
 `;
