@@ -200,6 +200,7 @@ class RepoTreesIntegration(ABC):
         use_api = not cache_hit and not only_use_cache
         repo_files: list[str] = cache.get(key, [])
         if use_api:
+            tree = None
             # Cache miss – fetch from API
             try:
                 tree = self.get_client().get_tree(repo_full_name, tree_sha)
@@ -211,15 +212,13 @@ class RepoTreesIntegration(ABC):
                     extra={"repo": repo_full_name},
                 )
                 cache.set(key, [], self.CACHE_SECONDS + shifted_seconds)
-                tree = None
             except ApiError as error:
                 if _is_not_found_error(error):
                     logger.info(
                         "Caching empty files result for missing repo or ref",
                         extra={"repo": repo_full_name},
                     )
-                    cache.set(key, [], NOT_FOUND_CACHE_SECONDS)
-                    tree = None
+                    cache.set(key, [], NOT_FOUND_CACHE_SECONDS + shifted_seconds)
                 else:
                     raise
             if tree:
