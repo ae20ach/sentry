@@ -307,7 +307,8 @@ def _get_eligible_org_ids() -> list[int]:
     cluster = redis_clusters.get("default")
     cached = cluster.get(ELIGIBLE_ORGS_CACHE_KEY)
     if cached:
-        return [int(oid) for oid in cached.decode().split(",") if oid]
+        value = cached if isinstance(cached, str) else cached.decode()
+        return [int(oid) for oid in value.split(",") if oid]
     return _refresh_eligible_orgs_cache()
 
 
