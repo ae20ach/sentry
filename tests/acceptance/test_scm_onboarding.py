@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from unittest import mock
 
 import pytest
@@ -42,6 +43,29 @@ class ScmOnboardingTest(AcceptanceTestCase):
         self.browser.wait_until('[data-test-id="onboarding-step-welcome"]')
         self.browser.click('[data-test-id="onboarding-welcome-start"]')
         self.browser.wait_until('[data-test-id="onboarding-step-scm-connect"]')
+
+    @contextmanager
+    def projects_born_active(self):
+        """Mark newly-created Projects as active so useRecentCreatedProject sees
+        isProjectActive=true on the first render of setup-docs.
+
+        Without this, tests must write first_event after setup-docs mounts, then
+        wait for the hook's 1s poll to observe it — racing the test's click on
+        Back. Mutating the returned instance lets ProjectSummarySerializer
+        surface firstEvent in the create response, so the frontend never sees
+        the inactive state.
+        """
+        original_create = Project.objects.create
+
+        def create_active(*args, **kwargs):
+            project = original_create(*args, **kwargs)
+            now = timezone.now()
+            Project.objects.filter(id=project.id).update(first_event=now)
+            project.first_event = now
+            return project
+
+        with mock.patch.object(Project.objects, "create", side_effect=create_active):
+            yield
 
     def skip_to_setup_docs(self, platform_search: str, platform_label: str) -> None:
         """Drive through the skip flow to setup-docs: skip connect → pick platform → create project."""
@@ -448,7 +472,10 @@ class ScmOnboardingTest(AcceptanceTestCase):
 
     def test_scm_back_from_setup_docs_active_project_no_changes(self) -> None:
         """Active project survives back-nav; clicking Create again reuses it (no duplicate)."""
-        with self.feature({"organizations:onboarding-scm-experiment": True}):
+        with (
+            self.feature({"organizations:onboarding-scm-experiment": True}),
+            self.projects_born_active(),
+        ):
             self.start_onboarding()
             self.skip_to_setup_docs("React", "React")
 
@@ -456,10 +483,7 @@ class ScmOnboardingTest(AcceptanceTestCase):
             project = Project.objects.get(organization=self.org)
             assert Rule.objects.filter(project=project).count() == 1
 
-            # Mark the project as active (received a first event).
-            Project.objects.filter(id=project.id).update(first_event=timezone.now())
-
-            # Navigate back — project is active, so useBackActions does NOT delete it.
+            # Project is active, so useBackActions does NOT delete it on back-nav.
             self.browser.click('[aria-label="Back"]')
             self.browser.wait_until('[data-test-id="onboarding-step-scm-project-details"]')
             self.browser.wait_until_clickable(xpath='//button[contains(., "Create project")]')
@@ -475,16 +499,16 @@ class ScmOnboardingTest(AcceptanceTestCase):
 
     def test_scm_back_from_setup_docs_active_project_alert_changed(self) -> None:
         """Changing the alert setting abandons the active project and creates a new one."""
-        with self.feature({"organizations:onboarding-scm-experiment": True}):
+        with (
+            self.feature({"organizations:onboarding-scm-experiment": True}),
+            self.projects_born_active(),
+        ):
             self.start_onboarding()
             self.skip_to_setup_docs("React", "React")
 
             self.browser.wait_until(xpath='//h2[text()="Configure React SDK"]')
             project1 = Project.objects.get(organization=self.org)
             assert Rule.objects.filter(project=project1).count() == 1
-
-            # Mark active so useBackActions preserves it on back-nav.
-            Project.objects.filter(id=project1.id).update(first_event=timezone.now())
 
             self.browser.click('[aria-label="Back"]')
             self.browser.wait_until('[data-test-id="onboarding-step-scm-project-details"]')
@@ -512,14 +536,15 @@ class ScmOnboardingTest(AcceptanceTestCase):
 
     def test_scm_back_from_setup_docs_active_project_platform_changed(self) -> None:
         """Active project survives back-nav; changing platform creates a new project."""
-        with self.feature({"organizations:onboarding-scm-experiment": True}):
+        with (
+            self.feature({"organizations:onboarding-scm-experiment": True}),
+            self.projects_born_active(),
+        ):
             self.start_onboarding()
             self.skip_to_setup_docs("React", "React")
 
             self.browser.wait_until(xpath='//h2[text()="Configure React SDK"]')
             project1 = Project.objects.get(organization=self.org)
-
-            Project.objects.filter(id=project1.id).update(first_event=timezone.now())
 
             # Navigate all the way back to platform selection and pick a different one.
             self.browser.click('[aria-label="Back"]')
