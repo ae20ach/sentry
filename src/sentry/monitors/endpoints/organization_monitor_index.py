@@ -18,7 +18,7 @@ from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import cell_silo_endpoint
 from sentry.api.bases import NoProjects
-from sentry.api.bases.organization import OrganizationAlertRulePermission
+from sentry.api.bases.organization import ALERT_MUTATION_SCOPES, OrganizationAlertRulePermission
 from sentry.api.helpers.teams import get_teams
 from sentry.api.paginator import OffsetPaginator
 from sentry.api.serializers import serialize
@@ -331,6 +331,11 @@ class OrganizationMonitorIndexEndpoint(OrganizationAlertRuleBaseEndpoint):
 
         monitor_guids = result.pop("ids", [])
         monitors = list(Monitor.objects.filter(guid__in=monitor_guids, project_id__in=project_ids))
+        if not all(
+            request.access.has_any_project_scope(monitor.project, ALERT_MUTATION_SCOPES)
+            for monitor in monitors
+        ):
+            return self.respond(status=403)
 
         status = result.get("status")
         # If enabling monitors, ensure we can assign all before moving forward

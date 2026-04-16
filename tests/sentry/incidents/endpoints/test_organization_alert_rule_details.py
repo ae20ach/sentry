@@ -84,9 +84,9 @@ class AlertRuleDetailsBase(AlertRuleBase):
 
     endpoint = "sentry-api-0-organization-alert-rule-details"
 
-    def _create_token(self, scope: str) -> ApiToken:
+    def _create_token(self, scope: str, user=None) -> ApiToken:
         with assume_test_silo_mode(SiloMode.CONTROL):
-            return ApiToken.objects.create(user=self.user, scope_list=[scope])
+            return ApiToken.objects.create(user=user or self.user, scope_list=[scope])
 
     @patch(
         "sentry.seer.anomaly_detection.store_data.seer_anomaly_detection_connection_pool.urlopen"
@@ -1039,6 +1039,35 @@ class AlertRuleDetailsPutEndpointTest(AlertRuleDetailsBase):
         assert response.status_code == 200
         self.alert_rule.refresh_from_db()
         assert self.alert_rule.name == self.valid_params["name"]
+
+    def test_update_denies_alerts_write_scope_for_other_team_projects(self) -> None:
+        team_admin_user = self.create_user()
+        self.create_member(
+            user=team_admin_user,
+            organization=self.organization,
+            role="member",
+            team_roles=[(self.team, "admin")],
+        )
+
+        other_team = self.create_team(organization=self.organization, name="other-team")
+        other_project = self.create_project(
+            organization=self.organization, teams=[other_team], name="other-project"
+        )
+        other_alert_rule = self.new_alert_rule(
+            data={**deepcopy(self.alert_rule_dict), "projects": [other_project.slug]}
+        )
+
+        token = self._create_token("alerts:write", user=team_admin_user)
+
+        with self.feature("organizations:incidents"):
+            response = self.client.put(
+                reverse(self.endpoint, args=[self.organization.slug, other_alert_rule.id]),
+                data={**self.valid_params, "projects": [other_project.slug]},
+                format="json",
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 403
 
     def test_simple(self) -> None:
         self.create_member(
@@ -2617,6 +2646,33 @@ class AlertRuleDetailsSentryAppPutEndpointTest(AlertRuleDetailsBase):
 
 class AlertRuleDetailsDeleteEndpointTest(AlertRuleDetailsBase):
     method = "delete"
+
+    def test_delete_denies_alerts_write_scope_for_other_team_projects(self) -> None:
+        team_admin_user = self.create_user()
+        self.create_member(
+            user=team_admin_user,
+            organization=self.organization,
+            role="member",
+            team_roles=[(self.team, "admin")],
+        )
+
+        other_team = self.create_team(organization=self.organization, name="other-team")
+        other_project = self.create_project(
+            organization=self.organization, teams=[other_team], name="other-project"
+        )
+        other_alert_rule = self.new_alert_rule(
+            data={**deepcopy(self.alert_rule_dict), "projects": [other_project.slug]}
+        )
+
+        token = self._create_token("alerts:write", user=team_admin_user)
+
+        with self.feature("organizations:incidents"):
+            response = self.client.delete(
+                reverse(self.endpoint, args=[self.organization.slug, other_alert_rule.id]),
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 403
 
     def test_simple(self) -> None:
         self.create_member(

@@ -225,6 +225,31 @@ def _has_any_team_scope(request: Request, scope: str) -> bool:
     return any(request.access.has_team_scope(team, scope) for team in teams)
 
 
+ALERT_MUTATION_SCOPES = frozenset({"org:write", "alerts:write"})
+
+
+def _has_project_alert_write_access(request: Request, projects: Sequence[Project]) -> bool:
+    return bool(projects) and all(
+        request.access.has_any_project_scope(project, ALERT_MUTATION_SCOPES) for project in projects
+    )
+
+
+def _has_view_project_scoped_alert_write(
+    request: Request,
+    view: APIView,
+    organization: Organization | RpcOrganization | RpcUserOrganizationContext,
+) -> bool | None:
+    get_projects = getattr(view, "get_alert_mutation_projects", None)
+    if not callable(get_projects):
+        return None
+
+    projects = get_projects(request, organization)
+    if projects is None:
+        return None
+
+    return _has_project_alert_write_access(request, projects)
+
+
 class OrganizationAlertRulePermission(OrganizationPermission):
     scope_map = {
         "GET": ["org:read", "org:write", "org:admin", "alerts:read"],
@@ -242,8 +267,15 @@ class OrganizationAlertRulePermission(OrganizationPermission):
         if super().has_object_permission(request, view, organization):
             return True
 
-        return request.method in {"POST", "PUT", "DELETE"} and _has_any_team_scope(
-            request, "alerts:write"
+        if request.method not in {"POST", "PUT", "DELETE"}:
+            return False
+
+        project_scoped_access = _has_view_project_scoped_alert_write(request, view, organization)
+        if project_scoped_access is not None:
+            return project_scoped_access
+
+        return bool(getattr(view, "allow_any_team_alert_write_fallback", False)) and (
+            _has_any_team_scope(request, "alerts:write")
         )
 
 
@@ -264,8 +296,15 @@ class OrganizationDetectorPermission(OrganizationPermission):
         if super().has_object_permission(request, view, organization):
             return True
 
-        return request.method in {"POST", "PUT", "DELETE"} and _has_any_team_scope(
-            request, "alerts:write"
+        if request.method not in {"POST", "PUT", "DELETE"}:
+            return False
+
+        project_scoped_access = _has_view_project_scoped_alert_write(request, view, organization)
+        if project_scoped_access is not None:
+            return project_scoped_access
+
+        return bool(getattr(view, "allow_any_team_alert_write_fallback", False)) and (
+            _has_any_team_scope(request, "alerts:write")
         )
 
 
