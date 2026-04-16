@@ -12,11 +12,9 @@ from sentry.tasks.llm_issue_detection import (
     run_llm_issue_detection,
 )
 from sentry.tasks.llm_issue_detection.detection import (
-    NUM_DISPATCH_SLOTS,
     TRANSACTION_BATCH_SIZE,
     TraceMetadataWithSpanCount,
     _get_unprocessed_traces,
-    _org_in_slot,
     mark_traces_as_processed,
 )
 from sentry.tasks.llm_issue_detection.trace_data import (
@@ -25,94 +23,23 @@ from sentry.tasks.llm_issue_detection.trace_data import (
 )
 from sentry.testutils.cases import APITransactionTestCase, SnubaTestCase, SpanTestCase, TestCase
 from sentry.testutils.helpers.datetime import before_now
-from sentry.testutils.pytest.fixtures import django_db_all
-
-
-class TestDispatchSlotBucketing(TestCase):
-    def test_org_in_slot_deterministic(self):
-        slot = next(s for s in range(NUM_DISPATCH_SLOTS) if _org_in_slot(12345, s))
-        assert _org_in_slot(12345, slot) is True
-        for s in range(NUM_DISPATCH_SLOTS):
-            if s != slot:
-                assert _org_in_slot(12345, s) is False
-
-    def test_org_in_slot_distributes_evenly(self):
-        slot_counts: dict[int, int] = {s: 0 for s in range(NUM_DISPATCH_SLOTS)}
-        for org_id in range(1, 10001):
-            for s in range(NUM_DISPATCH_SLOTS):
-                if _org_in_slot(org_id, s):
-                    slot_counts[s] += 1
-                    break
-
-        expected_per_slot = 10000 / NUM_DISPATCH_SLOTS
-        for count in slot_counts.values():
-            assert count > expected_per_slot * 0.8
-            assert count < expected_per_slot * 1.2
 
 
 class TestRunLLMIssueDetection(TestCase):
-    @patch("sentry.tasks.llm_issue_detection.detection.detect_llm_issues_for_org.apply_async")
-    @patch("sentry.tasks.llm_issue_detection.detection._org_in_slot", return_value=True)
-    @patch("sentry.tasks.llm_issue_detection.detection._get_current_dispatch_slot", return_value=1)
-    @patch("sentry.tasks.llm_issue_detection.detection._get_eligible_org_ids")
-    def test_dispatches_orgs_in_current_slot(
-        self, mock_get_eligible, _mock_slot, _mock_in_slot, mock_apply_async
-    ):
-        mock_get_eligible.return_value = [self.organization.id]
-
+    @patch("sentry.tasks.llm_issue_detection.detection.CursoredScheduler")
+    def test_calls_scheduler_tick(self, mock_scheduler_cls):
         with self.options({"issue-detection.llm-detection.enabled": True}):
             run_llm_issue_detection()
 
-        mock_apply_async.assert_called_once()
-        assert mock_apply_async.call_args.kwargs["args"] == [self.organization.id]
+        mock_scheduler_cls.assert_called_once()
+        mock_scheduler_cls.return_value.tick.assert_called_once()
 
-    @patch("sentry.tasks.llm_issue_detection.detection.detect_llm_issues_for_org.apply_async")
-    @patch("sentry.tasks.llm_issue_detection.detection._org_in_slot", return_value=False)
-    @patch("sentry.tasks.llm_issue_detection.detection._get_current_dispatch_slot", return_value=1)
-    @patch("sentry.tasks.llm_issue_detection.detection._get_eligible_org_ids")
-    def test_skips_orgs_not_in_current_slot(
-        self, mock_get_eligible, _mock_slot, _mock_in_slot, mock_apply_async
-    ):
-        mock_get_eligible.return_value = [self.organization.id]
-
-        with self.options({"issue-detection.llm-detection.enabled": True}):
+    @patch("sentry.tasks.llm_issue_detection.detection.CursoredScheduler")
+    def test_skips_when_disabled(self, mock_scheduler_cls):
+        with self.options({"issue-detection.llm-detection.enabled": False}):
             run_llm_issue_detection()
 
-        mock_apply_async.assert_not_called()
-
-    @patch("sentry.tasks.llm_issue_detection.detection.detect_llm_issues_for_org.apply_async")
-    @patch("sentry.tasks.llm_issue_detection.detection._get_current_dispatch_slot", return_value=1)
-    @patch("sentry.tasks.llm_issue_detection.detection._get_eligible_org_ids")
-    def test_skips_when_no_eligible_orgs(self, mock_get_eligible, _mock_slot, mock_apply_async):
-        mock_get_eligible.return_value = []
-
-        with self.options({"issue-detection.llm-detection.enabled": True}):
-            run_llm_issue_detection()
-
-        mock_apply_async.assert_not_called()
-
-    @django_db_all
-    @patch("sentry.tasks.llm_issue_detection.detection.redis_clusters")
-    def test_refresh_cache_filters_by_feature_flags(self, mock_redis_clusters):
-        from sentry.tasks.llm_issue_detection.detection import _refresh_eligible_orgs_cache
-
-        mock_cluster = Mock()
-        mock_redis_clusters.get.return_value = mock_cluster
-
-        org_with_flags = self.create_organization()
-        org_without_flags = self.create_organization()
-
-        with self.feature(
-            {
-                "organizations:ai-issue-detection": [org_with_flags.slug],
-                "organizations:gen-ai-features": [org_with_flags.slug],
-            }
-        ):
-            result = _refresh_eligible_orgs_cache()
-
-        assert org_with_flags.id in result
-        assert org_without_flags.id not in result
-        mock_cluster.set.assert_called_once()
+        mock_scheduler_cls.assert_not_called()
 
 
 class TestDetectLLMIssuesForOrg(TestCase):

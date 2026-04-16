@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import random
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
@@ -32,8 +32,7 @@ from sentry.seer.explorer.utils import normalize_description
 from sentry.seer.signed_seer_api import SeerViewerContext, make_signed_seer_api_request
 from sentry.tasks.base import instrumented_task
 from sentry.taskworker.namespaces import issues_tasks
-from sentry.utils.hashlib import md5_text
-from sentry.utils.query import RangeQuerySetWrapper
+from sentry.utils.cursored_scheduler import CursoredScheduler
 from sentry.utils.redis import redis_clusters
 
 logger = logging.getLogger("sentry.tasks.llm_issue_detection")
@@ -45,10 +44,7 @@ TRANSACTION_BATCH_SIZE = 50
 TRACE_PROCESSING_TTL_SECONDS = 7200
 MAX_LLM_FIELD_LENGTH = 2000
 
-DISPATCH_INTERVAL_MINUTES = 15
-NUM_DISPATCH_SLOTS = 10
-MAX_ORGS_PER_CYCLE = 500
-ORG_DISPATCH_STAGGER_SECONDS = 15
+DETECTION_CYCLE_DURATION = timedelta(hours=2, minutes=30)
 
 
 seer_issue_detection_connection_pool = connection_from_url(
@@ -264,54 +260,6 @@ def create_issue_occurrence_from_detection(
     )
 
 
-ELIGIBLE_ORGS_CACHE_KEY = "llm_detection:eligible_org_ids"
-ELIGIBLE_ORGS_CACHE_TTL_SECONDS = NUM_DISPATCH_SLOTS * DISPATCH_INTERVAL_MINUTES * 60
-
-
-def _get_current_dispatch_slot() -> int:
-    """Return the current time slot index for bucketed dispatch."""
-    now = datetime.now(UTC)
-    minutes_since_epoch = int(now.timestamp()) // 60
-    return (minutes_since_epoch // DISPATCH_INTERVAL_MINUTES) % NUM_DISPATCH_SLOTS
-
-
-def _org_in_slot(org_id: int, slot: int) -> bool:
-    """Check if an org's hash-assigned slot matches the given slot."""
-    return int(md5_text(str(org_id)).hexdigest(), 16) % NUM_DISPATCH_SLOTS == slot
-
-
-def _refresh_eligible_orgs_cache() -> list[int]:
-    """Scan all active orgs, filter by feature flags, cache the result."""
-    eligible_ids: list[int] = []
-    for org in RangeQuerySetWrapper(
-        Organization.objects.filter(status=OrganizationStatus.ACTIVE),
-    ):
-        if (
-            features.has("organizations:ai-issue-detection", org)
-            and features.has("organizations:gen-ai-features", org)
-            and not org.get_option("sentry:hide_ai_features")
-        ):
-            eligible_ids.append(org.id)
-
-    cluster = redis_clusters.get("default")
-    cluster.set(
-        ELIGIBLE_ORGS_CACHE_KEY,
-        ",".join(str(oid) for oid in eligible_ids),
-        ex=ELIGIBLE_ORGS_CACHE_TTL_SECONDS,
-    )
-    return eligible_ids
-
-
-def _get_eligible_org_ids() -> list[int]:
-    """Read cached eligible org IDs, or rebuild if missing."""
-    cluster = redis_clusters.get("default")
-    cached = cluster.get(ELIGIBLE_ORGS_CACHE_KEY)
-    if cached:
-        value = cached if isinstance(cached, str) else cached.decode()
-        return [int(oid) for oid in value.split(",") if oid]
-    return _refresh_eligible_orgs_cache()
-
-
 @instrumented_task(
     name="sentry.tasks.llm_issue_detection.run_llm_issue_detection",
     namespace=issues_tasks,
@@ -321,33 +269,20 @@ def run_llm_issue_detection() -> None:
     """
     Main scheduled task for LLM issue detection.
 
-    Uses md5 hash bucketing to spread org dispatches across time slots.
-    Each 15-minute cycle processes one slot's worth of orgs.
+    Uses CursoredScheduler to iterate all active orgs in batches over a cycle.
+    Each org task checks feature flags and exits early if ineligible.
     """
     if not options.get("issue-detection.llm-detection.enabled"):
         return
 
-    current_slot = _get_current_dispatch_slot()
-
-    if current_slot == 0:
-        eligible_org_ids = _refresh_eligible_orgs_cache()
-    else:
-        eligible_org_ids = _get_eligible_org_ids()
-
-    dispatched = 0
-    for org_id in eligible_org_ids:
-        if dispatched >= MAX_ORGS_PER_CYCLE:
-            break
-
-        if not _org_in_slot(org_id, current_slot):
-            continue
-
-        detect_llm_issues_for_org.apply_async(
-            args=[org_id],
-            countdown=dispatched * ORG_DISPATCH_STAGGER_SECONDS,
-            headers={"sentry-propagate-traces": False},
-        )
-        dispatched += 1
+    scheduler = CursoredScheduler(
+        name="llm_issue_detection",
+        schedule_key="llm-issue-detection",
+        queryset=Organization.objects.filter(status=OrganizationStatus.ACTIVE),
+        task=detect_llm_issues_for_org,
+        cycle_duration=DETECTION_CYCLE_DURATION,
+    )
+    scheduler.tick()
 
 
 @instrumented_task(
