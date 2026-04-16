@@ -1,8 +1,10 @@
 import styled from '@emotion/styled';
 
 import * as Layout from 'sentry/components/layouts/thirds';
+import {useRoutes} from 'sentry/utils/useRoutes';
 import {TopBar} from 'sentry/views/navigation/topBar';
 import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
+import {BreadcrumbTitle} from 'sentry/views/settings/components/settingsBreadcrumb/breadcrumbTitle';
 
 type Props = {
   /**
@@ -43,20 +45,32 @@ function UnstyledSettingsPageHeader({
   ...props
 }: Props) {
   const hasPageFrame = useHasPageFrameFeature();
+  const routes = useRoutes();
+  const hasTitle = !!title;
+  const hasSubtitle = !!subtitle;
+  const showVisibleTitle = hasPageFrame ? false : hasTitle;
+  const hasInlineHeaderText = showVisibleTitle || hasSubtitle;
   // If Header is narrow, use align-items to center <Action>.
   // Otherwise, use a fixed margin to prevent an odd alignment.
   // This is needed as Actions could be a button or a dropdown.
-  const isNarrow = !subtitle;
+  const isNarrow = hasSubtitle ? false : true;
 
   return (
-    <div {...props}>
+    <HeaderRoot hasInlineHeaderText={hasInlineHeaderText} {...props}>
+      {hasPageFrame && typeof title === 'string' ? (
+        <BreadcrumbTitle routes={routes} title={title} />
+      ) : null}
       <TitleAndActions isNarrow={isNarrow}>
         <TitleWrapper>
-          {icon && <Icon>{icon}</Icon>}
-          {title && (
+          {hasInlineHeaderText && icon && <Icon>{icon}</Icon>}
+          {hasInlineHeaderText && (
             <Title tabs={tabs} styled={noTitleStyles}>
-              <Layout.Title>{title}</Layout.Title>
-              {subtitle && <Subtitle colorSubtitle={colorSubtitle}>{subtitle}</Subtitle>}
+              {showVisibleTitle && <Layout.Title>{title}</Layout.Title>}
+              {hasSubtitle && (
+                <Subtitle colorSubtitle={colorSubtitle} hasTitle={showVisibleTitle}>
+                  {subtitle}
+                </Subtitle>
+              )}
             </Title>
           )}
         </TitleWrapper>
@@ -71,7 +85,7 @@ function UnstyledSettingsPageHeader({
 
       {body && <BodyWrapper>{body}</BodyWrapper>}
       {tabs && <TabsWrapper>{tabs}</TabsWrapper>}
-    </div>
+    </HeaderRoot>
   );
 }
 
@@ -79,6 +93,10 @@ interface TitleProps extends React.HTMLAttributes<HTMLDivElement> {
   styled?: boolean;
   tabs?: React.ReactNode;
 }
+
+const HeaderRoot = styled('div')<{hasInlineHeaderText: boolean}>`
+  margin-top: ${p => (p.hasInlineHeaderText ? `-${p.theme.space['3xl']}` : 0)};
+`;
 
 const TitleAndActions = styled('div')<{isNarrow?: boolean}>`
   display: flex;
@@ -94,12 +112,12 @@ const Title = styled('div')<TitleProps>`
   margin: ${p => p.theme.space['3xl']} ${p => p.theme.space.xl}
     ${p => p.theme.space['2xl']} 0;
 `;
-const Subtitle = styled('div')<{colorSubtitle?: boolean}>`
+const Subtitle = styled('div')<{colorSubtitle?: boolean; hasTitle?: boolean}>`
   color: ${p =>
     p.colorSubtitle ? p.theme.tokens.content.accent : p.theme.colors.gray500};
   font-weight: ${p => p.theme.font.weight.sans.regular};
   font-size: ${p => p.theme.font.size.md};
-  padding: ${p => p.theme.space.lg} 0 0;
+  padding: ${p => (p.hasTitle ? `${p.theme.space.lg} 0 0` : 0)};
 `;
 
 const Icon = styled('div')`
@@ -114,7 +132,6 @@ export const SettingsPageHeader = styled(UnstyledSettingsPageHeader)<
   Omit<React.HTMLProps<HTMLDivElement>, keyof Props> & Props
 >`
   font-size: 14px;
-  margin-top: -${p => p.theme.space['3xl']};
 `;
 
 const BodyWrapper = styled('div')`
