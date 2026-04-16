@@ -14,7 +14,6 @@ from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import cell_silo_endpoint
 from sentry.api.bases import NoProjects, OrganizationEventsEndpointBase
-from sentry.api.endpoints.organization_trace_item_attributes import adjust_start_end_window
 from sentry.api.event_search import translate_escape_sequences
 from sentry.api.serializers.base import serialize
 from sentry.api.utils import handle_query_errors
@@ -152,18 +151,6 @@ class OrganizationTraceItemsStatsEndpoint(OrganizationEventsEndpointBase):
 
         substring_match = serialized.get("substringMatch", "")
         value_substring_match = translate_escape_sequences(substring_match)
-
-        # Fetch attribute names
-        adjusted_start_date, adjusted_end_date = adjust_start_end_window(
-            snuba_params.start_date, snuba_params.end_date
-        )
-        attrs_snuba_params = snuba_params.copy()
-        attrs_snuba_params.start = adjusted_start_date
-        attrs_snuba_params.end = adjusted_end_date
-        attrs_resolver = SearchResolver(
-            params=attrs_snuba_params, config=resolver_config, definitions=stats_config.definitions
-        )
-        attrs_resolver.resolve_meta(referrer=stats_config.referrer.value)
 
         max_attributes = options.get("explore.trace-items.keys.max")
 
