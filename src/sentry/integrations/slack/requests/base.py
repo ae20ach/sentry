@@ -86,10 +86,10 @@ class SlackRequest:
         """
         Ensure everything is present to properly process this request
         """
-        self._validate_data()
         self._log_request()
         self._get_context()
         self.authorize()
+        self._validate_data()
         self.validate_integration()
 
     def is_bot(self) -> bool:
@@ -154,7 +154,7 @@ class SlackRequest:
 
     @property
     def logging_data(self) -> Mapping[str, str]:
-        _data = self.data
+        _data = self.request.data
         data = {
             "slack_team_id": _get_field_id_option(_data, "team"),
             "slack_channel_id": _get_field_id_option(_data, "channel"),
