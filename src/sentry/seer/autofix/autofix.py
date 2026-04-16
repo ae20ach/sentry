@@ -745,10 +745,6 @@ def trigger_autofix(
     # Resolve the project preference, or create a new one with org defaults.
     # Preference repos are the source of truth (even if empty).
     preference = _resolve_project_preference(group.organization, group.project)
-    if preference:
-        repos = [repo.dict() for repo in preference.repositories]
-    else:
-        repos = code_mappings_repos
 
     # Pre-resolve stacktrace frame paths using code mappings so Seer can skip
     # expensive git tree fetches for large repos.
@@ -794,7 +790,7 @@ def trigger_autofix(
         run_id = _call_autofix(
             user=user,
             group=group,
-            repos=repos,
+            repos=code_mappings_repos,
             serialized_event=serialized_event,
             profile=profile,
             trace_tree=trace_tree,
