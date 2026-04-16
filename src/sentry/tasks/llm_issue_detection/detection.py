@@ -264,6 +264,10 @@ def create_issue_occurrence_from_detection(
     )
 
 
+ELIGIBLE_ORGS_CACHE_KEY = "llm_detection:eligible_org_ids"
+ELIGIBLE_ORGS_CACHE_TTL_SECONDS = NUM_DISPATCH_SLOTS * DISPATCH_INTERVAL_MINUTES * 60 * 2
+
+
 def _get_current_dispatch_slot() -> int:
     """Return the current time slot index for bucketed dispatch."""
     now = datetime.now(UTC)
@@ -274,6 +278,37 @@ def _get_current_dispatch_slot() -> int:
 def _org_in_slot(org_id: int, slot: int) -> bool:
     """Check if an org's hash-assigned slot matches the given slot."""
     return int(md5_text(str(org_id)).hexdigest(), 16) % NUM_DISPATCH_SLOTS == slot
+
+
+def _refresh_eligible_orgs_cache() -> list[int]:
+    """Scan all active orgs, filter by feature flags, cache the result."""
+    eligible_ids: list[int] = []
+    for org in RangeQuerySetWrapper(
+        Organization.objects.filter(status=OrganizationStatus.ACTIVE),
+    ):
+        if (
+            features.has("organizations:ai-issue-detection", org)
+            and features.has("organizations:gen-ai-features", org)
+            and not org.get_option("sentry:hide_ai_features")
+        ):
+            eligible_ids.append(org.id)
+
+    cluster = redis_clusters.get("default")
+    cluster.set(
+        ELIGIBLE_ORGS_CACHE_KEY,
+        ",".join(str(oid) for oid in eligible_ids),
+        ex=ELIGIBLE_ORGS_CACHE_TTL_SECONDS,
+    )
+    return eligible_ids
+
+
+def _get_eligible_org_ids() -> list[int]:
+    """Read cached eligible org IDs, or rebuild if missing."""
+    cluster = redis_clusters.get("default")
+    cached = cluster.get(ELIGIBLE_ORGS_CACHE_KEY)
+    if cached:
+        return [int(oid) for oid in cached.decode().split(",") if oid]
+    return _refresh_eligible_orgs_cache()
 
 
 @instrumented_task(
@@ -292,24 +327,22 @@ def run_llm_issue_detection() -> None:
         return
 
     current_slot = _get_current_dispatch_slot()
-    dispatched = 0
 
-    for org in RangeQuerySetWrapper(
-        Organization.objects.filter(status=OrganizationStatus.ACTIVE),
-    ):
+    if current_slot == 0:
+        eligible_org_ids = _refresh_eligible_orgs_cache()
+    else:
+        eligible_org_ids = _get_eligible_org_ids()
+
+    dispatched = 0
+    for org_id in eligible_org_ids:
         if dispatched >= MAX_ORGS_PER_CYCLE:
             break
 
-        if (
-            not _org_in_slot(org.id, current_slot)
-            or not features.has("organizations:ai-issue-detection", org)
-            or not features.has("organizations:gen-ai-features", org)
-            or org.get_option("sentry:hide_ai_features")
-        ):
+        if not _org_in_slot(org_id, current_slot):
             continue
 
         detect_llm_issues_for_org.apply_async(
-            args=[org.id],
+            args=[org_id],
             countdown=dispatched * ORG_DISPATCH_STAGGER_SECONDS,
             headers={"sentry-propagate-traces": False},
         )

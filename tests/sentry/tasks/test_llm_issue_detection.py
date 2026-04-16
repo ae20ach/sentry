@@ -50,52 +50,30 @@ class TestDispatchSlotBucketing(TestCase):
             assert count < expected_per_slot * 1.2
 
 
-@django_db_all
 class TestRunLLMIssueDetection(TestCase):
     @patch("sentry.tasks.llm_issue_detection.detection.detect_llm_issues_for_org.apply_async")
-    @patch("sentry.tasks.llm_issue_detection.detection._org_in_slot")
-    def test_dispatches_orgs_in_current_slot(self, mock_org_in_slot, mock_apply_async):
-        org = self.create_organization()
-        mock_org_in_slot.return_value = True
+    @patch("sentry.tasks.llm_issue_detection.detection._org_in_slot", return_value=True)
+    @patch("sentry.tasks.llm_issue_detection.detection._get_current_dispatch_slot", return_value=1)
+    @patch("sentry.tasks.llm_issue_detection.detection._get_eligible_org_ids")
+    def test_dispatches_orgs_in_current_slot(
+        self, mock_get_eligible, _mock_slot, _mock_in_slot, mock_apply_async
+    ):
+        mock_get_eligible.return_value = [self.organization.id]
 
-        with (
-            self.options({"issue-detection.llm-detection.enabled": True}),
-            self.feature(
-                {
-                    "organizations:ai-issue-detection": [org.slug],
-                    "organizations:gen-ai-features": [org.slug],
-                }
-            ),
-        ):
+        with self.options({"issue-detection.llm-detection.enabled": True}):
             run_llm_issue_detection()
 
         mock_apply_async.assert_called_once()
-        assert mock_apply_async.call_args.kwargs["args"] == [org.id]
+        assert mock_apply_async.call_args.kwargs["args"] == [self.organization.id]
 
     @patch("sentry.tasks.llm_issue_detection.detection.detect_llm_issues_for_org.apply_async")
-    @patch("sentry.tasks.llm_issue_detection.detection._org_in_slot")
-    def test_skips_orgs_not_in_current_slot(self, mock_org_in_slot, mock_apply_async):
-        org = self.create_organization()
-        mock_org_in_slot.return_value = False
-
-        with (
-            self.options({"issue-detection.llm-detection.enabled": True}),
-            self.feature(
-                {
-                    "organizations:ai-issue-detection": [org.slug],
-                    "organizations:gen-ai-features": [org.slug],
-                }
-            ),
-        ):
-            run_llm_issue_detection()
-
-        mock_apply_async.assert_not_called()
-
-    @patch("sentry.tasks.llm_issue_detection.detection.detect_llm_issues_for_org.apply_async")
-    @patch("sentry.tasks.llm_issue_detection.detection._org_in_slot")
-    def test_skips_orgs_without_feature_flag(self, mock_org_in_slot, mock_apply_async):
-        self.create_organization()
-        mock_org_in_slot.return_value = True
+    @patch("sentry.tasks.llm_issue_detection.detection._org_in_slot", return_value=False)
+    @patch("sentry.tasks.llm_issue_detection.detection._get_current_dispatch_slot", return_value=1)
+    @patch("sentry.tasks.llm_issue_detection.detection._get_eligible_org_ids")
+    def test_skips_orgs_not_in_current_slot(
+        self, mock_get_eligible, _mock_slot, _mock_in_slot, mock_apply_async
+    ):
+        mock_get_eligible.return_value = [self.organization.id]
 
         with self.options({"issue-detection.llm-detection.enabled": True}):
             run_llm_issue_detection()
@@ -103,24 +81,38 @@ class TestRunLLMIssueDetection(TestCase):
         mock_apply_async.assert_not_called()
 
     @patch("sentry.tasks.llm_issue_detection.detection.detect_llm_issues_for_org.apply_async")
-    @patch("sentry.tasks.llm_issue_detection.detection._org_in_slot")
-    def test_skips_orgs_with_hidden_ai(self, mock_org_in_slot, mock_apply_async):
-        org = self.create_organization()
-        org.update_option("sentry:hide_ai_features", True)
-        mock_org_in_slot.return_value = True
+    @patch("sentry.tasks.llm_issue_detection.detection._get_current_dispatch_slot", return_value=1)
+    @patch("sentry.tasks.llm_issue_detection.detection._get_eligible_org_ids")
+    def test_skips_when_no_eligible_orgs(self, mock_get_eligible, _mock_slot, mock_apply_async):
+        mock_get_eligible.return_value = []
 
-        with (
-            self.options({"issue-detection.llm-detection.enabled": True}),
-            self.feature(
-                {
-                    "organizations:ai-issue-detection": [org.slug],
-                    "organizations:gen-ai-features": [org.slug],
-                }
-            ),
-        ):
+        with self.options({"issue-detection.llm-detection.enabled": True}):
             run_llm_issue_detection()
 
         mock_apply_async.assert_not_called()
+
+    @django_db_all
+    @patch("sentry.tasks.llm_issue_detection.detection.redis_clusters")
+    def test_refresh_cache_filters_by_feature_flags(self, mock_redis_clusters):
+        from sentry.tasks.llm_issue_detection.detection import _refresh_eligible_orgs_cache
+
+        mock_cluster = Mock()
+        mock_redis_clusters.get.return_value = mock_cluster
+
+        org_with_flags = self.create_organization()
+        org_without_flags = self.create_organization()
+
+        with self.feature(
+            {
+                "organizations:ai-issue-detection": [org_with_flags.slug],
+                "organizations:gen-ai-features": [org_with_flags.slug],
+            }
+        ):
+            result = _refresh_eligible_orgs_cache()
+
+        assert org_with_flags.id in result
+        assert org_without_flags.id not in result
+        mock_cluster.set.assert_called_once()
 
 
 class TestDetectLLMIssuesForOrg(TestCase):
