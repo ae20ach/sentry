@@ -49,6 +49,7 @@ export enum ActionType {
   SENTRY_APP = 'sentry_app',
   PLUGIN = 'plugin',
   WEBHOOK = 'webhook',
+  SEER_RCA = 'seer_rca',
 }
 
 export enum ActionGroup {
