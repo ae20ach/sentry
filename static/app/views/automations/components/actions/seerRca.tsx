@@ -10,7 +10,7 @@ export function SeerRCA() {
 
 export function SeerRCANode() {
   return (
-    <Flex>
+    <Flex gap="xs">
       <IconSeer />
       <Text>{t('Send to Seer for Root Cause Analysis.')}</Text>
     </Flex>
