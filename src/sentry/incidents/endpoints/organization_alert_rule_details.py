@@ -13,10 +13,6 @@ from rest_framework.response import Response
 from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import cell_silo_endpoint
-from sentry.api.bases.organization import (
-    ALERT_MUTATION_SCOPES,
-    get_legacy_alert_mutation_scopes,
-)
 from sentry.api.fields.actor import OwnerActorField
 from sentry.api.serializers import serialize
 from sentry.api.serializers.rest_framework.project import ProjectField
@@ -331,17 +327,6 @@ def _check_project_access[T](
 
         if not request.access.has_project_access(project):
             return Response(status=status.HTTP_403_FORBIDDEN)
-
-        if request.method in {"PUT", "DELETE"}:
-            has_project_alert_write = request.access.has_any_project_scope(
-                project, ALERT_MUTATION_SCOPES
-            )
-            has_legacy_org_write = any(
-                request.access.has_scope(scope)
-                for scope in get_legacy_alert_mutation_scopes(self, request.method)
-            )
-            if not has_project_alert_write and not has_legacy_org_write:
-                return Response(status=status.HTTP_403_FORBIDDEN)
 
         return func(self, request, organization, alert_rule)
 

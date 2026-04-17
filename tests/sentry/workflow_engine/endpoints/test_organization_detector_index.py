@@ -1515,6 +1515,27 @@ class OrganizationDetectorDeleteTest(OrganizationDetectorIndexBaseTest):
             actor=self.user,
         )
 
+    def test_delete_detectors_permission_allowed_for_team_admin(self) -> None:
+        team_admin_user = self.create_user()
+        self.create_member(
+            team_roles=[(self.team, "admin")],
+            user=team_admin_user,
+            role="member",
+            organization=self.organization,
+        )
+        self.organization.update_option("sentry:alerts_member_write", False)
+        self.login_as(user=team_admin_user)
+
+        with outbox_runner():
+            self.get_success_response(
+                self.organization.slug,
+                qs_params={"id": str(self.detector.id)},
+                status_code=204,
+            )
+
+        self.detector.refresh_from_db()
+        assert self.detector.status == ObjectStatus.PENDING_DELETION
+
     def test_delete_detectors_permission_denied(self) -> None:
         # Members can not delete detectors for projects they are not part of
         other_detector = self.create_detector(

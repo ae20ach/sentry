@@ -24,12 +24,10 @@ from sentry.testutils.silo import no_silo_test
 MUTATION_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
 
-def _iter_endpoint_view_classes(urlpatterns, base: str = "") -> Generator[type[Endpoint]]:
+def _iter_endpoint_view_classes(urlpatterns) -> Generator[type[Endpoint]]:
     for pattern in urlpatterns:
         if isinstance(pattern, URLResolver):
-            yield from _iter_endpoint_view_classes(
-                pattern.url_patterns, base + str(pattern.pattern)
-            )
+            yield from _iter_endpoint_view_classes(pattern.url_patterns)
         elif isinstance(pattern, URLPattern):
             callback = pattern.callback
             if hasattr(callback, "view_class") and issubclass(callback.view_class, Endpoint):

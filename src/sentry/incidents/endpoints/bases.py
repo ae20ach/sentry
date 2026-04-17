@@ -51,12 +51,12 @@ class OrganizationAlertRuleBaseEndpoint(OrganizationEndpoint):
         # team admins should be able to create alerts for the projects they have access to
         projects = self.get_projects(request, organization)
         # team admins will have alerts:write scoped to their projects, members will not
-        team_admin_has_access = all(
-            [request.access.has_project_scope(project, "alerts:write") for project in projects]
-        )
-        # all() returns True for empty list, so include a check for it
-        if not team_admin_has_access or not projects:
-            raise PermissionDenied
+        if projects and all(
+            request.access.has_project_scope(project, "alerts:write") for project in projects
+        ):
+            return
+
+        raise PermissionDenied
 
 
 class ProjectAlertRuleEndpoint(ProjectEndpoint):

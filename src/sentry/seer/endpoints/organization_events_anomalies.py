@@ -7,7 +7,7 @@ from sentry import features
 from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import cell_silo_endpoint
-from sentry.api.bases.organization import ALERT_MUTATION_SCOPES, OrganizationAlertRulePermission
+from sentry.api.bases.organization import OrganizationAlertRulePermission
 from sentry.api.bases.organization_events import OrganizationEventsEndpointBase
 from sentry.api.exceptions import ResourceDoesNotExist
 from sentry.api.serializers.base import serialize
@@ -115,13 +115,7 @@ class OrganizationEventsAnomaliesEndpoint(OrganizationEventsEndpointBase):
             )
 
         project_id = to_valid_int_id("project_id", raw_project_id)
-
-        projects = self.get_projects(request, organization, project_ids={project_id})
-        if not all(
-            request.access.has_any_project_scope(project, ALERT_MUTATION_SCOPES)
-            for project in projects
-        ):
-            return Response(status=403)
+        self.get_projects(request, organization, project_ids={project_id})
 
         anomalies = get_historical_anomaly_data_from_seer_preview(
             current_data=current_data,

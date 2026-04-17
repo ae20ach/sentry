@@ -14,6 +14,7 @@ from rest_framework import serializers
 from rest_framework.fields import empty
 
 from sentry import audit_log, quotas
+from sentry.api.bases.organization import LEGACY_ALERT_MUTATION_PROJECT_SCOPES
 from sentry.api.fields.actor import OwnerActorField
 from sentry.api.fields.empty_integer import EmptyIntegerField
 from sentry.api.fields.sentry_slug import SentrySerializerSlugField
@@ -74,9 +75,6 @@ IntervalNames = Literal["year", "month", "week", "day", "hour", "minute"]
 INTERVAL_NAMES = ("year", "month", "week", "day", "hour", "minute")
 
 CRONTAB_WHITESPACE = re.compile(r"\s+")
-# TODO(api-write-scope-compat): Remove legacy org:write support once public
-# cron monitor clients have migrated to alerts:write.
-MONITOR_PROJECT_SCOPES = ("project:read", "org:write", "alerts:write")
 
 # XXX(dcramer): @reboot is not supported (as it cannot be)
 NONSTANDARD_CRONTAB_SCHEDULES = {
@@ -315,7 +313,7 @@ class ConfigValidator(serializers.Serializer):
 @extend_schema_serializer(exclude_fields=["alert_rule"])
 class MonitorValidator(CamelSnakeSerializer):
     project = ProjectField(
-        scope=MONITOR_PROJECT_SCOPES,
+        scope=LEGACY_ALERT_MUTATION_PROJECT_SCOPES,
         required=True,
         help_text="The project slug to associate the monitor to.",
     )
