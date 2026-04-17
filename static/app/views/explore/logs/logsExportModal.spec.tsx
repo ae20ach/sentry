@@ -116,7 +116,7 @@ describe('LogsExportModal', () => {
 
     await userEvent.click(screen.getByRole('textbox'));
     await userEvent.click(
-      screen.getByRole('menuitemradio', {name: String(aboveSyncLimit)})
+      screen.getByRole('menuitemradio', {name: `${aboveSyncLimit} (All)`})
     );
     await userEvent.click(screen.getByRole('button', {name: 'Export'}));
 
