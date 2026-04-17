@@ -54,11 +54,22 @@ dump_diag() {
   echo "::endgroup::"
 }
 
+stamp_lines() {
+  # Prefix each stdin line with a UTC wall-clock time. Python3 is always on
+  # GH-hosted runners; `ts` (moreutils) is not.
+  python3 -u -c '
+import sys, time
+for line in sys.stdin:
+    sys.stdout.write("[%s] %s" % (time.strftime("%H:%M:%S", time.gmtime()), line))
+    sys.stdout.flush()
+'
+}
+
 rc=1
 for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
   echo "::group::devservices up attempt $attempt/$MAX_ATTEMPTS (per-attempt timeout: $ATTEMPT_TIMEOUT, $(elapsed))"
   stdbuf -oL -eL timeout "$ATTEMPT_TIMEOUT" "$DS" up --mode "$MODE" 2>&1 \
-    | ts '[%H:%M:%.S]'
+    | stamp_lines
   rc=${PIPESTATUS[0]}
   echo "attempt $attempt finished rc=$rc ($(elapsed))"
   echo "::endgroup::"
