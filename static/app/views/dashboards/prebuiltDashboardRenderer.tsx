@@ -92,46 +92,47 @@ export function PrebuiltDashboardRenderer({
     !dismissed &&
     pageFilters.selection.projects.includes(6178942) &&
     isAiAgentsOverview;
+  const showDashboardMigrationAlert = Boolean(dashboardId);
+  const hasPageAlerts = showDashboardMigrationAlert || showSeerDataBanner;
 
-  const dashboardAlerts =
-    dashboardId || showSeerDataBanner ? (
-      <Stack gap="lg">
-        {dashboardId ? (
-          <Alert variant="info" showIcon>
-            {tct(
-              'Insights pages are moving to Dashboards. Same functionality you love with more customization (and a less cheesy name). [link:View this page on Dashboards]',
-              {
-                link: (
-                  <Link
-                    to={{
-                      pathname: `/organizations/${organization.slug}/dashboard/${dashboardId}/`,
-                      query: extractSelectionParameters(location.query),
-                    }}
-                  />
-                ),
-              }
-            )}
-          </Alert>
-        ) : null}
-
-        {showSeerDataBanner ? (
-          <Alert
-            variant="warning"
-            trailingItems={
-              <Button
-                aria-label="Dismiss"
-                icon={<IconClose />}
-                size="xs"
-                onClick={dismiss}
-              />
+  const pageAlerts = hasPageAlerts ? (
+    <Stack gap="lg">
+      {showDashboardMigrationAlert ? (
+        <Alert variant="info" showIcon>
+          {tct(
+            'Insights pages are moving to Dashboards. Same functionality you love with more customization (and a less cheesy name). [link:View this page on Dashboards]',
+            {
+              link: (
+                <Link
+                  to={{
+                    pathname: `/organizations/${organization.slug}/dashboard/${dashboardId}/`,
+                    query: extractSelectionParameters(location.query),
+                  }}
+                />
+              ),
             }
-          >
-            SENTRY EMPLOYEES: Transaction size limits make seer instrumentation
-            incomplete. Data shown here does not reflect actual state.
-          </Alert>
-        ) : null}
-      </Stack>
-    ) : null;
+          )}
+        </Alert>
+      ) : null}
+
+      {showSeerDataBanner ? (
+        <Alert
+          variant="warning"
+          trailingItems={
+            <Button
+              aria-label="Dismiss"
+              icon={<IconClose />}
+              size="xs"
+              onClick={dismiss}
+            />
+          }
+        >
+          SENTRY EMPLOYEES: Transaction size limits make seer instrumentation incomplete.
+          Data shown here does not reflect actual state.
+        </Alert>
+      ) : null}
+    </Stack>
+  ) : null;
 
   return (
     <LoadingContainer isLoading={isLoading} showChildrenWhileLoading={false}>
@@ -139,7 +140,7 @@ export function PrebuiltDashboardRenderer({
         dashboard={dashboard}
         dashboards={[]}
         initialState={DashboardState.EMBEDDED}
-        pageAlerts={dashboardAlerts}
+        pageAlerts={pageAlerts}
         storageNamespace={storageNamespace}
       />
     </LoadingContainer>
