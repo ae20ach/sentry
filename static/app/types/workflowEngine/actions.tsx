@@ -55,6 +55,7 @@ export enum ActionType {
 export enum ActionGroup {
   NOTIFICATION = 'notification',
   TICKET_CREATION = 'ticket_creation',
+  SEER = 'seer',
   OTHER = 'other',
 }
 

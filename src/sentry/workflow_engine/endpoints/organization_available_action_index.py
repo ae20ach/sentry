@@ -160,17 +160,16 @@ class OrganizationAvailableActionIndexEndpoint(OrganizationEndpoint):
                         )
                     )
 
-            elif action_type == Action.Type.SEER_RCA and features.has(
-                "organizations:workflow-engine-seer-rca", organization
-            ):
-                actions.append(
-                    serialize(
-                        handler,
-                        request.user,
-                        ActionHandlerSerializer(),
-                        action_type=action_type,
+            elif action_type == Action.Type.SEER_RCA:
+                if features.has("organizations:workflow-engine-seer-rca", organization):
+                    actions.append(
+                        serialize(
+                            handler,
+                            request.user,
+                            ActionHandlerSerializer(),
+                            action_type=action_type,
+                        )
                     )
-                )
 
             # add all other action types (EMAIL, PLUGIN, etc.)
             else:

@@ -37,7 +37,7 @@ def _get_workflow_creator_user(action: Action) -> RpcUser | AnonymousUser:
 
 @action_handler_registry.register(Action.Type.SEER_RCA)
 class SeerRootCauseHandler(ActionHandler):
-    group = ActionHandler.Group.OTHER
+    group = ActionHandler.Group.SEER
     config_schema: dict = {}
     data_schema: dict = {}
 
