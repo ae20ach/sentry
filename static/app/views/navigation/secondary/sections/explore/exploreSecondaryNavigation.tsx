@@ -97,7 +97,7 @@ export function ExploreSecondaryNavigation() {
                 <SecondaryNavigation.ListItem>
                   <SecondaryNavigation.Link
                     to={`${baseUrl}/metrics/`}
-                    analyticsItemName="explore_metrics"
+                    analyticsItemName="explore_application_metrics"
                     trailingItems={<FeatureBadge type="beta" />}
                   >
                     {t('Application Metrics')}
