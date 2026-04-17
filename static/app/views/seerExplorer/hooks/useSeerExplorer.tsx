@@ -546,13 +546,15 @@ export const useSeerExplorer = () => {
   }, [apiData?.session?.blocks, apiData?.session?.updated_at, optimistic]);
 
   // On any completed state
+  const isCompleted = isSessionComplete(apiData?.session);
+
   useEffect(() => {
-    if (isSessionComplete(apiData?.session)) {
+    if (isCompleted) {
       setWaitingForInterrupt(false);
       setOptimistic(null);
       setDeletedFromIndex(null);
     }
-  }, [apiData?.session]);
+  }, [isCompleted]);
 
   // Detect PR creation errors and show error messages
   useEffect(() => {
