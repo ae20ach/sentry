@@ -2994,32 +2994,6 @@ register(
     flags=FLAG_AUTOMATOR_MODIFIABLE,
 )
 
-# the duration of the first datetime chunk of data queried
-# expressed in hours.
-register(
-    "profiling.flamegraph.query.initial_chunk_delta.hours",
-    type=Int,
-    default=12,
-    flags=FLAG_AUTOMATOR_MODIFIABLE,
-)
-
-# the max duration of any datetime chunk of data queried
-# expressed in hours.
-register(
-    "profiling.flamegraph.query.max_delta.hours",
-    type=Int,
-    default=48,
-    flags=FLAG_AUTOMATOR_MODIFIABLE,
-)
-
-# The value by which the current delta is multiplied
-register(
-    "profiling.flamegraph.query.multiplier",
-    type=Int,
-    default=2,
-    flags=FLAG_AUTOMATOR_MODIFIABLE,
-)
-
 # list of platform names for which we allow using unsampled profiles for the purpose
 # of improving profile (function) metrics
 register(
@@ -3167,12 +3141,6 @@ register(
     "spans.buffer.max-segment-bytes",
     type=Int,
     default=10 * 1024 * 1024,
-    flags=FLAG_PRIORITIZE_DISK | FLAG_AUTOMATOR_MODIFIABLE,
-)
-# When enabled, oversized segments are split into chunks instead of being dropped.
-register(
-    "spans.buffer.chunk-oversized-segments",
-    default=False,
     flags=FLAG_PRIORITIZE_DISK | FLAG_AUTOMATOR_MODIFIABLE,
 )
 # Whether to enforce max-segment-bytes during ingestion via the Lua script.
