@@ -3,6 +3,7 @@ import {useCallback} from 'react';
 import {addErrorMessage, addSuccessMessage} from 'sentry/actionCreators/indicator';
 import type {ResponseMeta} from 'sentry/api';
 import {t} from 'sentry/locale';
+import {getApiUrl} from 'sentry/utils/api/getApiUrl';
 import {downloadFromHref} from 'sentry/utils/downloadFromHref';
 import {useApi} from 'sentry/utils/useApi';
 import {useOrganization} from 'sentry/utils/useOrganization';
@@ -93,15 +94,20 @@ export function useDataExport({
 
       // This is a fire and forget request.
       const result = await api
-        .requestPromise(`/organizations/${organization.slug}/data-export/`, {
-          includeAllArgs: true,
-          method: 'POST',
-          data: {
-            format,
-            query_type: payload.queryType,
-            query_info: payload.queryInfo,
-          },
-        })
+        .requestPromise(
+          getApiUrl('/organizations/$organizationIdOrSlug/data-export/', {
+            path: {organizationIdOrSlug: organization.slug},
+          }),
+          {
+            includeAllArgs: true,
+            method: 'POST',
+            data: {
+              format,
+              query_type: payload.queryType,
+              query_info: payload.queryInfo,
+            },
+          }
+        )
         .then(([data, _, response]) => {
           if (!unmountedRef?.current) {
             handleDataExportResponse(data, format, response, organization.slug);
