@@ -40,6 +40,7 @@ from sentry.db.models.query import in_iexact
 from sentry.incidents.endpoints.bases import OrganizationAlertRuleBaseEndpoint
 from sentry.models.environment import Environment
 from sentry.models.organization import Organization
+from sentry.models.project import Project
 from sentry.monitors.models import (
     DEFAULT_STATUS_ORDER,
     MONITOR_ENVIRONMENT_ORDERING,
@@ -86,6 +87,9 @@ class OrganizationMonitorIndexEndpoint(OrganizationAlertRuleBaseEndpoint):
         "PUT": ApiPublishStatus.EXPERIMENTAL,
     }
     owner = ApiOwner.CRONS
+    # TODO(api-write-scope-compat): Remove legacy org:write support once public
+    # cron monitor clients have migrated to alerts:write.
+    legacy_alert_mutation_scope_map = {"POST": ("org:write",)}
     permission_classes = (OrganizationAlertRulePermission,)
 
     @extend_schema(
@@ -331,9 +335,11 @@ class OrganizationMonitorIndexEndpoint(OrganizationAlertRuleBaseEndpoint):
 
         monitor_guids = result.pop("ids", [])
         monitors = list(Monitor.objects.filter(guid__in=monitor_guids, project_id__in=project_ids))
+        projects_by_id = Project.objects.in_bulk({monitor.project_id for monitor in monitors})
         if not all(
-            request.access.has_any_project_scope(monitor.project, ALERT_MUTATION_SCOPES)
-            for monitor in monitors
+            project is not None
+            and request.access.has_any_project_scope(project, ALERT_MUTATION_SCOPES)
+            for project in (projects_by_id.get(monitor.project_id) for monitor in monitors)
         ):
             return self.respond(status=403)
 

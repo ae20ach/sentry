@@ -45,7 +45,9 @@ from .alert_rule_trigger import AlertRuleTriggerSerializer
 
 logger = logging.getLogger(__name__)
 
-ALERT_RULE_PROJECT_SCOPES = ("project:read", "org:write", "org:admin", "alerts:write")
+# TODO(api-write-scope-compat): Remove legacy org:write support once public
+# metric alert clients have migrated to alerts:write.
+ALERT_RULE_PROJECT_SCOPES = ("project:read", "org:write", "alerts:write")
 
 
 class AlertRuleSerializer(SnubaQueryValidator, CamelSnakeModelSerializer[AlertRule]):

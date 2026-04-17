@@ -469,6 +469,26 @@ class AlertRuleCreateEndpointTest(AlertRuleIndexBase, SnubaTestCase):
 
         assert response.status_code == 403
 
+    # TODO(api-write-scope-compat): Remove this legacy org:write coverage once
+    # public metric alert clients have migrated to alerts:write.
+    def test_create_allows_legacy_org_write_scope_for_tokens(self) -> None:
+        team = self.create_team(organization=self.organization, members=[self.user])
+        ProjectTeam.objects.create(project=self.project, team=team)
+        token = self._create_token("org:write")
+
+        with (
+            outbox_runner(),
+            self.feature(["organizations:incidents", "organizations:performance-view"]),
+        ):
+            response = self.client.post(
+                f"/api/0/organizations/{self.organization.slug}/alert-rules/",
+                data=self.alert_rule_dict,
+                format="json",
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 201
+
     def test_create_allows_alerts_write_scope_for_tokens(self) -> None:
         team = self.create_team(organization=self.organization, members=[self.user])
         ProjectTeam.objects.create(project=self.project, team=team)

@@ -83,3 +83,15 @@ class OrganizationUptimeAssertionSuggestionsTest(UptimeAlertBaseEndpointTest):
         )
 
         assert response.status_code == 403
+
+    def test_org_write_scope_cannot_generate_suggestions(self) -> None:
+        api_key = self.create_api_key(organization=self.organization, scope_list=["org:write"])
+
+        response = self.client.post(
+            self.url,
+            data=self.payload,
+            format="json",
+            HTTP_AUTHORIZATION=self.create_basic_auth_header(api_key.key),
+        )
+
+        assert response.status_code == 403

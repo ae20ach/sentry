@@ -7,7 +7,11 @@ from rest_framework.request import Request
 
 from sentry import features
 from sentry.api.api_owners import ApiOwner
-from sentry.api.bases.organization import OrganizationAlertRulePermission, OrganizationEndpoint
+from sentry.api.bases.organization import (
+    OrganizationAlertRulePermission,
+    OrganizationEndpoint,
+    get_legacy_alert_mutation_scopes,
+)
 from sentry.api.bases.project import ProjectAlertRulePermission, ProjectEndpoint
 from sentry.api.exceptions import ResourceDoesNotExist
 from sentry.incidents.endpoints.serializers.utils import get_object_id_from_fake_id
@@ -46,11 +50,9 @@ class OrganizationAlertRuleBaseEndpoint(OrganizationEndpoint):
         in their request.
         """
 
-        # if the requesting user has any of these org-level permissions, then they can create an alert
-        if (
-            request.access.has_scope("alerts:write")
-            or request.access.has_scope("org:admin")
-            or request.access.has_scope("org:write")
+        if request.access.has_scope("alerts:write") or any(
+            request.access.has_scope(scope)
+            for scope in get_legacy_alert_mutation_scopes(self, request.method)
         ):
             return
 
