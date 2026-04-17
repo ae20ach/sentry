@@ -17,26 +17,6 @@ import {useUpdateProject} from 'sentry/utils/project/useUpdateProject';
 import {useQueryClient} from 'sentry/utils/queryClient';
 import {useOrganization} from 'sentry/utils/useOrganization';
 
-export function useSelectedAgentFromProjectSettings({
-  integrations,
-  preference,
-}: {
-  integrations: CodingAgentIntegration[];
-  preference: ProjectSeerPreferences;
-}) {
-  return useMemo(() => {
-    // If we have nothing in preferences, then we have Seer
-    if (!preference?.automation_handoff?.integration_id) {
-      return 'seer';
-    }
-    // Otherwise, we have a preference!
-    return integrations.find(
-      integration =>
-        integration.id === String(preference.automation_handoff?.integration_id)
-    );
-  }, [preference.automation_handoff?.integration_id, integrations]);
-}
-
 export function useSelectedAgentFromBulkSettings({
   autofixSettings,
   integrations,
