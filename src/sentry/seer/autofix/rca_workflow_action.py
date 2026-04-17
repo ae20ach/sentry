@@ -22,13 +22,16 @@ def _get_workflow_creator_user(action: Action) -> RpcUser | AnonymousUser:
     if dcg_action is None:
         return AnonymousUser()
 
-    wdcg = WorkflowDataConditionGroup.objects.filter(
-        condition_group=dcg_action.condition_group
-    ).first()
-    if wdcg is None or wdcg.workflow.created_by_id is None:
+    created_by_id = (
+        WorkflowDataConditionGroup.objects.filter(condition_group=dcg_action.condition_group)
+        .values_list("workflow__created_by_id", flat=True)
+        .first()
+    )
+
+    if created_by_id is None:
         return AnonymousUser()
 
-    rpc_user = user_service.get_user(user_id=wdcg.workflow.created_by_id)
+    rpc_user = user_service.get_user(user_id=created_by_id)
     if rpc_user is None:
         return AnonymousUser()
 
