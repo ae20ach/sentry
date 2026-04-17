@@ -139,10 +139,9 @@ export function PrebuiltDashboardRenderer({
         dashboard={dashboard}
         dashboards={[]}
         initialState={DashboardState.EMBEDDED}
+        pageAlerts={dashboardAlerts}
         storageNamespace={storageNamespace}
-      >
-        {dashboardAlerts}
-      </DashboardDetail>
+      />
     </LoadingContainer>
   );
 }

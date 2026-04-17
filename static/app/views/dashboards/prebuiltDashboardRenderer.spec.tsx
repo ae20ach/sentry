@@ -7,8 +7,8 @@ import {PrebuiltDashboardRenderer} from 'sentry/views/dashboards/prebuiltDashboa
 import {PrebuiltDashboardId} from 'sentry/views/dashboards/utils/prebuiltConfigs';
 
 jest.mock('sentry/views/dashboards/detail', () => ({
-  DashboardDetailWithInjectedProps: ({children}: {children?: ReactNode}) => (
-    <div data-test-id="dashboard-detail">{children}</div>
+  DashboardDetailWithInjectedProps: ({pageAlerts}: {pageAlerts?: ReactNode}) => (
+    <div data-test-id="dashboard-detail">{pageAlerts}</div>
   ),
 }));
 
