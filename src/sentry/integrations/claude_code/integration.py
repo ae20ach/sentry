@@ -7,8 +7,8 @@ and can be used by the coding agent system.
 
 from __future__ import annotations
 
+import hashlib
 import logging
-import uuid
 from collections.abc import Mapping, MutableMapping
 from typing import Any, Literal
 
@@ -33,6 +33,7 @@ from sentry.integrations.coding_agent.integration import (
 )
 from sentry.integrations.coding_agent.models import CodingAgentLaunchRequest
 from sentry.integrations.models.integration import Integration
+from sentry.integrations.models.organization_integration import OrganizationIntegration
 from sentry.integrations.pipeline import IntegrationPipeline
 from sentry.integrations.services.integration.model import RpcIntegration
 from sentry.pipeline.types import PipelineStepResult
@@ -158,6 +159,25 @@ class ClaudeCodeApiKeyPipelineView(CodingAgentPipelineView):
         pipeline.bind_state(self.get_state_key(), form.cleaned_data["api_key"])
 
 
+def _build_external_id(organization_id: int) -> str:
+    digest = hashlib.sha256(f"{PROVIDER_KEY}:{organization_id}".encode()).hexdigest()
+    return digest[:32]
+
+
+def _delete_legacy_integrations(organization_id: int, external_id: str) -> None:
+    # Per-instance .delete() generates the cross-silo outboxes that bulk delete skips.
+    legacy_integration_ids = list(
+        OrganizationIntegration.objects.filter(
+            organization_id=organization_id,
+            integration__provider=PROVIDER_KEY,
+        )
+        .exclude(integration__external_id=external_id)
+        .values_list("integration_id", flat=True)
+    )
+    for integration in Integration.objects.filter(id__in=legacy_integration_ids):
+        integration.delete()
+
+
 class ClaudeCodeApiKeySerializer(CamelSnakeSerializer):
     api_key = CharField(required=True, max_length=255)
 
@@ -239,8 +259,13 @@ class ClaudeCodeAgentIntegrationProvider(CodingAgentIntegrationProvider):
             model=getattr(client, "model", None),
         )
 
+        assert self.pipeline.organization is not None
+        organization_id = self.pipeline.organization.id
+        external_id = _build_external_id(organization_id)
+        _delete_legacy_integrations(organization_id, external_id)
+
         return {
-            "external_id": uuid.uuid4().hex,
+            "external_id": external_id,
             "name": PROVIDER_NAME,
             "metadata": integration_metadata.dict(),
         }
