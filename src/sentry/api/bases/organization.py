@@ -289,7 +289,7 @@ def get_legacy_alert_mutation_scopes(view: APIView, method: str | None) -> tuple
     return tuple(scopes)
 
 
-class OrganizationAlertRulePermission(OrganizationPermission):
+class OrganizationAlertMutationPermission(OrganizationPermission):
     scope_map = {
         "GET": ["org:read", "org:write", "org:admin", "alerts:read"],
         "POST": ["alerts:write"],
@@ -337,52 +337,12 @@ class OrganizationAlertRulePermission(OrganizationPermission):
         )
 
 
-class OrganizationDetectorPermission(OrganizationPermission):
-    scope_map = {
-        "GET": ["org:read", "org:write", "org:admin", "alerts:read"],
-        "POST": ["alerts:write"],
-        "PUT": ["alerts:write"],
-        "DELETE": ["alerts:write"],
-    }
+class OrganizationAlertRulePermission(OrganizationAlertMutationPermission):
+    pass
 
-    def has_permission(self, request: Request, view: APIView) -> bool:
-        if super().has_permission(request, view):
-            return True
 
-        if not request.auth:
-            return False
-
-        current_scopes = request.auth.get_scopes()
-        return any(
-            scope in current_scopes
-            for scope in get_legacy_alert_mutation_scopes(view, request.method)
-        )
-
-    def has_object_permission(
-        self,
-        request: Request,
-        view: APIView,
-        organization: Organization | RpcOrganization | RpcUserOrganizationContext,
-    ) -> bool:
-        if super().has_object_permission(request, view, organization):
-            return True
-
-        if request.method not in {"POST", "PUT", "DELETE"}:
-            return False
-
-        if any(
-            request.access.has_scope(scope)
-            for scope in get_legacy_alert_mutation_scopes(view, request.method)
-        ):
-            return True
-
-        project_scoped_access = _has_view_project_scoped_alert_write(request, view, organization)
-        if project_scoped_access is not None:
-            return project_scoped_access
-
-        return bool(getattr(view, "allow_any_team_alert_write_fallback", False)) and (
-            _has_any_team_scope(request, "alerts:write")
-        )
+class OrganizationDetectorPermission(OrganizationAlertMutationPermission):
+    pass
 
 
 class OrgAuthTokenPermission(OrganizationPermission):
