@@ -33,7 +33,6 @@ const ROW_COUNT_VALUES = [
 ];
 
 const exportModalFormSchema = z.object({
-  allColumns: z.boolean(),
   format: z.enum(['csv', 'jsonl']),
   limit: z.number(),
 });
@@ -86,7 +85,6 @@ export function LogsExportModal({
   const handleDataExport = useDataExport({payload});
   const rowOptions = generateRowOptions(estimatedRowCount);
   const defaultValues: ExportModalFormValues = {
-    allColumns: false,
     format: 'csv',
     limit: rowOptions[0]!.value,
   };
@@ -98,7 +96,7 @@ export function LogsExportModal({
       onDynamic: exportModalFormSchema,
     },
     onSubmit: async ({value}) => {
-      if (value.allColumns || value.limit > ROW_COUNT_VALUE_SYNC_LIMIT) {
+      if (value.limit > ROW_COUNT_VALUE_SYNC_LIMIT) {
         await handleDataExport(value.format);
         return;
       }
@@ -151,21 +149,6 @@ export function LogsExportModal({
                   onChange={field.handleChange}
                   value={field.state.value}
                   defaultValue={rowOptions[0]}
-                />
-              </field.Layout.Stack>
-            )}
-          </form.AppField>
-          <form.AppField name="allColumns">
-            {field => (
-              <field.Layout.Stack
-                hintText={t(
-                  'Whether to add data from all columns to output rows, not just those specified in your table.'
-                )}
-                label={t('All columns')}
-              >
-                <field.Switch
-                  checked={field.state.value ?? false}
-                  onChange={field.handleChange}
                 />
               </field.Layout.Stack>
             )}

@@ -110,20 +110,6 @@ describe('LogsExportModal', () => {
     expect(addSuccessMessage).toHaveBeenCalledWith('Downloading file to your browser.');
   });
 
-  it('calls handleDataExport when Export is clicked with all columns enabled', async () => {
-    renderModal(500);
-
-    await userEvent.click(screen.getByRole('checkbox', {name: /all columns/i}));
-    await userEvent.click(screen.getByRole('button', {name: 'Export'}));
-
-    await waitFor(() => {
-      expect(mockHandleDataExport).toHaveBeenCalledWith('csv');
-    });
-
-    expect(mockDownloadLogs).not.toHaveBeenCalled();
-    expect(mockAddSuccessMessage).not.toHaveBeenCalled();
-  });
-
   it('calls handleDataExport when row limit is above the sync limit', async () => {
     const aboveSyncLimit = QUERY_PAGE_LIMIT + 1;
     renderModal(aboveSyncLimit);
