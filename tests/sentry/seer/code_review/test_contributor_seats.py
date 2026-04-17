@@ -8,6 +8,7 @@ from sentry.seer.code_review.contributor_seats import (
     should_increment_contributor_seat,
     track_contributor_seat,
 )
+from sentry.seer.models.project_repository import SeerProjectRepository
 from sentry.testutils.cases import TestCase
 
 
@@ -96,10 +97,14 @@ class ShouldIncrementContributorSeatTest(TestCase):
     def test_returns_true_when_autofix_enabled_and_quota_available(
         self, mock_quota: MagicMock
     ) -> None:
-        self.create_code_mapping(project=self.project, repo=self.repo)
-        self.project.update_option("sentry:autofix_automation_tuning", "medium")
+        SeerProjectRepository.objects.create(project=self.project, repository=self.repo)
 
-        with self.feature("organizations:seat-based-seer-enabled"):
+        with self.feature(
+            {
+                "organizations:seat-based-seer-enabled": True,
+                "organizations:seer-project-settings-read-from-sentry": True,
+            }
+        ):
             result = should_increment_contributor_seat(
                 self.organization, self.repo, self.contributor
             )
