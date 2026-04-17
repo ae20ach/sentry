@@ -1,13 +1,17 @@
 name: 'Early Devservices'
-description: 'Starts devservices in the background so image pulls overlap with venv setup'
+description: 'Starts devservices in the background so image pulls overlap with venv setup. Retries on failure with per-line timestamped logs and a docker/host heartbeat.'
 inputs:
   mode:
     description: 'devservices mode (must match the mode passed to setup-sentry)'
     required: true
   timeout-minutes:
-    description: 'Maximum minutes for devservices up'
+    description: 'Per-attempt timeout for devservices up (minutes). Total budget = timeout-minutes × max-attempts.'
     required: false
-    default: '10'
+    default: '4'
+  max-attempts:
+    description: 'Number of attempts before giving up'
+    required: false
+    default: '3'
 
 runs:
   using: 'composite'
@@ -34,5 +38,9 @@ runs:
         uv pip install --python /tmp/ds-venv/bin/python -q \
           --index-url https://pypi.devinfra.sentry.io/simple \
           "devservices==${DS_VERSION}"
-        (set +e; timeout ${{ inputs.timeout-minutes }}m /tmp/ds-venv/bin/devservices up --mode ${{ inputs.mode }}; echo $? > /tmp/ds-exit) \
+        : > /tmp/ds-heartbeat.log
+        "${GITHUB_ACTION_PATH}/run.sh" \
+          "${{ inputs.mode }}" \
+          "${{ inputs.timeout-minutes }}m" \
+          "${{ inputs.max-attempts }}" \
           > /tmp/ds.log 2>&1 &
