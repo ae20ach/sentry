@@ -21,6 +21,7 @@ from rest_framework import serializers, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from sentry import audit_log
 from sentry.api.api_owners import ApiOwner
@@ -52,6 +53,7 @@ from sentry.deletions.models.scheduleddeletion import CellScheduledDeletion
 from sentry.exceptions import InvalidSearchQuery
 from sentry.models.organization import Organization
 from sentry.models.project import Project
+from sentry.organizations.services.organization import RpcOrganization, RpcUserOrganizationContext
 from sentry.search.utils import parse_user_value
 from sentry.utils.audit import create_audit_entry
 from sentry.utils.dates import ensure_aware
@@ -99,7 +101,7 @@ class OrganizationWorkflowPermission(OrganizationPermission):
         "DELETE": ["alerts:write"],
     }
 
-    def has_permission(self, request: Request, view) -> bool:
+    def has_permission(self, request: Request, view: APIView) -> bool:
         if super().has_permission(request, view):
             return True
 
@@ -112,7 +114,12 @@ class OrganizationWorkflowPermission(OrganizationPermission):
             for scope in get_legacy_alert_mutation_scopes(view, request.method)
         )
 
-    def has_object_permission(self, request: Request, view, organization) -> bool:
+    def has_object_permission(
+        self,
+        request: Request,
+        view: APIView,
+        organization: Organization | RpcOrganization | RpcUserOrganizationContext,
+    ) -> bool:
         if super().has_object_permission(request, view, organization):
             return True
 

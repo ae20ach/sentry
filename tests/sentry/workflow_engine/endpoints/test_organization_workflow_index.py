@@ -39,9 +39,9 @@ class OrganizationWorkflowAPITestCase(APITestCase):
         super().setUp()
         self.login_as(user=self.user)
 
-    def _auth_headers(self, *scopes: str) -> dict[str, str]:
+    def _auth_header(self, *scopes: str) -> bytes:
         api_key = self.create_api_key(organization=self.organization, scope_list=list(scopes))
-        return {"HTTP_AUTHORIZATION": self.create_basic_auth_header(api_key.key)}
+        return self.create_basic_auth_header(api_key.key)
 
 
 @cell_silo_test
@@ -627,7 +627,7 @@ class OrganizationWorkflowCreateTest(OrganizationWorkflowAPITestCase, BaseWorkfl
             reverse(self.endpoint, args=[self.organization.slug]),
             data=self.valid_workflow,
             format="json",
-            **self._auth_headers("org:write"),
+            HTTP_AUTHORIZATION=self._auth_header("org:write"),
         )
 
         assert response.status_code == 201
@@ -637,7 +637,7 @@ class OrganizationWorkflowCreateTest(OrganizationWorkflowAPITestCase, BaseWorkfl
             reverse(self.endpoint, args=[self.organization.slug]),
             data=self.valid_workflow,
             format="json",
-            **self._auth_headers("alerts:write"),
+            HTTP_AUTHORIZATION=self._auth_header("alerts:write"),
         )
 
         assert response.status_code == 201
@@ -1229,7 +1229,7 @@ class OrganizationWorkflowPutTest(OrganizationWorkflowAPITestCase):
             f"{reverse(self.endpoint, args=[self.organization.slug])}?id={self.workflow.id}",
             data={"enabled": True},
             format="json",
-            **self._auth_headers("org:write"),
+            HTTP_AUTHORIZATION=self._auth_header("org:write"),
         )
 
         assert response.status_code == 200
@@ -1241,7 +1241,7 @@ class OrganizationWorkflowPutTest(OrganizationWorkflowAPITestCase):
             f"{reverse(self.endpoint, args=[self.organization.slug])}?id={self.workflow.id}",
             data={"enabled": True},
             format="json",
-            **self._auth_headers("alerts:write"),
+            HTTP_AUTHORIZATION=self._auth_header("alerts:write"),
         )
 
         assert response.status_code == 200
@@ -1406,7 +1406,7 @@ class OrganizationWorkflowDeleteTest(OrganizationWorkflowAPITestCase):
     def test_delete_workflows_allows_legacy_org_write_scope_for_api_keys(self) -> None:
         response = self.client.delete(
             f"{reverse(self.endpoint, args=[self.organization.slug])}?id={self.workflow.id}",
-            **self._auth_headers("org:write"),
+            HTTP_AUTHORIZATION=self._auth_header("org:write"),
         )
 
         assert response.status_code == 204
@@ -1414,7 +1414,7 @@ class OrganizationWorkflowDeleteTest(OrganizationWorkflowAPITestCase):
     def test_delete_workflows_allows_alerts_write_scope_for_api_keys(self) -> None:
         response = self.client.delete(
             f"{reverse(self.endpoint, args=[self.organization.slug])}?id={self.workflow.id}",
-            **self._auth_headers("alerts:write"),
+            HTTP_AUTHORIZATION=self._auth_header("alerts:write"),
         )
 
         assert response.status_code == 204

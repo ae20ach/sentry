@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from datetime import timedelta
+from typing import Any
 
 import pytest
 from django.db.models import Q
@@ -27,7 +28,6 @@ from sentry.testutils.cases import APITestCase
 from sentry.testutils.helpers.datetime import before_now
 from sentry.testutils.helpers.features import with_feature
 from sentry.testutils.outbox import outbox_runner
-from sentry.testutils.skips import requires_kafka, requires_snuba
 from sentry.testutils.silo import assume_test_silo_mode, cell_silo_test
 from sentry.testutils.skips import requires_kafka, requires_snuba
 from sentry.uptime.grouptype import UptimeDomainCheckFailure
@@ -67,7 +67,7 @@ class OrganizationDetectorIndexBaseTest(APITestCase):
             type=IssueStreamGroupType.slug, project=self.project, name="Issue Stream"
         )
 
-    def _create_token(self, scope: str, user=None) -> ApiToken:
+    def _create_token(self, scope: str, user: Any | None = None) -> ApiToken:
         with assume_test_silo_mode(SiloMode.CONTROL):
             return ApiToken.objects.create(user=user or self.user, scope_list=[scope])
 

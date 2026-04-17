@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import Any
 from unittest import mock
 
 import pytest
@@ -98,7 +99,7 @@ class OrganizationDetectorDetailsBaseTest(APITestCase):
         )
         assert self.detector.data_sources is not None
 
-    def _create_token(self, scope: str, user=None) -> ApiToken:
+    def _create_token(self, scope: str, user: Any | None = None) -> ApiToken:
         with assume_test_silo_mode(SiloMode.CONTROL):
             return ApiToken.objects.create(user=user or self.user, scope_list=[scope])
 
