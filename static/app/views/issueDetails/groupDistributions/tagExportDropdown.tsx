@@ -20,16 +20,7 @@ interface Props {
 export function TagExportDropdown({tagKey, group, organization, project}: Props) {
   const [isExportDisabled, setIsExportDisabled] = useState(false);
   const hasDiscoverQuery = organization.features.includes('discover-query');
-  const handleDataExport = useDataExport({
-    payload: {
-      queryType: ExportQueryType.ISSUES_BY_TAG,
-      queryInfo: {
-        project: project.id,
-        group: group.id,
-        key: tagKey,
-      },
-    },
-  });
+  const handleDataExport = useDataExport();
 
   return (
     <DropdownMenu
@@ -59,7 +50,14 @@ export function TagExportDropdown({tagKey, group, organization, project}: Props)
           key: 'export-all',
           label: isExportDisabled ? t('Export in progress...') : t('Export All to CSV'),
           onAction: () => {
-            handleDataExport();
+            handleDataExport({
+              queryType: ExportQueryType.ISSUES_BY_TAG,
+              queryInfo: {
+                project: project.id,
+                group: group.id,
+                key: tagKey,
+              },
+            });
             setIsExportDisabled(true);
           },
           disabled: isExportDisabled || !hasDiscoverQuery,

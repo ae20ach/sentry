@@ -85,7 +85,7 @@ export function LogsExportModal({
     }),
     [queryInfo]
   );
-  const handleDataExport = useDataExport({payload});
+  const handleDataExport = useDataExport();
   const rowOptions = generateRowOptions(estimatedRowCount);
   const defaultValues: ExportModalFormValues = {
     format: 'csv',
@@ -100,7 +100,14 @@ export function LogsExportModal({
     },
     onSubmit: async ({value}) => {
       if (value.limit > ROW_COUNT_VALUE_SYNC_LIMIT) {
-        await handleDataExport(value.format);
+        await handleDataExport({
+          format: value.format,
+          queryInfo: {
+            ...payload.queryInfo,
+            limit: value.limit,
+          },
+          queryType: payload.queryType,
+        });
         return;
       }
 

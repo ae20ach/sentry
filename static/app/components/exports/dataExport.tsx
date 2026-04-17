@@ -19,6 +19,7 @@ export interface LogsQueryInfo {
   sort: string[];
   end?: string;
   environment?: string[];
+  limit?: number;
   start?: string;
   statsPeriod?: string;
 }
@@ -45,7 +46,6 @@ export function DataExport({
   const unmountedRef = useRef(false);
   const [inProgress, setInProgress] = useState(false);
   const handleDataExport = useDataExport({
-    payload,
     unmountedRef,
     inProgressCallback: setInProgress,
   });
@@ -71,7 +71,7 @@ export function DataExport({
   }, []);
 
   const handleClick = () => {
-    debounce(handleDataExport, 500)();
+    debounce(() => handleDataExport(payload), 500)();
     onClick?.();
   };
 

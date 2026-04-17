@@ -1,10 +1,9 @@
 import type {LogsQueryInfo} from 'sentry/components/exports/dataExport';
 import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
-import {useLocation} from 'sentry/utils/useLocation';
-import {useOrganization} from 'sentry/utils/useOrganization';
 import {LogsExportButton} from 'sentry/views/explore/logs/logsExportButton';
 import {LogsExportModalButton} from 'sentry/views/explore/logs/logsExportModalButton';
 import type {OurLogsResponseItem} from 'sentry/views/explore/logs/types';
+import {useShowModalExport} from 'sentry/views/explore/logs/useShowModalExport';
 import {
   useQueryParamsFields,
   useQueryParamsSearch,
@@ -24,11 +23,7 @@ export function LogsExportSwitch({
   error,
   estimatedRowCount,
 }: LogsExportSwitchProps) {
-  const organization = useOrganization();
-  const location = useLocation();
-  const showModalExport =
-    organization.features.includes('ourlogs-modal-export') ||
-    location.query.logsModalExport === 'true';
+  const showModalExport = useShowModalExport();
 
   const {selection} = usePageFilters();
   const logsSearch = useQueryParamsSearch();

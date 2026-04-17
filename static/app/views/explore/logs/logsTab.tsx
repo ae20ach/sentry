@@ -77,6 +77,7 @@ import {useLogsSearchQueryBuilderProps} from 'sentry/views/explore/logs/useLogsS
 import {useLogsTimeseries} from 'sentry/views/explore/logs/useLogsTimeseries';
 import {usePersistentLogsPageParameters} from 'sentry/views/explore/logs/usePersistentLogsPageParameters';
 import {useSaveAsItems} from 'sentry/views/explore/logs/useSaveAsItems';
+import {useShowModalExport} from 'sentry/views/explore/logs/useShowModalExport';
 import {calculateAverageLogsPerSecond} from 'sentry/views/explore/logs/utils';
 import {
   useQueryParamsAggregateSortBys,
@@ -275,11 +276,19 @@ export function LogsTabContent({datePageFilterProps, tableExpando}: LogsTabProps
   }, [autorefreshEnabled]);
 
   const rawLogCountsAll = useRawCounts({dataset: DiscoverDatasets.OURLOGS});
-  const rawLogCountsFiltered = useRawCounts({
-    dataset: DiscoverDatasets.OURLOGS,
-    normalModeExtrapolated: true,
-    query: logsSearch.formatString(),
-  });
+
+  const showModalExport = useShowModalExport();
+  const rawLogCountsFiltered = showModalExport
+    ? // This is a bit hacky, but: we only use rawLogCountsFiltered deep inside:
+      //   LogsExportSwitch > LogsExportModalButton > LogsExportModal
+      // We don't want to send extra network requests unnecessarily.
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      useRawCounts({
+        dataset: DiscoverDatasets.OURLOGS,
+        normalModeExtrapolated: true,
+        query: logsSearch.formatString(),
+      })
+    : undefined;
 
   const yAxes = useMemo(() => {
     const uniqueYAxes = new Set(visualizes.map(visualize => visualize.yAxis));
@@ -464,7 +473,7 @@ export function LogsTabContent({datePageFilterProps, tableExpando}: LogsTabProps
                 error={tableData.error}
                 estimatedRowCount={Math.max(
                   tableData.data.length,
-                  rawLogCountsFiltered.total.count ?? 0
+                  rawLogCountsFiltered?.total.count ?? 0
                 )}
               />
             </OverChartButtonGroup>

@@ -36,12 +36,11 @@ describe('useDataExport', () => {
       statusCode: 400,
     });
 
-    const {result} = renderHookWithProviders(
-      () => useDataExport({payload: mockPayload, inProgressCallback}),
-      {organization: mockAuthorizedOrg}
-    );
+    const {result} = renderHookWithProviders(() => useDataExport({inProgressCallback}), {
+      organization: mockAuthorizedOrg,
+    });
 
-    await result.current();
+    await result.current({...mockPayload});
 
     await waitFor(() => {
       expect(addErrorMessage).toHaveBeenCalledWith(
@@ -62,12 +61,11 @@ describe('useDataExport', () => {
       body: {detail},
     });
 
-    const {result} = renderHookWithProviders(
-      () => useDataExport({payload: mockPayload, inProgressCallback}),
-      {organization: mockAuthorizedOrg}
-    );
+    const {result} = renderHookWithProviders(() => useDataExport({inProgressCallback}), {
+      organization: mockAuthorizedOrg,
+    });
 
-    await result.current();
+    await result.current({...mockPayload});
 
     await waitFor(() => {
       expect(addErrorMessage).toHaveBeenCalledWith(detail);
@@ -84,12 +82,11 @@ describe('useDataExport', () => {
 
     const unmountedRef = {current: true};
 
-    const {result} = renderHookWithProviders(
-      () => useDataExport({payload: mockPayload, unmountedRef}),
-      {organization: mockAuthorizedOrg}
-    );
+    const {result} = renderHookWithProviders(() => useDataExport({unmountedRef}), {
+      organization: mockAuthorizedOrg,
+    });
 
-    await result.current();
+    await result.current({...mockPayload});
 
     expect(addErrorMessage).not.toHaveBeenCalled();
   });
@@ -101,12 +98,11 @@ describe('useDataExport', () => {
       body: {id: 721},
     });
 
-    const {result} = renderHookWithProviders(
-      () => useDataExport({payload: mockPayload}),
-      {organization: mockAuthorizedOrg}
-    );
+    const {result} = renderHookWithProviders(() => useDataExport(), {
+      organization: mockAuthorizedOrg,
+    });
 
-    await result.current();
+    await result.current({...mockPayload});
 
     await waitFor(() => {
       expect(addSuccessMessage).toHaveBeenCalledWith(
@@ -122,12 +118,11 @@ describe('useDataExport', () => {
       body: {id: 721},
     });
 
-    const {result} = renderHookWithProviders(
-      () => useDataExport({payload: mockPayload}),
-      {organization: mockAuthorizedOrg}
-    );
+    const {result} = renderHookWithProviders(() => useDataExport(), {
+      organization: mockAuthorizedOrg,
+    });
 
-    await result.current();
+    await result.current({...mockPayload});
 
     await waitFor(() => {
       expect(addSuccessMessage).toHaveBeenCalledWith(
@@ -143,12 +138,11 @@ describe('useDataExport', () => {
       body: {id: 99184, fileName: 'export.csv'},
     });
 
-    const {result} = renderHookWithProviders(
-      () => useDataExport({payload: mockPayload}),
-      {organization: mockAuthorizedOrg}
-    );
+    const {result} = renderHookWithProviders(() => useDataExport(), {
+      organization: mockAuthorizedOrg,
+    });
 
-    await result.current('csv');
+    await result.current({format: 'csv', ...mockPayload});
 
     await waitFor(() => {
       expect(downloadFromHref).toHaveBeenCalledWith(
@@ -162,6 +156,41 @@ describe('useDataExport', () => {
     );
   });
 
+  it('should use payload when provided', async () => {
+    const exportMock = MockApiClient.addMockResponse({
+      ...requestBase,
+      statusCode: 201,
+      body: {id: 721},
+    });
+
+    const {result} = renderHookWithProviders(() => useDataExport(), {
+      organization: mockAuthorizedOrg,
+    });
+
+    await result.current({
+      format: 'csv',
+      queryInfo: {
+        ...mockPayload.queryInfo,
+        limit: 10_000,
+      },
+      queryType: mockPayload.queryType,
+    });
+
+    expect(exportMock).toHaveBeenCalledWith('/organizations/org-slug/data-export/', {
+      data: {
+        format: 'csv',
+        query_type: mockPayload.queryType,
+        query_info: {
+          ...mockPayload.queryInfo,
+          limit: 10_000,
+        },
+      },
+      error: expect.any(Function),
+      method: 'POST',
+      success: expect.any(Function),
+    });
+  });
+
   it('should call inProgressCallback with true when an export starts', async () => {
     const inProgressCallback = jest.fn();
 
@@ -171,12 +200,11 @@ describe('useDataExport', () => {
       body: {id: 721},
     });
 
-    const {result} = renderHookWithProviders(
-      () => useDataExport({payload: mockPayload, inProgressCallback}),
-      {organization: mockAuthorizedOrg}
-    );
+    const {result} = renderHookWithProviders(() => useDataExport({inProgressCallback}), {
+      organization: mockAuthorizedOrg,
+    });
 
-    const exportPromise = result.current();
+    const exportPromise = result.current({...mockPayload});
     expect(inProgressCallback).toHaveBeenCalledWith(true);
     await exportPromise;
   });

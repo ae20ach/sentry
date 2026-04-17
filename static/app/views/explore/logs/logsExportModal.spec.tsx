@@ -121,7 +121,14 @@ describe('LogsExportModal', () => {
     await userEvent.click(screen.getByRole('button', {name: 'Export'}));
 
     await waitFor(() => {
-      expect(mockHandleDataExport).toHaveBeenCalledWith('csv');
+      expect(mockHandleDataExport).toHaveBeenCalledWith(
+        expect.objectContaining({
+          format: 'csv',
+          queryInfo: expect.objectContaining({
+            limit: aboveSyncLimit,
+          }),
+        })
+      );
     });
 
     expect(mockDownloadLogs).not.toHaveBeenCalled();

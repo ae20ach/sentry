@@ -25,10 +25,11 @@ export interface DataExportPayload {
    */
   queryInfo: any;
   queryType: ExportQueryType;
+
+  format?: DataExportFormat;
 }
 
-interface DataExportOptions {
-  payload: DataExportPayload;
+interface UseDataExportOptions {
   inProgressCallback?: (inProgress: boolean) => void;
   unmountedRef?: React.RefObject<boolean>;
 }
@@ -81,18 +82,16 @@ function handleDataExportResponse(
  * @todo(LOGS-698): Modernize this into using a useApiQuery call.
  */
 export function useDataExport({
-  payload,
   inProgressCallback,
   unmountedRef,
-}: DataExportOptions) {
+}: UseDataExportOptions = {}) {
   const organization = useOrganization();
   const api = useApi();
 
   return useCallback(
-    async (format: DataExportFormat = 'csv') => {
+    async ({format = 'csv', queryInfo, queryType}: DataExportPayload) => {
       inProgressCallback?.(true);
 
-      // This is a fire and forget request.
       const result = await api
         .requestPromise(
           getApiUrl('/organizations/$organizationIdOrSlug/data-export/', {
@@ -103,8 +102,8 @@ export function useDataExport({
             method: 'POST',
             data: {
               format,
-              query_type: payload.queryType,
-              query_info: payload.queryInfo,
+              query_info: queryInfo,
+              query_type: queryType,
             },
           }
         )
@@ -130,13 +129,6 @@ export function useDataExport({
 
       return result!;
     },
-    [
-      payload.queryInfo,
-      payload.queryType,
-      organization.slug,
-      api,
-      inProgressCallback,
-      unmountedRef,
-    ]
+    [organization.slug, api, inProgressCallback, unmountedRef]
   );
 }
