@@ -2,7 +2,9 @@ from datetime import timedelta
 from unittest.mock import MagicMock, patch
 
 import orjson
+import pytest
 from django.urls import reverse
+from rest_framework.exceptions import PermissionDenied
 from urllib3 import HTTPResponse
 from urllib3.exceptions import TimeoutError
 
@@ -12,6 +14,7 @@ from sentry.incidents.models.alert_rule import (
     AlertRuleThresholdType,
 )
 from sentry.models.apitoken import ApiToken
+from sentry.organizations.services.organization import organization_service
 from sentry.seer.anomaly_detection.types import (
     Anomaly,
     AnomalyDetectionConfig,
@@ -20,6 +23,7 @@ from sentry.seer.anomaly_detection.types import (
     TimeSeriesPoint,
 )
 from sentry.seer.anomaly_detection.utils import translate_direction
+from sentry.seer.endpoints.organization_events_anomalies import OrganizationEventsAnomaliesEndpoint
 from sentry.silo.base import SiloMode
 from sentry.testutils.cases import APITestCase
 from sentry.testutils.helpers.datetime import before_now, freeze_time
@@ -89,6 +93,35 @@ class OrganizationEventsAnomaliesEndpointTest(APITestCase):
                 ),
             ],
         )
+
+    def test_get_alert_mutation_projects_unwraps_rpc_user_org_context(self) -> None:
+        endpoint = OrganizationEventsAnomaliesEndpoint()
+        request = MagicMock()
+        request.data = {"project_id": str(self.project.id)}
+
+        rpc_org_context = organization_service.get_organization_by_id(
+            id=self.organization.id, user_id=self.user.id
+        )
+        assert rpc_org_context is not None
+
+        with patch.object(endpoint, "get_projects", return_value=[self.project]) as get_projects:
+            projects = endpoint.get_alert_mutation_projects(request, rpc_org_context)
+
+        assert projects == [self.project]
+        get_projects.assert_called_once_with(
+            request, rpc_org_context.organization, project_ids={self.project.id}
+        )
+
+    def test_get_alert_mutation_projects_does_not_swallow_permission_denied(self) -> None:
+        endpoint = OrganizationEventsAnomaliesEndpoint()
+        request = MagicMock()
+        request.data = {"project_id": str(self.project.id)}
+
+        with (
+            patch.object(endpoint, "get_projects", side_effect=PermissionDenied),
+            pytest.raises(PermissionDenied),
+        ):
+            endpoint.get_alert_mutation_projects(request, self.organization)
 
     @with_feature("organizations:anomaly-detection-alerts")
     @with_feature("organizations:incidents")

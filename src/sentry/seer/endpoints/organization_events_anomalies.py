@@ -1,4 +1,5 @@
 from drf_spectacular.utils import extend_schema
+from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -20,6 +21,7 @@ from sentry.apidocs.examples.organization_examples import OrganizationExamples
 from sentry.apidocs.parameters import GlobalParams
 from sentry.apidocs.utils import inline_sentry_response_serializer
 from sentry.models.organization import Organization
+from sentry.organizations.services.organization import RpcOrganization, RpcUserOrganizationContext
 from sentry.seer.anomaly_detection.get_historical_anomalies import (
     get_historical_anomaly_data_from_seer_preview,
 )
@@ -38,16 +40,26 @@ class OrganizationEventsAnomaliesEndpoint(OrganizationEventsEndpointBase):
     # alerts/detectors, so it intentionally follows alert-write permissions.
     permission_classes = (OrganizationAlertRulePermission,)
 
-    def get_alert_mutation_projects(self, request: Request, organization: Organization):
+    def get_alert_mutation_projects(
+        self,
+        request: Request,
+        organization: Organization | RpcOrganization | RpcUserOrganizationContext,
+    ):
         raw_project_id = request.data.get("project_id")
         if raw_project_id is None:
             return None
 
         try:
             project_id = to_valid_int_id("project_id", raw_project_id)
-            return self.get_projects(request, organization, project_ids={project_id})
-        except Exception:
+        except ValidationError:
             return None
+
+        lookup_organization = (
+            organization.organization
+            if isinstance(organization, RpcUserOrganizationContext)
+            else organization
+        )
+        return self.get_projects(request, lookup_organization, project_ids={project_id})
 
     @extend_schema(
         operation_id="Identify anomalies in historical data",
