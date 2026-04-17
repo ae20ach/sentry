@@ -3,9 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import ClassVar
-
-from django.db import models
+from typing import Any, ClassVar
 
 __all__ = (
     "HashPartition",
@@ -35,12 +33,12 @@ class PartitionConfig:
         if not self.key:
             raise ValueError("PartitionConfig.key must contain at least one column name")
 
-    def sql_clause(self, model: type[models.Model]) -> str:
+    def sql_clause(self, model: Any) -> str:
         """Generate the PARTITION BY SQL clause."""
         columns = ", ".join(self._resolve_column_names(model))
         return f"PARTITION BY {self.strategy.value} ({columns})"
 
-    def _resolve_column_names(self, model: type[models.Model]) -> list[str]:
+    def _resolve_column_names(self, model: Any) -> list[str]:
         """Resolve model field names to database column names."""
         columns = []
         for field_name in self.key:
@@ -70,7 +68,7 @@ class ListPartition:
     """Defines a LIST partition with explicit values."""
 
     name: str
-    values: list[str] = field(default_factory=list)
+    values: list[str | int] = field(default_factory=list)
 
     def sql_bound_clause(self) -> str:
         formatted = ", ".join(f"'{v}'" if isinstance(v, str) else str(v) for v in self.values)
@@ -93,7 +91,7 @@ class HashPartition:
 Partition = RangePartition | ListPartition | HashPartition
 
 
-def is_partitioning_enabled(model_or_table: type[models.Model] | str) -> bool:
+def is_partitioning_enabled(model_or_table: Any) -> bool:
     """
     Check if partitioning is enabled for a given model in this environment.
 
@@ -142,7 +140,7 @@ def _get_partitioned_model_base():
 
 
 # Lazily initialized on first access
-_PartitionedModel = None
+_PartitionedModel: type | None = None
 
 
 def get_partitioned_model_class():
