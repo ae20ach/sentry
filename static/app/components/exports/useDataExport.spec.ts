@@ -153,7 +153,7 @@ describe('useDataExport', () => {
     await waitFor(() => {
       expect(downloadFromHref).toHaveBeenCalledWith(
         expect.stringMatching(/^export\.csv .+\.csv$/),
-        '/api/0/organizations/sentry/data-export/99184/?download=true'
+        '/api/0/organizations/org-slug/data-export/99184/?download=true'
       );
     });
 

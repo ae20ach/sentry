@@ -51,7 +51,8 @@ interface DataExportData {
 function handleDataExportResponse(
   data: DataExportData,
   format: DataExportFormat,
-  response: ResponseMeta | undefined
+  response: ResponseMeta | undefined,
+  organizationSlug: string
 ) {
   if (response?.status !== 201) {
     addSuccessMessage(
@@ -70,7 +71,7 @@ function handleDataExportResponse(
   const filename = createLogDownloadFilename(data.fileName, format);
   downloadFromHref(
     filename,
-    `/api/0/organizations/sentry/data-export/${data.id}/?download=true`
+    `/api/0/organizations/${organizationSlug}/data-export/${data.id}/?download=true`
   );
   addSuccessMessage(t("Downloading '%s' to your browser.", data.fileName));
 }
@@ -103,7 +104,7 @@ export function useDataExport({
         })
         .then(([data, _, response]) => {
           if (!unmountedRef?.current) {
-            handleDataExportResponse(data, format, response);
+            handleDataExportResponse(data, format, response, organization.slug);
           }
         })
         .catch(error => {
