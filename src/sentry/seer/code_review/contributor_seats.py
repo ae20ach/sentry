@@ -65,13 +65,13 @@ def _is_autofix_enabled_for_repo(organization: Organization, repository_id: int)
 
     try:
         preferences = bulk_get_project_preferences(organization.id, project_ids)
-    except (SeerApiError, HTTPError, JSONDecodeError):
+    except (SeerApiError, HTTPError):
         logger.warning(
             "seer.contributor_seats.autofix_check_error",
             extra={"organization_id": organization.id, "repository_id": repository_id},
         )
         return False
-    except Exception as e:
+    except (JSONDecodeError, Exception) as e:
         sentry_sdk.capture_exception(e, level="warning")
         return False
 
