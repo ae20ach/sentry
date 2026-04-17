@@ -1,36 +1,41 @@
-import {useMemo} from 'react';
-
-import {useReplayCount} from 'sentry/utils/replayCount/useReplayCount';
-import {useOrganization} from 'sentry/utils/useOrganization';
+import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
+import {MutableSearch} from 'sentry/utils/tokenizeSearch';
+import {useSpans} from 'sentry/views/insights/common/queries/useDiscover';
 
 interface Props {
-  bufferLimit?: number;
+  limit: number;
+  transaction: string;
   statsPeriod?: string;
 }
 
-/**
- * Query results for whether a Transaction has replays associated.
- */
 export function useReplayCountForTransactions({
-  bufferLimit = 25,
+  limit,
+  transaction,
   statsPeriod = '14d',
-}: Props = {}) {
-  const organization = useOrganization();
-  const {getOne, getMany, hasOne, hasMany} = useReplayCount({
-    bufferLimit,
-    dataSource: 'discover',
-    fieldName: 'transaction',
-    organization,
-    statsPeriod,
-  });
+}: Props): number | undefined {
+  const {selection} = usePageFilters();
 
-  return useMemo(
-    () => ({
-      getReplayCountForTransaction: getOne,
-      getReplayCountForTransactions: getMany,
-      transactionHasReplay: hasOne,
-      transactionsHaveReplay: hasMany,
-    }),
-    [getMany, getOne, hasMany, hasOne]
+  const search = new MutableSearch('has:replay.id is_transaction:true');
+  search.addFilterValue('transaction', transaction);
+
+  const {data, isPending} = useSpans(
+    {
+      search,
+      // `count()` ensures we get one row per unique replay ID
+      fields: ['replay.id', 'count()'],
+      limit: limit + 1,
+      pageFilters: {
+        ...selection,
+        datetime: {
+          period: statsPeriod,
+          start: null,
+          end: null,
+          utc: selection.datetime.utc,
+        },
+      },
+    },
+    'api.performance.transaction-summary.replay-count'
   );
+
+  return isPending ? undefined : data.length;
 }

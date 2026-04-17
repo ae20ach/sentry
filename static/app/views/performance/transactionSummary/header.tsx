@@ -50,6 +50,8 @@ import TeamKeyTransactionButton from './teamKeyTransactionButton';
 import TransactionThresholdButton from './transactionThresholdButton';
 import type {TransactionThresholdMetric} from './transactionThresholdModal';
 
+const REPLAY_COUNT_LIMIT = 50;
+
 type Props = {
   currentTab: Tab;
   eventView: EventView;
@@ -151,10 +153,11 @@ export function TransactionHeader({
     isProfilingSupportedOrProjectHasProfiles(project);
 
   // Hard-code 90d for the replay tab to surface more interesting data.
-  const {getReplayCountForTransaction} = useReplayCountForTransactions({
+  const replaysCount = useReplayCountForTransactions({
+    transaction: transactionName,
     statsPeriod: '90d',
+    limit: REPLAY_COUNT_LIMIT,
   });
-  const replaysCount = getReplayCountForTransaction(transactionName);
 
   const tabList = (
     <TabList
@@ -169,7 +172,7 @@ export function TransactionHeader({
       </TabList.Item>
       <TabList.Item key={Tab.REPLAYS} textValue={t('Replays')} hidden={!hasSessionReplay}>
         {t('Replays')}
-        <ReplayCountBadge count={replaysCount} />
+        <ReplayCountBadge count={replaysCount} limit={REPLAY_COUNT_LIMIT} />
       </TabList.Item>
       <TabList.Item key={Tab.PROFILING} textValue={t('Profiling')} hidden={!hasProfiling}>
         {t('Profiles')}
@@ -415,7 +418,7 @@ export function TransactionHeader({
           hidden={!hasSessionReplay}
         >
           {t('Replays')}
-          <ReplayCountBadge count={replaysCount} />
+          <ReplayCountBadge count={replaysCount} limit={REPLAY_COUNT_LIMIT} />
         </TabList.Item>
         <TabList.Item
           key={Tab.PROFILING}
