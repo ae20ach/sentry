@@ -162,7 +162,7 @@ function LogsHeader() {
               />
             ) : null}
             <Layout.Title>
-              {title ? title : t('Traces')}
+              {title ? title : t('Logs')}
               <PageHeadingQuestionTooltip
                 docsUrl="https://docs.sentry.io/product/explore/logs/"
                 title={t(
