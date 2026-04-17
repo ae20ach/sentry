@@ -180,7 +180,7 @@ class WebVitalsIssueDataSerializer(ProjectUserIssueRequestSerializer):
 class ProjectUserIssuePermission(ProjectPermission):
     scope_map = {
         "GET": [],
-        "POST": ["event:write", "event:admin"],
+        "POST": ["event:read", "event:write", "event:admin"],
         "PUT": [],
         "DELETE": [],
     }

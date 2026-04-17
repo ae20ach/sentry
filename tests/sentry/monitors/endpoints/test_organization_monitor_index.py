@@ -1047,6 +1047,46 @@ class BulkEditOrganizationMonitorTest(MonitorTestCase):
         other_monitor.refresh_from_db()
         assert other_monitor.status == ObjectStatus.ACTIVE
 
+    # TODO(api-write-scope-compat): Remove this legacy org:write coverage once
+    # public cron monitor clients have migrated to alerts:write.
+    def test_bulk_edit_allows_org_write_scope_for_tokens(self) -> None:
+        monitor_one = self._create_monitor(slug="monitor-one")
+        token = self._create_token("org:write")
+
+        response = self.client.put(
+            reverse(self.endpoint, args=[self.organization.slug]),
+            data={"ids": [monitor_one.guid], "status": "disabled"},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 200
+        monitor_one.refresh_from_db()
+        assert monitor_one.status == ObjectStatus.DISABLED
+
+    def test_team_admin_can_bulk_edit_with_project_scoped_alerts_write(self) -> None:
+        team_admin_user = self.create_user(is_superuser=False)
+        self.create_member(
+            user=team_admin_user,
+            organization=self.organization,
+            role="member",
+            team_roles=[(self.team, "admin")],
+        )
+        self.organization.update_option("sentry:alerts_member_write", False)
+        self.login_as(team_admin_user)
+
+        monitor_one = self._create_monitor(slug="monitor-one")
+
+        response = self.get_success_response(
+            self.organization.slug,
+            ids=[monitor_one.guid],
+            status="disabled",
+        )
+
+        assert response.status_code == 200
+        monitor_one.refresh_from_db()
+        assert monitor_one.status == ObjectStatus.DISABLED
+
     @patch("sentry.quotas.backend.check_assign_seats")
     def test_enable_no_quota(self, check_assign_seats: MagicMock) -> None:
         monitor_one = self._create_monitor(slug="monitor_one", status=ObjectStatus.DISABLED)

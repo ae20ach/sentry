@@ -3,6 +3,7 @@ from datetime import timedelta
 
 import pytest
 from django.db.models import Q
+from django.urls import reverse
 
 from sentry import audit_log
 from sentry.api.serializers import serialize
@@ -13,9 +14,11 @@ from sentry.grouping.grouptype import ErrorGroupType
 from sentry.incidents.grouptype import MetricIssue
 from sentry.incidents.models.alert_rule import AlertRule
 from sentry.incidents.utils.constants import INCIDENTS_SNUBA_SUBSCRIPTION_TYPE
+from sentry.models.apitoken import ApiToken
 from sentry.models.environment import Environment
 from sentry.monitors.grouptype import MonitorIncidentType
 from sentry.search.utils import _HACKY_INVALID_USER
+from sentry.silo.base import SiloMode
 from sentry.snuba.dataset import Dataset
 from sentry.snuba.models import QuerySubscription, SnubaQuery, SnubaQueryEventType
 from sentry.snuba.subscriptions import create_snuba_query, create_snuba_subscription
@@ -24,7 +27,8 @@ from sentry.testutils.cases import APITestCase
 from sentry.testutils.helpers.datetime import before_now
 from sentry.testutils.helpers.features import with_feature
 from sentry.testutils.outbox import outbox_runner
-from sentry.testutils.silo import cell_silo_test
+from sentry.testutils.skips import requires_kafka, requires_snuba
+from sentry.testutils.silo import assume_test_silo_mode, cell_silo_test
 from sentry.testutils.skips import requires_kafka, requires_snuba
 from sentry.uptime.grouptype import UptimeDomainCheckFailure
 from sentry.uptime.types import (
@@ -62,6 +66,10 @@ class OrganizationDetectorIndexBaseTest(APITestCase):
         self.issue_stream_detector = self.create_detector(
             type=IssueStreamGroupType.slug, project=self.project, name="Issue Stream"
         )
+
+    def _create_token(self, scope: str, user=None) -> ApiToken:
+        with assume_test_silo_mode(SiloMode.CONTROL):
+            return ApiToken.objects.create(user=user or self.user, scope_list=[scope])
 
 
 @cell_silo_test
@@ -1022,6 +1030,36 @@ class OrganizationDetectorIndexPutTest(OrganizationDetectorIndexBaseTest):
             organization=self.organization,
         )
 
+    # TODO(api-write-scope-compat): Remove this legacy org:* coverage once
+    # public detector clients have migrated to alerts:write.
+    def test_update_detectors_allows_org_write_scope_for_tokens(self) -> None:
+        token = self._create_token("org:write")
+
+        response = self.client.put(
+            f"{reverse(self.endpoint, args=[self.organization.slug])}?id={self.user_detector.id}",
+            data={"enabled": False},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 200
+        self.user_detector.refresh_from_db()
+        assert self.user_detector.enabled is False
+
+    def test_update_detectors_allows_alerts_write_scope_for_tokens(self) -> None:
+        token = self._create_token("alerts:write")
+
+        response = self.client.put(
+            f"{reverse(self.endpoint, args=[self.organization.slug])}?id={self.user_detector.id}",
+            data={"enabled": False},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 200
+        self.user_detector.refresh_from_db()
+        assert self.user_detector.enabled is False
+
     def test_update_detectors_by_ids_success(self) -> None:
         response = self.get_success_response(
             self.organization.slug,
@@ -1342,6 +1380,30 @@ class OrganizationDetectorDeleteTest(OrganizationDetectorIndexBaseTest):
         self.detector_three = self.create_detector(
             project=self.project, name="Third Detector", type=MetricIssue.slug
         )
+
+    # TODO(api-write-scope-compat): Remove this legacy org:* coverage once
+    # public detector clients have migrated to alerts:write.
+    def test_delete_detectors_allows_org_write_scope_for_tokens(self) -> None:
+        token = self._create_token("org:write")
+
+        with outbox_runner():
+            response = self.client.delete(
+                f"{reverse(self.endpoint, args=[self.organization.slug])}?id={self.detector.id}",
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 204
+
+    def test_delete_detectors_allows_alerts_write_scope_for_tokens(self) -> None:
+        token = self._create_token("alerts:write")
+
+        with outbox_runner():
+            response = self.client.delete(
+                f"{reverse(self.endpoint, args=[self.organization.slug])}?id={self.detector.id}",
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 204
 
     def test_delete_detectors_by_ids_success(self) -> None:
         """Test successful deletion of detectors by specific IDs"""

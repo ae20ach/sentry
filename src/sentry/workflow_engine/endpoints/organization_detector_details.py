@@ -127,6 +127,12 @@ def get_detector_validator(
 @extend_schema(tags=["Monitors"])
 class OrganizationDetectorDetailsEndpoint(OrganizationEndpoint):
     allow_any_team_alert_write_fallback = True
+    # TODO(api-write-scope-compat): Remove legacy org:* support once public
+    # detector clients have migrated to alerts:write.
+    legacy_alert_mutation_scope_map = {
+        "PUT": ("org:read", "org:write", "org:admin"),
+        "DELETE": ("org:read", "org:write", "org:admin"),
+    }
 
     def get_alert_mutation_projects(
         self,

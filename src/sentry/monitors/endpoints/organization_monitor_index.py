@@ -18,7 +18,11 @@ from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import cell_silo_endpoint
 from sentry.api.bases import NoProjects
-from sentry.api.bases.organization import ALERT_MUTATION_SCOPES, OrganizationAlertRulePermission
+from sentry.api.bases.organization import (
+    ALERT_MUTATION_SCOPES,
+    OrganizationAlertRulePermission,
+    get_legacy_alert_mutation_scopes,
+)
 from sentry.api.helpers.teams import get_teams
 from sentry.api.paginator import OffsetPaginator
 from sentry.api.serializers import serialize
@@ -89,7 +93,10 @@ class OrganizationMonitorIndexEndpoint(OrganizationAlertRuleBaseEndpoint):
     owner = ApiOwner.CRONS
     # TODO(api-write-scope-compat): Remove legacy org:write support once public
     # cron monitor clients have migrated to alerts:write.
-    legacy_alert_mutation_scope_map = {"POST": ("org:write",)}
+    legacy_alert_mutation_scope_map = {
+        "POST": ("org:write", "org:admin"),
+        "PUT": ("org:write", "org:admin"),
+    }
     permission_classes = (OrganizationAlertRulePermission,)
 
     @extend_schema(
@@ -329,6 +336,9 @@ class OrganizationMonitorIndexEndpoint(OrganizationAlertRuleBaseEndpoint):
             return self.respond(validator.errors, status=400)
 
         result = dict(validator.validated_data)
+        monitor_edit_scopes = ALERT_MUTATION_SCOPES | frozenset(
+            get_legacy_alert_mutation_scopes(self, request.method)
+        )
 
         projects = self.get_projects(request, organization, include_all_accessible=True)
         project_ids = [project.id for project in projects]
@@ -338,7 +348,7 @@ class OrganizationMonitorIndexEndpoint(OrganizationAlertRuleBaseEndpoint):
         projects_by_id = Project.objects.in_bulk({monitor.project_id for monitor in monitors})
         if not all(
             project is not None
-            and request.access.has_any_project_scope(project, ALERT_MUTATION_SCOPES)
+            and request.access.has_any_project_scope(project, monitor_edit_scopes)
             for project in (projects_by_id.get(monitor.project_id) for monitor in monitors)
         ):
             return self.respond(status=403)

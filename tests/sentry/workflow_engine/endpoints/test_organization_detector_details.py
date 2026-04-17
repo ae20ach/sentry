@@ -568,17 +568,22 @@ class OrganizationDetectorDetailsPutTest(OrganizationDetectorDetailsBaseTest):
 
         assert response.status_code == 403
 
-    def test_update_rejects_org_write_scope_for_tokens(self) -> None:
+    # TODO(api-write-scope-compat): Remove this legacy org:* coverage once
+    # public detector clients have migrated to alerts:write.
+    def test_update_allows_org_write_scope_for_tokens(self) -> None:
         token = self._create_token("org:write")
 
-        response = self.client.put(
-            reverse(self.endpoint, args=[self.organization.slug, self.detector.id]),
-            data={"enabled": False},
-            format="json",
-            HTTP_AUTHORIZATION=f"Bearer {token.token}",
-        )
+        with self.tasks():
+            response = self.client.put(
+                reverse(self.endpoint, args=[self.organization.slug, self.detector.id]),
+                data={"enabled": False},
+                format="json",
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
 
-        assert response.status_code == 403
+        assert response.status_code == 200
+        self.detector.refresh_from_db()
+        assert self.detector.enabled is False
 
     def test_team_admin_can_update_with_project_scoped_alerts_write(self) -> None:
         team_admin_user = self.create_user(is_superuser=False)
@@ -1192,6 +1197,30 @@ class OrganizationDetectorDetailsPutTest(OrganizationDetectorDetailsBaseTest):
 @cell_silo_test
 class OrganizationDetectorDetailsDeleteTest(OrganizationDetectorDetailsBaseTest):
     method = "DELETE"
+
+    # TODO(api-write-scope-compat): Remove this legacy org:* coverage once
+    # public detector clients have migrated to alerts:write.
+    def test_delete_allows_org_write_scope_for_tokens(self) -> None:
+        token = self._create_token("org:write")
+
+        with outbox_runner():
+            response = self.client.delete(
+                reverse(self.endpoint, args=[self.organization.slug, self.detector.id]),
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 204
+
+    def test_delete_allows_alerts_write_scope_for_tokens(self) -> None:
+        token = self._create_token("alerts:write")
+
+        with outbox_runner():
+            response = self.client.delete(
+                reverse(self.endpoint, args=[self.organization.slug, self.detector.id]),
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 204
 
     def test_team_admin_can_delete_with_project_scoped_alerts_write(self) -> None:
         team_admin_user = self.create_user(is_superuser=False)

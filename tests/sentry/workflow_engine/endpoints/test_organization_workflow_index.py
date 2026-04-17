@@ -620,7 +620,9 @@ class OrganizationWorkflowCreateTest(OrganizationWorkflowAPITestCase, BaseWorkfl
             {"name": "assigneeId", "value": "3"},
         ]
 
-    def test_create_requires_alerts_write_scope_for_api_keys(self) -> None:
+    # TODO(api-write-scope-compat): Remove this legacy org:* coverage once
+    # public workflow clients have migrated to alerts:write.
+    def test_create_allows_legacy_org_write_scope_for_api_keys(self) -> None:
         response = self.client.post(
             reverse(self.endpoint, args=[self.organization.slug]),
             data=self.valid_workflow,
@@ -628,7 +630,17 @@ class OrganizationWorkflowCreateTest(OrganizationWorkflowAPITestCase, BaseWorkfl
             **self._auth_headers("org:write"),
         )
 
-        assert response.status_code == 403
+        assert response.status_code == 201
+
+    def test_create_allows_alerts_write_scope_for_api_keys(self) -> None:
+        response = self.client.post(
+            reverse(self.endpoint, args=[self.organization.slug]),
+            data=self.valid_workflow,
+            format="json",
+            **self._auth_headers("alerts:write"),
+        )
+
+        assert response.status_code == 201
 
     @mock.patch("sentry.workflow_engine.endpoints.validators.base.workflow.create_audit_entry")
     def test_create_workflow__basic(self, mock_audit: mock.MagicMock) -> None:
@@ -1210,7 +1222,9 @@ class OrganizationWorkflowPutTest(OrganizationWorkflowAPITestCase):
             organization_id=self.organization.id, name="Third Workflow", enabled=False
         )
 
-    def test_bulk_enable_requires_alerts_write_scope_for_api_keys(self) -> None:
+    # TODO(api-write-scope-compat): Remove this legacy org:* coverage once
+    # public workflow clients have migrated to alerts:write.
+    def test_bulk_enable_allows_legacy_org_write_scope_for_api_keys(self) -> None:
         response = self.client.put(
             f"{reverse(self.endpoint, args=[self.organization.slug])}?id={self.workflow.id}",
             data={"enabled": True},
@@ -1218,7 +1232,21 @@ class OrganizationWorkflowPutTest(OrganizationWorkflowAPITestCase):
             **self._auth_headers("org:write"),
         )
 
-        assert response.status_code == 403
+        assert response.status_code == 200
+        self.workflow.refresh_from_db()
+        assert self.workflow.enabled is True
+
+    def test_bulk_enable_allows_alerts_write_scope_for_api_keys(self) -> None:
+        response = self.client.put(
+            f"{reverse(self.endpoint, args=[self.organization.slug])}?id={self.workflow.id}",
+            data={"enabled": True},
+            format="json",
+            **self._auth_headers("alerts:write"),
+        )
+
+        assert response.status_code == 200
+        self.workflow.refresh_from_db()
+        assert self.workflow.enabled is True
 
     def test_bulk_enable_workflows_by_ids_success(self) -> None:
         response = self.get_success_response(
@@ -1372,6 +1400,24 @@ class OrganizationWorkflowDeleteTest(OrganizationWorkflowAPITestCase):
         self.workflow_three = self.create_workflow(
             organization_id=self.organization.id, name="Third Workflow"
         )
+
+    # TODO(api-write-scope-compat): Remove this legacy org:* coverage once
+    # public workflow clients have migrated to alerts:write.
+    def test_delete_workflows_allows_legacy_org_write_scope_for_api_keys(self) -> None:
+        response = self.client.delete(
+            f"{reverse(self.endpoint, args=[self.organization.slug])}?id={self.workflow.id}",
+            **self._auth_headers("org:write"),
+        )
+
+        assert response.status_code == 204
+
+    def test_delete_workflows_allows_alerts_write_scope_for_api_keys(self) -> None:
+        response = self.client.delete(
+            f"{reverse(self.endpoint, args=[self.organization.slug])}?id={self.workflow.id}",
+            **self._auth_headers("alerts:write"),
+        )
+
+        assert response.status_code == 204
 
     def test_delete_workflows_by_ids_success(self) -> None:
         """Test successful deletion of workflows by specific IDs"""

@@ -241,7 +241,28 @@ class OrganizationEventsAnomaliesEndpointTest(APITestCase):
 
     @with_feature("organizations:anomaly-detection-alerts")
     @with_feature("organizations:incidents")
-    def test_org_read_scope_cannot_post(self) -> None:
+    # TODO(api-write-scope-compat): Remove this legacy org:* coverage once
+    # alert authoring preview clients have migrated to alerts:write.
+    @patch(
+        "sentry.seer.anomaly_detection.get_historical_anomalies.seer_anomaly_detection_connection_pool.urlopen"
+    )
+    def test_org_read_scope_can_post(self, mock_seer_request: MagicMock) -> None:
+        mock_seer_request.return_value = HTTPResponse(
+            orjson.dumps(
+                DetectAnomaliesResponse(
+                    success=True,
+                    message="",
+                    timeseries=[
+                        TimeSeriesPoint(
+                            timestamp=self.current_timestamp_1,
+                            value=2,
+                            anomaly=Anomaly(anomaly_score=-0.1, anomaly_type="none"),
+                        )
+                    ],
+                )
+            ),
+            status=200,
+        )
         token = self._create_token("org:read")
         data = self.get_test_data(self.project.id)
         url = reverse(self.endpoint, args=[self.organization.slug])
@@ -254,11 +275,32 @@ class OrganizationEventsAnomaliesEndpointTest(APITestCase):
                 HTTP_AUTHORIZATION=f"Bearer {token.token}",
             )
 
-        assert response.status_code == 403
+        assert response.status_code == 200
 
     @with_feature("organizations:anomaly-detection-alerts")
     @with_feature("organizations:incidents")
-    def test_org_write_scope_cannot_post(self) -> None:
+    # TODO(api-write-scope-compat): Remove this legacy org:* coverage once
+    # alert authoring preview clients have migrated to alerts:write.
+    @patch(
+        "sentry.seer.anomaly_detection.get_historical_anomalies.seer_anomaly_detection_connection_pool.urlopen"
+    )
+    def test_org_write_scope_can_post(self, mock_seer_request: MagicMock) -> None:
+        mock_seer_request.return_value = HTTPResponse(
+            orjson.dumps(
+                DetectAnomaliesResponse(
+                    success=True,
+                    message="",
+                    timeseries=[
+                        TimeSeriesPoint(
+                            timestamp=self.current_timestamp_1,
+                            value=2,
+                            anomaly=Anomaly(anomaly_score=-0.1, anomaly_type="none"),
+                        )
+                    ],
+                )
+            ),
+            status=200,
+        )
         token = self._create_token("org:write")
         data = self.get_test_data(self.project.id)
         url = reverse(self.endpoint, args=[self.organization.slug])
@@ -271,7 +313,7 @@ class OrganizationEventsAnomaliesEndpointTest(APITestCase):
                 HTTP_AUTHORIZATION=f"Bearer {token.token}",
             )
 
-        assert response.status_code == 403
+        assert response.status_code == 200
 
     @with_feature("organizations:anomaly-detection-alerts")
     @with_feature("organizations:incidents")
@@ -302,6 +344,45 @@ class OrganizationEventsAnomaliesEndpointTest(APITestCase):
             )
 
         assert response.status_code == 403
+
+    @with_feature("organizations:anomaly-detection-alerts")
+    @with_feature("organizations:incidents")
+    @patch(
+        "sentry.seer.anomaly_detection.get_historical_anomalies.seer_anomaly_detection_connection_pool.urlopen"
+    )
+    def test_team_admin_can_post_when_member_alert_write_disabled(
+        self, mock_seer_request: MagicMock
+    ) -> None:
+        team_admin_user = self.create_user(is_superuser=False)
+        self.create_member(
+            user=team_admin_user,
+            organization=self.organization,
+            role="member",
+            team_roles=[(self.team, "admin")],
+        )
+        self.organization.update_option("sentry:alerts_member_write", False)
+        self.login_as(team_admin_user)
+
+        seer_return_value = DetectAnomaliesResponse(
+            success=True,
+            message="",
+            timeseries=[
+                TimeSeriesPoint(
+                    timestamp=self.current_timestamp_1,
+                    value=2,
+                    anomaly=Anomaly(anomaly_score=-0.1, anomaly_type="none"),
+                )
+            ],
+        )
+        mock_seer_request.return_value = HTTPResponse(orjson.dumps(seer_return_value), status=200)
+
+        data = self.get_test_data(self.project.id)
+        with outbox_runner():
+            response = self.get_success_response(
+                self.organization.slug, status_code=200, raw_data=orjson.dumps(data)
+            )
+
+        assert response.status_code == 200
 
     @with_feature("organizations:anomaly-detection-alerts")
     @with_feature("organizations:incidents")
