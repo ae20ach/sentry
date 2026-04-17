@@ -465,6 +465,28 @@ class CreateOrganizationMonitorTest(MonitorTestCase):
 
         assert response.status_code == 403
 
+    # TODO(api-write-scope-compat): Remove this legacy org:write coverage once
+    # public cron monitor clients have migrated to alerts:write.
+    def test_create_allows_legacy_org_write_scope_for_tokens(self) -> None:
+        token = self._create_token("org:write")
+        data = {
+            "project": self.project.slug,
+            "name": "My Monitor",
+            "type": "cron_job",
+            "owner": f"user:{self.user.id}",
+            "config": {"schedule_type": "crontab", "schedule": "@daily"},
+        }
+
+        with outbox_runner():
+            response = self.client.post(
+                reverse(self.endpoint, args=[self.organization.slug]),
+                data=data,
+                format="json",
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 201
+
     def test_create_allows_alerts_write_scope_for_tokens(self) -> None:
         token = self._create_token("alerts:write")
         data = {
@@ -993,12 +1015,25 @@ class BulkEditOrganizationMonitorTest(MonitorTestCase):
             role="member",
             team_roles=[(self.team, "admin")],
         )
+        self.organization.update_option("sentry:alerts_member_write", False)
 
         other_team = self.create_team(organization=self.organization, name="other-team")
         other_project = self.create_project(
             organization=self.organization, teams=[other_team], name="other-project"
         )
-        other_monitor = self._create_monitor(project=other_project, slug="other-monitor")
+        other_monitor = Monitor.objects.create(
+            organization_id=self.organization.id,
+            project_id=other_project.id,
+            config={
+                "schedule": "* * * * *",
+                "schedule_type": ScheduleType.CRONTAB,
+                "checkin_margin": None,
+                "max_runtime": None,
+            },
+            owner_user_id=self.user.id,
+            slug="other-monitor",
+            name="other-monitor",
+        )
         token = self._create_token("alerts:write", user=team_admin_user)
 
         response = self.client.put(

@@ -103,9 +103,8 @@ class OrganizationEventsAnomaliesEndpoint(OrganizationEventsEndpointBase):
             )
 
         project_id = to_valid_int_id("project_id", raw_project_id)
+
         projects = self.get_projects(request, organization, project_ids={project_id})
-        if not projects:
-            return Response({"detail": "Invalid project"}, status=400)
         if not all(
             request.access.has_any_project_scope(project, ALERT_MUTATION_SCOPES)
             for project in projects

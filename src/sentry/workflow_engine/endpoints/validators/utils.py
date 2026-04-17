@@ -26,9 +26,10 @@ from sentry.workflow_engine.models.workflow import Workflow
 
 logger = logging.getLogger(__name__)
 
-# Only those with organization write permissions can edit system-created detectors (e.g. error detectors).
-SYSTEM_CREATED_DETECTOR_REQUIRED_SCOPES = {"org:write"}
-USER_CREATED_DETECTOR_REQUIRED_SCOPES = {"org:write", "alerts:write"}
+# Detector edits should use the alert-specific write scope regardless of how the
+# detector was created.
+SYSTEM_CREATED_DETECTOR_REQUIRED_SCOPES = {"alerts:write"}
+USER_CREATED_DETECTOR_REQUIRED_SCOPES = {"alerts:write"}
 
 
 def is_system_created_detector(detector: Detector) -> bool:
@@ -55,8 +56,6 @@ def can_edit_user_created_detectors(request: Request, project: Project) -> bool:
 def can_edit_detectors(detectors: QuerySet[Detector], request: Request) -> bool:
     """
     Determine if the requesting user has access to edit the given detectors.
-    System created detectors lock edit access to org:write, while user created detectors
-    are more permissive.
     """
     required_scopes = (
         SYSTEM_CREATED_DETECTOR_REQUIRED_SCOPES
@@ -75,9 +74,7 @@ def can_edit_detectors(detectors: QuerySet[Detector], request: Request) -> bool:
 
 def can_edit_detector(detector: Detector, request: Request) -> bool:
     """
-    Determine if the requesting user has access to detector edit. If the request does not have the "alerts:write"
-    permission, then we must verify that the user is a team admin with "alerts:write" access to the project(s)
-    in their request.
+    Determine if the requesting user has alert-write access to edit the detector.
     """
     if is_system_created_detector(detector) and not can_edit_system_created_detectors(
         request, detector.project

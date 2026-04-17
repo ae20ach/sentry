@@ -3,6 +3,7 @@ from typing import Any
 from unittest import mock
 
 import responses
+from django.urls import reverse
 
 from sentry import audit_log
 from sentry.api.serializers import serialize
@@ -37,6 +38,10 @@ class OrganizationWorkflowAPITestCase(APITestCase):
     def setUp(self) -> None:
         super().setUp()
         self.login_as(user=self.user)
+
+    def _auth_headers(self, *scopes: str) -> dict[str, str]:
+        api_key = self.create_api_key(organization=self.organization, scope_list=list(scopes))
+        return {"HTTP_AUTHORIZATION": self.create_basic_auth_header(api_key.key)}
 
 
 @cell_silo_test
@@ -614,6 +619,16 @@ class OrganizationWorkflowCreateTest(OrganizationWorkflowAPITestCase, BaseWorkfl
             {"name": "teamId", "value": "1"},
             {"name": "assigneeId", "value": "3"},
         ]
+
+    def test_create_requires_alerts_write_scope_for_api_keys(self) -> None:
+        response = self.client.post(
+            reverse(self.endpoint, args=[self.organization.slug]),
+            data=self.valid_workflow,
+            format="json",
+            **self._auth_headers("org:write"),
+        )
+
+        assert response.status_code == 403
 
     @mock.patch("sentry.workflow_engine.endpoints.validators.base.workflow.create_audit_entry")
     def test_create_workflow__basic(self, mock_audit: mock.MagicMock) -> None:
@@ -1194,6 +1209,16 @@ class OrganizationWorkflowPutTest(OrganizationWorkflowAPITestCase):
         self.workflow_three = self.create_workflow(
             organization_id=self.organization.id, name="Third Workflow", enabled=False
         )
+
+    def test_bulk_enable_requires_alerts_write_scope_for_api_keys(self) -> None:
+        response = self.client.put(
+            f"{reverse(self.endpoint, args=[self.organization.slug])}?id={self.workflow.id}",
+            data={"enabled": True},
+            format="json",
+            **self._auth_headers("org:write"),
+        )
+
+        assert response.status_code == 403
 
     def test_bulk_enable_workflows_by_ids_success(self) -> None:
         response = self.get_success_response(

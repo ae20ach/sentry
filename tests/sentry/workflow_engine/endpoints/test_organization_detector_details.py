@@ -98,6 +98,10 @@ class OrganizationDetectorDetailsBaseTest(APITestCase):
         )
         assert self.detector.data_sources is not None
 
+    def _create_token(self, scope: str, user=None) -> ApiToken:
+        with assume_test_silo_mode(SiloMode.CONTROL):
+            return ApiToken.objects.create(user=user or self.user, scope_list=[scope])
+
 
 @cell_silo_test
 class OrganizationDetectorDetailsGetTest(OrganizationDetectorDetailsBaseTest):
@@ -269,10 +273,6 @@ class OrganizationDetectorDetailsPutTest(OrganizationDetectorDetailsBaseTest):
             "config": self.detector.config,
         }
         assert SnubaQuery.objects.get(id=self.snuba_query.id)
-
-    def _create_token(self, scope: str, user=None) -> ApiToken:
-        with assume_test_silo_mode(SiloMode.CONTROL):
-            return ApiToken.objects.create(user=user or self.user, scope_list=[scope])
 
     def assert_detector_updated(self, detector: Detector) -> None:
         assert detector.name == "Updated Detector"
@@ -568,6 +568,18 @@ class OrganizationDetectorDetailsPutTest(OrganizationDetectorDetailsBaseTest):
 
         assert response.status_code == 403
 
+    def test_update_rejects_org_write_scope_for_tokens(self) -> None:
+        token = self._create_token("org:write")
+
+        response = self.client.put(
+            reverse(self.endpoint, args=[self.organization.slug, self.detector.id]),
+            data={"enabled": False},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token.token}",
+        )
+
+        assert response.status_code == 403
+
     def test_team_admin_can_update_with_project_scoped_alerts_write(self) -> None:
         team_admin_user = self.create_user(is_superuser=False)
         self.create_member(
@@ -613,12 +625,15 @@ class OrganizationDetectorDetailsPutTest(OrganizationDetectorDetailsBaseTest):
             role="member",
             team_roles=[(self.team, "admin")],
         )
+        self.organization.update_option("sentry:alerts_member_write", False)
 
         other_team = self.create_team(organization=self.organization, name="other-team")
         other_project = self.create_project(
             organization=self.organization, teams=[other_team], name="other-project"
         )
-        other_detector = self.create_detector(project=other_project, name="Other Detector")
+        other_detector = self.create_detector(
+            project=other_project, type=MetricIssue.slug, name="Other Detector"
+        )
 
         token = self._create_token("alerts:write", user=team_admin_user)
 
@@ -1185,12 +1200,15 @@ class OrganizationDetectorDetailsDeleteTest(OrganizationDetectorDetailsBaseTest)
             role="member",
             team_roles=[(self.team, "admin")],
         )
+        self.organization.update_option("sentry:alerts_member_write", False)
 
         other_team = self.create_team(organization=self.organization, name="other-team")
         other_project = self.create_project(
             organization=self.organization, teams=[other_team], name="other-project"
         )
-        other_detector = self.create_detector(project=other_project, name="Other Detector")
+        other_detector = self.create_detector(
+            project=other_project, type=MetricIssue.slug, name="Other Detector"
+        )
 
         token = self._create_token("alerts:write", user=team_admin_user)
 

@@ -74,7 +74,9 @@ IntervalNames = Literal["year", "month", "week", "day", "hour", "minute"]
 INTERVAL_NAMES = ("year", "month", "week", "day", "hour", "minute")
 
 CRONTAB_WHITESPACE = re.compile(r"\s+")
-MONITOR_PROJECT_SCOPES = ("project:read", "org:write", "org:admin", "alerts:write")
+# TODO(api-write-scope-compat): Remove legacy org:write support once public
+# cron monitor clients have migrated to alerts:write.
+MONITOR_PROJECT_SCOPES = ("project:read", "org:write", "alerts:write")
 
 # XXX(dcramer): @reboot is not supported (as it cannot be)
 NONSTANDARD_CRONTAB_SCHEDULES = {

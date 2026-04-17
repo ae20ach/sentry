@@ -225,6 +225,23 @@ class OrganizationEventsAnomaliesEndpointTest(APITestCase):
 
     @with_feature("organizations:anomaly-detection-alerts")
     @with_feature("organizations:incidents")
+    def test_org_write_scope_cannot_post(self) -> None:
+        token = self._create_token("org:write")
+        data = self.get_test_data(self.project.id)
+        url = reverse(self.endpoint, args=[self.organization.slug])
+
+        with outbox_runner():
+            response = self.client.post(
+                url,
+                data=orjson.dumps(data),
+                content_type="application/json",
+                HTTP_AUTHORIZATION=f"Bearer {token.token}",
+            )
+
+        assert response.status_code == 403
+
+    @with_feature("organizations:anomaly-detection-alerts")
+    @with_feature("organizations:incidents")
     def test_alerts_write_scope_denies_other_team_projects(self) -> None:
         team_admin_user = self.create_user(is_superuser=False)
         self.create_member(
@@ -233,6 +250,7 @@ class OrganizationEventsAnomaliesEndpointTest(APITestCase):
             role="member",
             team_roles=[(self.team, "admin")],
         )
+        self.organization.update_option("sentry:alerts_member_write", False)
 
         other_team = self.create_team(organization=self.organization, name="other-team")
         other_project = self.create_project(
