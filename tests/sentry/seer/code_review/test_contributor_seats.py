@@ -38,12 +38,65 @@ class ShouldIncrementContributorSeatTest(TestCase):
         result = should_increment_contributor_seat(self.organization, self.repo, self.contributor)
         assert result is False
 
-    def test_returns_false_when_no_code_review_or_autofix_enabled(self) -> None:
+    @patch(
+        "sentry.seer.code_review.contributor_seats.bulk_get_project_preferences",
+        return_value={},
+    )
+    def test_returns_false_when_no_code_review_or_autofix_enabled(
+        self, mock_bulk_get_project_preferences: MagicMock
+    ) -> None:
         with self.feature("organizations:seat-based-seer-enabled"):
             result = should_increment_contributor_seat(
                 self.organization, self.repo, self.contributor
             )
             assert result is False
+
+    @patch(
+        "sentry.seer.code_review.contributor_seats.quotas.backend.check_seer_quota",
+        return_value=True,
+    )
+    def test_returns_false_when_autofix_disabled(self, mock_quota: MagicMock) -> None:
+        self.create_repository_settings(repository=self.repo, enabled_code_review=False)
+
+        with self.subTest("no SeerProjectRepository row for repo when flag on"):
+            other_repo = self.create_repo(
+                project=self.project,
+                provider="integrations:github",
+                integration_id=self.integration.id,
+            )
+            SeerProjectRepository.objects.create(project=self.project, repository=other_repo)
+
+            with self.feature(
+                {
+                    "organizations:seat-based-seer-enabled": True,
+                    "organizations:seer-project-settings-read-from-sentry": True,
+                }
+            ):
+                result = should_increment_contributor_seat(
+                    self.organization, self.repo, self.contributor
+                )
+                assert result is False
+                mock_quota.assert_not_called()
+
+        mock_quota.reset_mock()
+
+        with self.subTest("Seer preferences exclude repo when flag off"):
+            with (
+                patch(
+                    "sentry.seer.code_review.contributor_seats.bulk_get_project_preferences",
+                    return_value={
+                        str(self.project.id): {
+                            "repositories": [{"repository_id": self.repo.id + 1}],
+                        },
+                    },
+                ),
+                self.feature("organizations:seat-based-seer-enabled"),
+            ):
+                result = should_increment_contributor_seat(
+                    self.organization, self.repo, self.contributor
+                )
+                assert result is False
+                mock_quota.assert_not_called()
 
     def test_returns_false_when_repo_has_no_integration_id(self) -> None:
         repo_no_integration = self.create_repo(
@@ -97,19 +150,40 @@ class ShouldIncrementContributorSeatTest(TestCase):
     def test_returns_true_when_autofix_enabled_and_quota_available(
         self, mock_quota: MagicMock
     ) -> None:
-        SeerProjectRepository.objects.create(project=self.project, repository=self.repo)
+        with self.subTest("reads from SeerProjectRepository when flag on"):
+            SeerProjectRepository.objects.create(project=self.project, repository=self.repo)
 
-        with self.feature(
-            {
-                "organizations:seat-based-seer-enabled": True,
-                "organizations:seer-project-settings-read-from-sentry": True,
-            }
-        ):
-            result = should_increment_contributor_seat(
-                self.organization, self.repo, self.contributor
-            )
-            assert result is True
-            mock_quota.assert_called_once()
+            with self.feature(
+                {
+                    "organizations:seat-based-seer-enabled": True,
+                    "organizations:seer-project-settings-read-from-sentry": True,
+                }
+            ):
+                result = should_increment_contributor_seat(
+                    self.organization, self.repo, self.contributor
+                )
+                assert result is True
+                mock_quota.assert_called_once()
+
+        mock_quota.reset_mock()
+
+        with self.subTest("reads from Seer preferences when flag off"):
+            with (
+                patch(
+                    "sentry.seer.code_review.contributor_seats.bulk_get_project_preferences",
+                    return_value={
+                        str(self.project.id): {
+                            "repositories": [{"repository_id": self.repo.id}],
+                        },
+                    },
+                ),
+                self.feature("organizations:seat-based-seer-enabled"),
+            ):
+                result = should_increment_contributor_seat(
+                    self.organization, self.repo, self.contributor
+                )
+                assert result is True
+                mock_quota.assert_called_once()
 
     @patch(
         "sentry.seer.code_review.contributor_seats.quotas.backend.check_seer_quota",
