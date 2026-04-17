@@ -8,13 +8,10 @@ export type SimilarItem = {
   aggregate?: {
     exception: number;
     message: number;
-    shouldBeGrouped?: string;
   };
-  score?: Record<string, number | null>;
   scoresByInterface?: {
     exception: Array<[string, number | null]>;
-    message: Array<[string, any | null]>;
-    shouldBeGrouped?: Array<[string, string | null]>;
+    message: Array<[string, number | null]>;
   };
 };
 
@@ -61,7 +58,6 @@ export function processSimilarItem(
 
   return {
     issue,
-    score: scoreMap as Record<string, number | null>,
     scoresByInterface: scoresByInterface as SimilarItem['scoresByInterface'],
     aggregate: aggregate as SimilarItem['aggregate'],
     isBelowThreshold,

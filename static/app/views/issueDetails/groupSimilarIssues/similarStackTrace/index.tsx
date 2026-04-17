@@ -1,6 +1,7 @@
 import {Fragment, useCallback, useState} from 'react';
-import styled from '@emotion/styled';
 import {skipToken, useMutation, useQuery} from '@tanstack/react-query';
+
+import {Heading, Text} from '@sentry/scraps/text';
 
 import {mergeGroups} from 'sentry/actionCreators/group';
 import {EmptyStateWarning} from 'sentry/components/emptyStateWarning';
@@ -173,17 +174,15 @@ export function SimilarStackTrace({project}: Props) {
 
   return (
     <Fragment>
-      <HeaderWrapper>
-        <Title>{t('Issues with a similar stack trace')}</Title>
-        <small>
-          {t(
-            'This is an experimental feature. Data may not be immediately available while we process merges.'
-          )}
-        </small>
-      </HeaderWrapper>
+      <Heading as="h4" size="lg">
+        {t('Issues with a similar stack trace')}
+      </Heading>
+      <Text as="p" variant="muted" size="sm">
+        {t('Experimental. Newly merged issues may take a moment to appear.')}
+      </Text>
       {isError ? (
         <LoadingError
-          message={t('Unable to load similar issues, please try again later')}
+          message={t("Couldn't load similar issues. Try again in a moment.")}
           onRetry={() => refetch()}
         />
       ) : loading ? (
@@ -219,26 +218,13 @@ function getEmptyMessage(
 ) {
   if (!platformSupportsLongStacktraces) {
     return t(
-      "There don't seem to be any similar issues. This can occur when the issue has no stacktrace or in-app frames, or when the stacktrace has over 30 frames."
+      'No similar issues found. This can happen when the issue has no stacktrace or in-app frames, or when the stacktrace has over 30 frames.'
     );
   }
   if (hasEmbeddings) {
     return t(
-      "There don't seem to be any similar issues. This can occur when the issue has no stacktrace or in-app frames."
+      'No similar issues found. This can happen when the issue has no stacktrace or in-app frames.'
     );
   }
-  return t("There don't seem to be any similar issues.");
+  return t('No similar issues found.');
 }
-
-const Title = styled('h4')`
-  font-size: ${p => p.theme.font.size.lg};
-  margin-bottom: ${p => p.theme.space.sm};
-`;
-
-const HeaderWrapper = styled('div')`
-  margin-bottom: ${p => p.theme.space.xl};
-
-  small {
-    color: ${p => p.theme.tokens.content.secondary};
-  }
-`;
