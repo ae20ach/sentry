@@ -289,7 +289,7 @@ def get_legacy_alert_mutation_scopes(view: APIView, method: str | None) -> tuple
     return tuple(scopes)
 
 
-class OrganizationAlertMutationPermission(OrganizationPermission):
+class OrganizationAlertingMutationPermission(OrganizationPermission):
     scope_map = {
         "GET": ["org:read", "org:write", "org:admin", "alerts:read"],
         "POST": ["alerts:write"],
@@ -337,11 +337,11 @@ class OrganizationAlertMutationPermission(OrganizationPermission):
         )
 
 
-class OrganizationAlertRulePermission(OrganizationAlertMutationPermission):
+class OrganizationAlertRulePermission(OrganizationAlertingMutationPermission):
     pass
 
 
-class OrganizationDetectorPermission(OrganizationAlertMutationPermission):
+class OrganizationDetectorPermission(OrganizationAlertingMutationPermission):
     pass
 
 
