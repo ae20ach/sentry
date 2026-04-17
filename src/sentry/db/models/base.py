@@ -392,6 +392,21 @@ def __model_class_prepared(sender: Any, **kwargs: Any) -> None:
             f"Please set `__relocation_scope__ = RelocationScope.Excluded` on the model definition."
         )
 
+    # Validate partitioned model configuration
+    from sentry.db.models.partitioned import PartitionConfig
+
+    partitioning = getattr(sender, "partitioning", None)
+    if partitioning is not None and isinstance(partitioning, PartitionConfig):
+        # Validate that all partition key columns exist on the model
+        for field_name in partitioning.key:
+            try:
+                sender._meta.get_field(field_name)
+            except Exception:
+                raise ValueError(
+                    f"{sender!r} defines partitioning key column '{field_name}' "
+                    f"that does not exist on the model."
+                )
+
     from sentry.hybridcloud.outbox.base import ReplicatedCellModel, ReplicatedControlModel
 
     if issubclass(sender, ReplicatedControlModel):
