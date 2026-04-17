@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 
+import sentry_sdk
 from django.db import router, transaction
 from orjson import JSONDecodeError
 from urllib3.exceptions import HTTPError
@@ -65,10 +66,13 @@ def _is_autofix_enabled_for_repo(organization: Organization, repository_id: int)
     try:
         preferences = bulk_get_project_preferences(organization.id, project_ids)
     except (SeerApiError, HTTPError, JSONDecodeError):
-        logger.exception(
+        logger.warning(
             "seer.contributor_seats.autofix_check_error",
             extra={"organization_id": organization.id, "repository_id": repository_id},
         )
+        return False
+    except Exception as e:
+        sentry_sdk.capture_exception(e, level="warning")
         return False
 
     return any(
