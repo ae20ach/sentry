@@ -131,7 +131,7 @@ export function LogsExportModal({
         <Stack gap="xl">
           <Text>
             {t(
-              'If you select more than %s rows or to export all columns of data your file will be sent to your email address.',
+              'If you select more than %s rows your file will be sent to your email address.',
               ROW_COUNT_VALUE_SYNC_LIMIT
             )}
           </Text>
