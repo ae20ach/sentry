@@ -178,6 +178,25 @@ class RemovePartition(ModelOperation):
         return f"{self.name_lower}_remove_{self.partition.name}"
 
 
+def _execute_outside_transaction(schema_editor, sql: str) -> None:
+    """
+    Execute SQL outside of a transaction, required for CONCURRENTLY operations.
+
+    CONCURRENTLY DDL cannot run inside a transaction block. In production,
+    CheckedMigration sets atomic=False so we're already outside a transaction.
+    In tests, we may be inside a transaction — in that case, fall back to
+    the non-CONCURRENTLY variant to avoid errors.
+    """
+    conn = schema_editor.connection
+    if conn.in_atomic_block:
+        # Inside a transaction (e.g., test runner) — CONCURRENTLY would fail.
+        # Fall back to the non-concurrent variant.
+        sql = sql.replace(" CONCURRENTLY", "", 1)
+        schema_editor.execute(sql)
+    else:
+        schema_editor.execute(sql)
+
+
 def _partition_index_name(partition_table: str, index_name: str, max_length: int = 63) -> str:
     """
     Generate a unique index name scoped to a partition table.
@@ -226,14 +245,16 @@ class AddPartitionIndex(IndexOperation):
             cloned_index = self.index.clone()
             cloned_index.name = idx_name
             sql_str = self._create_index_sql(schema_editor, model, cloned_index, partition_table)
-            schema_editor.execute(sql_str)
+            _execute_outside_transaction(schema_editor, sql_str)
 
     def _create_index_sql(self, schema_editor, model, index, table_name):
-        """Generate CREATE INDEX SQL targeting a specific partition table."""
+        """Generate CREATE INDEX CONCURRENTLY SQL targeting a specific partition table."""
         sql = index.create_sql(model, schema_editor)
-        # Replace the parent table name with the partition table name
         parent_table = model._meta.db_table
         sql_str = str(sql)
+        # Add CONCURRENTLY after CREATE INDEX
+        sql_str = sql_str.replace("CREATE INDEX", "CREATE INDEX CONCURRENTLY", 1)
+        # Replace the parent table name with the partition table name
         sql_str = sql_str.replace(
             schema_editor.quote_name(parent_table),
             schema_editor.quote_name(table_name),
@@ -255,7 +276,10 @@ class AddPartitionIndex(IndexOperation):
 
         for partition_table in partitions:
             idx_name = _partition_index_name(partition_table, self.index.name)
-            schema_editor.execute(f"DROP INDEX IF EXISTS {schema_editor.quote_name(idx_name)}")
+            _execute_outside_transaction(
+                schema_editor,
+                f"DROP INDEX CONCURRENTLY IF EXISTS {schema_editor.quote_name(idx_name)}",
+            )
 
     def deconstruct(self):
         return (
@@ -315,7 +339,10 @@ class RemovePartitionIndex(IndexOperation):
 
         for partition_table in partitions:
             idx_name = _partition_index_name(partition_table, self.name)
-            schema_editor.execute(f"DROP INDEX IF EXISTS {schema_editor.quote_name(idx_name)}")
+            _execute_outside_transaction(
+                schema_editor,
+                f"DROP INDEX CONCURRENTLY IF EXISTS {schema_editor.quote_name(idx_name)}",
+            )
 
     def database_backwards(self, app_label, schema_editor, from_state, to_state):
         model = to_state.apps.get_model(app_label, self.model_name)
@@ -338,12 +365,13 @@ class RemovePartitionIndex(IndexOperation):
             cloned_index = index.clone()
             cloned_index.name = idx_name
             sql_str = self._create_index_sql(schema_editor, model, cloned_index, partition_table)
-            schema_editor.execute(sql_str)
+            _execute_outside_transaction(schema_editor, sql_str)
 
     def _create_index_sql(self, schema_editor, model, index, table_name):
         sql = index.create_sql(model, schema_editor)
         parent_table = model._meta.db_table
         sql_str = str(sql)
+        sql_str = sql_str.replace("CREATE INDEX", "CREATE INDEX CONCURRENTLY", 1)
         sql_str = sql_str.replace(
             schema_editor.quote_name(parent_table),
             schema_editor.quote_name(table_name),
