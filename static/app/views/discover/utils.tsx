@@ -784,7 +784,7 @@ export function handleAddMultipleQueriesToDashboard({
       interval: eventView.interval!,
       limit: widgetAsQueryParams?.limit,
       widgetType,
-    } as Widget;
+    };
   });
 
   openAddToDashboardModal({

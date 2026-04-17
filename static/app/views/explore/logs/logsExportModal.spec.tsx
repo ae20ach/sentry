@@ -52,7 +52,7 @@ const queryInfo: LogsQueryInfo = {
   sort: ['-timestamp'],
 };
 
-const tableData = new Array(500).map((_, i) =>
+const tableData = Array.from({length: 500}).map((_, i) =>
   LogFixture({
     id: `log-${i}`,
     [OurLogKnownFieldKey.PROJECT_ID]: `${i}`,

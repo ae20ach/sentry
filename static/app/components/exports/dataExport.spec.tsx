@@ -84,6 +84,7 @@ describe('DataExport', () => {
       `/organizations/${mockAuthorizedOrg.slug}/data-export/`,
       {
         data: {
+          format: 'csv',
           query_type: mockPayload.queryType,
           query_info: mockPayload.queryInfo,
         },
