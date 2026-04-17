@@ -109,17 +109,17 @@ export function LogsExportModal({
           },
           queryType: payload.queryType,
         });
-        return;
+      } else {
+        downloadLogs({
+          rows: tableData.slice(0, value.limit),
+          fields: queryInfo.field,
+          filename: 'logs',
+          format: value.format,
+        });
+        addSuccessMessage(t('Downloading file to your browser.'));
       }
 
-      downloadLogs({
-        rows: tableData.slice(0, value.limit),
-        fields: queryInfo.field,
-        filename: 'logs',
-        format: value.format,
-      });
-
-      addSuccessMessage(t('Downloading file to your browser.'));
+      closeModal();
     },
   });
 
