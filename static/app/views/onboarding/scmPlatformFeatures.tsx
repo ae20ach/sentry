@@ -23,11 +23,11 @@ import type {PlatformIntegration, PlatformKey} from 'sentry/types/project';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {isDisabledGamingPlatform} from 'sentry/utils/platform';
 import {useOrganization} from 'sentry/utils/useOrganization';
+import {GenericFooter} from 'sentry/views/onboarding/components/genericFooter';
 import {ScmFeatureSelectionCards} from 'sentry/views/onboarding/components/scmFeatureSelectionCards';
 import {ScmPlatformCard} from 'sentry/views/onboarding/components/scmPlatformCard';
 
 import {ScmSearchControl} from './components/scmSearchControl';
-import {ScmStepFooter} from './components/scmStepFooter';
 import {ScmStepHeader} from './components/scmStepHeader';
 import {ScmVirtualizedMenuList} from './components/scmVirtualizedMenuList';
 import {
@@ -474,24 +474,30 @@ export function ScmPlatformFeatures({onComplete, genBackButton}: StepProps) {
               />
             </Container>
           )}
-          <ScmStepFooter maxWidth={PLATFORM_CONTENT_WIDTH} leading={genBackButton?.()}>
-            <Button
-              priority="primary"
-              analyticsEventKey="onboarding.scm_platform_features_continue_clicked"
-              analyticsEventName="Onboarding: SCM Platform Features Continue Clicked"
-              analyticsParams={{
-                platform: currentPlatformKey ?? '',
-                source: showDetectedPlatforms ? 'detected' : 'manual',
-                features: currentFeatures,
-              }}
-              onClick={handleContinue}
-              disabled={!currentPlatformKey}
-            >
-              {t('Continue')}
-            </Button>
-          </ScmStepFooter>
         </MotionStack>
       </LayoutGroup>
+
+      <GenericFooter>
+        <Flex align="center" padding="0 3xl">
+          {genBackButton?.()}
+        </Flex>
+        <Flex align="center" padding="0 3xl" gap="md">
+          <Button
+            priority="primary"
+            analyticsEventKey="onboarding.scm_platform_features_continue_clicked"
+            analyticsEventName="Onboarding: SCM Platform Features Continue Clicked"
+            analyticsParams={{
+              platform: currentPlatformKey ?? '',
+              source: showDetectedPlatforms ? 'detected' : 'manual',
+              features: currentFeatures,
+            }}
+            onClick={handleContinue}
+            disabled={!currentPlatformKey}
+          >
+            {t('Continue')}
+          </Button>
+        </Flex>
+      </GenericFooter>
     </Flex>
   );
 }
