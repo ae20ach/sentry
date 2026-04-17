@@ -1,3 +1,4 @@
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from sentry.models.organizationcontributors import (
@@ -31,6 +32,21 @@ class ShouldIncrementContributorSeatTest(TestCase):
             external_identifier="12345",
             alias="testuser",
         )
+
+    def _mock_preference(self, repository_id: int) -> dict[str, Any]:
+        return {
+            "organization_id": self.organization.id,
+            "project_id": self.project.id,
+            "repositories": [
+                {
+                    "provider": self.repo.provider,
+                    "owner": "owner",
+                    "name": "name",
+                    "external_id": "external-id",
+                    "repository_id": repository_id,
+                },
+            ],
+        }
 
     def test_returns_false_when_seat_based_seer_disabled(self) -> None:
         self.create_repository_settings(repository=self.repo, enabled_code_review=True)
@@ -85,9 +101,7 @@ class ShouldIncrementContributorSeatTest(TestCase):
                 patch(
                     "sentry.seer.code_review.contributor_seats.bulk_get_project_preferences",
                     return_value={
-                        str(self.project.id): {
-                            "repositories": [{"repository_id": self.repo.id + 1}],
-                        },
+                        str(self.project.id): self._mock_preference(repository_id=self.repo.id + 1)
                     },
                 ),
                 self.feature("organizations:seat-based-seer-enabled"),
@@ -172,9 +186,7 @@ class ShouldIncrementContributorSeatTest(TestCase):
                 patch(
                     "sentry.seer.code_review.contributor_seats.bulk_get_project_preferences",
                     return_value={
-                        str(self.project.id): {
-                            "repositories": [{"repository_id": self.repo.id}],
-                        },
+                        str(self.project.id): self._mock_preference(repository_id=self.repo.id)
                     },
                 ),
                 self.feature("organizations:seat-based-seer-enabled"),
