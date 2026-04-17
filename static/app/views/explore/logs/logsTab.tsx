@@ -277,6 +277,7 @@ export function LogsTabContent({datePageFilterProps, tableExpando}: LogsTabProps
   const rawLogCountsAll = useRawCounts({dataset: DiscoverDatasets.OURLOGS});
   const rawLogCountsFiltered = useRawCounts({
     dataset: DiscoverDatasets.OURLOGS,
+    normalModeExtrapolated: true,
     query: logsSearch.formatString(),
   });
 
