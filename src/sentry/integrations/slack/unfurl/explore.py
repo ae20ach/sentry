@@ -247,12 +247,13 @@ def map_explore_query_args(url: str, args: Mapping[str, str | None]) -> Mapping[
         try:
             metric_parsed = json.loads(metric_json)
             for agg_field in metric_parsed.get("aggregateFields", []):
-                if "yAxes" in agg_field and isinstance(agg_field["yAxes"], list):
-                    y_axes.extend(agg_field["yAxes"])
                 if "groupBy" in agg_field and agg_field["groupBy"]:
                     group_bys.append(agg_field["groupBy"])
-                if chart_type is None and isinstance(agg_field.get("chartType"), int):
-                    chart_type = agg_field["chartType"]
+                # yAxes and chartType are per-chart; take them from the first entry only.
+                if not y_axes and isinstance(agg_field.get("yAxes"), list):
+                    y_axes.extend(agg_field["yAxes"])
+                    if isinstance(agg_field.get("chartType"), int):
+                        chart_type = agg_field["chartType"]
             for sort_by in metric_parsed.get("aggregateSortBys", []):
                 field = sort_by.get("field", "")
                 kind = sort_by.get("kind", "desc")
@@ -266,13 +267,14 @@ def map_explore_query_args(url: str, args: Mapping[str, str | None]) -> Mapping[
     for field_json in visualize_fields:
         try:
             parsed = json.loads(field_json)
-            if "yAxes" in parsed and isinstance(parsed["yAxes"], list):
-                y_axes.extend(parsed["yAxes"])
             if "groupBy" in parsed and parsed["groupBy"]:
                 group_bys.append(parsed["groupBy"])
-            if chart_type is None and isinstance(parsed.get("chartType"), int):
-                chart_type = parsed["chartType"]
-        except (json.JSONDecodeError, TypeError):
+            # yAxes and chartType are per-chart; take them from the first entry only.
+            if not y_axes and isinstance(parsed.get("yAxes"), list):
+                y_axes.extend(parsed["yAxes"])
+                if isinstance(parsed.get("chartType"), int):
+                    chart_type = parsed["chartType"]
+        except (json.JSONDecodeError, TypeError, AttributeError):
             continue
 
     if not y_axes:
