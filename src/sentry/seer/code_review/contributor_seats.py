@@ -10,6 +10,8 @@ from __future__ import annotations
 import logging
 
 from django.db import router, transaction
+from orjson import JSONDecodeError
+from urllib3.exceptions import HTTPError
 
 from sentry import features, quotas
 from sentry.constants import DataCategory, ObjectStatus
@@ -62,7 +64,7 @@ def _is_autofix_enabled_for_repo(organization: Organization, repository_id: int)
 
     try:
         preferences = bulk_get_project_preferences(organization.id, project_ids)
-    except SeerApiError:
+    except (SeerApiError, HTTPError, JSONDecodeError):
         logger.exception(
             "seer.contributor_seats.autofix_check_error",
             extra={"organization_id": organization.id, "repository_id": repository_id},
