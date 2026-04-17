@@ -1172,6 +1172,9 @@ def _filter_option_to_config_setting(flt: _FilterSpec, setting: str) -> Mapping[
 
 
 def _should_extract_transaction_metrics(project: Project) -> bool:
+    if options.get("relay.transaction-metrics-extraction.disabled"):
+        return False
+
     return features.has(
         "organizations:transaction-metrics-extraction", project.organization
     ) and not killswitches.killswitch_matches_context(

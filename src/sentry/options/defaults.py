@@ -1504,6 +1504,11 @@ register("relay.static_auth", default={}, flags=FLAG_NOSTORE)
 # Example value: [{"project_id": 42}, {"project_id": 123}]
 register("relay.drop-transaction-metrics", default=[], flags=FLAG_AUTOMATOR_MODIFIABLE)
 
+# When True, disables transaction metrics extraction globally.
+register(
+    "relay.transaction-metrics-extraction.disabled", default=False, flags=FLAG_AUTOMATOR_MODIFIABLE
+)
+
 # Relay should emit a usage metric to track total spans.
 register("relay.span-usage-metric", default=False, flags=FLAG_AUTOMATOR_MODIFIABLE)
 
