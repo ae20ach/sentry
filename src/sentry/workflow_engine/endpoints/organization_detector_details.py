@@ -13,6 +13,7 @@ from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import cell_silo_endpoint
 from sentry.api.bases import OrganizationDetectorPermission, OrganizationEndpoint
+from sentry.api.bases.organization import get_organization_id
 from sentry.api.exceptions import ResourceDoesNotExist
 from sentry.api.serializers import serialize
 from sentry.apidocs.constants import (
@@ -67,15 +68,6 @@ def _check_metric_detector_allowed(detector: Detector, organization: Organizatio
         return
     if not is_metric_subscription_allowed(dataset, organization):
         raise ResourceDoesNotExist
-
-
-def _get_organization_id(
-    organization: Organization | RpcOrganization | RpcUserOrganizationContext,
-) -> int:
-    if isinstance(organization, RpcUserOrganizationContext):
-        return organization.organization.id
-
-    return organization.id
 
 
 def remove_detector(request: Request, organization: Organization, detector: Detector) -> Response:
@@ -134,6 +126,8 @@ def get_detector_validator(
 @cell_silo_endpoint
 @extend_schema(tags=["Monitors"])
 class OrganizationDetectorDetailsEndpoint(OrganizationEndpoint):
+    allow_any_team_alert_write_fallback = True
+
     def get_alert_mutation_projects(
         self,
         request: Request,
@@ -151,7 +145,7 @@ class OrganizationDetectorDetailsEndpoint(OrganizationEndpoint):
         except ValidationError:
             return None
 
-        organization_id = _get_organization_id(organization)
+        organization_id = get_organization_id(organization)
         detector = (
             Detector.objects.select_related("project")
             .filter(

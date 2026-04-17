@@ -233,6 +233,15 @@ class OrganizationDataExportPermission(OrganizationPermission):
     }
 
 
+def get_organization_id(
+    organization: Organization | RpcOrganization | RpcUserOrganizationContext,
+) -> int:
+    if isinstance(organization, RpcUserOrganizationContext):
+        return organization.organization.id
+
+    return organization.id
+
+
 def _has_any_team_scope(request: Request, scope: str) -> bool:
     if not request.access.team_ids_with_membership:
         return False
