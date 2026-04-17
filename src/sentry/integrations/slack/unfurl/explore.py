@@ -39,31 +39,39 @@ TOP_N = 5
 EXPLORE_CHART_SIZE: ChartSize = {"width": 1200, "height": 400}
 
 
-class ExploreDatasetDefaults(TypedDict):
-    title: str
-    y_axis: str
+class ExploreDatasetConfig(TypedDict):
+    title_prefix: str
+    default_y_axis: str
+    query_key: str
+    sort_key: str
 
 
-EXPLORE_DATASET_DEFAULTS: dict[SupportedTraceItemType, ExploreDatasetDefaults] = {
+EXPLORE_DATASET_CONFIGS: dict[SupportedTraceItemType, ExploreDatasetConfig] = {
     SupportedTraceItemType.SPANS: {
-        "title": "Explore Traces",
-        "y_axis": "count(span.duration)",
+        "title_prefix": "Explore Traces",
+        "default_y_axis": "count(span.duration)",
+        "query_key": "query",
+        "sort_key": "aggregateSort",
     },
     SupportedTraceItemType.LOGS: {
-        "title": "Explore Logs",
-        "y_axis": "count(message)",
+        "title_prefix": "Explore Logs",
+        "default_y_axis": "count(message)",
+        "query_key": "logsQuery",
+        "sort_key": "logsSortBys",
     },
     SupportedTraceItemType.TRACEMETRICS: {
-        "title": "Explore Metrics",
-        "y_axis": "sum(value)",
+        "title_prefix": "Explore Metrics",
+        "default_y_axis": "sum(value)",
+        "query_key": "query",
+        "sort_key": "aggregateSort",
     },
 }
 
 
-def _get_explore_dataset_defaults(dataset: SupportedTraceItemType) -> ExploreDatasetDefaults:
-    """Returns the default title and y_axis for the given explore dataset."""
-    return EXPLORE_DATASET_DEFAULTS.get(
-        dataset, EXPLORE_DATASET_DEFAULTS[SupportedTraceItemType.SPANS]
+def _get_explore_dataset_config(dataset: SupportedTraceItemType) -> ExploreDatasetConfig:
+    """Returns the config for the given explore dataset."""
+    return EXPLORE_DATASET_CONFIGS.get(
+        dataset, EXPLORE_DATASET_CONFIGS[SupportedTraceItemType.SPANS]
     )
 
 
@@ -125,11 +133,11 @@ def _unfurl_explore(
         chart_type = link.args.get("chart_type")
 
         explore_dataset = link.args.get("dataset", SupportedTraceItemType.SPANS)
-        defaults = _get_explore_dataset_defaults(explore_dataset)
+        dataset_config = _get_explore_dataset_config(explore_dataset)
 
         y_axes = params.getlist("yAxis")
         if not y_axes:
-            y_axes = [defaults["y_axis"]]
+            y_axes = [dataset_config["default_y_axis"]]
             params.setlist("yAxis", y_axes)
 
         group_bys = params.getlist("groupBy")
@@ -171,7 +179,7 @@ def _unfurl_explore(
             continue
 
         # Only one chart/y-axis is supported at a time in Explore
-        title = f"{defaults['title']} - {y_axes[0]}"
+        title = f"{dataset_config['title_prefix']} - {y_axes[0]}"
         unfurls[link.url] = SlackDiscoverMessageBuilder(
             title=title,
             chart_url=url,
@@ -230,6 +238,7 @@ def map_explore_query_args(url: str, args: Mapping[str, str | None]) -> Mapping[
     raw_query = QueryDict(parsed_url.query)
 
     explore_dataset = _get_explore_dataset(url)
+    dataset_config = _get_explore_dataset_config(explore_dataset)
 
     # Parse visualization params from the URL.
     # Each metric uses a "metric" JSON param with nested aggregateFields.
@@ -278,7 +287,7 @@ def map_explore_query_args(url: str, args: Mapping[str, str | None]) -> Mapping[
             continue
 
     if not y_axes:
-        y_axes = [_get_explore_dataset_defaults(explore_dataset)["y_axis"]]
+        y_axes = [dataset_config["default_y_axis"]]
 
     # Build query params
     query = QueryDict(mutable=True)
@@ -287,17 +296,21 @@ def map_explore_query_args(url: str, args: Mapping[str, str | None]) -> Mapping[
     if group_bys:
         query.setlist("groupBy", group_bys)
 
-    # Copy standard params
-    for param in ("project", "statsPeriod", "start", "end", "query", "environment", "interval"):
+    # Copy standard params (query and sort are handled separately per dataset)
+    for param in ("project", "statsPeriod", "start", "end", "environment", "interval"):
         values = raw_query.getlist(param)
         if values:
             query.setlist(param, values)
 
-    # Explore stores the aggregate sort as "aggregateSort" in the URL;
-    # the events-timeseries endpoint expects it as "sort".
-    aggregate_sort = raw_query.getlist("aggregateSort")
-    if aggregate_sort:
-        query.setlist("sort", aggregate_sort)
+    # Each dataset stores query/sort under different URL param keys.
+    # Map the dataset-specific key to the API's standard "query"/"sort" params.
+    query_values = raw_query.getlist(dataset_config["query_key"])
+    if query_values:
+        query.setlist("query", query_values)
+
+    sort_values = raw_query.getlist(dataset_config["sort_key"])
+    if sort_values:
+        query.setlist("sort", sort_values)
 
     # Metrics stores query and sort inside the metric JSON param
     if metric_query:

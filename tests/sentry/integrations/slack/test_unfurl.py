@@ -1971,6 +1971,31 @@ class UnfurlTest(TestCase):
         assert api_params["dataset"] == "logs"
         assert api_params["yAxis"] == "sum(payload_size)"
 
+    def test_map_explore_query_args_logs_query_and_sort(self) -> None:
+        url = f"https://sentry.io/organizations/{self.organization.slug}/explore/logs/?aggregateField=%7B%22yAxes%22%3A%5B%22count(message)%22%5D%7D&logsQuery=severity%3Aerror&logsSortBys=-timestamp&project={self.project.id}&statsPeriod=24h"
+        link_type, args = match_link(url)
+
+        if not args or not link_type:
+            raise AssertionError("Missing link_type/args")
+
+        assert link_type == LinkType.EXPLORE
+        assert args["dataset"] == SupportedTraceItemType.LOGS
+        assert args["query"]["query"] == "severity:error"
+        assert args["query"]["sort"] == "-timestamp"
+        assert args["query"]["yAxis"] == "count(message)"
+
+    def test_map_explore_query_args_spans_query_and_sort(self) -> None:
+        url = f"https://sentry.io/organizations/{self.organization.slug}/explore/traces/?visualize=%7B%22yAxes%22%3A%5B%22count(span.duration)%22%5D%7D&query=span.op%3Ahttp&aggregateSort=-count(span.duration)&project={self.project.id}&statsPeriod=24h"
+        link_type, args = match_link(url)
+
+        if not args or not link_type:
+            raise AssertionError("Missing link_type/args")
+
+        assert link_type == LinkType.EXPLORE
+        assert args["dataset"] == SupportedTraceItemType.SPANS
+        assert args["query"]["query"] == "span.op:http"
+        assert args["query"]["sort"] == "-count(span.duration)"
+
     @patch(
         "sentry.integrations.slack.unfurl.explore.client.get",
     )
