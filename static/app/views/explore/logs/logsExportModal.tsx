@@ -11,6 +11,7 @@ import type {ModalRenderProps} from 'sentry/actionCreators/modal';
 import type {LogsQueryInfo} from 'sentry/components/exports/dataExport';
 import {ExportQueryType, useDataExport} from 'sentry/components/exports/useDataExport';
 import {t} from 'sentry/locale';
+import type {SelectValue} from 'sentry/types/core';
 import {QUERY_PAGE_LIMIT} from 'sentry/views/explore/logs/constants';
 import {downloadLogs} from 'sentry/views/explore/logs/downloadLogs';
 import type {OurLogsResponseItem} from 'sentry/views/explore/logs/types';
@@ -46,16 +47,18 @@ type LogsExportModalProps = ModalRenderProps & {
 };
 
 function generateRowOptions(estimatedRowCount: number) {
-  const rowOptions = ROW_COUNT_VALUES.map(value => ({label: value, value})).filter(
-    ({value}) => value <= estimatedRowCount
-  );
+  const rowOptions: Array<SelectValue<number>> = ROW_COUNT_VALUES.map(value => ({
+    label: value,
+    value,
+  })).filter(({value}) => value <= estimatedRowCount);
 
   if (
     !rowOptions.length ||
-    estimatedRowCount > rowOptions[rowOptions.length - 1]!.value
+    (estimatedRowCount > rowOptions[rowOptions.length - 1]!.value &&
+      rowOptions.length < ROW_COUNT_VALUES.length)
   ) {
     rowOptions.push({
-      label: estimatedRowCount,
+      label: `${estimatedRowCount} (All)`,
       value: estimatedRowCount,
     });
   }
