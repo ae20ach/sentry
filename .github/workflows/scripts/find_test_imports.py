@@ -1,13 +1,4 @@
 #!/usr/bin/env python3
-"""Find test files that directly import a given Python source module.
-
-Fallback for coverage-based test selection when a changed source file has no
-per-test coverage data. This happens with files like Pydantic model definitions,
-where the class body executes at module load time (before any per-test coverage
-context is active), so the coverage DB never records a link between the source
-file and the tests that use it.
-"""
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -19,7 +10,7 @@ def source_file_to_module(repo_relative_path: str) -> str | None:
     return repo_relative_path.removeprefix("src/").removesuffix(".py").replace("/", ".")
 
 
-def find_test_importers(source_files: list[str], repo_root: Path) -> set[str]:
+def find_test_imports(source_files: list[str], repo_root: Path) -> set[str]:
     modules: dict[str, str] = {}
     for f in source_files:
         m = source_file_to_module(f)

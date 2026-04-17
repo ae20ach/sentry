@@ -22,8 +22,7 @@ import sqlite3
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
-from find_test_importers import find_test_importers  # noqa: E402
+from find_test_imports import find_test_imports
 
 # -- Path conventions --
 # The coverage DB stores paths relative to the getsentry rootdir:
@@ -217,7 +216,7 @@ def main() -> int:
             # Union with static import search so files invisible to coverage are still caught.
             changed_source_files = [f for f in changed if not _is_test(f) and f.endswith(".py")]
             if changed_source_files:
-                static_tests = find_test_importers(changed_source_files, Path.cwd())
+                static_tests = find_test_imports(changed_source_files, Path.cwd())
                 static_tests = {
                     f
                     for f in static_tests
