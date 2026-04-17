@@ -12,6 +12,7 @@ import type {LogsQueryInfo} from 'sentry/components/exports/dataExport';
 import {ExportQueryType, useDataExport} from 'sentry/components/exports/useDataExport';
 import {t} from 'sentry/locale';
 import type {SelectValue} from 'sentry/types/core';
+import {formatNumber} from 'sentry/utils/number/formatNumber';
 import {QUERY_PAGE_LIMIT} from 'sentry/views/explore/logs/constants';
 import {downloadLogs} from 'sentry/views/explore/logs/downloadLogs';
 import type {OurLogsResponseItem} from 'sentry/views/explore/logs/types';
@@ -48,7 +49,7 @@ type LogsExportModalProps = ModalRenderProps & {
 
 function generateRowOptions(estimatedRowCount: number) {
   const rowOptions: Array<SelectValue<number>> = ROW_COUNT_VALUES.map(value => ({
-    label: value,
+    label: formatNumber(value),
     value,
   })).filter(({value}) => value <= estimatedRowCount);
 
@@ -58,7 +59,7 @@ function generateRowOptions(estimatedRowCount: number) {
       rowOptions.length < ROW_COUNT_VALUES.length)
   ) {
     rowOptions.push({
-      label: `${estimatedRowCount} (All)`,
+      label: t('%s (All)', formatNumber(estimatedRowCount)),
       value: estimatedRowCount,
     });
   }
@@ -132,7 +133,7 @@ export function LogsExportModal({
           <Text>
             {t(
               'If you select more than %s rows your file will be sent to your email address.',
-              ROW_COUNT_VALUE_SYNC_LIMIT
+              formatNumber(ROW_COUNT_VALUE_SYNC_LIMIT)
             )}
           </Text>
           <form.AppField name="format">
