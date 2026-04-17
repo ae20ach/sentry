@@ -1,3 +1,4 @@
+import type {ReactNode} from 'react';
 import {OrganizationFixture} from 'sentry-fixture/organization';
 
 import {render, screen} from 'sentry-test/reactTestingLibrary';
@@ -6,7 +7,9 @@ import {PrebuiltDashboardRenderer} from 'sentry/views/dashboards/prebuiltDashboa
 import {PrebuiltDashboardId} from 'sentry/views/dashboards/utils/prebuiltConfigs';
 
 jest.mock('sentry/views/dashboards/detail', () => ({
-  DashboardDetailWithInjectedProps: () => <div data-test-id="dashboard-detail" />,
+  DashboardDetailWithInjectedProps: ({children}: {children?: ReactNode}) => (
+    <div data-test-id="dashboard-detail">{children}</div>
+  ),
 }));
 
 jest.mock('sentry/views/dashboards/utils/usePopulateLinkedDashboards', () => ({

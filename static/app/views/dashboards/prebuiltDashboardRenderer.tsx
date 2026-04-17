@@ -1,6 +1,6 @@
 import {Alert} from '@sentry/scraps/alert';
 import {Button} from '@sentry/scraps/button';
-import {Container} from '@sentry/scraps/layout';
+import {Stack} from '@sentry/scraps/layout';
 import {Link} from '@sentry/scraps/link';
 
 import {useDismissable} from 'sentry/components/banner';
@@ -93,10 +93,10 @@ export function PrebuiltDashboardRenderer({
     pageFilters.selection.projects.includes(6178942) &&
     isAiAgentsOverview;
 
-  return (
-    <LoadingContainer isLoading={isLoading} showChildrenWhileLoading={false}>
-      {dashboardId && (
-        <Container padding="xl 3xl 0">
+  const dashboardAlerts =
+    dashboardId || showSeerDataBanner ? (
+      <Stack gap="lg">
+        {dashboardId ? (
           <Alert variant="info" showIcon>
             {tct(
               'Insights pages are moving to Dashboards. Same functionality you love with more customization (and a less cheesy name). [link:View this page on Dashboards]',
@@ -112,11 +112,9 @@ export function PrebuiltDashboardRenderer({
               }
             )}
           </Alert>
-        </Container>
-      )}
+        ) : null}
 
-      {showSeerDataBanner && (
-        <Container padding="xl 3xl 0">
+        {showSeerDataBanner ? (
           <Alert
             variant="warning"
             trailingItems={
@@ -131,14 +129,20 @@ export function PrebuiltDashboardRenderer({
             SENTRY EMPLOYEES: Transaction size limits make seer instrumentation
             incomplete. Data shown here does not reflect actual state.
           </Alert>
-        </Container>
-      )}
+        ) : null}
+      </Stack>
+    ) : null;
+
+  return (
+    <LoadingContainer isLoading={isLoading} showChildrenWhileLoading={false}>
       <DashboardDetail
         dashboard={dashboard}
         dashboards={[]}
         initialState={DashboardState.EMBEDDED}
         storageNamespace={storageNamespace}
-      />
+      >
+        {dashboardAlerts}
+      </DashboardDetail>
     </LoadingContainer>
   );
 }

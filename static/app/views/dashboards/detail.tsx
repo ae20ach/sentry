@@ -9,7 +9,7 @@ import isEqualWith from 'lodash/isEqualWith';
 import omit from 'lodash/omit';
 import pick from 'lodash/pick';
 
-import {Stack} from '@sentry/scraps/layout';
+import {Container, Stack} from '@sentry/scraps/layout';
 
 import {
   createDashboard,
@@ -1042,7 +1042,7 @@ class DashboardDetail extends Component<Props, State> {
   };
 
   renderDefaultDashboardDetail() {
-    const {organization, dashboard, dashboards, location} = this.props;
+    const {children, organization, dashboard, dashboards, location} = this.props;
     const {modifiedDashboard, dashboardState, widgetLimitReached} = this.state;
     return (
       <PageFiltersContainer
@@ -1083,6 +1083,7 @@ class DashboardDetail extends Component<Props, State> {
                   />
                 </StyledPageHeader>
                 <HookHeader organization={organization} />
+                {children ? <Container marginBottom="xl">{children}</Container> : null}
                 <FiltersBar
                   dashboard={dashboard}
                   dashboardPermissions={dashboard.permissions}
@@ -1151,6 +1152,7 @@ class DashboardDetail extends Component<Props, State> {
   renderDashboardDetail() {
     const {
       api,
+      children,
       organization,
       dashboard,
       dashboards,
@@ -1278,6 +1280,9 @@ class DashboardDetail extends Component<Props, State> {
                           location={location}
                           forceTransactions={metricsDataSide.forceTransactionsOnly}
                         >
+                          {children ? (
+                            <Container marginBottom="xl">{children}</Container>
+                          ) : null}
                           <FiltersBar
                             dashboard={modifiedDashboard ?? dashboard}
                             filters={(modifiedDashboard ?? dashboard).filters}
