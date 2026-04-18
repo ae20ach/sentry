@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeAlias, TypedDict, 
 from django.db.models import Q
 from sentry_sdk import logger as sentry_logger
 
-from sentry import features, options
+from sentry import options
 from sentry.types.group import PriorityLevel
 
 if TYPE_CHECKING:
@@ -213,20 +213,13 @@ class WorkflowEvaluation:
     def log_to(self, logger: Logger) -> bool:
         """
         Logs workflow evaluation data.
-        Logging may be skipped if the organization isn't opted in and logs are being
-        sampled.
+        Logging is sampled by workflow_engine.evaluation_log_sample_rate.
         Returns True if logged, False otherwise.
         """
-        # Check if we should log this evaluation
-        organization = self.data.organization
-        should_log = features.has("organizations:workflow-engine-log-evaluations", organization)
         direct_to_sentry = options.get("workflow_engine.evaluation_logs_direct_to_sentry")
 
-        if not should_log:
-            sample_rate = options.get("workflow_engine.evaluation_log_sample_rate")
-            should_log = random.random() < sample_rate
-
-        if not should_log:
+        sample_rate = options.get("workflow_engine.evaluation_log_sample_rate")
+        if random.random() >= sample_rate:
             return False
 
         log_str = "workflow_engine.process_workflows.evaluation"
