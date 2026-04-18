@@ -337,12 +337,6 @@ OCCURRENCE_REPLACEMENT_ATTRIBUTES: set[str] = {
     if definition.replacement
 }
 
-OCCURRENCE_REPLACEMENT_MAP: dict[str, str] = {
-    definition.public_alias: definition.replacement
-    for definition in OCCURRENCE_ATTRIBUTE_DEFINITIONS.values()
-    if definition.replacement
-}
-
 OCCURRENCE_INTERNAL_TO_SECONDARY_ALIASES_MAPPING: dict[str, set[str]] = {}
 
 for definition in OCCURRENCE_ATTRIBUTE_DEFINITIONS.values():
