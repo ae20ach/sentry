@@ -9,6 +9,7 @@ import {TopBar} from 'sentry/views/navigation/topBar';
 import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 import {SettingsBreadcrumb} from './settingsBreadcrumb';
+import {SettingsCommandPaletteActions} from './settingsCommandPaletteActions';
 import {SettingsHeader} from './settingsHeader';
 import {SettingsSearch} from './settingsSearch';
 
@@ -24,6 +25,7 @@ export function SettingsLayout({children}: Props) {
 
   return (
     <SettingsColumn>
+      <SettingsCommandPaletteActions />
       {hasPageFrame ? (
         <Fragment>
           <TopBar.Slot name="title">

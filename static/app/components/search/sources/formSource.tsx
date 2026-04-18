@@ -17,6 +17,7 @@ type FormSearchField = {
 };
 
 let ALL_FORM_FIELDS_CACHED: FormSearchField[] | null = null;
+let DEFAULT_FUZZY_PROMISE: Promise<Fuse<FormSearchField>> | null = null;
 
 type SearchMapParams = {
   fields: Record<string, Field>;
@@ -119,11 +120,50 @@ function getSearchMap() {
   return ALL_FORM_FIELDS_CACHED;
 }
 
+function createFormFieldSearch(
+  searchOptions?: Fuse.IFuseOptions<FormSearchField>
+): Promise<Fuse<FormSearchField>> {
+  return createFuzzySearch(getSearchMap(), {
+    ...searchOptions,
+    keys: ['title', 'description'],
+    getFn: strGetFn,
+  });
+}
+
+function getDefaultFormFieldSearch() {
+  if (DEFAULT_FUZZY_PROMISE === null) {
+    DEFAULT_FUZZY_PROMISE = createFormFieldSearch();
+  }
+
+  return DEFAULT_FUZZY_PROMISE;
+}
+
+function mapResults(fuzzy: Fuse<FormSearchField>, query: string): Result[] {
+  const resolvedTs = makeResolvedTs();
+
+  return fuzzy.search(query).map<Result>(({item, ...rest}) => ({
+    item: {
+      ...item,
+      sourceType: 'field',
+      resultType: 'field',
+      to: {pathname: item.route, hash: `#${encodeURIComponent(item.field.name)}`},
+      resolvedTs,
+    },
+    ...rest,
+  }));
+}
+
+export async function getFormSourceResults(query: string): Promise<Result[]> {
+  const fuzzy = await getDefaultFormFieldSearch();
+  return mapResults(fuzzy, query);
+}
+
 /**
  * @internal Used specifically for tests
  */
 export function setSearchMap(fields: FormSearchField[]) {
   ALL_FORM_FIELDS_CACHED = fields;
+  DEFAULT_FUZZY_PROMISE = null;
 }
 
 interface Props {
@@ -142,31 +182,13 @@ export function FormSource({searchOptions, query, children}: Props) {
   const [fuzzy, setFuzzy] = useState<Fuse<FormSearchField> | null>(null);
 
   const createSearch = useCallback(async () => {
-    setFuzzy(
-      await createFuzzySearch(getSearchMap(), {
-        ...searchOptions,
-        keys: ['title', 'description'],
-        getFn: strGetFn,
-      })
-    );
+    setFuzzy(await createFormFieldSearch(searchOptions));
   }, [searchOptions]);
 
   useEffect(() => void createSearch(), [createSearch]);
 
   const results = useMemo(() => {
-    const resolvedTs = makeResolvedTs();
-    return (
-      fuzzy?.search(query).map<Result>(({item, ...rest}) => ({
-        item: {
-          ...item,
-          sourceType: 'field',
-          resultType: 'field',
-          to: {pathname: item.route, hash: `#${encodeURIComponent(item.field.name)}`},
-          resolvedTs,
-        },
-        ...rest,
-      })) ?? []
-    );
+    return fuzzy ? mapResults(fuzzy, query) : [];
   }, [fuzzy, query]);
 
   return children({
