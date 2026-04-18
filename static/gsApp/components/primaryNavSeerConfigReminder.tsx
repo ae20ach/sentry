@@ -41,7 +41,13 @@ function useReminderData() {
   } = useQuery(getSeerOnboardingCheckQueryOptions({organization, staleTime: 60_000}));
 
   if (!canWrite || !hasSeatBasedSeer || isPending || isError) {
-    return {canSeeReminder: false, analyticsParams, title: null, description: null};
+    return {
+      canSeeReminder: false,
+      analyticsParams,
+      title: null,
+      description: null,
+      showSeerIcon: false,
+    };
   }
   const {hasSupportedScmIntegration, isAutofixEnabled, isCodeReviewEnabled} = data;
 
@@ -53,6 +59,7 @@ function useReminderData() {
       description: t(
         'Seer is enabled, but Github is not connected. Connect your GitHub account to enable Autofix and Code Review.'
       ),
+      showSeerIcon: false,
     };
   }
 
@@ -60,15 +67,11 @@ function useReminderData() {
     return {
       canSeeReminder: true,
       analyticsParams,
-      title: (
-        <Flex align="center" gap="sm">
-          <IconSeer />
-          {t('Start using Autofix')}
-        </Flex>
-      ),
+      title: t('Start using Autofix'),
       description: t(
         'Seer is enabled but projects are not connected to repos. Connect your source code and run Root Cause Analysis, Solution generation, and PR creation.'
       ),
+      showSeerIcon: true,
     };
   }
 
@@ -76,19 +79,21 @@ function useReminderData() {
     return {
       canSeeReminder: true,
       analyticsParams,
-      title: (
-        <Flex align="center" gap="sm">
-          <IconSeer />
-          {t('Start using Code Review')}
-        </Flex>
-      ),
+      title: t('Start using Code Review'),
       description: t(
         'Seer is enabled but Code Review is not configured. Configure Seer to automatically review PRs and flag potential issues.'
       ),
+      showSeerIcon: true,
     };
   }
 
-  return {canSeeReminder: false, analyticsParams, title: null, description: null};
+  return {
+    canSeeReminder: false,
+    analyticsParams,
+    title: null,
+    description: null,
+    showSeerIcon: false,
+  };
 }
 
 export function PrimaryNavSeerConfigReminder() {
@@ -100,7 +105,8 @@ export function PrimaryNavSeerConfigReminder() {
     state,
   } = usePrimaryNavigationButtonOverlay();
 
-  const {canSeeReminder, title, description, analyticsParams} = useReminderData();
+  const {canSeeReminder, title, description, analyticsParams, showSeerIcon} =
+    useReminderData();
 
   useEffect(() => {
     if (canSeeReminder) {
@@ -130,7 +136,10 @@ export function PrimaryNavSeerConfigReminder() {
       {isOpen && (
         <PrimaryNavigation.ButtonOverlay overlayProps={overlayProps}>
           <Stack gap="xl">
-            <Heading as="h3">{title}</Heading>
+            <Flex align="center" gap="sm">
+              {showSeerIcon ? <IconSeer /> : null}
+              <Heading as="h3">{title}</Heading>
+            </Flex>
             <Text>{description}</Text>
             <Flex justify="start">
               <LinkButton
