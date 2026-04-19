@@ -363,6 +363,7 @@ export type KnownSentryApiUrls =
   | '/organizations/$organizationIdOrSlug/integrations/$integrationId/migrate-opsgenie/'
   | '/organizations/$organizationIdOrSlug/integrations/$integrationId/repos/'
   | '/organizations/$organizationIdOrSlug/integrations/$integrationId/serverless-functions/'
+  | '/organizations/$organizationIdOrSlug/integrations/$integrationId/vercel/rotate-api-key/'
   | '/organizations/$organizationIdOrSlug/integrations/coding-agents/'
   | '/organizations/$organizationIdOrSlug/integrations/direct-enable/$providerKey/'
   | '/organizations/$organizationIdOrSlug/intercom-jwt/'
