@@ -244,6 +244,23 @@ function ConfigureIntegration() {
     }
   };
 
+  const handleVercelRotateApiKey = async () => {
+    try {
+      await api.requestPromise(
+        `/organizations/${organization.slug}/integrations/${integrationId}/vercel/rotate-api-key/`,
+        {method: 'POST'}
+      );
+      addSuccessMessage(t('Rotated SENTRY_AUTH_TOKEN and re-synced env vars in Vercel.'));
+    } catch (error) {
+      const responseJSON = (error as {responseJSON?: {detail?: unknown}})?.responseJSON;
+      addErrorMessage(
+        typeof responseJSON?.detail === 'string'
+          ? responseJSON.detail
+          : t('Could not rotate API key. Please try again.')
+      );
+    }
+  };
+
   const isOpsgeniePluginInstalled = () => {
     return (plugins || []).some(
       p =>
@@ -274,6 +291,40 @@ function ConfigureIntegration() {
         >
           {t('Open in Discord')}
         </LinkButton>
+      );
+    }
+
+    if (provider.key === 'vercel') {
+      return (
+        <Access access={['org:integrations']}>
+          {({hasAccess}) => (
+            <Confirm
+              disabled={!hasAccess}
+              header={t('Rotate API key')}
+              renderMessage={() => (
+                <Fragment>
+                  <p>
+                    {t(
+                      'This will generate a new SENTRY_AUTH_TOKEN, push it to Vercel for every project linked to this integration, and revoke the previously-issued token.'
+                    )}
+                  </p>
+                  <p>
+                    {t(
+                      'Other core Sentry env vars (DSN, organization, project, log drain, OTLP, public key) will also be re-synced. In-flight Vercel deployments using the old token will fail; trigger a redeploy after rotation.'
+                    )}
+                  </p>
+                </Fragment>
+              )}
+              onConfirm={() => {
+                handleVercelRotateApiKey();
+              }}
+            >
+              <Button priority="primary" disabled={!hasAccess}>
+                {t('Rotate API Key')}
+              </Button>
+            </Confirm>
+          )}
+        </Access>
       );
     }
 
