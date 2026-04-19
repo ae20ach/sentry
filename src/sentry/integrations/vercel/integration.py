@@ -29,6 +29,7 @@ from sentry.pipeline.views.nested import NestedPipelineView
 from sentry.projects.services.project.model import RpcProject
 from sentry.projects.services.project_key import project_key_service
 from sentry.projects.services.project_key.model import RpcProjectKey
+from sentry.sentry_apps.installations import SentryAppInstallationTokenCreator
 from sentry.sentry_apps.logic import SentryAppCreator
 from sentry.sentry_apps.models.sentry_app_installation import SentryAppInstallation
 from sentry.sentry_apps.models.sentry_app_installation_for_provider import (
@@ -37,6 +38,7 @@ from sentry.sentry_apps.models.sentry_app_installation_for_provider import (
 from sentry.sentry_apps.models.sentry_app_installation_token import SentryAppInstallationToken
 from sentry.shared_integrations.exceptions import ApiError, IntegrationError
 from sentry.users.models.user import User
+from sentry.users.services.user.model import RpcUser
 from sentry.utils.http import absolute_uri
 
 from .client import VercelClient
@@ -410,6 +412,115 @@ class VercelIntegration(IntegrationInstallation):
                 pass
             else:
                 raise
+
+    def rotate_auth_tokens(self, *, user: User | RpcUser) -> int:
+        """
+        Mint a new internal-integration auth token, push the new token plus all
+        core Sentry env vars to every Vercel project mapped through this
+        integration, and then revoke any previously-issued internal-integration
+        tokens for this Vercel installation.
+
+        Returns the number of project mappings that were re-synced.
+
+        Failure mode: if the Vercel API fails partway through, we delete the
+        newly-minted token (so it does not count against the per-installation
+        token cap on retry) and re-raise. The previously-active tokens are left
+        in place so the existing Sentry+Vercel integration keeps working.
+        """
+        sentry_app_installation = SentryAppInstallationForProvider.objects.get(
+            organization_id=self.organization_id, provider="vercel"
+        ).sentry_app_installation
+
+        old_token_ids = list(
+            SentryAppInstallationToken.objects.filter(
+                sentry_app_installation=sentry_app_installation
+            ).values_list("id", flat=True)
+        )
+
+        new_api_token = SentryAppInstallationTokenCreator(
+            sentry_app_installation=sentry_app_installation,
+        ).run(user=user)
+        new_token_value = new_api_token.token
+
+        try:
+            mappings = self.org_integration.config.get("project_mappings") or []
+            sentry_projects = {proj.id: proj for proj in self.organization.projects}
+
+            vercel_client = self.get_client()
+            for mapping in mappings:
+                [sentry_project_id, vercel_project_id] = mapping
+                sentry_project = sentry_projects.get(sentry_project_id)
+                if sentry_project is None:
+                    # The mapped Sentry project no longer exists in this org.
+                    # Skip it rather than failing the whole rotation; the next
+                    # config save will surface the broken mapping.
+                    continue
+
+                project_key = project_key_service.get_default_project_key(
+                    organization_id=self.organization_id, project_id=sentry_project_id
+                )
+                if not project_key:
+                    raise IntegrationError(
+                        f"Cannot rotate Vercel API key: project {sentry_project.slug} has no enabled DSN."
+                    )
+
+                vercel_project = vercel_client.get_project(vercel_project_id)
+                env_var_map = (
+                    VercelEnvVarMapBuilder()
+                    .with_organization(self.organization)
+                    .with_project(sentry_project)
+                    .with_project_key(project_key)
+                    .with_auth_token(new_token_value)
+                    .with_framework(vercel_project.get("framework"))
+                    .build()
+                )
+
+                for env_var, details in env_var_map.items():
+                    if env_var == "SENTRY_AUTH_TOKEN" and details["value"] is None:
+                        sentry_sdk.capture_message(
+                            "Setting SENTRY_AUTH_TOKEN env var with None value during Vercel rotate"
+                        )
+
+                    self.create_env_var(
+                        vercel_client,
+                        vercel_project_id,
+                        env_var,
+                        details["value"],
+                        details["type"],
+                        details["target"],
+                    )
+        except Exception:
+            # Roll back the freshly-minted token so we do not leak quota toward
+            # INTERNAL_INTEGRATION_TOKEN_COUNT_MAX on retries.
+            try:
+                new_api_token.delete()
+            except Exception:
+                logger.exception(
+                    "vercel.rotate_auth_tokens.cleanup_failed",
+                    extra={
+                        "organization_id": self.organization_id,
+                        "integration_id": self.model.id,
+                    },
+                )
+            raise
+
+        # Vercel env vars were updated successfully; safe to revoke old tokens.
+        if old_token_ids:
+            old_tokens = SentryAppInstallationToken.objects.filter(id__in=old_token_ids)
+            for old_token in old_tokens.select_related("api_token"):
+                try:
+                    old_token.api_token.delete()
+                except Exception:
+                    logger.exception(
+                        "vercel.rotate_auth_tokens.revoke_failed",
+                        extra={
+                            "organization_id": self.organization_id,
+                            "integration_id": self.model.id,
+                            "installation_token_id": old_token.id,
+                        },
+                    )
+
+        return len(mappings)
 
 
 class VercelIntegrationProvider(IntegrationProvider):

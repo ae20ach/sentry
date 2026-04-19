@@ -354,6 +354,9 @@ API_PUBLISH_STATUS_ALLOWLIST_DONT_MODIFY = {
         "GET",
         "POST",
     },
+    "/api/0/organizations/{organization_id_or_slug}/integrations/{integration_id}/vercel/rotate-api-key/": {
+        "POST"
+    },
     "/api/0/organizations/{organization_id_or_slug}/members/": {"GET", "POST"},
     "/api/0/organizations/{organization_id_or_slug}/external-users/": {"POST"},
     "/api/0/organizations/{organization_id_or_slug}/external-users/{external_user_id}/": {

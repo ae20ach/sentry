@@ -291,6 +291,9 @@ from sentry.integrations.api.endpoints.organization_integration_request import (
 from sentry.integrations.api.endpoints.organization_integration_serverless_functions import (
     OrganizationIntegrationServerlessFunctionsEndpoint,
 )
+from sentry.integrations.api.endpoints.organization_integration_vercel_rotate_api_key import (
+    OrganizationIntegrationVercelRotateApiKeyEndpoint,
+)
 from sentry.integrations.api.endpoints.organization_integrations_index import (
     OrganizationIntegrationsEndpoint,
 )
@@ -2023,6 +2026,11 @@ ORGANIZATION_URLS: list[URLPattern | URLResolver] = [
         r"^(?P<organization_id_or_slug>[^/]+)/integrations/(?P<integration_id>[^/]+)/serverless-functions/$",
         OrganizationIntegrationServerlessFunctionsEndpoint.as_view(),
         name="sentry-api-0-organization-integration-serverless-functions",
+    ),
+    re_path(
+        r"^(?P<organization_id_or_slug>[^/]+)/integrations/(?P<integration_id>[^/]+)/vercel/rotate-api-key/$",
+        OrganizationIntegrationVercelRotateApiKeyEndpoint.as_view(),
+        name="sentry-api-0-organization-integration-vercel-rotate-api-key",
     ),
     re_path(
         r"^(?P<organization_id_or_slug>[^/]+)/members/$",

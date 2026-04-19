@@ -627,6 +627,14 @@ default_manager.add(
         template="disconnected detector {detector_name} from workflow {workflow_name}",
     )
 )
+default_manager.add(
+    AuditLogEvent(
+        event_id=218,
+        name="INTEGRATION_ROTATE_API_KEY",
+        api_name="integration.rotate-api-key",
+        template="rotated the API key for {provider} integration",
+    )
+)
 
 default_manager.add(
     AuditLogEvent(
