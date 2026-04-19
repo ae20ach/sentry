@@ -82,7 +82,8 @@ class OrganizationIntegrationVercelRotateApiKeyTest(IntegrationTestCase):
         path = self.get_path(integration_id=integration.id)
         response = self.client.post(path, format="json")
         assert response.status_code == 400
-        assert response.data["detail"].startswith("Rotate is only supported")
+        body = orjson.loads(response.content)
+        assert body["detail"].startswith("Rotate is only supported")
 
     @responses.activate
     def test_rotate_no_mappings(self) -> None:
@@ -99,7 +100,7 @@ class OrganizationIntegrationVercelRotateApiKeyTest(IntegrationTestCase):
         path = self.get_path(integration_id=integration.id)
         response = self.client.post(path, format="json")
         assert response.status_code == 200
-        assert response.data == {"projectMappingsSynced": 0}
+        assert orjson.loads(response.content) == {"projectMappingsSynced": 0}
 
         # Old token revoked, new token minted, net count unchanged.
         new_token_count = SentryAppInstallationToken.objects.filter(
@@ -142,7 +143,7 @@ class OrganizationIntegrationVercelRotateApiKeyTest(IntegrationTestCase):
         path = self.get_path(integration_id=integration.id)
         response = self.client.post(path, format="json")
         assert response.status_code == 200, response.content
-        assert response.data == {"projectMappingsSynced": 1}
+        assert orjson.loads(response.content) == {"projectMappingsSynced": 1}
 
         env_calls = [
             orjson.loads(c.request.body)
@@ -178,12 +179,14 @@ class OrganizationIntegrationVercelRotateApiKeyTest(IntegrationTestCase):
         assert public_key_call["value"] == public_key
 
         # Old token revoked; only the rotated token survives.
-        remaining_tokens = SentryAppInstallationToken.objects.filter(
-            sentry_app_installation__sentryappinstallationforprovider__organization_id=self.organization.id,
-            sentry_app_installation__sentryappinstallationforprovider__provider="vercel",
+        remaining_tokens = list(
+            SentryAppInstallationToken.objects.filter(
+                sentry_app_installation__sentryappinstallationforprovider__organization_id=self.organization.id,
+                sentry_app_installation__sentryappinstallationforprovider__provider="vercel",
+            )
         )
-        assert remaining_tokens.count() == 1
-        assert remaining_tokens.first().api_token_id != old_token_id
+        assert len(remaining_tokens) == 1
+        assert remaining_tokens[0].api_token_id != old_token_id
 
     @responses.activate
     def test_rotate_vercel_failure_rolls_back_token(self) -> None:
