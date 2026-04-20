@@ -161,6 +161,8 @@ def _format_value(
         return f"[{parts}]"
     if isinstance(raw_value, datetime):
         return raw_value.isoformat()
+    if isinstance(raw_value, bool):
+        return "1" if raw_value else "0"
     if isinstance(raw_value, (int, float)):
         return str(raw_value)
     return _format_string_value(str(raw_value))
@@ -169,6 +171,8 @@ def _format_value(
 def _format_single_value(value: str | int | float | datetime) -> str:
     if isinstance(value, datetime):
         return value.isoformat()
+    if isinstance(value, bool):
+        return "1" if value else "0"
     if isinstance(value, (int, float)):
         return str(value)
     return _format_string_value(str(value))
