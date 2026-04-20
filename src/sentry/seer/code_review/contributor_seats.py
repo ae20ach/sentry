@@ -108,9 +108,9 @@ def should_increment_contributor_seat(
     """
     if (
         repo.integration_id is None
-        or not _has_code_review_or_autofix_enabled(organization, repo.id)
         or contributor.is_bot
         or not features.has("organizations:seat-based-seer-enabled", organization)
+        or not _has_code_review_or_autofix_enabled(organization, repo.id)
     ):
         return False
 
