@@ -264,7 +264,7 @@ def translate_metric_alert_to_detector_payload(data: dict[str, Any]) -> dict[str
 
     # build up config
     config: dict[str, Any] = {"detection_type": detection_type}
-    if data.get("comparisonDelta"):
+    if data.get("comparisonDelta") is not None:
         config["comparison_delta"] = int(data["comparisonDelta"] * 60)  # minutes -> seconds
 
     if data.get("sensitivity"):
@@ -331,6 +331,9 @@ def create_metric_alert(
                 )
             except Project.DoesNotExist:
                 raise ValidationError("Project slug must be passed")
+
+        if context_project is None:
+            raise ValidationError("Project slug must be passed")
 
         context = {
             "organization": organization,

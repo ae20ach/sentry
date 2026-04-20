@@ -654,6 +654,22 @@ class AlertRuleCreateEndpointTest(AlertRuleIndexBase, SnubaTestCase):
             )
         assert resp.data == ["Project slug must be passed"]
 
+    def test_workflow_engine_post_missing_projects(self) -> None:
+        data = {k: v for k, v in self.alert_rule_dict.items() if k != "projects"}
+        with self.feature(
+            [
+                "organizations:incidents",
+                "organizations:performance-view",
+                "organizations:workflow-engine-rule-serializers",
+            ]
+        ):
+            resp = self.get_error_response(
+                self.organization.slug,
+                status_code=400,
+                **data,
+            )
+        assert resp.data == ["Project slug must be passed"]
+
     def test_create_alert_rule_aci(self) -> None:
         with (
             outbox_runner(),
