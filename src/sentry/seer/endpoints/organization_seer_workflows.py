@@ -36,7 +36,9 @@ class OrganizationSeerWorkflowsEndpoint(OrganizationEndpoint):
         if not features.has("organizations:seer-night-shift", organization):
             raise NotFound
 
-        queryset = SeerNightShiftRun.objects.filter(organization_id=organization.id)
+        queryset = SeerNightShiftRun.objects.filter(
+            organization_id=organization.id
+        ).prefetch_related("issues")
 
         return self.paginate(
             request=request,

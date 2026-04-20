@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import defaultdict
 from typing import Any, TypedDict
 
 from sentry.api.serializers import Serializer, register
@@ -26,19 +25,10 @@ class SeerNightShiftRunResponse(TypedDict):
 
 @register(SeerNightShiftRun)
 class SeerNightShiftRunSerializer(Serializer):
-    def get_attrs(
-        self, item_list: list[SeerNightShiftRun], user: Any, **kwargs: Any
-    ) -> dict[SeerNightShiftRun, dict[str, list[SeerNightShiftRunIssue]]]:
-        issues_by_run: dict[int, list[SeerNightShiftRunIssue]] = defaultdict(list)
-        for issue in SeerNightShiftRunIssue.objects.filter(run_id__in=[r.id for r in item_list]):
-            issues_by_run[issue.run_id].append(issue)
-
-        return {run: {"issues": issues_by_run.get(run.id, [])} for run in item_list}
-
     def serialize(
         self,
         obj: SeerNightShiftRun,
-        attrs: dict[str, list[SeerNightShiftRunIssue]],
+        attrs: dict[str, Any],
         user: Any,
         **kwargs: Any,
     ) -> SeerNightShiftRunResponse:
@@ -48,7 +38,7 @@ class SeerNightShiftRunSerializer(Serializer):
             "triageStrategy": obj.triage_strategy,
             "errorMessage": obj.error_message,
             "extras": obj.extras or {},
-            "issues": [_serialize_issue(i) for i in attrs["issues"]],
+            "issues": [_serialize_issue(i) for i in obj.issues.all()],
         }
 
 
