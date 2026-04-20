@@ -171,7 +171,15 @@ def translate_metric_alert_to_detector_payload(data: dict[str, Any]) -> dict[str
     - timeWindow (minutes) -> time_window (seconds)
     """
     # build up data conditions
-    detection_type = data.get("detectionType", AlertRuleDetectionType.STATIC)
+    detection_type = data.get("detectionType")
+    if not detection_type:
+        if data.get("comparisonDelta"):
+            detection_type = AlertRuleDetectionType.PERCENT
+        elif data.get("seasonality") or data.get("sensitivity"):
+            detection_type = AlertRuleDetectionType.DYNAMIC
+        else:
+            detection_type = AlertRuleDetectionType.STATIC
+
     threshold_type = data.get("thresholdType", AlertRuleThresholdType.ABOVE.value)
     triggers = data.get("triggers", [])
     conditions: list[dict[str, Any]] = []
@@ -341,11 +349,11 @@ def create_metric_alert(
             "request": request,
             "user": request.user,
         }
-        validator = MetricIssueDetectorValidator(data=detector_data, context=context)
-        if not validator.is_valid():
-            raise ValidationError(validator.errors)
+        detector_validator = MetricIssueDetectorValidator(data=detector_data, context=context)
+        if not detector_validator.is_valid():
+            raise ValidationError(detector_validator.errors)
 
-        detector = validator.save()
+        detector = detector_validator.save()
 
         return Response(
             serialize(
