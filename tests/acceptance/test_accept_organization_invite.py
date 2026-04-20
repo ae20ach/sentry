@@ -10,6 +10,7 @@ from sentry.testutils.silo import no_silo_test
 
 # When we want to set this @cell_silo_test, we'll need to configure regions in order for invites to work.
 # See the accept_organization_invite.py#get_invite_state logic
+# Some change
 @no_silo_test
 class AcceptOrganizationInviteTest(AcceptanceTestCase):
     def setUp(self) -> None:
