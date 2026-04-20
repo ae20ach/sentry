@@ -1,4 +1,4 @@
-from typing import cast
+from typing import Any, cast
 
 import sentry_sdk
 from scm.providers.github.provider import GitHubProvider
@@ -8,11 +8,29 @@ from scm.types import Provider, Repository, RepositoryId
 
 from sentry.constants import ObjectStatus
 from sentry.integrations.errors import OrganizationIntegrationNotFound
+from sentry.integrations.github.client import GitHubApiClient
+from sentry.integrations.gitlab.client import GitLabApiClient
 from sentry.integrations.services.integration.service import integration_service
 from sentry.models.repository import Repository as RepositoryModel
 from sentry.scm.private.rate_limit import RedisRateLimitProvider
 from sentry.shared_integrations.exceptions import IntegrationError
 from sentry.utils import metrics
+
+
+class GitHubClientWrapper:
+    def __init__(self, client: GitHubApiClient) -> None:
+        self.client = client
+
+    def request(self, *args: Any, **kwargs: Any) -> Any:
+        return self.client._request(*args, **kwargs)
+
+
+class GitLabClientWrapper:
+    def __init__(self, client: GitLabApiClient) -> None:
+        self.client = client
+
+    def request(self, *args: Any, **kwargs: Any) -> Any:
+        return self.client._issue_request_with_auto_token_refresh(*args, **kwargs)
 
 
 def fetch_service_provider(
@@ -34,13 +52,13 @@ def fetch_service_provider(
 
     if integration.provider == "github":
         return GitHubProvider(
-            client,
+            GitHubClientWrapper(client),
             organization_id,
             repository,
             rate_limit_provider=rate_limit_provider or RedisRateLimitProvider(),
         )
     elif integration.provider == "gitlab":
-        return GitLabProvider(client, organization_id, repository)
+        return GitLabProvider(GitLabClientWrapper(client), organization_id, repository)
     else:
         return None
 
