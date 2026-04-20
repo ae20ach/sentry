@@ -26,13 +26,13 @@ from ..exceptions import (
 from ..response.base import BaseApiResponse
 
 
-class SessionSettings(TypedDict):
+class SessionSettings(TypedDict, total=False):
     timeout: int
     allow_redirects: bool
     # the below are taken from session.merge_environment_settings
-    proxies: dict[str, str]
+    proxies: dict[str, Any]
     stream: bool | None
-    verify: bool | str
+    verify: bool | str | None
     cert: str | tuple[str, str] | None
 
 
@@ -203,7 +203,7 @@ class BaseApiClient:
         stream: bool | None = None,
         raw_response: Literal[False] = ...,
         endpoint: str | None = None,
-    ) -> dict[str, Any] | str | list[Any]: ...
+    ) -> BaseApiResponse: ...
 
     def _request(
         self,
@@ -222,7 +222,7 @@ class BaseApiClient:
         stream: bool | None = None,
         raw_response: bool = False,
         endpoint: str | None = None,
-    ) -> dict[str, Any] | str | list[Any] | Response:
+    ) -> BaseApiResponse | Response:
         if allow_redirects is None:
             allow_redirects = self.allow_redirects
 
@@ -278,7 +278,7 @@ class BaseApiClient:
                 session_settings: SessionSettings = {
                     "timeout": timeout,
                     "allow_redirects": allow_redirects,
-                    **environment_settings,
+                    **environment_settings,  # type: ignore[typeddict-item]
                 }
                 resp: Response = session.send(finalized_request, **session_settings)
                 if raw_response:
@@ -327,23 +327,20 @@ class BaseApiClient:
 
         self.track_response_data(resp.status_code, None, resp, extra=extra)
 
-        if resp.status_code == 204:
-            return {}
-
-        response_data = BaseApiResponse.from_response(
+        # BaseApiResponse.from_response returns MappingApiResponse (subclass of dict)
+        # or SequenceApiResponse (subclass of list), or TextApiResponse (has str .text)
+        return BaseApiResponse.from_response(
             resp, allow_text=allow_text, ignore_webhook_errors=ignore_webhook_errors
         )
-        # BaseApiResponse.from_response returns dict, str, or list
-        return response_data
 
     # subclasses should override ``request``
     def request(
         self, method: str, path: str, *args: Any, **kwargs: Any
-    ) -> dict[str, Any] | str | list[Any] | Response:
+    ) -> BaseApiResponse | Response:
         return self._request(method, path, *args, **kwargs)
 
-    def delete(self, path: str, *args: Any, **kwargs: Any) -> dict[str, Any] | str | list[Any]:
-        return self.request("DELETE", path, *args, **kwargs)
+    def delete(self, path: str, *args: Any, **kwargs: Any) -> BaseApiResponse:
+        return self.request("DELETE", path, *args, **kwargs)  # type: ignore[return-value]
 
     def get_cache_key(self, path: str, method: str, query: str = "", data: str | None = "") -> str:
         if not data:
@@ -355,56 +352,56 @@ class BaseApiClient:
             + md5_text(self.build_url(path), method, query, data).hexdigest()
         )
 
-    def check_cache(self, cache_key: str) -> dict[str, Any] | str | list[Any] | None:
+    def check_cache(self, cache_key: str) -> BaseApiResponse | None:
         return cache.get(cache_key)
 
-    def set_cache(
-        self, cache_key: str, result: dict[str, Any] | str | list[Any], cache_time: int
-    ) -> None:
+    def set_cache(self, cache_key: str, result: BaseApiResponse, cache_time: int) -> None:
         cache.set(cache_key, result, cache_time)
 
-    def _get_cached(
-        self, path: str, method: str, *args: Any, **kwargs: Any
-    ) -> dict[str, Any] | str | list[Any]:
+    def _get_cached(self, path: str, method: str, *args: Any, **kwargs: Any) -> BaseApiResponse:
         data = kwargs.get("data", None)
         query = ""
         if kwargs.get("params", None):
             query = json.dumps(kwargs.get("params"))
 
         key = self.get_cache_key(path, method, query, data)
-        result = self.check_cache(key)
-        if result is None:
-            cache_time = kwargs.pop("cache_time", None) or self.cache_time
-            result = self.request(method, path, *args, **kwargs)
-            self.set_cache(key, result, cache_time)
+        cached_result = self.check_cache(key)
+        if cached_result is not None:
+            return cached_result
+
+        cache_time_val = kwargs.pop("cache_time", None) or self.cache_time
+        result = self.request(method, path, *args, **kwargs)
+        # request() returns BaseApiResponse when raw_response=False (the default)
+        assert isinstance(result, BaseApiResponse)
+        self.set_cache(key, result, cache_time_val)
         return result
 
-    def get_cached(self, path: str, *args: Any, **kwargs: Any) -> dict[str, Any] | str | list[Any]:
+    def get_cached(self, path: str, *args: Any, **kwargs: Any) -> BaseApiResponse:
         return self._get_cached(path, "GET", *args, **kwargs)
 
-    def get(self, path: str, *args: Any, **kwargs: Any) -> dict[str, Any] | str | list[Any]:
-        return self.request("GET", path, *args, **kwargs)
+    def get(self, path: str, *args: Any, **kwargs: Any) -> BaseApiResponse:
+        return self.request("GET", path, *args, **kwargs)  # type: ignore[return-value]
 
-    def patch(self, path: str, *args: Any, **kwargs: Any) -> dict[str, Any] | str | list[Any]:
-        return self.request("PATCH", path, *args, **kwargs)
+    def patch(self, path: str, *args: Any, **kwargs: Any) -> BaseApiResponse:
+        return self.request("PATCH", path, *args, **kwargs)  # type: ignore[return-value]
 
-    def post(self, path: str, *args: Any, **kwargs: Any) -> dict[str, Any] | str | list[Any]:
-        return self.request("POST", path, *args, **kwargs)
+    def post(self, path: str, *args: Any, **kwargs: Any) -> BaseApiResponse:
+        return self.request("POST", path, *args, **kwargs)  # type: ignore[return-value]
 
-    def put(self, path: str, *args: Any, **kwargs: Any) -> dict[str, Any] | str | list[Any]:
-        return self.request("PUT", path, *args, **kwargs)
+    def put(self, path: str, *args: Any, **kwargs: Any) -> BaseApiResponse:
+        return self.request("PUT", path, *args, **kwargs)  # type: ignore[return-value]
 
-    def head(self, path: str, *args: Any, **kwargs: Any) -> dict[str, Any] | str | list[Any]:
-        return self.request("HEAD", path, *args, **kwargs)
+    def head(self, path: str, *args: Any, **kwargs: Any) -> BaseApiResponse:
+        return self.request("HEAD", path, *args, **kwargs)  # type: ignore[return-value]
 
-    def head_cached(self, path: str, *args: Any, **kwargs: Any) -> dict[str, Any] | str | list[Any]:
+    def head_cached(self, path: str, *args: Any, **kwargs: Any) -> BaseApiResponse:
         return self._get_cached(path, "HEAD", *args, **kwargs)
 
     def get_with_pagination(
         self,
         path: str,
         gen_params: Callable[[int, int], Mapping[str, str | int | bool]],
-        get_results: Callable[[dict[str, Any] | str | list[Any]], Sequence[Any]],
+        get_results: Callable[[BaseApiResponse], Sequence[Any]],
         *args: Any,
         **kwargs: Any,
     ) -> list[Any]:
