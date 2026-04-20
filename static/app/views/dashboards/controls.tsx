@@ -47,6 +47,7 @@ type Props = {
   onEdit: () => void;
   organization: Organization;
   widgetLimitReached: boolean;
+  hasPageFrameFeature?: boolean;
   hasUnsavedFilters?: boolean;
   isSaving?: boolean;
   onChangeEditAccess?: (newDashboardPermissions: DashboardPermissions) => void;
@@ -65,6 +66,7 @@ export function Controls({
   onCancel,
   onAddWidget,
   isSaving,
+  hasPageFrameFeature,
 }: Props) {
   const [isFavorited, setIsFavorited] = useState(dashboard.isFavorited);
   const queryClient = useQueryClient();
@@ -263,6 +265,54 @@ export function Controls({
     );
   };
 
+  const renderPageFrameEditButton = (hasFeature: boolean) => {
+    if (!hasFeature) {
+      return null;
+    }
+    if (isPrebuiltDashboard) {
+      return (
+        <Button
+          data-test-id="dashboard-edit"
+          aria-label={t('edit-dashboard')}
+          icon={<IconEdit />}
+          disabled
+          tooltipProps={{
+            title: tct(
+              'This is a [label] dashboard and cannot be edited. Duplicate it to make changes.',
+              {label: PREBUILT_DASHBOARD_LABEL}
+            ),
+          }}
+          priority="default"
+          size="sm"
+        />
+      );
+    }
+    const isDisabled = !hasFeature || hasUnsavedFilters || !hasEditAccess || isSaving;
+    const toolTipMessage = isSaving
+      ? DASHBOARD_SAVING_MESSAGE
+      : hasEditAccess
+        ? hasUnsavedFilters
+          ? UNSAVED_FILTERS_MESSAGE
+          : null
+        : t('You do not have permission to edit this dashboard');
+
+    return (
+      <Button
+        data-test-id="dashboard-edit"
+        aria-label={t('edit-dashboard')}
+        onClick={e => {
+          e.preventDefault();
+          onEdit();
+        }}
+        icon={isSaving ? <LoadingIndicator size={14} /> : <IconEdit />}
+        disabled={isDisabled}
+        tooltipProps={{title: toolTipMessage ?? t('Edit Dashboard')}}
+        priority="default"
+        size="sm"
+      />
+    );
+  };
+
   return (
     <StyledButtonBar key="controls">
       <DashboardEditFeature>
@@ -283,12 +333,22 @@ export function Controls({
                 />
               </Tooltip>
             </Feature>
-            {dashboard.id !== 'default-overview' && !isPrebuiltDashboard && (
-              <EditAccessSelector
-                dashboard={dashboard}
-                onChangeEditAccess={onChangeEditAccess}
-              />
-            )}
+            {hasPageFrameFeature && renderPageFrameEditButton(hasFeature)}
+            {dashboard.id !== 'default-overview' &&
+              !isPrebuiltDashboard &&
+              (hasPageFrameFeature ? (
+                <Tooltip title={t('Edit Access')}>
+                  <EditAccessSelector
+                    dashboard={dashboard}
+                    onChangeEditAccess={onChangeEditAccess}
+                  />
+                </Tooltip>
+              ) : (
+                <EditAccessSelector
+                  dashboard={dashboard}
+                  onChangeEditAccess={onChangeEditAccess}
+                />
+              ))}
             {dashboard.id !== 'default-overview' && (
               <Tooltip title={isFavorited ? t('Starred Dashboard') : t('Star Dashboard')}>
                 <Button
@@ -325,7 +385,7 @@ export function Controls({
                 />
               </Tooltip>
             )}
-            {renderEditButton(hasFeature)}
+            {!hasPageFrameFeature && renderEditButton(hasFeature)}
             {hasFeature && !isPrebuiltDashboard && (
               <Tooltip
                 title={tooltipMessage}
