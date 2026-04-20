@@ -334,16 +334,16 @@ def detect_llm_issues_for_org(org_id: int) -> None:
     if not has_access:
         return
 
-    projects = list(
+    project_ids = list(
         Project.objects.filter(
             organization_id=org_id,
             status=ObjectStatus.ACTIVE,
         ).values_list("id", flat=True)
     )
-    if not projects:
+    if not project_ids:
         return
 
-    project_id = random.choice(projects)
+    project_id = random.choice(project_ids)
 
     project = Project.objects.get_from_cache(id=project_id)
     perf_settings = project.get_option("sentry:performance_issue_settings", default={})
