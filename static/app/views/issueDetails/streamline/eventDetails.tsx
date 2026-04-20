@@ -17,6 +17,8 @@ import {useIssueDetails} from 'sentry/views/issueDetails/streamline/context';
 import {EventMissingBanner} from 'sentry/views/issueDetails/streamline/eventMissingBanner';
 import {EventTitle} from 'sentry/views/issueDetails/streamline/eventTitle';
 import {NAVIGATION_MOBILE_TOPBAR_HEIGHT} from 'sentry/views/navigation/constants';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
+import {useTopOffset} from 'sentry/views/navigation/useTopOffset';
 
 export function EventDetails({group, event, project}: EventDetailsContentProps) {
   if (!event) {
@@ -50,8 +52,12 @@ function StickyEventNav({event, group}: {event: Event; group: Group}) {
   const [nav, setNav] = useState<HTMLDivElement | null>(null);
   const isStuck = useIsStuck(nav);
   const isScreenMedium = useMedia(`(max-width: ${theme.breakpoints.md})`);
+  const hasPageFrame = useHasPageFrameFeature();
+  const {contentTop} = useTopOffset();
   const {dispatch} = useIssueDetails();
   const sidebarHeight = isScreenMedium ? NAVIGATION_MOBILE_TOPBAR_HEIGHT : 0;
+  const stickyTop = hasPageFrame ? contentTop : `${sidebarHeight}px`;
+  const stickyTopOffset = Number.parseInt(stickyTop, 10) || 0;
 
   useLayoutEffect(() => {
     if (!nav) {
@@ -60,9 +66,9 @@ function StickyEventNav({event, group}: {event: Event; group: Group}) {
     const navHeight = nav.offsetHeight ?? 0;
     dispatch({
       type: 'UPDATE_NAV_SCROLL_MARGIN',
-      margin: navHeight + sidebarHeight,
+      margin: navHeight + stickyTopOffset,
     });
-  }, [nav, isScreenMedium, dispatch, sidebarHeight]);
+  }, [nav, dispatch, stickyTopOffset]);
 
   return (
     <FloatingEventNavigation
@@ -70,7 +76,7 @@ function StickyEventNav({event, group}: {event: Event; group: Group}) {
       group={group}
       ref={setNav}
       data-stuck={isStuck}
-      style={{top: sidebarHeight}}
+      style={{top: stickyTop}}
     />
   );
 }
