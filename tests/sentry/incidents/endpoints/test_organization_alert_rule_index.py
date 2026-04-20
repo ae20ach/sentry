@@ -129,8 +129,8 @@ class AlertRuleBase(APITestCase):
         return {
             "aggregate": "count()",
             "query": "",
-            "time_window": 30,
-            "detection_type": AlertRuleDetectionType.DYNAMIC,
+            "timeWindow": 30,
+            "detectionType": AlertRuleDetectionType.DYNAMIC,
             "sensitivity": AlertRuleSensitivity.LOW,
             "seasonality": AlertRuleSeasonality.AUTO,
             "thresholdType": 0,
@@ -521,11 +521,7 @@ class AlertRuleCreateEndpointTest(AlertRuleIndexBase, SnubaTestCase):
         assert "upsampled_count() is not allowed as user input" in str(resp.data)
         assert "Use count() instead" in str(resp.data)
 
-    def test_workflow_engine_serializer(self) -> None:
-        team = self.create_team(organization=self.organization, members=[self.user])
-        ProjectTeam.objects.create(project=self.project, team=team)
-        self.login_as(self.user)
-
+    def test_workflow_engine_post_creates_only_detector(self) -> None:
         with (
             outbox_runner(),
             self.feature(
@@ -542,8 +538,93 @@ class AlertRuleCreateEndpointTest(AlertRuleIndexBase, SnubaTestCase):
                 **self.alert_rule_dict,
             )
 
-        detector = Detector.objects.get(alertruledetector__alert_rule_id=int(resp.data.get("id")))
+        assert not AlertRule.objects.filter(name=self.alert_rule_dict["name"]).exists()
+        detector = Detector.objects.get(type=MetricIssue.slug, project=self.project)
         assert resp.data == serialize(detector, self.user, WorkflowEngineDetectorSerializer())
+
+    def test_workflow_engine_post_creates_only_detector_eap(self) -> None:
+        data = {
+            **self.alert_rule_dict,
+            "dataset": "events_analytics_platform",
+            "alertType": "eap_metrics",
+            "queryType": 1,
+            "aggregate": "count()",
+        }
+        with (
+            outbox_runner(),
+            self.feature(
+                [
+                    "organizations:incidents",
+                    "organizations:performance-view",
+                    "organizations:visibility-explore-view",
+                    "organizations:workflow-engine-rule-serializers",
+                ]
+            ),
+        ):
+            resp = self.get_success_response(
+                self.organization.slug,
+                status_code=201,
+                **data,
+            )
+
+        assert not AlertRule.objects.filter(name=self.alert_rule_dict["name"]).exists()
+        detector = Detector.objects.get(type=MetricIssue.slug, project=self.project)
+        assert resp.data == serialize(detector, self.user, WorkflowEngineDetectorSerializer())
+        data_source = DataSource.objects.get(detector=detector)
+        query_sub = QuerySubscription.objects.get(id=data_source.source_id)
+        assert query_sub.snuba_query.dataset == Dataset.EventsAnalyticsPlatform.value
+
+    def test_workflow_engine_post_creates_only_detector_percent_based(self) -> None:
+        data = {
+            **self.alert_rule_dict,
+            "comparisonDelta": 10080.0,
+        }
+        with (
+            outbox_runner(),
+            self.feature(
+                [
+                    "organizations:incidents",
+                    "organizations:performance-view",
+                    "organizations:workflow-engine-rule-serializers",
+                ]
+            ),
+        ):
+            resp = self.get_success_response(
+                self.organization.slug,
+                status_code=201,
+                **data,
+            )
+
+        assert not AlertRule.objects.filter(name=self.alert_rule_dict["name"]).exists()
+        detector = Detector.objects.get(type=MetricIssue.slug, project=self.project)
+        assert resp.data == serialize(detector, self.user, WorkflowEngineDetectorSerializer())
+
+    @patch("sentry.incidents.metric_issue_detector.send_new_detector_data")
+    def test_workflow_engine_post_creates_only_detector_anomaly_detection(
+        self, mock_send_new_detector_data: MagicMock
+    ) -> None:
+        with (
+            outbox_runner(),
+            self.feature(
+                [
+                    "organizations:incidents",
+                    "organizations:performance-view",
+                    "organizations:anomaly-detection-alerts",
+                    "organizations:workflow-engine-rule-serializers",
+                ]
+            ),
+        ):
+            resp = self.get_success_response(
+                self.organization.slug,
+                status_code=201,
+                **self.dynamic_alert_rule_dict,
+            )
+
+        assert not AlertRule.objects.filter(name=self.alert_rule_dict["name"]).exists()
+        detector = Detector.objects.get(type=MetricIssue.slug, project=self.project)
+        assert detector.config.get("detection_type") == AlertRuleDetectionType.DYNAMIC.value
+        assert resp.data == serialize(detector, self.user, WorkflowEngineDetectorSerializer())
+        assert mock_send_new_detector_data.call_count == 1
 
     def test_create_alert_rule_aci(self) -> None:
         with (
@@ -1039,7 +1120,7 @@ class AlertRuleCreateEndpointTest(AlertRuleIndexBase, SnubaTestCase):
     @with_feature("organizations:incidents")
     def test_anomaly_detection_alert_validation_error(self) -> None:
         data = self.dynamic_alert_rule_dict
-        data["time_window"] = 10
+        data["timeWindow"] = 10
         with outbox_runner():
             resp = self.get_error_response(
                 self.organization.slug,

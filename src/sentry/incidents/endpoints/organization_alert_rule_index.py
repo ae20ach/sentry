@@ -2,6 +2,7 @@ import logging
 from collections.abc import Sequence
 from copy import deepcopy
 from datetime import UTC, datetime
+from typing import Any
 
 from django.db import connections, router, transaction
 from django.db.models import (
@@ -61,7 +62,12 @@ from sentry.incidents.endpoints.serializers.workflow_engine_detector import (
 from sentry.incidents.endpoints.utils import parse_team_params
 from sentry.incidents.grouptype import MetricIssue
 from sentry.incidents.logic import get_slack_actions_with_async_lookups
-from sentry.incidents.models.alert_rule import AlertRule
+from sentry.incidents.metric_issue_detector import MetricIssueDetectorValidator
+from sentry.incidents.models.alert_rule import (
+    AlertRule,
+    AlertRuleDetectionType,
+    AlertRuleThresholdType,
+)
 from sentry.incidents.models.incident import Incident, IncidentStatus
 from sentry.incidents.serializers import AlertRuleSerializer as DrfAlertRuleSerializer
 from sentry.incidents.utils.sentry_apps import trigger_sentry_app_action_creators_for_incidents
@@ -106,6 +112,7 @@ from sentry.workflow_engine.models import (
     DetectorState,
     Workflow,
 )
+from sentry.workflow_engine.models.data_condition import Condition
 from sentry.workflow_engine.types import DetectorPriorityLevel
 from sentry.workflow_engine.utils.legacy_metric_tracking import (
     report_used_legacy_models,
@@ -151,6 +158,122 @@ def filter_detectors_by_datasets(
 VALID_COMBINED_RULE_SORT_KEYS = {"date_added", "name", "incident_status", "date_triggered"}
 
 
+def translate_metric_alert_to_detector_payload(data: dict[str, Any]) -> dict[str, Any]:
+    """
+    Translate a metric alert rule payload into the shape expected by MetricIssueDetectorValidator.
+
+    Mapping:
+    - thresholdType ABOVE: triggers use GREATER, resolution uses LESS_OR_EQUAL
+    - thresholdType BELOW: triggers use LESS, resolution uses GREATER_OR_EQUAL
+    - critical trigger -> HIGH priority condition
+    - warning trigger -> MEDIUM priority condition
+    - resolveThreshold -> OK priority condition (falls back to warning/critical alertThreshold)
+    - timeWindow (minutes) -> time_window (seconds)
+    """
+    # build up data conditions
+    detection_type = data.get("detectionType", AlertRuleDetectionType.STATIC)
+    threshold_type = data.get("thresholdType", AlertRuleThresholdType.ABOVE.value)
+    triggers = data.get("triggers", [])
+    conditions: list[dict[str, Any]] = []
+
+    if detection_type == AlertRuleDetectionType.DYNAMIC:
+        # Anomaly detection: a single anomaly detection condition for the critical trigger
+        # No resolve condition is needed; the handler manages state transitions
+        conditions.append(
+            {
+                "type": Condition.ANOMALY_DETECTION,
+                "comparison": {
+                    "sensitivity": data.get("sensitivity"),
+                    "seasonality": data.get("seasonality"),
+                    "threshold_type": threshold_type,
+                },
+                "condition_result": DetectorPriorityLevel.HIGH,
+            }
+        )
+    else:
+        # Static / percent: generate GREATER/LESS conditions from triggers
+        # Note: ABOVE_AND_BELOW is not used
+        if threshold_type == AlertRuleThresholdType.ABOVE.value:
+            trigger_condition_type = Condition.GREATER
+            resolve_condition_type = Condition.LESS_OR_EQUAL
+        else:  # BELOW
+            trigger_condition_type = Condition.LESS
+            resolve_condition_type = Condition.GREATER_OR_EQUAL
+
+        for trigger in triggers:
+            label = trigger.get("label")
+            condition_result = (
+                DetectorPriorityLevel.HIGH if label == "critical" else DetectorPriorityLevel.MEDIUM
+            )
+            conditions.append(
+                {
+                    "type": trigger_condition_type,
+                    "comparison": trigger.get("alertThreshold"),
+                    "condition_result": condition_result,
+                }
+            )
+
+        resolve_threshold = data.get("resolveThreshold")
+        if resolve_threshold is None:
+            warning = next((t for t in triggers if t.get("label") == "warning"), None)
+            critical = next((t for t in triggers if t.get("label") == "critical"), None)
+            resolve_threshold = (warning or critical or {}).get("alertThreshold")
+
+        if resolve_threshold is not None:
+            conditions.append(
+                {
+                    "type": resolve_condition_type,
+                    "comparison": resolve_threshold,
+                    "condition_result": DetectorPriorityLevel.OK,
+                }
+            )
+
+    # build up data source
+    data_source: dict[str, Any] = {
+        "dataset": data.get("dataset", "events"),
+        "query": data.get("query", ""),
+        "aggregate": data.get("aggregate", ""),
+        "time_window": int(data.get("timeWindow", 1)) * 60,  # minutes -> seconds
+        "environment": data.get("environment"),
+        "event_types": data.get("eventTypes", []),
+    }
+    if "queryType" in data:
+        data_source["query_type"] = data["queryType"]
+    if "extrapolationMode" in data:
+        data_source["extrapolation_mode"] = data["extrapolationMode"]
+
+    # build up config
+    config: dict[str, Any] = {
+        "detection_type": data.get("detectionType")
+        or data.get("detection_type", AlertRuleDetectionType.STATIC),
+    }
+    if data.get("comparisonDelta"):
+        config["comparison_delta"] = int(data["comparisonDelta"] * 60)  # minutes -> seconds
+
+    if data.get("sensitivity"):
+        config["sensitivity"] = data.get("sensitivity")
+
+    if data.get("seasonality"):
+        config["seasonality"] = data.get("seasonality")
+
+    detector_payload: dict[str, Any] = {
+        "name": data.get("name", ""),
+        "type": MetricIssue.slug,
+        "data_sources": [data_source],
+        "condition_group": {
+            "logic_type": "any",
+            "conditions": conditions,
+        },
+        "config": config,
+    }
+    if "owner" in data:
+        detector_payload["owner"] = data["owner"]
+    if "description" in data:
+        detector_payload["description"] = data["description"]
+
+    return detector_payload
+
+
 def create_metric_alert(
     request: Request, organization: Organization, project: Project | None = None
 ) -> HttpResponseBase:
@@ -177,6 +300,38 @@ def create_metric_alert(
 
     if project:
         data["projects"] = [project.slug]
+
+    if features.has("organizations:workflow-engine-rule-serializers", organization) or features.has(
+        "organizations:workflow-engine-metric-alert-endpoints-post", organization
+    ):
+        detector_data = translate_metric_alert_to_detector_payload(data)
+
+        context_project = project
+        if context_project is None and data.get("projects"):
+            context_project = Project.objects.get(
+                slug=data["projects"][0], organization=organization
+            )
+
+        context = {
+            "organization": organization,
+            "project": context_project,
+            "request": request,
+            "user": request.user,
+        }
+        validator = MetricIssueDetectorValidator(data=detector_data, context=context)
+        if not validator.is_valid():
+            raise ValidationError(validator.errors)
+
+        detector = validator.save()
+
+        return Response(
+            serialize(
+                detector,
+                request.user,
+                WorkflowEngineDetectorSerializer(),
+            ),
+            status=status.HTTP_201_CREATED,
+        )
 
     validator = DrfAlertRuleSerializer(
         context={
@@ -211,19 +366,6 @@ def create_metric_alert(
         return Response({"uuid": client.uuid}, status=202)
     else:
         alert_rule = validator.save()
-        if features.has("organizations:workflow-engine-rule-serializers", organization):
-            try:
-                detector = Detector.objects.get(alertruledetector__alert_rule_id=alert_rule.id)
-                return Response(
-                    serialize(
-                        detector,
-                        request.user,
-                        WorkflowEngineDetectorSerializer(),
-                    ),
-                    status=status.HTTP_201_CREATED,
-                )
-            except Detector.DoesNotExist:
-                return Response(status=status.HTTP_404_NOT_FOUND)
         return Response(serialize(alert_rule, request.user), status=status.HTTP_201_CREATED)
 
 
