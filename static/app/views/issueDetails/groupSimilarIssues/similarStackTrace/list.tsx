@@ -94,7 +94,7 @@ export function List({
         </SimpleTable.Header>
 
         {loading &&
-          Array.from({length: 2}).map((_, i) => (
+          Array.from({length: 3}).map((_, i) => (
             <SimilarStackTraceItemSkeleton
               key={i}
               hasSimilarityEmbeddingsFeature={hasSimilarityEmbeddingsFeature}

@@ -158,12 +158,15 @@ export function SimilarStackTrace({project}: Props) {
     });
   }, [checkedIds, similar, filtered, location.query, mergeMutate]);
 
-  const {data: event} = useGroupEvent({groupId: params.groupId, eventId: 'latest'});
+  const {data: event, isPending: isEventPending} = useGroupEvent({
+    groupId: params.groupId,
+    eventId: 'latest',
+  });
   const platformSupportsLongStacktraces = LONG_STACKTRACE_PLATFORMS.includes(
     event?.platform ?? ''
   );
 
-  const loading = isPending || isProjectPending || !canFetch;
+  const loading = isPending || isProjectPending || isEventPending || !canFetch;
 
   return (
     <Stack gap="xl" align="stretch">
