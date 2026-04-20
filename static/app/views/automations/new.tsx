@@ -59,6 +59,22 @@ function AutomationDocumentTitle() {
 }
 
 function AutomationBreadcrumbs() {
+  const title = useFormField('name');
+  const organization = useOrganization();
+  return (
+    <Breadcrumbs
+      crumbs={[
+        {
+          label: t('Alerts'),
+          to: makeAutomationBasePathname(organization.slug),
+        },
+        {label: title ? title : t('New Alert')},
+      ]}
+    />
+  );
+}
+
+function PageFrameAutomationBreadcrumbs() {
   const organization = useOrganization();
   return (
     <Breadcrumbs
@@ -241,7 +257,7 @@ export default function AutomationNewSettings() {
                 {hasPageFrameFeature ? (
                   <Fragment>
                     <TopBar.Slot name="title">
-                      <AutomationBreadcrumbs />
+                      <PageFrameAutomationBreadcrumbs />
                     </TopBar.Slot>
                     <EditableAutomationTitle>
                       <EditableAutomationName />

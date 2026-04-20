@@ -60,7 +60,27 @@ function AutomationDocumentTitle() {
   return <SentryDocumentTitle title={title ?? t('Edit Alert')} />;
 }
 
-function AutomationBreadcrumbs({
+function AutomationBreadcrumbs({automationId}: {automationId: string}) {
+  const title = useFormField('name');
+  const organization = useOrganization();
+  return (
+    <Breadcrumbs
+      crumbs={[
+        {
+          label: t('Alerts'),
+          to: makeAutomationBasePathname(organization.slug),
+        },
+        {
+          label: title,
+          to: makeAutomationDetailsPathname(organization.slug, automationId),
+        },
+        {label: t('Configure')},
+      ]}
+    />
+  );
+}
+
+function PageFrameAutomationBreadcrumbs({
   automationId,
   automationName,
 }: {
@@ -245,7 +265,7 @@ function AutomationEditForm({automation}: {automation: Automation}) {
                 {hasPageFrameFeature ? (
                   <Fragment>
                     <TopBar.Slot name="title">
-                      <AutomationBreadcrumbs
+                      <PageFrameAutomationBreadcrumbs
                         automationId={params.automationId}
                         automationName={automation.name}
                       />
@@ -256,10 +276,7 @@ function AutomationEditForm({automation}: {automation: Automation}) {
                   </Fragment>
                 ) : (
                   <Fragment>
-                    <AutomationBreadcrumbs
-                      automationId={params.automationId}
-                      automationName={automation.name}
-                    />
+                    <AutomationBreadcrumbs automationId={params.automationId} />
                     <Layout.Title>
                       <EditableAutomationName />
                     </Layout.Title>
