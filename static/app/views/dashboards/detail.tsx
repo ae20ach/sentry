@@ -1234,7 +1234,6 @@ class DashboardDetail extends Component<Props, State> {
                         dashboardState={dashboardState}
                         widgetLimitReached={widgetLimitReached}
                         isSaving={isCommittingChanges}
-                        hasPageFrameFeature
                       />
                     </TopBar.Slot>
                   ) : (
