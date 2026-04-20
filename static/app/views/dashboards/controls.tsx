@@ -366,12 +366,10 @@ export function Controls({
             {dashboard.id !== 'default-overview' &&
               !isPrebuiltDashboard &&
               (hasPageFrameFeature ? (
-                <Tooltip title={t('Edit Access')}>
-                  <EditAccessSelector
-                    dashboard={dashboard}
-                    onChangeEditAccess={onChangeEditAccess}
-                  />
-                </Tooltip>
+                <EditAccessSelector
+                  dashboard={dashboard}
+                  onChangeEditAccess={onChangeEditAccess}
+                />
               ) : (
                 <EditAccessSelector
                   dashboard={dashboard}
