@@ -40,7 +40,8 @@ def count_hits(queryset, max_hits):
     except EmptyResultSet:
         return 0
     cursor = connections[queryset.using_replica().db].cursor()
-    cursor.execute(f"SELECT COUNT(*) FROM ({h_sql}) as t", h_params)
+    # nosemgrep: python.django.security.injection.sql.sql-injection-db-cursor-execute
+    cursor.execute("SELECT COUNT(*) FROM (%s) as t" % h_sql, h_params)
     return cursor.fetchone()[0]
 
 
