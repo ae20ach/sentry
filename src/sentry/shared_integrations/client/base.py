@@ -327,6 +327,11 @@ class BaseApiClient:
 
         self.track_response_data(resp.status_code, None, resp, extra=extra)
 
+        if resp.status_code == 204:
+            from ..response import MappingApiResponse
+
+            return MappingApiResponse({}, resp.headers, resp.status_code)
+
         # BaseApiResponse.from_response returns MappingApiResponse (subclass of dict)
         # or SequenceApiResponse (subclass of list), or TextApiResponse (has str .text)
         return BaseApiResponse.from_response(
@@ -370,8 +375,10 @@ class BaseApiClient:
             return cached_result
 
         cache_time_val = kwargs.pop("cache_time", None) or self.cache_time
+        raw_response = kwargs.get("raw_response", False)
         result = self.request(method, path, *args, **kwargs)
-        # request() returns BaseApiResponse when raw_response=False (the default)
+        if raw_response:
+            return result  # type: ignore[return-value]
         assert isinstance(result, BaseApiResponse)
         self.set_cache(key, result, cache_time_val)
         return result
