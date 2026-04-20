@@ -386,7 +386,9 @@ function TableOfContents({plans}: {plans: Plans}) {
               {entries.map(([planName, planDetails], idx) => (
                 <Fragment key={planName}>
                   {idx > 0 && ', '}
-                  <a href={`#${planDetails.id ?? planFallbackAnchorId(label, planName)}`}>
+                  <a
+                    href={`#${planDetails.id ?? planFallbackAnchorId(formatPlanTierId(label.replace(/ /g, '_')), planName)}`}
+                  >
                     {planDetails.id ?? planName}
                   </a>
                 </Fragment>
@@ -701,7 +703,8 @@ function shouldShowCategoryCode(categoryLabel: string, categoryCode?: string): b
   if (!categoryCode) return false;
   const baseLabel = categoryLabel.replace(/\s*\(DISABLED\)\s*$/i, '').trim();
   const labelWithoutPlural = baseLabel.toLowerCase().replace(/s$/, '');
-  return labelWithoutPlural !== categoryCode;
+  const codeWithoutPlural = categoryCode.toLowerCase().replace(/s$/, '');
+  return labelWithoutPlural !== codeWithoutPlural;
 }
 
 function MergedPriceTiersTable({
