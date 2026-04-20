@@ -66,6 +66,7 @@ from sentry.testutils.silo import assume_test_silo_mode
 from sentry.testutils.skips import requires_snuba
 from sentry.utils.snuba import _snuba_pool
 from sentry.workflow_engine.models import Action, DataSource, Detector
+from sentry.workflow_engine.types import DetectorPriorityLevel
 from tests.sentry.incidents.serializers.test_workflow_engine_base import (
     TestWorkflowEngineSerializer,
 )
@@ -575,6 +576,7 @@ class AlertRuleCreateEndpointTest(AlertRuleIndexBase, SnubaTestCase):
         assert query_sub.snuba_query.dataset == Dataset.EventsAnalyticsPlatform.value
 
     def test_workflow_engine_post_creates_only_detector_percent_based(self) -> None:
+        # alert_rule_dict uses thresholdType=ABOVE (0), critical=200, warning=150, resolveThreshold=100
         data = {
             **self.alert_rule_dict,
             "comparisonDelta": 10080.0,
@@ -598,6 +600,13 @@ class AlertRuleCreateEndpointTest(AlertRuleIndexBase, SnubaTestCase):
         assert not AlertRule.objects.filter(name=self.alert_rule_dict["name"]).exists()
         detector = Detector.objects.get(type=MetricIssue.slug, project=self.project)
         assert resp.data == serialize(detector, self.user, WorkflowEngineDetectorSerializer())
+
+        # Percent-change thresholds must be translated: ABOVE adds 100, so frontend delta 200 → 300,
+        # 150 → 250, resolveThreshold 100 → 200. Storing raw deltas would fire at the wrong level.
+        conditions = {c.condition_result: c.comparison for c in detector.get_conditions()}
+        assert conditions[DetectorPriorityLevel.HIGH] == 300  # critical 200 + 100
+        assert conditions[DetectorPriorityLevel.MEDIUM] == 250  # warning 150 + 100
+        assert conditions[DetectorPriorityLevel.OK] == 200  # resolve 100 + 100
 
     @patch("sentry.incidents.metric_issue_detector.send_new_detector_data")
     def test_workflow_engine_post_creates_only_detector_anomaly_detection(
