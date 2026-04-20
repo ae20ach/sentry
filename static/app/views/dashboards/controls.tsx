@@ -270,6 +270,42 @@ export function Controls({
       <DashboardEditFeature>
         {hasFeature => (
           <Fragment>
+            {dashboard.id !== 'default-overview' && (
+              <Tooltip title={isFavorited ? t('Starred Dashboard') : t('Star Dashboard')}>
+                <Button
+                  size="sm"
+                  aria-label={t('star-dashboard')}
+                  icon={
+                    <IconStar
+                      variant={isFavorited ? 'warning' : 'muted'}
+                      isSolid={isFavorited}
+                      aria-label={isFavorited ? t('Unstar') : t('Star')}
+                      data-test-id={isFavorited ? 'yellow-star' : 'empty-star'}
+                    />
+                  }
+                  onClick={async () => {
+                    try {
+                      setIsFavorited(!isFavorited);
+                      await updateDashboardFavorite(
+                        api,
+                        queryClient,
+                        organization,
+                        dashboard.id,
+                        !isFavorited
+                      );
+                      trackAnalytics('dashboards_manage.toggle_favorite', {
+                        organization,
+                        dashboard_id: dashboard.id,
+                        favorited: !isFavorited,
+                      });
+                    } catch (error) {
+                      // If the api call fails, revert the state
+                      setIsFavorited(isFavorited);
+                    }
+                  }}
+                />
+              </Tooltip>
+            )}
             <Feature features="dashboards-import">
               <Tooltip title={t('Export Dashboard')}>
                 <Button
@@ -342,42 +378,6 @@ export function Controls({
                   onChangeEditAccess={onChangeEditAccess}
                 />
               ))}
-            {dashboard.id !== 'default-overview' && (
-              <Tooltip title={isFavorited ? t('Starred Dashboard') : t('Star Dashboard')}>
-                <Button
-                  size="sm"
-                  aria-label={t('star-dashboard')}
-                  icon={
-                    <IconStar
-                      variant={isFavorited ? 'warning' : 'muted'}
-                      isSolid={isFavorited}
-                      aria-label={isFavorited ? t('Unstar') : t('Star')}
-                      data-test-id={isFavorited ? 'yellow-star' : 'empty-star'}
-                    />
-                  }
-                  onClick={async () => {
-                    try {
-                      setIsFavorited(!isFavorited);
-                      await updateDashboardFavorite(
-                        api,
-                        queryClient,
-                        organization,
-                        dashboard.id,
-                        !isFavorited
-                      );
-                      trackAnalytics('dashboards_manage.toggle_favorite', {
-                        organization,
-                        dashboard_id: dashboard.id,
-                        favorited: !isFavorited,
-                      });
-                    } catch (error) {
-                      // If the api call fails, revert the state
-                      setIsFavorited(isFavorited);
-                    }
-                  }}
-                />
-              </Tooltip>
-            )}
             {!hasPageFrameFeature && renderEditButton(hasFeature)}
             {hasFeature && !isPrebuiltDashboard && (
               <Tooltip
