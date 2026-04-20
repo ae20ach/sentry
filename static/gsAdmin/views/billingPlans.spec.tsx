@@ -53,7 +53,7 @@ afterEach(() => {
 const mockPlansResponse: BillingPlansResponse = {
   not_live: [],
   data: {
-    am9000: {
+    am3: {
       business: {
         data_categories_disabled: [],
         pricing: {
@@ -95,11 +95,11 @@ describe('BillingPlans Component', () => {
     render(<BillingPlans />);
 
     // Verify that the main heading is rendered
-    expect(screen.getByText('Application Monitoring Billing Plans')).toBeInTheDocument();
+    expect(screen.getByText('Billing Plans')).toBeInTheDocument();
 
     // Wait for the plans data to be fetched and rendered
     await waitFor(() => {
-      expect(screen.getAllByText('AM9000 Plans').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('AM3 Plans').length).toBeGreaterThan(0);
     });
   });
 
@@ -169,7 +169,7 @@ describe('BillingPlans Component', () => {
 
     // Wait for the plans data to be fetched and rendered
     await waitFor(() => {
-      expect(screen.getAllByText('AM9000 Plans').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('AM3 Plans').length).toBeGreaterThan(0);
     });
 
     // Find the download button and click it
@@ -193,7 +193,7 @@ describe('BillingPlans Component', () => {
     expect(downloadLink!.download).toMatch(expectedFilenamePattern);
 
     expect(TEST_BLOB_CONSTRUCTOR).toHaveBeenCalledWith(
-      expect.arrayContaining([expect.stringContaining('AM9000')]),
+      expect.arrayContaining([expect.stringContaining('AM3')]),
       {type: 'text/csv;charset=utf-8;'}
     );
 
@@ -201,8 +201,8 @@ describe('BillingPlans Component', () => {
     const blobText = blobArgs.join('');
 
     // Perform assertions on the CSV content
-    expect(blobText).toContain('AM9000');
-    expect(blobText).toContain('Am9000 Business, , , ,Errors,,,,,,');
+    expect(blobText).toContain('AM3');
+    expect(blobText).toContain('Am3 Business, , , ,Errors,,,,,,');
     expect(blobText).toContain(
       'Monthly,Annual, , ,Tier,Volume (max),Monthly,Annual,Reserved PPE,PAYG PPE,'
     );
@@ -213,7 +213,7 @@ describe('BillingPlans Component', () => {
   it('displays "NOT LIVE" badge for plans that are not live', async () => {
     // Mock response with a plan in the 'not_live' array
     const mockNotLiveResponse = {
-      not_live: ['am9000'],
+      not_live: ['am3'],
       data: mockPlansResponse.data,
     };
 
@@ -228,13 +228,13 @@ describe('BillingPlans Component', () => {
 
     // Wait for the plans data to be fetched and rendered
     await waitFor(() => {
-      expect(screen.getAllByText('AM9000 Plans').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('AM3 Plans').length).toBeGreaterThan(0);
     });
 
     // Check that the 'NOT LIVE' badge is displayed next to the plan header
     const planHeader = screen.getByRole('heading', {
       level: 3,
-      name: /AM9000\s+Business\s+Plan/i,
+      name: /AM3\s+Business\s+Plan/i,
     });
     const planNotLiveBadge = within(planHeader.parentElement!).getByText('NOT LIVE');
     expect(planNotLiveBadge).toBeInTheDocument();
@@ -245,7 +245,7 @@ describe('BillingPlans Component', () => {
     const mockDisabledDataCategoryResponse = {
       not_live: [],
       data: {
-        am9000: {
+        am3: {
           business: {
             data_categories_disabled: ['errors'],
             pricing: {
@@ -287,7 +287,7 @@ describe('BillingPlans Component', () => {
 
     // Wait for the plans data to be fetched and rendered
     await waitFor(() => {
-      expect(screen.getAllByText('AM9000 Plans').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('AM3 Plans').length).toBeGreaterThan(0);
     });
 
     // Disabled categories are shown with "(DISABLED)" in the category label
@@ -298,15 +298,15 @@ describe('BillingPlans Component', () => {
     render(<BillingPlans />);
 
     // Verify that the main heading is rendered
-    expect(screen.getByText('Application Monitoring Billing Plans')).toBeInTheDocument();
+    expect(screen.getByText('Billing Plans')).toBeInTheDocument();
 
     // Wait for the plans data to be fetched and rendered
     await waitFor(() => {
-      expect(screen.getAllByText('AM9000 Plans').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('AM3 Plans').length).toBeGreaterThan(0);
     });
 
     // Check that the LIVE badge is displayed for the plan
-    const planHeader = screen.getByRole('heading', {level: 2, name: /AM9000 Plans/i});
+    const planHeader = screen.getByRole('heading', {level: 2, name: /AM3 Plans/i});
     const headerLiveBadges = within(planHeader.parentElement!).getAllByText('LIVE');
     headerLiveBadges.forEach(badge => {
       expect(badge).toBeInTheDocument();
