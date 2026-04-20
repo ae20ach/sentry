@@ -53,31 +53,35 @@ function PageContent({
   return (
     <PageFiltersContainer>
       <ErrorBoundary>
-        <Stack flex={1} align="stretch" gap="xl" background="primary" overflow="hidden">
-          <LayoutGrid hideTop={hideTop}>
-            {!hideTop && (
-              <Stack
-                flexGrow={1}
-                gap="md"
-                area="top"
-                direction={{xs: 'column', sm: 'row'}}
-                align={{xs: 'stretch', sm: 'start'}}
-              >
-                <FeedbackFilters />
-                <SearchContainer>
-                  <FeedbackSearch />
-                </SearchContainer>
-              </Stack>
-            )}
-            {hasFeedbackContent ? (
-              content
-            ) : (
-              <SetupContainer>
-                <FeedbackSetupPanel />
-              </SetupContainer>
-            )}
-          </LayoutGrid>
-        </Stack>
+        <StyledLayoutBody>
+          <StyledLayoutMain width="full">
+            <Stack flex={1} minHeight={0} align="stretch" gap="xl" background="primary">
+              <LayoutGrid hideTop={hideTop}>
+                {!hideTop && (
+                  <Stack
+                    flexGrow={1}
+                    gap="md"
+                    area="top"
+                    direction={{xs: 'column', sm: 'row'}}
+                    align={{xs: 'stretch', sm: 'start'}}
+                  >
+                    <FeedbackFilters />
+                    <SearchContainer>
+                      <FeedbackSearch />
+                    </SearchContainer>
+                  </Stack>
+                )}
+                {hasFeedbackContent ? (
+                  content
+                ) : (
+                  <SetupContainer>
+                    <FeedbackSetupPanel />
+                  </SetupContainer>
+                )}
+              </LayoutGrid>
+            </Stack>
+          </StyledLayoutMain>
+        </StyledLayoutBody>
       </ErrorBoundary>
     </PageFiltersContainer>
   );
@@ -270,19 +274,12 @@ export default function FeedbackListPage() {
 }
 
 const LayoutGrid = styled('div')<{hideTop?: boolean}>`
-  overflow: hidden;
   flex: 1;
   min-height: 0;
 
   display: grid;
   gap: ${p => p.theme.space.xl};
   place-items: stretch;
-
-  padding: ${p => p.theme.space.xl};
-
-  @media (min-width: ${p => p.theme.breakpoints.lg}) {
-    padding: ${p => p.theme.space.xl} ${p => p.theme.space['3xl']};
-  }
 
   grid-template-rows: max-content minmax(0, 1fr);
   grid-template-areas:
@@ -291,7 +288,8 @@ const LayoutGrid = styled('div')<{hideTop?: boolean}>`
 
   @media (max-width: ${p => p.theme.breakpoints.md}) {
     grid-template-columns: 1fr;
-    grid-template-rows: ${p => (p.hideTop ? '0fr minmax(0, 100vh)' : 'max-content 76vh')};
+    grid-template-rows: ${p =>
+      p.hideTop ? '0fr minmax(0, 1fr)' : 'max-content minmax(0, 1fr)'};
     grid-template-areas: ${p => (p.hideTop ? "'.' 'content'" : "'top' 'content'")};
   }
 
@@ -302,6 +300,16 @@ const LayoutGrid = styled('div')<{hideTop?: boolean}>`
   @media (min-width: ${p => p.theme.breakpoints.lg}) {
     grid-template-columns: minmax(390px, 1fr) 2fr;
   }
+`;
+
+const StyledLayoutBody = styled(Layout.Body)`
+  min-height: 0;
+`;
+
+const StyledLayoutMain = styled(Layout.Main)`
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 `;
 
 const Container = styled('div')<{area?: string}>`
