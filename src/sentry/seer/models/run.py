@@ -71,11 +71,12 @@ class SeerAgentRun(DefaultFieldsModel):
 
     run = models.OneToOneField("seer.SeerRun", on_delete=models.CASCADE, related_name="agent")
     title = models.CharField(max_length=256)
+    # SET_NULL so the historical run record survives project/group deletion.
     project = FlexibleForeignKey(
-        "sentry.Project", on_delete=models.CASCADE, db_constraint=False, null=True
+        "sentry.Project", on_delete=models.SET_NULL, db_constraint=False, null=True
     )
     group = FlexibleForeignKey(
-        "sentry.Group", on_delete=models.CASCADE, db_constraint=False, null=True
+        "sentry.Group", on_delete=models.SET_NULL, db_constraint=False, null=True
     )
     # What feature/surface invoked this run: "autofix", "night_shift",
     # "slack_thread", "dashboard_generate", "bug-fixer", "chat", etc.
