@@ -225,15 +225,19 @@ export default function FeedbackListPage() {
       <SentryDocumentTitle title={t('User Feedback')} orgSlug={organization.slug}>
         <Stack flex={1} contain="size">
           <FeedbackQueryKeys organization={organization}>
-            <TopBar.Slot name="title">{titleContent}</TopBar.Slot>
-            <TopBar.Slot name="actions">
-              <LinkButton {...createAlertAction}>{t('Create Alert')}</LinkButton>
-            </TopBar.Slot>
-            <TopBar.Slot name="feedback">
-              <FeedbackButton size="sm" feedbackOptions={userFeedbackFeedbackOptions}>
-                {null}
-              </FeedbackButton>
-            </TopBar.Slot>
+            <Layout.Header unified>
+              <Layout.HeaderContent unified>
+                <Layout.Title>{titleContent}</Layout.Title>
+              </Layout.HeaderContent>
+              <TopBar.Slot name="actions">
+                <LinkButton {...createAlertAction}>{t('Create Alert')}</LinkButton>
+              </TopBar.Slot>
+              <TopBar.Slot name="feedback">
+                <FeedbackButton size="sm" feedbackOptions={userFeedbackFeedbackOptions}>
+                  {null}
+                </FeedbackButton>
+              </TopBar.Slot>
+            </Layout.Header>
             <PageContent
               hideTop={hideTop}
               hasFeedbackContent={hasFeedbackContent}
@@ -304,9 +308,16 @@ const LayoutGrid = styled('div')<{hideTop?: boolean}>`
 
 const StyledLayoutBody = styled(Layout.Body)`
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  @media (min-width: ${p => p.theme.breakpoints.lg}) {
+    display: flex;
+  }
 `;
 
 const StyledLayoutMain = styled(Layout.Main)`
+  flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
