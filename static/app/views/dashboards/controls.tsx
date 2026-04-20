@@ -363,19 +363,12 @@ export function Controls({
                   size="sm"
                 />
               ))}
-            {dashboard.id !== 'default-overview' &&
-              !isPrebuiltDashboard &&
-              (hasPageFrameFeature ? (
-                <EditAccessSelector
-                  dashboard={dashboard}
-                  onChangeEditAccess={onChangeEditAccess}
-                />
-              ) : (
-                <EditAccessSelector
-                  dashboard={dashboard}
-                  onChangeEditAccess={onChangeEditAccess}
-                />
-              ))}
+            {dashboard.id !== 'default-overview' && !isPrebuiltDashboard && (
+              <EditAccessSelector
+                dashboard={dashboard}
+                onChangeEditAccess={onChangeEditAccess}
+              />
+            )}
             {!hasPageFrameFeature && renderEditButton(hasFeature)}
             {hasFeature && !isPrebuiltDashboard && (
               <Tooltip
