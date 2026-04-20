@@ -1,0 +1,118 @@
+=== METADATA ===
+Key,Value
+Timestamp,2026-04-20T17:25:46.275Z
+GitCommit,4bae177829fc4e47aa1a65b49362bc8d851e8b1a
+GitBranch,HEAD
+TotalFiles,6487
+AnalyzedFiles,6487
+
+=== TOP 10 MOST COMMONLY STYLED COMPONENTS ===
+Component,Instances
+div,3710
+span,480
+Button,197
+Link,96
+p,84
+Panel,78
+InlineArrowFunction,67
+ul,54
+PanelItem,52
+motion.div,50
+
+=== TOP 10 MOST COMMONLY USED CSS RULES ===
+CSSRule,Instances
+display,2963
+color,1431
+align-items,1390
+padding,1237
+width,1209
+gap,1164
+position,1065
+font-size,1046
+height,1004
+margin-bottom,795
+
+=== CORE COMPONENT USAGE (LAYOUT) ===
+Type,Component,Instances
+Layout,Flex,255
+
+=== CORE COMPONENT USAGE (TEXT) ===
+Type,Component,Instances
+Text,,0
+
+=== CORE COMPONENT USAGE (ALL COMPONENTS) ===
+Component,Instances
+Button,564
+Tooltip,503
+Alert,287
+LinkButton,282
+Link,258
+Flex,255
+ButtonBar,144
+Tag,87
+TabList,55
+Tabs,48
+SegmentedControl,45
+InputGroup,34
+AlertLink,24
+Badge,23
+TabPanels,20
+CompositeSelect,15
+TriggerLabel,10
+StyledButton,6
+CheckWrap,5
+TooltipContext,4
+SectionTitle,4
+CollapsedAvatars,2
+TabStateProvider,2
+InnerWrap,2
+SectionWrap,2
+SectionHeader,2
+SectionGroup,2
+ListLabel,2
+ListWrap,2
+SizeLimitMessage,2
+FeatureBadge,1
+ListBox,1
+MenuListItem,1
+LeadingItems,1
+SelectContext,1
+SelectFilterContext,1
+
+=== CORE COMPONENT USAGE (SUMMARY) ===
+Component,Instances
+Total Files,0
+Core Components,2697
+
+=== STYLED DIVS WITH ONLY FLEX RULES ===
+Rank,Component,Location
+1,div,./static/app/views/traces/content.tsx:166:26
+2,div,./static/app/views/traces/tracesSearchBar.tsx:83:34
+3,div,./static/app/views/relocation/uploadBackup.tsx:227:18
+4,div,./static/app/data/forms/projectGeneralSettings.tsx:43:25
+5,div,./static/app/views/integrationPipeline/githubInstallationSelect.tsx:222:28
+6,div,./static/app/views/issueDetails/groupTags/tagDetailsDrawerContent.tsx:387:15
+7,div,./static/app/views/issueDetails/groupTags/groupTagValues.tsx:403:16
+8,div,./static/app/views/integrationPipeline/awsLambdaFunctionSelect.tsx:227:22
+9,div,./static/app/views/profiling/landingAggregateFlamegraph.tsx:158:30
+10,div,./static/app/views/profiling/landingAggregateFlamegraph.tsx:364:38
+
+=== TOP 10 FILES BY STYLED CALL COUNT ===
+File,StyledCalls
+./static/app/views/performance/newTraceDetails/traceDrawer/details/styles.tsx,54
+./static/app/views/explore/logs/styles.tsx,32
+./static/app/components/events/autofix/autofixInsightCards.tsx,30
+./static/app/components/events/autofix/autofixDiff.tsx,29
+./static/app/views/alerts/rules/issue/index.tsx,24
+./static/app/views/releases/list/releaseCard/index.tsx,23
+./static/app/components/stream/group.tsx,21
+./static/app/views/preprod/sizeAnalysis.tsx,20
+./static/app/views/performance/onboarding.tsx,20
+./static/app/components/deprecatedSmartSearchBar/searchDropdown.tsx,20
+
+=== STYLED USAGE STATISTICS ===
+Metric,Value
+Total TSX Files,6487
+Files with Styled Calls,1895
+Percentage with Styled Calls,29.2%
+

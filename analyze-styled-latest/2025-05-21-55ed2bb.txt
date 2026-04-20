@@ -1,0 +1,109 @@
+=== METADATA ===
+Key,Value
+Timestamp,2026-04-20T17:25:22.596Z
+GitCommit,55ed2bb7871844f889746c353ffe9a37b9ae3386
+GitBranch,HEAD
+TotalFiles,6237
+AnalyzedFiles,6237
+
+=== TOP 10 MOST COMMONLY STYLED COMPONENTS ===
+Component,Instances
+div,3513
+span,463
+Button,197
+Link,92
+Panel,80
+p,79
+InlineArrowFunction,68
+PanelItem,54
+ul,51
+motion.div,47
+
+=== TOP 10 MOST COMMONLY USED CSS RULES ===
+CSSRule,Instances
+display,2820
+color,1370
+align-items,1329
+padding,1179
+width,1141
+gap,1085
+position,1003
+font-size,995
+height,946
+margin-bottom,749
+
+=== CORE COMPONENT USAGE (LAYOUT) ===
+Type,Component,Instances
+Layout,,0
+
+=== CORE COMPONENT USAGE (TEXT) ===
+Type,Component,Instances
+Text,,0
+
+=== CORE COMPONENT USAGE (ALL COMPONENTS) ===
+Component,Instances
+Button,534
+Tooltip,462
+LinkButton,265
+Alert,261
+ButtonBar,137
+Tag,85
+SegmentedControl,45
+InputGroup,35
+AlertLink,24
+Badge,20
+StyledButton,20
+CompositeSelect,15
+SectionTitle,8
+TriggerLabel,5
+CheckWrap,5
+SectionHeader,5
+CollapsedAvatars,2
+InnerWrap,2
+SectionWrap,2
+SectionGroup,2
+ListLabel,2
+ListWrap,2
+SizeLimitMessage,2
+TooltipContext,2
+FeatureBadge,1
+LeadingItems,1
+MenuListItem,1
+
+=== CORE COMPONENT USAGE (SUMMARY) ===
+Component,Instances
+Total Files,0
+Core Components,1945
+
+=== STYLED DIVS WITH ONLY FLEX RULES ===
+Rank,Component,Location
+1,div,./static/app/views/explore/utils.tsx:432:37
+2,div,./static/app/views/dashboards/editAccessSelector.tsx:437:40
+3,div,./static/app/views/codecov/coverage/coverageWrapper.tsx:34:26
+4,div,./static/app/stories/layout.tsx:6:27
+5,div,./static/app/stories/apiReference.tsx:416:46
+6,div,./static/app/views/performance/vitalDetail/vitalDetailContent.tsx:322:21
+7,div,./static/app/views/codecov/coverage/pulls/pullWrapper.tsx:33:26
+8,div,./static/app/views/alerts/rules/uptime/uptimeHeadersField.tsx:148:26
+9,div,./static/app/views/alerts/rules/uptime/uptimeHeadersField.tsx:154:23
+10,div,./static/app/views/dashboards/manage/dashboardTable.tsx:401:27
+
+=== TOP 10 FILES BY STYLED CALL COUNT ===
+File,StyledCalls
+./static/app/views/performance/newTraceDetails/traceDrawer/details/styles.tsx,48
+./static/app/components/events/autofix/autofixDiff.tsx,29
+./static/app/components/events/autofix/autofixInsightCards.tsx,28
+./static/app/views/alerts/rules/issue/index.tsx,24
+./static/app/views/releases/list/releaseCard/index.tsx,23
+./static/app/components/stream/group.tsx,21
+./static/app/views/performance/onboarding.tsx,20
+./static/app/components/deprecatedSmartSearchBar/searchDropdown.tsx,20
+./static/app/components/events/interfaces/spans/header.tsx,20
+./static/app/components/events/eventStatisticalDetector/eventDifferentialFlamegraph.tsx,20
+
+=== STYLED USAGE STATISTICS ===
+Metric,Value
+Total TSX Files,6237
+Files with Styled Calls,1813
+Percentage with Styled Calls,29.1%
+

@@ -1,0 +1,135 @@
+=== METADATA ===
+Key,Value
+Timestamp,2026-04-20T17:26:54.352Z
+GitCommit,08906794ba31a4ff347ad1ac54140518c63687d4
+GitBranch,HEAD
+TotalFiles,7243
+AnalyzedFiles,7243
+
+=== TOP 10 MOST COMMONLY STYLED COMPONENTS ===
+Component,Instances
+div,3401
+span,474
+Button,181
+Link,92
+InlineArrowFunction,77
+p,71
+Panel,68
+ul,58
+motion.div,55
+img,54
+
+=== TOP 10 MOST COMMONLY USED CSS RULES ===
+CSSRule,Instances
+display,2751
+color,1329
+align-items,1294
+padding,1238
+width,1199
+gap,1119
+position,1015
+font-size,998
+height,981
+margin-bottom,752
+
+=== CORE COMPONENT USAGE (LAYOUT) ===
+Type,Component,Instances
+Layout,Flex,990
+Layout,Container,326
+Layout,Stack,112
+Layout,Grid,60
+
+=== CORE COMPONENT USAGE (TEXT) ===
+Type,Component,Instances
+Text,Text,592
+Text,Heading,127
+
+=== CORE COMPONENT USAGE (ALL COMPONENTS) ===
+Component,Instances
+Flex,990
+Button,649
+Text,592
+Tooltip,553
+Container,326
+LinkButton,286
+Alert,274
+Link,230
+CodeBlock,162
+ButtonBar,152
+ExternalLink,142
+Heading,127
+Stack,112
+Tag,103
+Grid,60
+TabList,59
+SegmentedControl,52
+Tabs,50
+InputGroup,43
+TabPanels,19
+Badge,17
+AlertLink,16
+CompositeSelect,15
+StyledButton,15
+InlineCode,13
+TriggerLabel,13
+Disclosure,12
+Separator,7
+SectionTitle,7
+Prose,6
+CheckWrap,5
+TooltipContext,4
+TabStateProvider,3
+ListBox,2
+CollapsedAvatars,2
+InnerWrap,2
+SectionWrap,2
+SectionHeader,2
+SectionGroup,2
+ListLabel,2
+ListWrap,2
+SizeLimitMessage,2
+TagBadge,1
+FeatureBadge,1
+TrackingContextProvider,1
+MenuListItem,1
+LeadingItems,1
+SelectContext,1
+SelectFilterContext,1
+
+=== CORE COMPONENT USAGE (SUMMARY) ===
+Component,Instances
+Total Files,0
+Core Components,5139
+
+=== STYLED DIVS WITH ONLY FLEX RULES ===
+Rank,Component,Location
+1,div,./static/app/views/seerExplorer/askUserQuestionBlock.tsx:160:27
+2,div,./static/app/views/seerExplorer/askUserQuestionBlock.tsx:166:26
+3,div,./static/app/views/seerExplorer/fileDiffViewer.tsx:212:26
+4,div,./static/app/views/seerExplorer/blockComponents.tsx:544:27
+5,div,./static/app/views/issueDetails/streamline/eventNavigation.tsx:359:27
+6,div,./static/app/views/issueDetails/streamline/eventTitle.tsx:244:25
+7,div,./static/app/views/discover/landing.tsx:302:26
+8,div,./static/app/views/alerts/rules/uptime/detailsTimelineLegend.tsx:106:20
+9,div,./static/app/views/alerts/rules/uptime/uptimeHeadersField.tsx:148:26
+10,div,./static/app/views/alerts/rules/uptime/uptimeHeadersField.tsx:154:23
+
+=== TOP 10 FILES BY STYLED CALL COUNT ===
+File,StyledCalls
+./static/app/views/performance/newTraceDetails/traceDrawer/details/styles.tsx,55
+./static/app/views/issueList/pages/dynamicGrouping.tsx,42
+./static/app/views/explore/logs/styles.tsx,36
+./static/app/components/events/autofix/autofixDiff.tsx,29
+./static/app/views/issueList/pages/topIssues.tsx,28
+./static/app/views/alerts/rules/issue/index.tsx,24
+./static/app/views/releases/list/releaseCard/index.tsx,22
+./static/app/components/stream/group.tsx,21
+./static/app/views/settings/projectSeer/autofixRepoItem.tsx,20
+./static/app/components/searchBar/searchDropdown.tsx,20
+
+=== STYLED USAGE STATISTICS ===
+Metric,Value
+Total TSX Files,7243
+Files with Styled Calls,1864
+Percentage with Styled Calls,25.7%
+

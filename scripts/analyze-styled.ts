@@ -620,7 +620,7 @@ class CoreComponentImportsDetector extends BaseDetector {
       );
       logger.log();
     } else {
-      logger.log('\n🧩 Core Component Usage (from sentry/components/core):\n');
+      logger.log('\n🧩 Core Component Usage (from sentry/components/core or @sentry/scraps):\n');
       logger.table(layoutData);
       logger.table(textData);
       logger.log('\n📋 All Core Components:\n');

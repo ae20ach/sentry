@@ -1,0 +1,96 @@
+=== METADATA ===
+Key,Value
+Timestamp,2026-04-20T17:24:54.047Z
+GitCommit,ea87c8b8cc64339147af329deac2f954d46942e7
+GitBranch,HEAD
+TotalFiles,5937
+AnalyzedFiles,5937
+
+=== TOP 10 MOST COMMONLY STYLED COMPONENTS ===
+Component,Instances
+div,3385
+span,465
+Button,207
+Link,84
+Panel,73
+p,72
+InlineArrowFunction,66
+PanelItem,59
+ul,50
+motion.div,47
+
+=== TOP 10 MOST COMMONLY USED CSS RULES ===
+CSSRule,Instances
+display,2780
+color,1346
+align-items,1290
+padding,1144
+width,1121
+gap,1033
+position,970
+font-size,967
+height,929
+margin-bottom,723
+
+=== CORE COMPONENT USAGE (LAYOUT) ===
+Type,Component,Instances
+Layout,,0
+
+=== CORE COMPONENT USAGE (TEXT) ===
+Type,Component,Instances
+Text,,0
+
+=== CORE COMPONENT USAGE (ALL COMPONENTS) ===
+Component,Instances
+Button,524
+LinkButton,261
+Alert,258
+Tag,70
+InputGroup,32
+AlertLink,24
+Badge,19
+StyledButton,18
+CollapsedAvatars,2
+InnerWrap,2
+FeatureBadge,1
+ButtonLabel,1
+LeadingItems,1
+MenuListItem,1
+
+=== CORE COMPONENT USAGE (SUMMARY) ===
+Component,Instances
+Total Files,0
+Core Components,1214
+
+=== STYLED DIVS WITH ONLY FLEX RULES ===
+Rank,Component,Location
+1,div,./static/app/views/projectInstall/issueAlertNotificationOptions.tsx:258:17
+2,div,./static/app/views/projectInstall/otherPlatformsInfo.tsx:104:17
+3,div,./static/app/views/projectInstall/issueAlertOptions.tsx:341:24
+4,div,./static/app/views/profiling/landingAggregateFlamegraph.tsx:786:52
+5,div,./static/app/views/sharedGroupDetails/sharedGroupHeader.tsx:87:24
+6,div,./static/app/views/setupWizard/wizardProjectSelection.tsx:387:22
+7,div,./static/app/views/setupWizard/wizardProjectSelection.tsx:411:20
+8,div,./static/app/views/stories/storyTypes.tsx:416:46
+9,div,./static/app/views/dashboards/editAccessSelector.tsx:439:40
+10,div,./static/app/views/explore/logs/styles.tsx:89:28
+
+=== TOP 10 FILES BY STYLED CALL COUNT ===
+File,StyledCalls
+./static/app/views/performance/newTraceDetails/traceDrawer/details/styles.tsx,52
+./static/app/views/performance/newTraceDetails/traceDrawer/details/issues/issues.tsx,31
+./static/app/components/events/autofix/autofixDiff.tsx,29
+./static/app/components/events/autofix/autofixInsightCards.tsx,28
+./static/app/components/stream/group.tsx,26
+./static/app/views/issueList/addViewPage.tsx,24
+./static/app/views/alerts/rules/issue/index.tsx,24
+./static/app/components/events/autofix/autofixSolution.tsx,23
+./static/app/views/profiling/landingAggregateFlamegraph.tsx,22
+./static/app/views/releases/list/releaseCard/index.tsx,22
+
+=== STYLED USAGE STATISTICS ===
+Metric,Value
+Total TSX Files,5937
+Files with Styled Calls,1732
+Percentage with Styled Calls,29.2%
+
