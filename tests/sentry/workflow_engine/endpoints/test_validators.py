@@ -115,15 +115,16 @@ class TestBaseGroupTypeDetectorValidator(BaseValidatorTest):
         self.validator_class = BaseDetectorTypeValidator
 
     def test_validate_type_valid(self) -> None:
+        class TestGroupType(GroupType):
+            type_id = 1
+            slug = "test_type"
+            description = "no handler"
+            category = GroupCategory.METRIC_ALERT.value
+            category_v2 = GroupCategory.METRIC.value
+            detector_settings = DetectorSettings(validator=MetricIssueDetectorValidator)
+
         with mock.patch.object(grouptype.registry, "get_by_slug") as mock_get_by_slug:
-            mock_get_by_slug.return_value = GroupType(
-                type_id=1,
-                slug="test_type",
-                description="no handler",
-                category=GroupCategory.METRIC_ALERT.value,
-                category_v2=GroupCategory.METRIC.value,
-                detector_settings=DetectorSettings(validator=MetricIssueDetectorValidator),
-            )
+            mock_get_by_slug.return_value = TestGroupType
             validator = self.validator_class()
             result = validator.validate_type("test_type")
             assert result == mock_get_by_slug.return_value
@@ -138,14 +139,15 @@ class TestBaseGroupTypeDetectorValidator(BaseValidatorTest):
                 validator.validate_type("unknown_type")
 
     def test_validate_type_incompatible(self) -> None:
+        class TestGroupType(GroupType):
+            type_id = 1
+            slug = "test_type"
+            description = "no handler"
+            category = GroupCategory.METRIC_ALERT.value
+            category_v2 = GroupCategory.METRIC.value
+
         with mock.patch.object(grouptype.registry, "get_by_slug") as mock_get_by_slug:
-            mock_get_by_slug.return_value = GroupType(
-                type_id=1,
-                slug="test_type",
-                description="no handler",
-                category=GroupCategory.METRIC_ALERT.value,
-                category_v2=GroupCategory.METRIC.value,
-            )
+            mock_get_by_slug.return_value = TestGroupType
             validator = self.validator_class()
             with pytest.raises(
                 ValidationError,
