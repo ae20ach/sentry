@@ -40,6 +40,11 @@ def count_hits(queryset, max_hits):
     except EmptyResultSet:
         return 0
     cursor = connections[queryset.using_replica().db].cursor()
+    # nosemgrep: python.django.db.djangoorm-django.djangoorm-django
+    # h_sql comes from Django's query compiler via sql_with_params() which generates
+    # safe, parameterized SQL. h_params contains the query parameters that are passed
+    # separately to cursor.execute(), ensuring proper parameterization. This is not
+    # vulnerable to SQL injection.
     cursor.execute(f"SELECT COUNT(*) FROM ({h_sql}) as t", h_params)
     return cursor.fetchone()[0]
 
