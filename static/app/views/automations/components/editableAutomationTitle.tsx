@@ -1,7 +1,6 @@
 import type {ReactNode} from 'react';
-import {css} from '@emotion/react';
+import styled from '@emotion/styled';
 
-import {Flex} from '@sentry/scraps/layout';
 import {Heading} from '@sentry/scraps/text';
 
 type Props = {
@@ -10,28 +9,20 @@ type Props = {
 
 export function EditableAutomationTitle({children}: Props) {
   return (
-    <Heading ellipsis>
-      {({className}) => (
-        <Flex
-          as="h1"
-          className={className}
-          align="center"
-          gap="md"
-          minWidth={0}
-          width="100%"
-          css={editableAutomationTitleCss}
-        >
-          {children}
-        </Flex>
-      )}
-    </Heading>
+    <StyledEditableAutomationTitle as="h1" ellipsis>
+      {children}
+    </StyledEditableAutomationTitle>
   );
 }
 
-const editableAutomationTitleCss = css`
+const StyledEditableAutomationTitle = styled(Heading)`
   width: 100%;
+  min-width: 0;
   font-size: 1.625rem;
   font-weight: 600;
   letter-spacing: -0.01em;
   line-height: 40px;
+  display: flex;
+  gap: ${p => p.theme.space.md};
+  align-items: center;
 `;
