@@ -53,35 +53,31 @@ function PageContent({
   return (
     <PageFiltersContainer>
       <ErrorBoundary>
-        <StyledLayoutBody>
-          <StyledLayoutMain width="full">
-            <Stack flex={1} minHeight={0} align="stretch" gap="xl" background="primary">
-              <LayoutGrid hideTop={hideTop}>
-                {!hideTop && (
-                  <Stack
-                    flexGrow={1}
-                    gap="md"
-                    area="top"
-                    direction={{xs: 'column', sm: 'row'}}
-                    align={{xs: 'stretch', sm: 'start'}}
-                  >
-                    <FeedbackFilters />
-                    <SearchContainer>
-                      <FeedbackSearch />
-                    </SearchContainer>
-                  </Stack>
-                )}
-                {hasFeedbackContent ? (
-                  content
-                ) : (
-                  <SetupContainer>
-                    <FeedbackSetupPanel />
-                  </SetupContainer>
-                )}
-              </LayoutGrid>
-            </Stack>
-          </StyledLayoutMain>
-        </StyledLayoutBody>
+        <Stack flex={1} minHeight={0} align="stretch" gap="xl" background="primary">
+          <LayoutGrid hideTop={hideTop}>
+            {!hideTop && (
+              <Stack
+                flexGrow={1}
+                gap="md"
+                area="top"
+                direction={{xs: 'column', sm: 'row'}}
+                align={{xs: 'stretch', sm: 'start'}}
+              >
+                <FeedbackFilters />
+                <SearchContainer>
+                  <FeedbackSearch />
+                </SearchContainer>
+              </Stack>
+            )}
+            {hasFeedbackContent ? (
+              content
+            ) : (
+              <SetupContainer>
+                <FeedbackSetupPanel />
+              </SetupContainer>
+            )}
+          </LayoutGrid>
+        </Stack>
       </ErrorBoundary>
     </PageFiltersContainer>
   );
@@ -238,11 +234,13 @@ export default function FeedbackListPage() {
                 </FeedbackButton>
               </TopBar.Slot>
             </Layout.Header>
-            <PageContent
-              hideTop={hideTop}
-              hasFeedbackContent={hasFeedbackContent}
-              content={pageContent}
-            />
+            <Stack flex={1} minHeight={0} overflow="hidden" padding="lg xl">
+              <PageContent
+                hideTop={hideTop}
+                hasFeedbackContent={hasFeedbackContent}
+                content={pageContent}
+              />
+            </Stack>
           </FeedbackQueryKeys>
         </Stack>
       </SentryDocumentTitle>
@@ -266,11 +264,18 @@ export default function FeedbackListPage() {
               </Flex>
             </Layout.HeaderActions>
           </Layout.Header>
-          <PageContent
-            hideTop={hideTop}
-            hasFeedbackContent={hasFeedbackContent}
-            content={pageContent}
-          />
+          <Stack
+            flex={1}
+            minHeight={0}
+            overflow="hidden"
+            padding={{sm: 'xl', lg: 'xl 3xl'}}
+          >
+            <PageContent
+              hideTop={hideTop}
+              hasFeedbackContent={hasFeedbackContent}
+              content={pageContent}
+            />
+          </Stack>
         </FeedbackQueryKeys>
       </FullViewport>
     </SentryDocumentTitle>
@@ -304,23 +309,6 @@ const LayoutGrid = styled('div')<{hideTop?: boolean}>`
   @media (min-width: ${p => p.theme.breakpoints.lg}) {
     grid-template-columns: minmax(390px, 1fr) 2fr;
   }
-`;
-
-const StyledLayoutBody = styled(Layout.Body)`
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-
-  @media (min-width: ${p => p.theme.breakpoints.lg}) {
-    display: flex;
-  }
-`;
-
-const StyledLayoutMain = styled(Layout.Main)`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
 `;
 
 const Container = styled('div')<{area?: string}>`
