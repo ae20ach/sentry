@@ -45,6 +45,8 @@ interface TopBarProps {
   showContextEngineToggle: boolean;
 }
 
+// NOOP
+
 export function TopBar({
   isPolling,
   isEmptyState,
