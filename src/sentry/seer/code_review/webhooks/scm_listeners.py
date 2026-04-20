@@ -1,7 +1,9 @@
+from scm.manager import SourceCodeManager
+from scm.types import CreatePullRequestReactionProtocol
+
 from sentry.integrations.models import Integration
-from sentry.scm.actions import SourceCodeManager
 from sentry.scm.private.event_stream import scm_event_stream
-from sentry.scm.types import CreatePullRequestReactionProtocol, PullRequestEvent
+from sentry.scm.types import PullRequestEvent
 
 
 @scm_event_stream.listen_for_pull_request
