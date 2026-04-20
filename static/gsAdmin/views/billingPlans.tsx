@@ -217,22 +217,21 @@ export function BillingPlans() {
 
   return (
     <BillingPlansContainer>
-      <h1>Application Monitoring Billing Plans</h1>
+      <h1>Billing Plans</h1>
       <Button icon={<IconDownload />} onClick={handleDownloadCsv}>
         Download CSV
       </Button>
       <TableOfContents plans={plans} />
-      {Object.entries(plans)
-        .sort(([a], [b]) => b.localeCompare(a))
-        .map(([planTierId, planTier]) => (
-          <PlanTierSection
-            key={planTierId}
-            planTierId={planTierId}
-            planTier={planTier}
-            categories={billingPlansResponse.categories}
-            notLive={billingPlansResponse.not_live}
-          />
-        ))}
+      {buildPlanSections(plans).map(({id, label, planTier}) => (
+        <PlanTierSection
+          key={id}
+          planTierId={id}
+          planTierLabel={label}
+          planTier={planTier}
+          categories={billingPlansResponse.categories}
+          notLive={billingPlansResponse.not_live}
+        />
+      ))}
     </BillingPlansContainer>
   );
 }
@@ -241,13 +240,21 @@ const PREFERRED_PLAN_ORDER = [
   'developer',
   'team',
   'business',
-  'enterprise_team',
   'enterprise_business',
-  'enterprise_trial',
-  'enterprise_team_ds',
-  'enterprise_business_ds',
-  'enterprise_trial_ds',
+  'enterprise_team_auf',
 ] as const;
+
+const BUNDLE_PLAN_KEYS = new Set([
+  'team_bundle',
+  'business_bundle',
+  'business_249_bundle',
+]);
+const SPONSORED_PLAN_KEYS = new Set([
+  'sponsored',
+  'sponsored_business',
+  'sponsored_team_auf',
+]);
+const TRIAL_PLAN_KEYS = new Set(['trial', 'enterprise_trial']);
 
 function getPlanColumnOrder(plans: Plans): string[] {
   const allPlanNames = new Set<string>();
@@ -260,9 +267,56 @@ function getPlanColumnOrder(plans: Plans): string[] {
   return [...preferred, ...others];
 }
 
+const AM_TIER_ORDER = ['am3', 'am2', 'am1'];
+const LEGACY_TIER_ORDER = ['mm2', 'mm1'];
+
 function TableOfContents({plans}: {plans: Plans}) {
-  const sortedTiers = Object.entries(plans).sort(([a], [b]) => b.localeCompare(a));
-  const planColumnOrder = getPlanColumnOrder(plans);
+  const amTiers = AM_TIER_ORDER.filter(id => id in plans);
+  const legacyTiers = LEGACY_TIER_ORDER.filter(id => id in plans);
+
+  const EXTRA_PLAN_KEYS = new Set([
+    ...BUNDLE_PLAN_KEYS,
+    ...SPONSORED_PLAN_KEYS,
+    ...TRIAL_PLAN_KEYS,
+  ]);
+
+  // Exclude bundle, sponsored, and trial plans from the table columns
+  const amPlansForTable = Object.fromEntries(
+    amTiers.map(id => [
+      id,
+      Object.fromEntries(
+        Object.entries(plans[id]!).filter(([planName]) => !EXTRA_PLAN_KEYS.has(planName))
+      ),
+    ])
+  );
+  const planColumnOrder = getPlanColumnOrder(amPlansForTable);
+
+  const trialPlans = amTiers.flatMap(id =>
+    Object.entries(plans[id]!).filter(([planName]) => TRIAL_PLAN_KEYS.has(planName))
+  );
+  const sponsoredPlans = amTiers.flatMap(id =>
+    Object.entries(plans[id]!).filter(([planName]) => SPONSORED_PLAN_KEYS.has(planName))
+  );
+  const am2BundlePlans = plans['am2']
+    ? Object.entries(plans['am2']).filter(([planName]) => BUNDLE_PLAN_KEYS.has(planName))
+    : [];
+
+  const extraLinks: Array<{entries: Array<[string, PlanDetails]>; label: string}> = [];
+  if (trialPlans.length > 0) {
+    extraLinks.push({label: 'Trials', entries: trialPlans});
+  }
+  if (sponsoredPlans.length > 0) {
+    extraLinks.push({label: 'Sponsored', entries: sponsoredPlans});
+  }
+  if (am2BundlePlans.length > 0) {
+    extraLinks.push({label: 'AM2 Bundles', entries: am2BundlePlans});
+  }
+  for (const planTierId of legacyTiers) {
+    extraLinks.push({
+      label: formatPlanTierId(planTierId),
+      entries: Object.entries(plans[planTierId]!),
+    });
+  }
 
   return (
     <TOCContainer>
@@ -278,12 +332,13 @@ function TableOfContents({plans}: {plans: Plans}) {
             </tr>
           </thead>
           <tbody>
-            {sortedTiers.length === 0 ? (
+            {amTiers.length === 0 ? (
               <tr>
                 <td colSpan={planColumnOrder.length + 1}>No plans.</td>
               </tr>
             ) : (
-              sortedTiers.map(([planTierId, planTier]) => {
+              amTiers.map(planTierId => {
+                const planTier = plans[planTierId]!;
                 const planTierIdFormatted = formatPlanTierId(planTierId);
                 return (
                   <tr key={planTierIdFormatted}>
@@ -323,12 +378,109 @@ function TableOfContents({plans}: {plans: Plans}) {
           </tbody>
         </StyledResultTable>
       </Panel>
+      {extraLinks.length > 0 && (
+        <div style={{marginTop: 12, fontSize: 14}}>
+          {extraLinks.map(({label, entries}) => (
+            <div key={label} style={{marginBottom: 6}}>
+              <strong>{label}:</strong>{' '}
+              {entries.map(([planName, planDetails], idx) => (
+                <Fragment key={planName}>
+                  {idx > 0 && ', '}
+                  <a href={`#${planDetails.id ?? planFallbackAnchorId(label, planName)}`}>
+                    {planDetails.id ?? planName}
+                  </a>
+                </Fragment>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </TOCContainer>
   );
 }
 
+function buildPlanSections(
+  plans: Plans
+): Array<{id: string; label: string; planTier: PlanTier}> {
+  const EXTRA_KEYS = new Set([
+    ...BUNDLE_PLAN_KEYS,
+    ...SPONSORED_PLAN_KEYS,
+    ...TRIAL_PLAN_KEYS,
+  ]);
+  const sections: Array<{id: string; label: string; planTier: PlanTier}> = [];
+
+  // AM tiers — core plans only (no trials/sponsored/bundles)
+  for (const tierId of AM_TIER_ORDER) {
+    if (!(tierId in plans)) continue;
+    const filtered = Object.fromEntries(
+      Object.entries(plans[tierId]!).filter(([k]) => !EXTRA_KEYS.has(k))
+    );
+    if (Object.keys(filtered).length > 0) {
+      sections.push({
+        id: tierId,
+        label: `${formatPlanTierId(tierId)} Plans`,
+        planTier: filtered,
+      });
+    }
+  }
+
+  // Trial plans collected from AM tiers in order
+  const trialEntries = AM_TIER_ORDER.flatMap(id =>
+    id in plans ? Object.entries(plans[id]!).filter(([k]) => TRIAL_PLAN_KEYS.has(k)) : []
+  );
+  if (trialEntries.length > 0) {
+    sections.push({
+      id: 'trials',
+      label: 'Trials',
+      planTier: Object.fromEntries(trialEntries),
+    });
+  }
+
+  // Sponsored plans collected from AM tiers in order
+  const sponsoredEntries = AM_TIER_ORDER.flatMap(id =>
+    id in plans
+      ? Object.entries(plans[id]!).filter(([k]) => SPONSORED_PLAN_KEYS.has(k))
+      : []
+  );
+  if (sponsoredEntries.length > 0) {
+    sections.push({
+      id: 'sponsored',
+      label: 'Sponsored',
+      planTier: Object.fromEntries(sponsoredEntries),
+    });
+  }
+
+  // AM2 bundle plans
+  if ('am2' in plans) {
+    const bundleEntries = Object.entries(plans['am2']!).filter(([k]) =>
+      BUNDLE_PLAN_KEYS.has(k)
+    );
+    if (bundleEntries.length > 0) {
+      sections.push({
+        id: 'am2_bundles',
+        label: 'AM2 Bundles',
+        planTier: Object.fromEntries(bundleEntries),
+      });
+    }
+  }
+
+  // Legacy MM tiers
+  for (const tierId of LEGACY_TIER_ORDER) {
+    if (tierId in plans) {
+      sections.push({
+        id: tierId,
+        label: `${formatPlanTierId(tierId)} Plans`,
+        planTier: plans[tierId]!,
+      });
+    }
+  }
+
+  return sections;
+}
+
 function PlanTierSection({
   planTierId,
+  planTierLabel,
   planTier,
   categories,
   notLive,
@@ -337,8 +489,10 @@ function PlanTierSection({
   planTierId: string;
   categories?: Record<string, CategoryInfo | string>;
   notLive?: string[];
+  planTierLabel?: string;
 }) {
   const planTierIdFormatted = formatPlanTierId(planTierId);
+  const heading = planTierLabel ?? `${planTierIdFormatted} Plans`;
   const isNotLive = notLive?.includes(planTierId) ?? false;
 
   return (
@@ -349,7 +503,7 @@ function PlanTierSection({
       }}
     >
       <h2 id={planTierIdFormatted} style={{marginTop: 20}}>
-        {planTierIdFormatted} Plans
+        {heading}
       </h2>
       {Object.entries(planTier).map(([planName, planDetails]) => (
         <PlanDetailsSection
