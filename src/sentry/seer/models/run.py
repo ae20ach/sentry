@@ -71,12 +71,15 @@ class SeerAgentRun(DefaultFieldsModel):
 
     run = models.OneToOneField("seer.SeerRun", on_delete=models.CASCADE, related_name="agent")
     title = models.CharField(max_length=256)
-    # SET_NULL so the historical run record survives project/group deletion.
+    # DO_NOTHING so we keep the historical run record AND preserve semantics:
+    # NULL means the run was never tied to a project/group (e.g. assisted query),
+    # while a stale non-NULL id means it ran against a project/group that has
+    # since been deleted. Readers must tolerate dereferencing a stale id.
     project = FlexibleForeignKey(
-        "sentry.Project", on_delete=models.SET_NULL, db_constraint=False, null=True
+        "sentry.Project", on_delete=models.DO_NOTHING, db_constraint=False, null=True
     )
     group = FlexibleForeignKey(
-        "sentry.Group", on_delete=models.SET_NULL, db_constraint=False, null=True
+        "sentry.Group", on_delete=models.DO_NOTHING, db_constraint=False, null=True
     )
     # What feature/surface invoked this run: "autofix", "night_shift",
     # "slack_thread", "dashboard_generate", "bug-fixer", "chat", etc.
