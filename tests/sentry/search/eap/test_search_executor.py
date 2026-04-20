@@ -461,3 +461,20 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
         cursor_group_ids = {gid for gid, _ in cursor_result}
         # Only group1 has score >= group1_score
         assert cursor_group_ids == {self.group1.id}
+
+    def test_last_seen_score_is_milliseconds(self) -> None:
+        result, _ = run_eap_group_search(
+            start=self.start,
+            end=self.end,
+            project_ids=[self.project.id],
+            environment_ids=None,
+            sort_field="last_seen",
+            organization=self.organization,
+            referrer="test",
+        )
+        group1_score = next(score for gid, score in result if gid == self.group1.id)
+        # group1's newest event is self.now - 5min. In ms that's ~1.7e12; in
+        # seconds it would be ~1.7e9. Only the ms range matches reality.
+        assert group1_score >= 10**12
+        expected_ms = int((self.now - timedelta(minutes=5)).timestamp() * 1000)
+        assert abs(group1_score - expected_ms) < 2000

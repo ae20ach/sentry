@@ -66,6 +66,13 @@ AGGREGATION_FIELD_TO_EAP_FUNCTION: dict[str, str] = {
 # UI does not meaningfully distinguish between very large result counts.
 EAP_COUNT_QUERY_MAX_LIMIT = 10000
 
+# Sort fields whose legacy aggregations multiply timestamps by 1000 to return
+# milliseconds (see executors.py:864-865). EAP's first_seen() / last_seen() are
+# plain min/max on `timestamp`, which is stored in seconds. We rescale on both
+# sides — cursor values ms → s when filtering, and returned scores s → ms when
+# returning — so the caller sees the same units as the legacy path.
+MS_SCORE_SORT_FIELDS: frozenset[str] = frozenset({"first_seen", "last_seen"})
+
 
 def search_filters_to_query_string(
     search_filters: Sequence[SearchFilter],
@@ -305,6 +312,8 @@ def run_eap_group_search(
         group_id = row.get("group_id")
         score = row.get(score_column)
         if group_id is not None:
+            if sort_field in MS_SCORE_SORT_FIELDS and score is not None:
+                score = int(score * 1000)
             tuples.append((int(group_id), score))
 
     # The EAP RPC TraceItemTableResponse does not include a total count
@@ -343,7 +352,10 @@ def _append_cursor_filter(query_string: str, cursor: Cursor | None, sort_field: 
 
     sort_function = EAP_SORT_STRATEGIES[sort_field][0][1]  # e.g. "last_seen()" or "count()"
     operator = ">=" if cursor.is_prev else "<="
-    cursor_filter = f"{sort_function}:{operator}{cursor.value}"
+    cursor_value = cursor.value
+    if sort_field in MS_SCORE_SORT_FIELDS:
+        cursor_value = float(cursor_value) / 1000
+    cursor_filter = f"{sort_function}:{operator}{cursor_value}"
     return f"{query_string} {cursor_filter}".strip()
 
 
