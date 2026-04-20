@@ -6,6 +6,7 @@ from sentry.search.eap.occurrences.search_executor import (
     search_filters_to_query_string,
 )
 from sentry.testutils.cases import OccurrenceTestCase, SnubaTestCase, TestCase
+from sentry.utils.cursors import Cursor
 
 
 class TestSearchFiltersToQueryString:
@@ -362,3 +363,59 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
         assert group_ids[1] == self.group1.id
         assert self.group2.id not in group_ids
         assert total == 2
+
+    def test_cursor_next_page_filters_by_score(self) -> None:
+        # First: get the actual last_seen scores from an unfiltered query.
+        result, _ = run_eap_group_search(
+            start=self.start,
+            end=self.end,
+            project_ids=[self.project.id],
+            environment_ids=None,
+            sort_field="last_seen",
+            organization=self.organization,
+            referrer="test",
+        )
+        assert len(result) == 2
+        # group1 has the higher score (more recent). Use group2's score as the
+        # cursor — the "next page" should exclude group1 (score > cursor) but
+        # include group2 (score == cursor).
+        group2_score = next(score for gid, score in result if gid == self.group2.id)
+
+        cursor_result, _ = run_eap_group_search(
+            start=self.start,
+            end=self.end,
+            project_ids=[self.project.id],
+            environment_ids=None,
+            sort_field="last_seen",
+            organization=self.organization,
+            cursor=Cursor(value=group2_score, offset=0, is_prev=False),
+            referrer="test",
+        )
+        cursor_group_ids = {gid for gid, _ in cursor_result}
+        assert cursor_group_ids == {self.group2.id}
+
+    def test_cursor_prev_page_filters_by_score(self) -> None:
+        result, _ = run_eap_group_search(
+            start=self.start,
+            end=self.end,
+            project_ids=[self.project.id],
+            environment_ids=None,
+            sort_field="last_seen",
+            organization=self.organization,
+            referrer="test",
+        )
+        group1_score = next(score for gid, score in result if gid == self.group1.id)
+
+        cursor_result, _ = run_eap_group_search(
+            start=self.start,
+            end=self.end,
+            project_ids=[self.project.id],
+            environment_ids=None,
+            sort_field="last_seen",
+            organization=self.organization,
+            cursor=Cursor(value=group1_score, offset=0, is_prev=True),
+            referrer="test",
+        )
+        cursor_group_ids = {gid for gid, _ in cursor_result}
+        # Only group1 has score >= group1_score
+        assert cursor_group_ids == {self.group1.id}

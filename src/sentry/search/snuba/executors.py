@@ -546,6 +546,7 @@ class AbstractQueryExecutor(metaclass=ABCMeta):
                     environment_ids=environment_ids,
                     sort_field=sort_field,
                     organization=organization,
+                    cursor=cursor,
                     group_ids=group_ids,
                     limit=limit,
                     offset=offset,

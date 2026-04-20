@@ -13,6 +13,7 @@ from sentry.search.eap.occurrences.query_utils import build_group_id_in_filter
 from sentry.search.eap.types import SearchResolverConfig
 from sentry.search.events.types import SnubaParams
 from sentry.snuba.occurrences_rpc import Occurrences
+from sentry.utils.cursors import Cursor
 
 logger = logging.getLogger(__name__)
 
@@ -213,6 +214,7 @@ def run_eap_group_search(
     environment_ids: Sequence[int] | None,
     sort_field: str,
     organization: Organization,
+    cursor: Cursor | None = None,
     group_ids: Sequence[int] | None = None,
     limit: int | None = None,
     offset: int = 0,
@@ -251,6 +253,7 @@ def run_eap_group_search(
     )
 
     query_string = search_filters_to_query_string(search_filters or [])
+    query_string = _append_cursor_filter(query_string, cursor, sort_field)
 
     extra_conditions = None
     if group_ids:
@@ -299,6 +302,23 @@ def run_eap_group_search(
     )
 
     return (tuples, total)
+
+
+def _append_cursor_filter(query_string: str, cursor: Cursor | None, sort_field: str) -> str:
+    """
+    Append an aggregation filter replicating the legacy cursor HAVING clause.
+
+    Legacy behavior (executors.py): having.append((sort_field, ">=" if is_prev else "<=", value))
+    EAP equivalent: append {sort_function}:{>=|<=}{cursor.value} to the query string, which
+    the SearchResolver parses as an AggregateFilter → routed to the RPC's aggregation_filter.
+    """
+    if cursor is None or not cursor.value:
+        return query_string
+
+    sort_function = EAP_SORT_STRATEGIES[sort_field][0][1]  # e.g. "last_seen()" or "count()"
+    operator = ">=" if cursor.is_prev else "<="
+    cursor_filter = f"{sort_function}:{operator}{cursor.value}"
+    return f"{query_string} {cursor_filter}".strip()
 
 
 def _get_total_count(
