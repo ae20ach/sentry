@@ -81,7 +81,7 @@ def _is_autofix_enabled_for_repo(organization: Organization, repository_id: int)
         return False
 
     return any(
-        any(repo.repository_id == repository_id for repo in pref.repositories)
+        any(repo.repository_id == repository_id for repo in pref.repositories if repo.repository_id)
         for pref in resolved_preferences
     )
 
