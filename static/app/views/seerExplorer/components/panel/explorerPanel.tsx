@@ -622,7 +622,9 @@ export function ExplorerPanel() {
         onOverrideCtxEngEnableToggle={() => setOverrideCtxEngEnable(v => !v)}
         showThinking={showThinking}
         onShowThinkingToggle={() => setShowThinking(v => !v)}
-        showThinkingToggle
+        showThinkingToggle={
+          !!organization?.features.includes('seer-explorer-thinking-blocks')
+        }
         showContextEngineToggle={
           !!organization?.features.includes(
             'seer-explorer-context-engine-fe-override-ui-flag'
