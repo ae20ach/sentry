@@ -328,12 +328,6 @@ def detect_llm_issues_for_org(org_id: int) -> None:
     except Organization.DoesNotExist:
         return
 
-    has_access = features.has("organizations:gen-ai-features", organization) and not bool(
-        organization.get_option("sentry:hide_ai_features")
-    )
-    if not has_access:
-        return
-
     project_ids = list(
         Project.objects.filter(
             organization_id=org_id,
