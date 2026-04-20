@@ -243,10 +243,7 @@ def translate_metric_alert_to_detector_payload(data: dict[str, Any]) -> dict[str
         data_source["extrapolation_mode"] = data["extrapolationMode"]
 
     # build up config
-    config: dict[str, Any] = {
-        "detection_type": data.get("detectionType")
-        or data.get("detection_type", AlertRuleDetectionType.STATIC),
-    }
+    config: dict[str, Any] = {"detection_type": detection_type}
     if data.get("comparisonDelta"):
         config["comparison_delta"] = int(data["comparisonDelta"] * 60)  # minutes -> seconds
 
@@ -308,9 +305,12 @@ def create_metric_alert(
 
         context_project = project
         if context_project is None and data.get("projects"):
-            context_project = Project.objects.get(
-                slug=data["projects"][0], organization=organization
-            )
+            try:
+                context_project = Project.objects.get(
+                    slug=data["projects"][0], organization=organization
+                )
+            except Project.DoesNotExist:
+                raise ValidationError("Project slug must be passed")
 
         context = {
             "organization": organization,

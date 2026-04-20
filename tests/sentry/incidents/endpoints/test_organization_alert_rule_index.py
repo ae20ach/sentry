@@ -626,6 +626,25 @@ class AlertRuleCreateEndpointTest(AlertRuleIndexBase, SnubaTestCase):
         assert resp.data == serialize(detector, self.user, WorkflowEngineDetectorSerializer())
         assert mock_send_new_detector_data.call_count == 1
 
+    def test_workflow_engine_post_invalid_project_slug(self) -> None:
+        data = {
+            **self.alert_rule_dict,
+            "projects": ["nonexistent-project-slug"],
+        }
+        with self.feature(
+            [
+                "organizations:incidents",
+                "organizations:performance-view",
+                "organizations:workflow-engine-rule-serializers",
+            ]
+        ):
+            resp = self.get_error_response(
+                self.organization.slug,
+                status_code=400,
+                **data,
+            )
+        assert resp.data == ["Project slug must be passed"]
+
     def test_create_alert_rule_aci(self) -> None:
         with (
             outbox_runner(),
