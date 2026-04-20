@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from typing import Any, TypedDict
+
+from django.db.models import prefetch_related_objects
 
 from sentry.api.serializers import Serializer, register
 from sentry.seer.models.night_shift import SeerNightShiftRun, SeerNightShiftRunIssue
@@ -25,10 +28,16 @@ class SeerNightShiftRunResponse(TypedDict):
 
 @register(SeerNightShiftRun)
 class SeerNightShiftRunSerializer(Serializer):
+    def get_attrs(
+        self, item_list: Sequence[SeerNightShiftRun], user: Any, **kwargs: Any
+    ) -> dict[SeerNightShiftRun, dict[str, Any]]:
+        prefetch_related_objects(item_list, "issues")
+        return {}
+
     def serialize(
         self,
         obj: SeerNightShiftRun,
-        attrs: dict[str, Any],
+        attrs: Mapping[str, Any],
         user: Any,
         **kwargs: Any,
     ) -> SeerNightShiftRunResponse:
