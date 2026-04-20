@@ -159,7 +159,10 @@ def trace_item_to_row(
             continue
         which = av.WhichOneof("value")
         value = anyvalue_to_python(av)
-        eap_storage_type = PROTOBUF_TYPE_TO_SEARCH_TYPE.get(which)
+        if which is None:
+            eap_storage_type = None
+        else:
+            eap_storage_type = PROTOBUF_TYPE_TO_SEARCH_TYPE.get(which)
         if eap_storage_type is None:
             new_key = internal_key
         else:
