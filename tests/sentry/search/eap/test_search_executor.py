@@ -364,6 +364,23 @@ class TestRunEAPGroupSearch(TestCase, SnubaTestCase, OccurrenceTestCase):
         assert self.group2.id not in group_ids
         assert total == 2
 
+    def test_total_with_aggregation_filter(self) -> None:
+        # setUp: group1 has 3 occurrences, group2 has 1.
+        # With times_seen:>2 only group1 passes.
+        result, total = run_eap_group_search(
+            start=self.start,
+            end=self.end,
+            project_ids=[self.project.id],
+            environment_ids=None,
+            sort_field="times_seen",
+            organization=self.organization,
+            search_filters=[SearchFilter(SearchKey("times_seen"), ">", SearchValue("2"))],
+            referrer="test",
+        )
+        group_ids = {gid for gid, _ in result}
+        assert group_ids == {self.group1.id}
+        assert total == 1
+
     def test_cursor_next_page_filters_by_score(self) -> None:
         # First: get the actual last_seen scores from an unfiltered query.
         result, _ = run_eap_group_search(

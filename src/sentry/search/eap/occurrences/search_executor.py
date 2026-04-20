@@ -59,6 +59,11 @@ AGGREGATION_FIELD_TO_EAP_FUNCTION: dict[str, str] = {
     "user_count": "count_unique(user)",
 }
 
+# Upper bound on the grouped count query used when the query contains aggregation
+# filters. The legacy path caps similar totals via too_many_candidates handling; the
+# UI does not meaningfully distinguish between very large result counts.
+EAP_COUNT_QUERY_MAX_LIMIT = 10000
+
 
 def search_filters_to_query_string(
     search_filters: Sequence[SearchFilter],
@@ -199,11 +204,14 @@ def _format_string_value(s: str) -> str:
 #   "trends" → "trends"   → complex ClickHouse expression (not supported)
 #   "recommended" → "recommended" → complex ClickHouse expression (not supported)
 #   "inbox" → ""          → Postgres only (not supported)
+#
+# group_id is included as a secondary orderby tiebreaker for stable ordering
+# within the same score, matching the legacy `[f"-{sort_field}", "group_id"]`.
 EAP_SORT_STRATEGIES: dict[str, tuple[list[str], list[str]]] = {
-    "last_seen": (["group_id", "last_seen()"], ["-last_seen()"]),
-    "times_seen": (["group_id", "count()"], ["-count()"]),
-    "first_seen": (["group_id", "first_seen()"], ["-first_seen()"]),
-    "user_count": (["group_id", "count_unique(user)"], ["-count_unique(user)"]),
+    "last_seen": (["group_id", "last_seen()"], ["-last_seen()", "group_id"]),
+    "times_seen": (["group_id", "count()"], ["-count()", "group_id"]),
+    "first_seen": (["group_id", "first_seen()"], ["-first_seen()", "group_id"]),
+    "user_count": (["group_id", "count_unique(user)"], ["-count_unique(user)", "group_id"]),
 }
 
 
@@ -292,13 +300,21 @@ def run_eap_group_search(
 
     # The EAP RPC TraceItemTableResponse does not include a total count
     # (unlike Snuba's totals=True), so we issue a separate aggregate query.
-    # TODO: this total hit calculation may be an overestimate
+    # When the query contains aggregation filters (HAVING), we must use a grouped
+    # count query to match the legacy `after_having_exclusive` totals semantics —
+    # otherwise the cheap count_unique(group_id) would treat the aggregation
+    # filter as a global condition instead of a per-group one.
+    has_aggregation_filter = (
+        any(sf.key.name in AGGREGATION_FIELD_TO_EAP_FUNCTION for sf in (search_filters or []))
+        or cursor is not None
+    )
     total = _get_total_count(
         snuba_params=snuba_params,
         query_string=query_string,
         extra_conditions=extra_conditions,
         referrer=referrer,
         organization_id=organization.id,
+        has_aggregation_filter=has_aggregation_filter,
     )
 
     return (tuples, total)
@@ -312,7 +328,7 @@ def _append_cursor_filter(query_string: str, cursor: Cursor | None, sort_field: 
     EAP equivalent: append {sort_function}:{>=|<=}{cursor.value} to the query string, which
     the SearchResolver parses as an AggregateFilter → routed to the RPC's aggregation_filter.
     """
-    if cursor is None or not cursor.value:
+    if cursor is None:
         return query_string
 
     sort_function = EAP_SORT_STRATEGIES[sort_field][0][1]  # e.g. "last_seen()" or "count()"
@@ -328,11 +344,33 @@ def _get_total_count(
     extra_conditions: TraceItemFilter | None,
     referrer: str,
     organization_id: int,
+    has_aggregation_filter: bool,
 ) -> int:
     """
     Calculate the total count of matching groups for the given query.
+
+    For queries without aggregation filters (HAVING), we can use a cheap
+    count_unique(group_id) scalar aggregate. For queries with aggregation
+    filters we need to replicate the legacy totals_mode=after_having_exclusive
+    behavior by running a grouped query (GROUP BY group_id) and counting the
+    rows returned — this is the only way to apply HAVING per-group instead of
+    globally.
     """
     try:
+        if has_aggregation_filter:
+            count_result = Occurrences.run_table_query(
+                params=snuba_params,
+                query_string=query_string,
+                selected_columns=["group_id", "count()"],
+                orderby=None,
+                offset=0,
+                limit=EAP_COUNT_QUERY_MAX_LIMIT,
+                referrer=referrer,
+                config=SearchResolverConfig(),
+                extra_conditions=extra_conditions,
+            )
+            return len(count_result.get("data", []))
+
         count_result = Occurrences.run_table_query(
             params=snuba_params,
             query_string=query_string,
