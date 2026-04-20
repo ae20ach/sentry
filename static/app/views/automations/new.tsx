@@ -1,4 +1,4 @@
-import {useCallback, useMemo} from 'react';
+import {useCallback, Fragment, useMemo} from 'react';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
 import * as Sentry from '@sentry/react';
@@ -47,6 +47,8 @@ import {
   makeAutomationDetailsPathname,
 } from 'sentry/views/automations/pathnames';
 import {resolveDetectorIdsForProjects} from 'sentry/views/automations/utils/resolveDetectorIdsForProjects';
+import {TopBar} from 'sentry/views/navigation/topBar';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 function AutomationDocumentTitle() {
   const title = useFormField('name');
@@ -56,7 +58,6 @@ function AutomationDocumentTitle() {
 }
 
 function AutomationBreadcrumbs() {
-  const title = useFormField('name');
   const organization = useOrganization();
   return (
     <Breadcrumbs
@@ -65,7 +66,7 @@ function AutomationBreadcrumbs() {
           label: t('Alerts'),
           to: makeAutomationBasePathname(organization.slug),
         },
-        {label: title ? title : t('New Alert')},
+        {label: t('New Alert')},
       ]}
     />
   );
@@ -134,6 +135,7 @@ export default function AutomationNewSettings() {
   const theme = useTheme();
   const maxWidth = theme.breakpoints.lg;
   const initialData = useInitialFormData();
+  const hasPageFrameFeature = useHasPageFrameFeature();
 
   const {
     errors: automationBuilderErrors,
@@ -235,10 +237,23 @@ export default function AutomationNewSettings() {
           <StyledLayoutHeader>
             <HeaderInner maxWidth={maxWidth}>
               <Layout.HeaderContent>
-                <AutomationBreadcrumbs />
-                <Layout.Title>
-                  <EditableAutomationName />
-                </Layout.Title>
+                {hasPageFrameFeature ? (
+                  <Fragment>
+                    <TopBar.Slot name="title">
+                      <AutomationBreadcrumbs />
+                    </TopBar.Slot>
+                    <EditableAutomationTitle>
+                      <EditableAutomationName />
+                    </EditableAutomationTitle>
+                  </Fragment>
+                ) : (
+                  <Fragment>
+                    <AutomationBreadcrumbs />
+                    <Layout.Title>
+                      <EditableAutomationName />
+                    </Layout.Title>
+                  </Fragment>
+                )}
               </Layout.HeaderContent>
               <div>
                 <AutomationFeedbackButton />
@@ -297,6 +312,24 @@ const HeaderInner = styled('div')<{maxWidth?: string}>`
     max-width: ${p => p.maxWidth};
     width: 100%;
   }
+`;
+
+const EditableAutomationTitle = styled('h1')`
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 1.625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: ${p => p.theme.tokens.content.primary};
+  line-height: 40px;
+  display: flex;
+  gap: ${p => p.theme.space.md};
+  align-items: center;
 `;
 
 const StyledBody = styled(Layout.Body)<{maxWidth?: string}>`
