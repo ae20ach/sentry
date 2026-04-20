@@ -7,9 +7,9 @@ from sentry.integrations.slack.message_builder.types import SlackAction
 from sentry.notifications.platform.service import serialize_notification_data
 from sentry.notifications.platform.slack.provider import SlackRenderable
 from sentry.notifications.platform.templates.seer import (
+    SeerAgentError,
+    SeerAgentResponse,
     SeerAutofixUpdate,
-    SeerExplorerError,
-    SeerExplorerResponse,
 )
 from sentry.notifications.utils.actions import BlockKitMessageAction
 from sentry.seer.autofix.utils import AutofixStoppingPoint
@@ -622,7 +622,7 @@ class SlackAgentEntrypointTest(TestCase):
 
         mock_schedule_all_thread_updates.assert_called_once()
         call_data = mock_schedule_all_thread_updates.call_args.kwargs["data"]
-        assert isinstance(call_data, SeerExplorerError)
+        assert isinstance(call_data, SeerAgentError)
         assert call_data.error_message == "Seer was unable to generate a response."
 
     def test_on_agent_update_skips_clear_when_integration_not_found(self) -> None:
@@ -664,7 +664,7 @@ class SlackAgentEntrypointTest(TestCase):
         )
 
         call_data = mock_schedule.call_args.kwargs["data"]
-        assert isinstance(call_data, SeerExplorerResponse)
+        assert isinstance(call_data, SeerAgentResponse)
         assert call_data.missing_scope_settings_url is not None
         assert "/integrations/slack/" in call_data.missing_scope_settings_url
 
@@ -687,7 +687,7 @@ class SlackAgentEntrypointTest(TestCase):
         )
 
         call_data = mock_schedule.call_args.kwargs["data"]
-        assert isinstance(call_data, SeerExplorerResponse)
+        assert isinstance(call_data, SeerAgentResponse)
         assert call_data.missing_scope_settings_url is None
 
     @patch("sentry.seer.entrypoints.slack.entrypoint.schedule_all_thread_updates")

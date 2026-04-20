@@ -9,10 +9,10 @@ from sentry.integrations.services.integration.service import integration_service
 from sentry.locks import locks
 from sentry.models.organization import Organization
 from sentry.notifications.platform.templates.seer import (
+    SeerAgentError,
+    SeerAgentResponse,
     SeerAutofixError,
     SeerAutofixUpdate,
-    SeerExplorerError,
-    SeerExplorerResponse,
 )
 from sentry.notifications.utils.actions import BlockKitMessageAction
 from sentry.organizations.services.organization.model import RpcOrganization
@@ -432,7 +432,7 @@ class SlackAgentEntrypoint(
         send_thread_update(
             install=self.install,
             thread=self.thread,
-            data=SeerExplorerError(error_message=error),
+            data=SeerAgentError(error_message=error),
             ephemeral_user_id=self.slack_user_id,
         )
 
@@ -457,7 +457,7 @@ class SlackAgentEntrypoint(
         thread = cache_payload["thread"]
 
         if not summary:
-            data: SeerExplorerError | SeerExplorerResponse = SeerExplorerError(
+            data: SeerAgentError | SeerAgentResponse = SeerAgentError(
                 error_message="Seer was unable to generate a response."
             )
         else:
@@ -467,7 +467,7 @@ class SlackAgentEntrypoint(
                 channel_id=thread["channel_id"],
                 thread_ts=thread["thread_ts"],
             )
-            data = SeerExplorerResponse(
+            data = SeerAgentResponse(
                 run_id=run_id,
                 organization_id=organization_id,
                 summary=summary,
