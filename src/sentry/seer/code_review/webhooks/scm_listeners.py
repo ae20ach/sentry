@@ -1,7 +1,7 @@
-from scm.manager import SourceCodeManager
 from scm.types import CreatePullRequestReactionProtocol
 
 from sentry.integrations.models import Integration
+from sentry.scm.factory import new as make_scm
 from sentry.scm.private.event_stream import scm_event_stream
 from sentry.scm.types import PullRequestEvent
 
@@ -37,9 +37,7 @@ def handle_pull_request_via_scm_stream(e: PullRequestEvent) -> None:
     else:
         assert False
 
-    scm = SourceCodeManager.make_from_repository_id(
-        organization_id=organization_id, repository_id=repository_id
-    )
+    scm = make_scm(organization_id, repository_id, referrer="seer")
     if isinstance(scm, CreatePullRequestReactionProtocol):
         scm.create_pull_request_reaction(
             pull_request_id=e.pull_request["id"],
