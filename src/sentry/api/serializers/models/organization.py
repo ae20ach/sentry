@@ -350,12 +350,31 @@ class OrganizationSummarySerializer(Serializer):
         }
         auth_providers = self._serialize_auth_providers(configs_by_org_id, item_list, user)
 
+        # Pre-fetch all organization feature flags in bulk during the get_attrs phase so
+        # that get_feature_set() does not call features.batch_has() per-object during
+        # the hot serialize() loop, avoiding repeated expensive DB/flagpole lookups.
+        org_features = [
+            feature
+            for feature in features.all(
+                feature_type=features.OrganizationFeature, api_expose_only=True
+            ).keys()
+            if feature.startswith(_ORGANIZATION_SCOPE_PREFIX)
+        ]
+        batch_features_by_org: dict[int, dict[str, bool | None] | None] = {}
+        with sentry_sdk.start_span(op="features.check", name="check batch features"):
+            for item in item_list:
+                result = features.batch_has(org_features, actor=user, organization=item)
+                batch_features_by_org[item.id] = (
+                    result.get(f"organization:{item.id}") if result else None
+                )
+
         data: MutableMapping[Organization, MutableMapping[str, Any]] = {}
         for item in item_list:
             data[item] = {
                 "avatar": avatars.get(item.id),
                 "auth_provider": auth_providers.get(item.id, None),
                 "has_api_key": configs_by_org_id[item.id].has_api_key,
+                "batch_features": batch_features_by_org.get(item.id),
             }
         return data
 
@@ -379,10 +398,12 @@ class OrganizationSummarySerializer(Serializer):
         }
 
     def get_feature_set(
-        self, obj: Organization, attrs: Mapping[str, Any], user: User | RpcUser | AnonymousUser
+        self,
+        obj: Organization,
+        attrs: Mapping[str, Any],
+        user: User | RpcUser | AnonymousUser,
+        batch_features: dict[str, bool | None] | None = None,
     ) -> list[str]:
-        from sentry import features
-
         # Retrieve all registered organization features
         org_features = [
             feature
@@ -393,20 +414,22 @@ class OrganizationSummarySerializer(Serializer):
         ]
         feature_set = set()
 
-        with sentry_sdk.start_span(op="features.check", name="check batch features"):
-            # Check features in batch using the entity handler
-            batch_features = features.batch_has(org_features, actor=user, organization=obj)
+        # Use pre-fetched batch features from get_attrs() when available; fall back to
+        # calling batch_has() directly for backward compatibility (e.g. callers outside
+        # the normal serializer lifecycle).
+        if batch_features is None:
+            with sentry_sdk.start_span(op="features.check", name="check batch features"):
+                result = features.batch_has(org_features, actor=user, organization=obj)
+                batch_features = result.get(f"organization:{obj.id}") if result else None
 
-            # batch_has has found some features
-            if batch_features:
-                for feature_name, active in batch_features.get(
-                    f"organization:{obj.id}", {}
-                ).items():
-                    if active:
-                        # Remove organization prefix
-                        feature_set.add(feature_name[len(_ORGANIZATION_SCOPE_PREFIX) :])
+        if batch_features:
+            for feature_name, active in batch_features.items():
+                if active:
+                    # Remove organization prefix
+                    feature_set.add(feature_name[len(_ORGANIZATION_SCOPE_PREFIX) :])
 
-                    # This feature_name was found via `batch_has`, don't check again using `has`
+                # This feature_name was found via `batch_has`, don't check again using `has`
+                if feature_name in org_features:
                     org_features.remove(feature_name)
 
         with sentry_sdk.start_span(op="features.check", name="check individual features"):
@@ -495,7 +518,9 @@ class OrganizationSummarySerializer(Serializer):
         }
 
         if include_feature_flags:
-            context["features"] = self.get_feature_set(obj, attrs, user)
+            context["features"] = self.get_feature_set(
+                obj, attrs, user, batch_features=attrs.get("batch_features")
+            )
             context["extraOptions"] = {
                 "traces": {
                     "spansExtractionDate": options.get("performance.traces.spans_extraction_date"),
