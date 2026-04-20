@@ -29,6 +29,7 @@ import {
   IconLock,
   IconOpen,
   IconSearch,
+  IconSeer,
   IconSettings,
   IconSiren,
   IconStar,
@@ -36,6 +37,7 @@ import {
 } from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {apiOptions} from 'sentry/utils/api/apiOptions';
+import {getApiUrl} from 'sentry/utils/api/getApiUrl';
 import {isActiveSuperuser} from 'sentry/utils/isActiveSuperuser';
 import {QUERY_API_CLIENT, useMutation} from 'sentry/utils/queryClient';
 import {useMutateUserOptions} from 'sentry/utils/useMutateUserOptions';
@@ -50,6 +52,7 @@ import {MCP_LANDING_SUB_PATH} from 'sentry/views/insights/pages/mcp/settings';
 import {MOBILE_LANDING_SUB_PATH} from 'sentry/views/insights/pages/mobile/settings';
 import {ISSUE_TAXONOMY_CONFIG} from 'sentry/views/issueList/taxonomies';
 import {useStarredIssueViews} from 'sentry/views/navigation/secondary/sections/issues/issueViews/useStarredIssueViews';
+import {openSeerExplorer} from 'sentry/views/seerExplorer/openSeerExplorer';
 import {getUserOrgNavigationConfiguration} from 'sentry/views/settings/organization/userOrgNavigationConfiguration';
 
 import {CMDKAction} from './cmdk';
@@ -266,7 +269,7 @@ export function GlobalCommandPaletteActions() {
             <CMDKAction
               key={project.id}
               display={{
-                label: project.name,
+                label: project.slug,
                 icon: <ProjectAvatar project={project} size={16} />,
               }}
               to={`/settings/${organization.slug}/projects/${project.slug}/`}
@@ -310,6 +313,38 @@ export function GlobalCommandPaletteActions() {
               onAction={() => exitSuperuser()}
             />
           )}
+          <CMDKAction
+            display={{label: t('Night Shift Chats'), icon: <IconSeer />}}
+            keywords={[
+              t('seer'),
+              t('ai'),
+              t('chat'),
+              t('agent'),
+              t('explorer'),
+              t('nightshift'),
+              t('autofix'),
+            ]}
+            limit={10}
+            resource={(): CMDKQueryOptions => {
+              const url = getApiUrl(
+                '/organizations/$organizationIdOrSlug/seer/explorer-runs/',
+                {path: {organizationIdOrSlug: organization.slug}}
+              );
+              const query = {per_page: 10, category_key: 'night_shift', owner: 'false'};
+              return cmdkQueryOptions({
+                queryKey: [url, {query}],
+                queryFn: () => QUERY_API_CLIENT.requestPromise(url, {query}),
+                select: (data: {data: Array<{run_id: number; title: string}>}) =>
+                  data.data.map(session => ({
+                    display: {label: session.title, icon: <IconSeer />},
+                    onAction: () => openSeerExplorer({runId: session.run_id}),
+                  })),
+                staleTime: 30_000,
+              });
+            }}
+          >
+            {data => data.map((item, i) => renderAsyncResult(item, i))}
+          </CMDKAction>
         </CMDKAction>
       )}
 
@@ -393,7 +428,42 @@ export function GlobalCommandPaletteActions() {
         )}
       </CMDKAction>
 
-      <CMDKAction display={{label: t('Help')}}>
+      <CMDKAction
+        display={{label: t('Help')}}
+        resource={(query: string): CMDKQueryOptions => {
+          return cmdkQueryOptions({
+            queryKey: ['command-palette-help-search', query, helpSearch],
+            queryFn: () =>
+              helpSearch.query(
+                query,
+                {searchAllIndexes: true},
+                {analyticsTags: ['source:command-palette']}
+              ),
+            select: data => {
+              const results = [];
+              for (const index of data) {
+                for (const hit of index.hits.slice(0, 3)) {
+                  results.push({
+                    display: {
+                      label: DOMPurify.sanitize(hit.title ?? '', {ALLOWED_TAGS: []}),
+                      details: DOMPurify.sanitize(
+                        hit.context?.context1 ?? hit.context?.context2 ?? '',
+                        {ALLOWED_TAGS: []}
+                      ),
+                      icon: <IconDocs />,
+                    },
+                    keywords: [hit.context?.context1, hit.context?.context2].filter(
+                      (v): v is string => typeof v === 'string'
+                    ),
+                    to: hit.url,
+                  });
+                }
+              }
+              return results;
+            },
+          });
+        }}
+      >
         <CMDKAction
           display={{label: t('Open Documentation'), icon: <IconDocs />}}
           to="https://docs.sentry.io"
@@ -410,44 +480,6 @@ export function GlobalCommandPaletteActions() {
           display={{label: t('View Changelog'), icon: <IconOpen />}}
           to="https://sentry.io/changelog/"
         />
-        <CMDKAction
-          display={{label: t('Search Results')}}
-          resource={(query: string): CMDKQueryOptions => {
-            return cmdkQueryOptions({
-              queryKey: ['command-palette-help-search', query, helpSearch],
-              queryFn: () =>
-                helpSearch.query(
-                  query,
-                  {searchAllIndexes: true},
-                  {analyticsTags: ['source:command-palette']}
-                ),
-              select: data => {
-                const results = [];
-                for (const index of data) {
-                  for (const hit of index.hits.slice(0, 3)) {
-                    results.push({
-                      display: {
-                        label: DOMPurify.sanitize(hit.title ?? '', {ALLOWED_TAGS: []}),
-                        details: DOMPurify.sanitize(
-                          hit.context?.context1 ?? hit.context?.context2 ?? '',
-                          {ALLOWED_TAGS: []}
-                        ),
-                        icon: <IconDocs />,
-                      },
-                      keywords: [hit.context?.context1, hit.context?.context2].filter(
-                        (v): v is string => typeof v === 'string'
-                      ),
-                      to: hit.url,
-                    });
-                  }
-                }
-                return results;
-              },
-            });
-          }}
-        >
-          {data => data.map((item, i) => renderAsyncResult(item, i))}
-        </CMDKAction>
       </CMDKAction>
 
       <CMDKAction display={{label: t('Interface')}}>
