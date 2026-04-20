@@ -61,7 +61,56 @@ class ProjectPreprodDistributionEndpointTest(TestCase):
     @patch(
         "sentry.preprod.api.endpoints.project_preprod_distribution.send_build_distribution_webhook"
     )
-    def test_set_error(self, mock_send_webhook) -> None:
+    def test_accepts_generic_processing_error(self, mock_send_webhook) -> None:
+        response = self._put(orjson.dumps({"error_code": 3, "error_message": "some novel failure"}))
+
+        assert response.status_code == 200
+        self.artifact.refresh_from_db()
+        assert (
+            self.artifact.installable_app_error_code
+            == PreprodArtifact.InstallableAppErrorCode.PROCESSING_ERROR
+        )
+        assert self.artifact.installable_app_error_message == "some novel failure"
+
+        mock_send_webhook.assert_called_once()
+        call_kwargs = mock_send_webhook.call_args
+        assert call_kwargs.kwargs["organization_id"] == self.project.organization_id
+
+    @override_settings(LAUNCHPAD_RPC_SHARED_SECRET=[SHARED_SECRET_FOR_TESTS])
+    @patch(
+        "sentry.preprod.api.endpoints.project_preprod_distribution.send_build_distribution_webhook"
+    )
+    def test_translates_legacy_invalid_signature(self, mock_send_webhook) -> None:
+        response = self._put(orjson.dumps({"error_code": 2, "error_message": "invalid_signature"}))
+
+        assert response.status_code == 200
+        self.artifact.refresh_from_db()
+        assert (
+            self.artifact.installable_app_error_code
+            == PreprodArtifact.InstallableAppErrorCode.INVALID_CODE_SIGNATURE
+        )
+        assert self.artifact.installable_app_error_message is None
+
+    @override_settings(LAUNCHPAD_RPC_SHARED_SECRET=[SHARED_SECRET_FOR_TESTS])
+    @patch(
+        "sentry.preprod.api.endpoints.project_preprod_distribution.send_build_distribution_webhook"
+    )
+    def test_translates_legacy_simulator(self, mock_send_webhook) -> None:
+        response = self._put(orjson.dumps({"error_code": 2, "error_message": "simulator"}))
+
+        assert response.status_code == 200
+        self.artifact.refresh_from_db()
+        assert (
+            self.artifact.installable_app_error_code
+            == PreprodArtifact.InstallableAppErrorCode.SIMULATOR_BUILD
+        )
+        assert self.artifact.installable_app_error_message is None
+
+    @override_settings(LAUNCHPAD_RPC_SHARED_SECRET=[SHARED_SECRET_FOR_TESTS])
+    @patch(
+        "sentry.preprod.api.endpoints.project_preprod_distribution.send_build_distribution_webhook"
+    )
+    def test_translates_legacy_unsupported_artifact_type(self, mock_send_webhook) -> None:
         response = self._put(
             orjson.dumps({"error_code": 3, "error_message": "Unsupported artifact type"})
         )
@@ -70,14 +119,33 @@ class ProjectPreprodDistributionEndpointTest(TestCase):
         self.artifact.refresh_from_db()
         assert (
             self.artifact.installable_app_error_code
-            == PreprodArtifact.InstallableAppErrorCode.PROCESSING_ERROR
+            == PreprodArtifact.InstallableAppErrorCode.UNSUPPORTED_ARTIFACT_TYPE
         )
-        assert self.artifact.installable_app_error_message == "Unsupported artifact type"
+        assert self.artifact.installable_app_error_message is None
 
-        # Verify webhook was sent
-        mock_send_webhook.assert_called_once()
-        call_kwargs = mock_send_webhook.call_args
-        assert call_kwargs.kwargs["organization_id"] == self.project.organization_id
+    @override_settings(LAUNCHPAD_RPC_SHARED_SECRET=[SHARED_SECRET_FOR_TESTS])
+    @patch(
+        "sentry.preprod.api.endpoints.project_preprod_distribution.send_build_distribution_webhook"
+    )
+    def test_accepts_new_granular_code(self, mock_send_webhook) -> None:
+        response = self._put(
+            orjson.dumps(
+                {
+                    "error_code": int(
+                        PreprodArtifact.InstallableAppErrorCode.INVALID_CODE_SIGNATURE
+                    ),
+                    "error_message": "",
+                }
+            )
+        )
+
+        assert response.status_code == 200
+        self.artifact.refresh_from_db()
+        assert (
+            self.artifact.installable_app_error_code
+            == PreprodArtifact.InstallableAppErrorCode.INVALID_CODE_SIGNATURE
+        )
+        assert self.artifact.installable_app_error_message == ""
 
     @override_settings(LAUNCHPAD_RPC_SHARED_SECRET=[SHARED_SECRET_FOR_TESTS])
     def test_invalid_error_code(self) -> None:
