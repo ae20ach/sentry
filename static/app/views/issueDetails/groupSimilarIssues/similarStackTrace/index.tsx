@@ -1,14 +1,11 @@
-import {Fragment, useCallback, useState} from 'react';
+import {useCallback, useState} from 'react';
 import {skipToken, useMutation, useQuery} from '@tanstack/react-query';
 
+import {Stack} from '@sentry/scraps/layout';
 import {Heading, Text} from '@sentry/scraps/text';
 
 import {mergeGroups} from 'sentry/actionCreators/group';
-import {EmptyStateWarning} from 'sentry/components/emptyStateWarning';
 import {HookOrDefault} from 'sentry/components/hookOrDefault';
-import {LoadingError} from 'sentry/components/loadingError';
-import {LoadingIndicator} from 'sentry/components/loadingIndicator';
-import {Panel} from 'sentry/components/panels/panel';
 import {t} from 'sentry/locale';
 import type {Project} from 'sentry/types/project';
 import {apiOptions} from 'sentry/utils/api/apiOptions';
@@ -166,49 +163,38 @@ export function SimilarStackTrace({project}: Props) {
     event?.platform ?? ''
   );
 
-  const hasSimilarItems =
-    (hasSimilarityFeature || hasEmbeddings) &&
-    (similar.length > 0 || filtered.length > 0);
-
   const loading = isPending || isProjectPending || !canFetch;
 
   return (
-    <Fragment>
-      <Heading as="h4" size="lg">
-        {t('Issues with a similar stack trace')}
-      </Heading>
-      <Text as="p" variant="muted" size="sm">
-        {t('Experimental. Newly merged issues may take a moment to appear.')}
-      </Text>
-      {isError ? (
-        <LoadingError
-          message={t("Couldn't load similar issues. Try again in a moment.")}
-          onRetry={() => refetch()}
-        />
-      ) : loading ? (
-        <LoadingIndicator />
-      ) : hasSimilarItems ? (
-        <List
-          items={similar}
-          filteredItems={filtered}
-          onMerge={handleMerge}
-          onToggle={handleToggle}
-          checkedIds={checkedIds}
-          busyIds={busyIds}
-          project={project}
-          groupId={params.groupId}
-          pageLinks={pageLinks}
-          hasSimilarityEmbeddingsFeature={hasEmbeddings}
-        />
-      ) : (
-        <Panel>
-          <EmptyStateWarning>
-            <p>{getEmptyMessage(hasEmbeddings, platformSupportsLongStacktraces)}</p>
-          </EmptyStateWarning>
-        </Panel>
-      )}
+    <Stack gap="xl" align="stretch">
+      <Stack gap="xs" align="stretch">
+        <Heading as="h4" size="lg">
+          {t('Issues with a similar stack trace')}
+        </Heading>
+        <Text as="p" variant="muted" size="sm">
+          {t(
+            'This is an experimental feature. Data may not be immediately available while we process merges.'
+          )}
+        </Text>
+      </Stack>
+      <List
+        loading={loading}
+        isError={isError}
+        onRetry={() => refetch()}
+        emptyMessage={getEmptyMessage(hasEmbeddings, platformSupportsLongStacktraces)}
+        items={similar}
+        filteredItems={filtered}
+        onMerge={handleMerge}
+        onToggle={handleToggle}
+        checkedIds={checkedIds}
+        busyIds={busyIds}
+        project={project}
+        groupId={params.groupId}
+        pageLinks={pageLinks}
+        hasSimilarityEmbeddingsFeature={hasEmbeddings}
+      />
       <DataConsentBanner source="grouping" />
-    </Fragment>
+    </Stack>
   );
 }
 

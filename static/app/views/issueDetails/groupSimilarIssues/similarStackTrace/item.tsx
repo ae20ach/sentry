@@ -10,6 +10,7 @@ import {Count} from 'sentry/components/count';
 import {GroupHeaderRow} from 'sentry/components/groupHeaderRow';
 import {GroupMetaRow} from 'sentry/components/groupMetaRow';
 import {Hovercard} from 'sentry/components/hovercard';
+import {Placeholder} from 'sentry/components/placeholder';
 import {ScoreBar} from 'sentry/components/scoreBar';
 import {SimilarScoreCard} from 'sentry/components/similarScoreCard';
 import {SimpleTable} from 'sentry/components/tables/simpleTable';
@@ -110,6 +111,36 @@ export function SimilarStackTraceItem({
         <Button onClick={handleShowDiff} size="xs">
           {t('Diff')}
         </Button>
+      </CenteredCell>
+    </SimpleTable.Row>
+  );
+}
+
+export function SimilarStackTraceItemSkeleton({
+  hasSimilarityEmbeddingsFeature,
+}: {
+  hasSimilarityEmbeddingsFeature: boolean;
+}) {
+  const scoreColumns = hasSimilarityEmbeddingsFeature ? 1 : 2;
+  return (
+    <SimpleTable.Row>
+      <IssueCell>
+        <Placeholder height="16px" width="16px" />
+        <Flex direction="column" gap="xs" flex="1" minWidth="0">
+          <Placeholder height="16px" width="60%" />
+          <Placeholder height="12px" width="40%" />
+        </Flex>
+      </IssueCell>
+      <CenteredCell>
+        <Placeholder height="16px" width="32px" />
+      </CenteredCell>
+      {Array.from({length: scoreColumns}).map((_, i) => (
+        <CenteredCell key={i}>
+          <Placeholder height="24px" width="40px" />
+        </CenteredCell>
+      ))}
+      <CenteredCell>
+        <Placeholder height="24px" width="44px" />
       </CenteredCell>
     </SimpleTable.Row>
   );
