@@ -32,7 +32,6 @@ from sentry.incidents.utils.types import DATA_SOURCE_SNUBA_QUERY_SUBSCRIPTION
 from sentry.issues import grouptype
 from sentry.models.organization import Organization
 from sentry.models.project import Project
-from sentry.snuba.models import SnubaQuery
 from sentry.organizations.services.organization import RpcOrganization, RpcUserOrganizationContext
 from sentry.snuba.models import SnubaQuery
 from sentry.utils.audit import create_audit_entry
