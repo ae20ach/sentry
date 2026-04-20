@@ -154,7 +154,9 @@ function ReplayDetailsContent() {
           <ReplayDetailsMetadata readerResult={readerResult} />
         </Flex>
       </Flex>
-      <ReplayDetailsPage readerResult={readerResult} />
+      <Stack flex={1} minHeight="0" overflow="hidden" padding="lg xl">
+        <ReplayDetailsPage readerResult={readerResult} />
+      </Stack>
     </Fragment>
   );
 
