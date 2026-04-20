@@ -14,10 +14,22 @@ class TestSearchFiltersToQueryString:
         cases = [
             (SearchFilter(SearchKey("level"), "=", SearchValue("error")), "level:error"),
             (SearchFilter(SearchKey("level"), "!=", SearchValue("error")), "!level:error"),
-            (SearchFilter(SearchKey("count"), ">", SearchValue("5")), "count:>5"),
-            (SearchFilter(SearchKey("count"), ">=", SearchValue("5")), "count:>=5"),
-            (SearchFilter(SearchKey("count"), "<", SearchValue("5")), "count:<5"),
-            (SearchFilter(SearchKey("count"), "<=", SearchValue("5")), "count:<=5"),
+            (
+                SearchFilter(SearchKey("exception_count"), ">", SearchValue("5")),
+                "exception_count:>5",
+            ),
+            (
+                SearchFilter(SearchKey("exception_count"), ">=", SearchValue("5")),
+                "exception_count:>=5",
+            ),
+            (
+                SearchFilter(SearchKey("exception_count"), "<", SearchValue("5")),
+                "exception_count:<5",
+            ),
+            (
+                SearchFilter(SearchKey("exception_count"), "<=", SearchValue("5")),
+                "exception_count:<=5",
+            ),
             (
                 SearchFilter(SearchKey("level"), "IN", SearchValue(["error", "warning"])),
                 "level:[error, warning]",
@@ -48,17 +60,30 @@ class TestSearchFiltersToQueryString:
                 'message:"foo \\"bar\\""',
             ),
             # Numeric values
-            (SearchFilter(SearchKey("count"), "=", SearchValue(42)), "count:42"),
-            (SearchFilter(SearchKey("count"), ">", SearchValue(3.14)), "count:>3.14"),
+            (
+                SearchFilter(SearchKey("exception_count"), "=", SearchValue(42)),
+                "exception_count:42",
+            ),
+            (
+                SearchFilter(SearchKey("exception_count"), ">", SearchValue(3.14)),
+                "exception_count:>3.14",
+            ),
             # Datetime values
             (
                 SearchFilter(SearchKey("timestamp"), ">", SearchValue(dt)),
                 "timestamp:>2024-01-15T12:00:00+00:00",
             ),
-            # Tags pass through
+            # User-defined tags are wrapped as `tags[...]` so the SearchResolver
+            # parses them as tag filters. OCCURRENCE_DEFINITIONS.alias_to_column
+            # maps the tag name to `attr[{name}]` at resolve time to match EAP's
+            # ingestion format.
             (
                 SearchFilter(SearchKey("tags[browser]"), "=", SearchValue("chrome")),
                 "tags[browser]:chrome",
+            ),
+            (
+                SearchFilter(SearchKey("service"), "=", SearchValue("api-gateway")),
+                "tags[service]:api-gateway",
             ),
         ]
         for sf, expected in cases:

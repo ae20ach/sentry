@@ -9,8 +9,10 @@ from sentry.api.event_search import SearchFilter
 from sentry.models.environment import Environment
 from sentry.models.organization import Organization
 from sentry.models.project import Project
+from sentry.search.eap.occurrences.attributes import OCCURRENCE_ATTRIBUTE_DEFINITIONS
 from sentry.search.eap.occurrences.query_utils import build_group_id_in_filter
 from sentry.search.eap.types import SearchResolverConfig
+from sentry.search.events.constants import TAG_KEY_RE
 from sentry.search.events.types import SnubaParams
 from sentry.snuba.occurrences_rpc import Occurrences
 from sentry.utils.cursors import Cursor
@@ -103,6 +105,13 @@ def _convert_single_filter(sf: SearchFilter) -> str | None:
 
     if key in TRANSLATE_KEYS:
         key = TRANSLATE_KEYS[key]
+
+    # User-defined tags (keys not defined as known EAP occurrence attributes)
+    # need to be wrapped as `tags[{key}]` so the SearchResolver parses them as
+    # tag filters. OCCURRENCE_DEFINITIONS.alias_to_column then maps the tag
+    # name to the EAP ingestion format `attr[{key}]` (see item_helpers.py).
+    if key not in OCCURRENCE_ATTRIBUTE_DEFINITIONS and not TAG_KEY_RE.match(key):
+        key = f"tags[{key}]"
 
     # has / !has filters: empty string value with = or !=
     if raw_value == "" and op in ("=", "!="):
@@ -300,11 +309,12 @@ def run_eap_group_search(
 
     # The EAP RPC TraceItemTableResponse does not include a total count
     # (unlike Snuba's totals=True), so we issue a separate aggregate query.
-    # When the query contains aggregation filters (HAVING), we must use a grouped
-    # count query to match the legacy `after_having_exclusive` totals semantics —
-    # otherwise the cheap count_unique(group_id) would treat the aggregation
-    # filter as a global condition instead of a per-group one.
-    has_aggregation_filter = (
+    # When the query contains aggregation filters (HAVING) — either user-supplied
+    # or an appended cursor filter — we must use a grouped count query to match
+    # the legacy `after_having_exclusive` totals semantics. Otherwise the cheap
+    # count_unique(group_id) would treat the aggregation filter as a global
+    # condition instead of a per-group one.
+    needs_grouped_count = (
         any(sf.key.name in AGGREGATION_FIELD_TO_EAP_FUNCTION for sf in (search_filters or []))
         or cursor is not None
     )
@@ -314,7 +324,7 @@ def run_eap_group_search(
         extra_conditions=extra_conditions,
         referrer=referrer,
         organization_id=organization.id,
-        has_aggregation_filter=has_aggregation_filter,
+        needs_grouped_count=needs_grouped_count,
     )
 
     return (tuples, total)
@@ -344,20 +354,11 @@ def _get_total_count(
     extra_conditions: TraceItemFilter | None,
     referrer: str,
     organization_id: int,
-    has_aggregation_filter: bool,
+    needs_grouped_count: bool,
 ) -> int:
-    """
-    Calculate the total count of matching groups for the given query.
-
-    For queries without aggregation filters (HAVING), we can use a cheap
-    count_unique(group_id) scalar aggregate. For queries with aggregation
-    filters we need to replicate the legacy totals_mode=after_having_exclusive
-    behavior by running a grouped query (GROUP BY group_id) and counting the
-    rows returned — this is the only way to apply HAVING per-group instead of
-    globally.
-    """
+    """Calculate the total count of matching groups for the given query."""
     try:
-        if has_aggregation_filter:
+        if needs_grouped_count:
             count_result = Occurrences.run_table_query(
                 params=snuba_params,
                 query_string=query_string,
