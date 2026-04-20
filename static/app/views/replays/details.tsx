@@ -111,9 +111,7 @@ function ReplayDetailsContent() {
           <ReplayDetailsUserBadge readerResult={readerResult} />
           <ReplayDetailsMetadata readerResult={readerResult} />
         </Flex>
-        <Stack flex={1} minHeight="0" overflow="hidden" padding="lg xl">
-          <ReplayDetailsPage readerResult={readerResult} />
-        </Stack>
+        <ReplayDetailsPage readerResult={readerResult} />
       </Fragment>
     );
 
