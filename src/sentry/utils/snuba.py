@@ -1298,11 +1298,18 @@ def _bulk_snuba_query(snuba_requests: Sequence[SnubaRequest]) -> ResultSet:
                         log_snuba_info("{}.err: {}".format(referrer, body["error"]))
             except ValueError:
                 if response.status != 200:
+                    response_text = (
+                        response.data.decode("utf-8", errors="replace")
+                        if isinstance(response.data, bytes)
+                        else response.data
+                    )
                     logger.warning(
                         "snuba.query.invalid-json",
-                        extra={"response.data": response.data},
+                        extra={"response.data": response.data, "response.status": response.status},
                     )
-                    raise SnubaError("Failed to parse snuba error response")
+                    raise SnubaError(
+                        f"Snuba returned HTTP {response.status} with non-JSON response: {response_text!r}"
+                    )
                 raise UnexpectedResponseError(f"Could not decode JSON response: {response.data!r}")
 
             allocation_policy_prefix = "allocation_policy."
