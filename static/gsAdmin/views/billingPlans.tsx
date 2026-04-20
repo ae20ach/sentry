@@ -297,8 +297,8 @@ function TableOfContents({plans}: {plans: Plans}) {
   const sponsoredPlans = amTiers.flatMap(id =>
     Object.entries(plans[id]!).filter(([planName]) => SPONSORED_PLAN_KEYS.has(planName))
   );
-  const am2BundlePlans = plans['am2']
-    ? Object.entries(plans['am2']).filter(([planName]) => BUNDLE_PLAN_KEYS.has(planName))
+  const am2BundlePlans = plans.am2
+    ? Object.entries(plans.am2).filter(([planName]) => BUNDLE_PLAN_KEYS.has(planName))
     : [];
 
   const extraLinks: Array<{entries: Array<[string, PlanDetails]>; label: string}> = [];
@@ -452,7 +452,7 @@ function buildPlanSections(
 
   // AM2 bundle plans
   if ('am2' in plans) {
-    const bundleEntries = Object.entries(plans['am2']!).filter(([k]) =>
+    const bundleEntries = Object.entries(plans.am2).filter(([k]) =>
       BUNDLE_PLAN_KEYS.has(k)
     );
     if (bundleEntries.length > 0) {
