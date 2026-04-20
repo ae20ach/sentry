@@ -94,7 +94,6 @@ class SeerAgentRun(DefaultFieldsModel):
         db_table = "seer_seeragentrun"
         indexes = [
             models.Index(fields=["source"]),
-            models.Index(fields=["group"]),
         ]
 
     __repr__ = sane_repr("run_id", "source", "group_id")
