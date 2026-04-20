@@ -41,6 +41,7 @@ import {
   validateAutomationBuilderState,
 } from 'sentry/views/automations/components/automationFormData';
 import {EditableAutomationName} from 'sentry/views/automations/components/editableAutomationName';
+import {EditableAutomationTitle} from 'sentry/views/automations/components/editableAutomationTitle';
 import {EditAutomationActions} from 'sentry/views/automations/components/editAutomationActions';
 import {getAutomationAnalyticsPayload} from 'sentry/views/automations/components/forms/common/getAutomationAnalyticsPayload';
 import {AutomationFormProvider} from 'sentry/views/automations/components/forms/context';
@@ -317,24 +318,6 @@ const HeaderInner = styled('div')<{maxWidth?: string}>`
     max-width: ${p => p.maxWidth};
     width: 100%;
   }
-`;
-
-const EditableAutomationTitle = styled('h1')`
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 1.625rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  margin: 0;
-  color: ${p => p.theme.tokens.content.primary};
-  line-height: 40px;
-  display: flex;
-  gap: ${p => p.theme.space.md};
-  align-items: center;
 `;
 
 const StyledBody = styled(Layout.Body)<{maxWidth?: string}>`
