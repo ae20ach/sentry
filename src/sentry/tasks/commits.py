@@ -110,21 +110,22 @@ def fetch_commits_for_compare_range(
     start_sha: str,
     end_sha: str,
     user: RpcUser | None,
-    lifecycle: Any,
 ) -> list[dict[str, Any]]:
+    set_tag("compare_commits_cache_enabled", cache_enabled)
     if cache_enabled:
         cache_key = get_github_compare_commits_cache_key(
             repo.organization_id, repo.id, repo.provider, start_sha, end_sha
         )
         cached_repo_commits = cache.get(cache_key)
-        lifecycle.add_extra("compare_commits_cache_enabled", True)
+        logger.info(
+            "fetch_commits.compare_commits_cache_hit",
+            extra={
+                "compare_commits_cache_hit": cached_repo_commits is not None,
+                "cache_key": cache_key,
+            },
+        )
         if cached_repo_commits is not None:
-            lifecycle.add_extra("compare_commits_cache_hit", True)
             return cached_repo_commits
-
-        lifecycle.add_extra("compare_commits_cache_hit", False)
-    else:
-        lifecycle.add_extra("compare_commits_cache_enabled", False)
 
     if is_integration_repo_provider:
         # New method to decouple the provider from the task
@@ -162,12 +163,12 @@ def fetch_recent_commits(
     return provider.compare_commits(repo, None, end_sha, actor=user)
 
 
-def get_repo_and_provider_for_ref(
+def get_repo_for_ref(
     *,
     release: Release,
     ref: Mapping[str, str],
     user_id: int,
-) -> tuple[Repository, Any, bool, str] | None:
+) -> Repository | None:
     repo = (
         Repository.objects.filter(
             organization_id=release.organization_id,
@@ -188,6 +189,13 @@ def get_repo_and_provider_for_ref(
         )
         return None
 
+    return repo
+
+
+def get_provider_for_repo(
+    *,
+    repo: Repository,
+) -> tuple[Any, bool, str] | None:
     is_integration_repo_provider = is_integration_provider(repo.provider)
     binding_key = (
         "integration-repository.provider" if is_integration_repo_provider else "repository.provider"
@@ -202,7 +210,104 @@ def get_repo_and_provider_for_ref(
         provider_cls.repo_provider if is_integration_repo_provider else provider_cls.auth_provider
     )
 
-    return repo, provider, is_integration_repo_provider, provider_key
+    return provider, is_integration_repo_provider, provider_key
+
+
+def get_start_sha_for_ref(
+    *,
+    ref: Mapping[str, str],
+    release: Release,
+    repo: Repository,
+    prev_release: Release | None,
+) -> str | None:
+    if ref.get("previousCommit"):
+        return ref["previousCommit"]
+
+    if prev_release:
+        try:
+            return ReleaseHeadCommit.objects.filter(
+                organization_id=release.organization_id,
+                release=prev_release,
+                repository_id=repo.id,
+            ).values_list("commit__key", flat=True)[0]
+        except IndexError:
+            pass
+
+    return None
+
+
+def fetch_commits_for_ref_with_lifecycle(
+    *,
+    provider_key: str,
+    repo: Repository,
+    provider: Any,
+    release: Release,
+    start_sha: str | None,
+    end_sha: str,
+    user_id: int,
+    user: RpcUser | None,
+    is_integration_repo_provider: bool,
+    compare_commits_cache_enabled: bool,
+) -> list[dict[str, Any]] | None:
+    with SCMIntegrationInteractionEvent(
+        SCMIntegrationInteractionType.COMPARE_COMMITS,
+        provider_key=provider_key,
+        organization_id=repo.organization_id,
+        integration_id=repo.integration_id,
+    ).capture() as lifecycle:
+        lifecycle.add_extras(
+            {
+                "organization_id": repo.organization_id,
+                "user_id": user_id,
+                "repository": repo.name,
+                "provider": provider.id,
+                "end_sha": end_sha,
+                "start_sha": start_sha,
+            }
+        )
+        try:
+            if start_sha is None:
+                return fetch_recent_commits(
+                    repo=repo,
+                    provider=provider,
+                    is_integration_repo_provider=is_integration_repo_provider,
+                    end_sha=end_sha,
+                    user=user,
+                )
+            return fetch_commits_for_compare_range(
+                cache_enabled=compare_commits_cache_enabled,
+                repo=repo,
+                provider=provider,
+                is_integration_repo_provider=is_integration_repo_provider,
+                start_sha=start_sha,
+                end_sha=end_sha,
+                user=user,
+            )
+        except NotImplementedError:
+            return None
+        except IntegrationResourceNotFoundError:
+            return None
+        except Exception as e:
+            span = sentry_sdk.get_current_span()
+            if span:
+                span.set_status("unknown_error")
+
+            if isinstance(e, InvalidIdentity) and getattr(e, "identity", None):
+                handle_invalid_identity(identity=e.identity, commit_failure=True)
+                lifecycle.record_halt(e)
+            elif isinstance(e, (PluginError, InvalidIdentity, IntegrationError)):
+                msg = generate_fetch_commits_error_email(release, repo, str(e))
+                emails = get_emails_for_user_or_org(user, release.organization_id)
+                msg.send_async(to=emails)
+                lifecycle.record_halt(e)
+            else:
+                msg = generate_fetch_commits_error_email(
+                    release, repo, "An internal system error occurred."
+                )
+                emails = get_emails_for_user_or_org(user, release.organization_id)
+                msg.send_async(to=emails)
+                lifecycle.record_failure(e)
+            return None
 
 
 @instrumented_task(
@@ -223,6 +328,7 @@ def fetch_commits(
     commit_list: list[dict[str, Any]] = []
 
     release = Release.objects.get(id=release_id)
+    logger.info("fetch_commits.start", extra={"organization_slug": release.organization.slug})
     set_tag("organization.slug", release.organization.slug)
     # TODO: Need a better way to error handle no user_id. We need the SDK to be able to call this without user context
     # to autoassociate commits to releases
@@ -239,111 +345,61 @@ def fetch_commits(
     github_compare_commits_cache_feature_enabled = features.has(
         GITHUB_FETCH_COMMITS_COMPARE_CACHE_FEATURE, organization, actor=user
     )
+    extra = {
+        "organization_id": release.organization_id,
+        "user_id": user_id,
+        "github_compare_commits_cache_feature_enabled": github_compare_commits_cache_feature_enabled,
+    }
+    logger.info("fetch_commits.config", extra=extra)
 
     for ref in refs:
-        resolved = get_repo_and_provider_for_ref(release=release, ref=ref, user_id=user_id)
-        if resolved is None:
+        repo = get_repo_for_ref(release=release, ref=ref, user_id=user_id)
+        if repo is None:
             continue
-        repo, provider, is_integration_repo_provider, provider_key = resolved
 
-        # if previous commit isn't provided, try to get from
-        # previous release otherwise, try to get
-        # recent commits from provider api
-        start_sha = None
-        if ref.get("previousCommit"):
-            start_sha = ref["previousCommit"]
-        elif prev_release:
-            try:
-                start_sha = ReleaseHeadCommit.objects.filter(
-                    organization_id=release.organization_id,
-                    release=prev_release,
-                    repository_id=repo.id,
-                ).values_list("commit__key", flat=True)[0]
-            except IndexError:
-                pass
+        provider_values = get_provider_for_repo(repo=repo)
+        if provider_values is None:
+            continue
+        provider, is_integration_repo_provider, provider_key = provider_values
+
+        start_sha = get_start_sha_for_ref(
+            ref=ref,
+            release=release,
+            repo=repo,
+            prev_release=prev_release,
+        )
 
         end_sha = ref["commit"]
+        extra = extra | {"repository": repo.name, "end_sha": end_sha, "start_sha": start_sha}
+        logger.info("fetch_commits.loop.start", extra=extra)
 
-        with SCMIntegrationInteractionEvent(
-            SCMIntegrationInteractionType.COMPARE_COMMITS,
+        provider_name = repo.provider
+        compare_commits_cache_enabled = (
+            github_compare_commits_cache_feature_enabled
+            and isinstance(provider_name, str)
+            and provider_name in GITHUB_CACHEABLE_REPOSITORY_PROVIDERS
+        )
+
+        repo_commits = fetch_commits_for_ref_with_lifecycle(
             provider_key=provider_key,
-            organization_id=repo.organization_id,
-            integration_id=repo.integration_id,
-        ).capture() as lifecycle:
-            lifecycle.add_extras(
-                {
-                    "organization_id": repo.organization_id,
-                    "user_id": user_id,
-                    "repository": repo.name,
-                    "provider": provider.id,
-                    "end_sha": end_sha,
-                    "start_sha": start_sha,
-                }
-            )
-            try:
-                if start_sha is None:
-                    repo_commits = fetch_recent_commits(
-                        repo=repo,
-                        provider=provider,
-                        is_integration_repo_provider=is_integration_repo_provider,
-                        end_sha=end_sha,
-                        user=user,
-                    )
-                else:
-                    provider_name = repo.provider
-                    compare_commits_cache_enabled = (
-                        github_compare_commits_cache_feature_enabled
-                        and isinstance(provider_name, str)
-                        and provider_name in GITHUB_CACHEABLE_REPOSITORY_PROVIDERS
-                    )
-                    repo_commits = fetch_commits_for_compare_range(
-                        cache_enabled=compare_commits_cache_enabled,
-                        repo=repo,
-                        provider=provider,
-                        is_integration_repo_provider=is_integration_repo_provider,
-                        start_sha=start_sha,
-                        end_sha=end_sha,
-                        user=user,
-                        lifecycle=lifecycle,
-                    )
-            except NotImplementedError:
-                pass
-            except IntegrationResourceNotFoundError:
-                pass
-            except Exception as e:
-                span = sentry_sdk.get_current_span()
-                if span is None:
-                    raise TypeError("No span is currently active right now")
-                span.set_status("unknown_error")
+            repo=repo,
+            provider=provider,
+            release=release,
+            start_sha=start_sha,
+            end_sha=end_sha,
+            user_id=user_id,
+            user=user,
+            is_integration_repo_provider=is_integration_repo_provider,
+            compare_commits_cache_enabled=compare_commits_cache_enabled,
+        )
+        logger.info(
+            "fetch_commits.loop.complete",
+            extra=extra | {"num_commits": len(repo_commits or [])},
+        )
+        if repo_commits is None:
+            continue
 
-                if isinstance(e, InvalidIdentity) and getattr(e, "identity", None):
-                    handle_invalid_identity(identity=e.identity, commit_failure=True)
-                    lifecycle.record_halt(e)
-                elif isinstance(e, (PluginError, InvalidIdentity, IntegrationError)):
-                    msg = generate_fetch_commits_error_email(release, repo, str(e))
-                    emails = get_emails_for_user_or_org(user, release.organization_id)
-                    msg.send_async(to=emails)
-                    lifecycle.record_halt(e)
-                else:
-                    msg = generate_fetch_commits_error_email(
-                        release, repo, "An internal system error occurred."
-                    )
-                    emails = get_emails_for_user_or_org(user, release.organization_id)
-                    msg.send_async(to=emails)
-                    lifecycle.record_failure(e)
-            else:
-                logger.info(
-                    "fetch_commits.complete",
-                    extra={
-                        "organization_id": repo.organization_id,
-                        "user_id": user_id,
-                        "repository": repo.name,
-                        "end_sha": end_sha,
-                        "start_sha": start_sha,
-                        "num_commits": len(repo_commits or []),
-                    },
-                )
-                commit_list.extend(repo_commits)
+        commit_list.extend(repo_commits)
 
     if not commit_list:
         return
