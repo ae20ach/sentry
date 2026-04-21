@@ -18,6 +18,7 @@ import {
 import {useIsMigratedExtrapolation} from 'sentry/views/detectors/components/details/metric/utils/useIsMigratedExtrapolation';
 import {getDetectorDataset} from 'sentry/views/detectors/datasetConfig/getDetectorDataset';
 import {DetectorDataset} from 'sentry/views/detectors/datasetConfig/types';
+import {useDetectorStatsPeriods} from 'sentry/views/detectors/hooks/useDetectorStatsPeriods';
 
 type MetricDetectorDetailsProps = {
   detector: MetricDetector;
@@ -39,6 +40,7 @@ export function MetricDetectorDetails({detector, project}: MetricDetectorDetails
   });
 
   const intervalSeconds = dataSource.queryObj?.snubaQuery.timeWindow;
+  useDetectorStatsPeriods(interval);
 
   return (
     <DetailLayout>
