@@ -52,7 +52,7 @@ def schedule_per_org_calculations_bucket(bucket_index: int) -> None:
         step=1000,
         result_value_getter=lambda o: o.id,
     ):
-        countdown = random.uniform(0, JITTER_WINDOW_SECONDS)
+        countdown = random.randint(0, JITTER_WINDOW_SECONDS)
         run_calculations_per_org_task.apply_async(args=(org.id,), countdown=countdown)
         dispatched += 1
 
