@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import type {
   SelectOptionWithKey,
   SelectSectionWithKey,
@@ -85,6 +83,6 @@ export type FilterKeyItem =
   | LogicFilterItem;
 
 export type Section = {
-  label: ReactNode;
+  label: React.ReactNode;
   value: string;
 };

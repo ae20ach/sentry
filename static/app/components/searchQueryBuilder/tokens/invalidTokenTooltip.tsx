@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import type {ListState} from '@react-stately/list';
 import type {Node} from '@react-types/shared';
 
@@ -10,11 +9,11 @@ import {t} from 'sentry/locale';
 import {defined} from 'sentry/utils';
 
 interface InvalidTokenTooltipProps extends Omit<TooltipProps, 'title'> {
-  children: ReactNode;
+  children: React.ReactNode;
   item: Node<ParseResultToken>;
   state: ListState<ParseResultToken>;
   token: ParseResultToken;
-  warning?: ReactNode;
+  warning?: React.ReactNode;
 }
 
 function getForceVisible({

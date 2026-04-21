@@ -1,4 +1,3 @@
-import type {DOMAttributes} from 'react';
 import {css} from '@emotion/react';
 import styled from '@emotion/styled';
 import type {FocusableElement} from '@react-types/shared';
@@ -9,7 +8,7 @@ import type {
   ContainerPropsWithRenderFunction,
 } from '@sentry/scraps/layout';
 
-type BaseGridCellProps = FlexProps & DOMAttributes<FocusableElement>;
+type BaseGridCellProps = FlexProps & React.DOMAttributes<FocusableElement>;
 
 export function BaseGridCell({children, ...props}: BaseGridCellProps) {
   return (

@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import {EventFixture} from 'sentry-fixture/event';
 import {EventIdQueryResultFixture} from 'sentry-fixture/eventIdQueryResult';
 import {MembersFixture} from 'sentry-fixture/members';
@@ -21,7 +20,7 @@ describe('ApiSource', () => {
   let eventIdMock: jest.Mock;
   let configState: ReturnType<typeof ConfigStore.getState>;
 
-  const defaultProps: ComponentProps<typeof ApiSource> = {
+  const defaultProps: React.ComponentProps<typeof ApiSource> = {
     query: '',
     debounceDuration: 0,
     children: jest.fn().mockReturnValue(null),

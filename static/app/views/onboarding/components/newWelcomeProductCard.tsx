@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import styled from '@emotion/styled';
 import {motion} from 'framer-motion';
 
@@ -10,11 +9,11 @@ import {OnboardingWelcomeProductId} from 'sentry/views/onboarding/types';
 
 export interface ProductOption {
   description: string;
-  icon: ReactNode;
+  icon: React.ReactNode;
   id: OnboardingWelcomeProductId;
   title: string;
-  badge?: ReactNode;
-  footer?: ReactNode;
+  badge?: React.ReactNode;
+  footer?: React.ReactNode;
 }
 
 interface NewWelcomeProductCardProps {

@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import {useEffect, useRef, useState} from 'react';
 import {useMatches} from 'react-router-dom';
 import styled from '@emotion/styled';
@@ -55,7 +54,7 @@ export function ReplayPreviewPlayer({
   handleBackClick?: () => void;
   handleForwardClick?: () => void;
   overlayContent?: React.ReactNode;
-  playPausePriority?: ComponentProps<typeof ReplayPlayPauseButton>['priority'];
+  playPausePriority?: React.ComponentProps<typeof ReplayPlayPauseButton>['priority'];
   query?: Query;
   showNextAndPrevious?: boolean;
 }) {

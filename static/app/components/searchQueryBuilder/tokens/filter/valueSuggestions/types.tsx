@@ -1,11 +1,9 @@
-import type {ReactNode} from 'react';
-
 import type {SelectOptionWithKey} from '@sentry/scraps/compactSelect';
 
 export type SuggestionItem = {
   value: string;
-  description?: ReactNode;
-  label?: ReactNode;
+  description?: React.ReactNode;
+  label?: React.ReactNode;
 };
 
 export type SuggestionSection = {

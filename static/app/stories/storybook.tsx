@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {Children, Fragment, Suspense, lazy, useEffect} from 'react';
 
 import {Container} from '@sentry/scraps/layout';
@@ -18,7 +17,7 @@ function makeStorybookDocumentTitle(title: string | undefined): string {
   return title ? `${title} — Scraps` : 'Scraps';
 }
 
-type StoryRenderFunction = () => ReactNode | ReactNode[];
+type StoryRenderFunction = () => React.ReactNode | React.ReactNode[];
 type StoryContext = (storyName: string, story: StoryRenderFunction) => void;
 type SetupFunction = (
   story: StoryContext,

@@ -1,4 +1,3 @@
-import type {CSSProperties, ReactNode} from 'react';
 import styled from '@emotion/styled';
 
 import {Button} from '@sentry/scraps/button';
@@ -10,15 +9,15 @@ import {SvgIcon} from 'sentry/icons/svgIcon';
 import {t} from 'sentry/locale';
 
 interface Props {
-  description: ReactNode;
-  heading: ReactNode;
-  icon: ReactNode;
+  description: React.ReactNode;
+  heading: React.ReactNode;
+  icon: React.ReactNode;
   image: any;
-  title: ReactNode;
-  button?: ReactNode;
+  title: React.ReactNode;
+  button?: React.ReactNode;
   className?: string;
   onDismiss?: () => void;
-  style?: CSSProperties;
+  style?: React.CSSProperties;
 }
 
 export function PageBanner({

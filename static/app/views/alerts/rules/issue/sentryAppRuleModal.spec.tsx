@@ -1,4 +1,3 @@
-import type {PropsWithChildren, ReactElement} from 'react';
 import styled from '@emotion/styled';
 import {SentryAppFixture} from 'sentry-fixture/sentryApp';
 import {SentryAppInstallationFixture} from 'sentry-fixture/sentryAppInstallation';
@@ -14,9 +13,9 @@ import type {
 
 describe('SentryAppRuleModal', () => {
   const modalElements = {
-    Header: (p: PropsWithChildren) => p.children as ReactElement,
-    Body: (p: PropsWithChildren) => p.children,
-    Footer: (p: PropsWithChildren) => p.children,
+    Header: (p: React.PropsWithChildren) => p.children as React.ReactElement,
+    Body: (p: React.PropsWithChildren) => p.children,
+    Footer: (p: React.PropsWithChildren) => p.children,
   };
   let sentryApp: any;
   let sentryAppInstallation: any;
@@ -97,7 +96,7 @@ describe('SentryAppRuleModal', () => {
   };
 
   const createWrapper = (props = {}) => {
-    const styledWrapper = styled((c: PropsWithChildren) => c.children);
+    const styledWrapper = styled((c: React.PropsWithChildren) => c.children);
     return render(
       <SentryAppRuleModal
         {...modalElements}

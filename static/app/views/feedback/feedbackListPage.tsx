@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {Fragment, useEffect, useState} from 'react';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -46,7 +45,7 @@ function PageContent({
   hasFeedbackContent,
   content,
 }: {
-  content: ReactNode;
+  content: React.ReactNode;
   hasFeedbackContent: boolean;
   hideTop: boolean;
 }) {

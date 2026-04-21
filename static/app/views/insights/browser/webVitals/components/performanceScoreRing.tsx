@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {useMemo} from 'react';
 import type {SerializedStyles, Theme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -70,7 +69,7 @@ export function PerformanceScoreRing({
   const radius = size / 2 - barWidth / 2;
   const circumference = 2 * Math.PI * radius;
 
-  const rings = useMemo<ReactNode[]>(() => {
+  const rings = useMemo<React.ReactNode[]>(() => {
     const sumMaxValues = values
       .map(({maxValue}) => maxValue)
       .reduce((acc, val) => acc + val, 0);

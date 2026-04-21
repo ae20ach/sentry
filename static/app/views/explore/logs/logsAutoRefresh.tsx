@@ -1,4 +1,4 @@
-import {Fragment, useEffect, type ReactNode} from 'react';
+import {Fragment, useEffect} from 'react';
 
 import {Switch} from '@sentry/scraps/switch';
 import {Tooltip} from '@sentry/scraps/tooltip';
@@ -185,7 +185,7 @@ function getPreFlightDisableReason({
 
 function getTooltipMessage(
   reason: PreFlightDisableReason | AutoRefreshState | null
-): ReactNode {
+): React.ReactNode {
   switch (reason) {
     case 'rate_limit_initial':
       return tct(

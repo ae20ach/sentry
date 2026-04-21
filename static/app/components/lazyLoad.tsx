@@ -1,4 +1,4 @@
-import {Component, Suspense, useEffect, useState, type ErrorInfo} from 'react';
+import {Component, Suspense, useEffect, useState} from 'react';
 import * as Sentry from '@sentry/react';
 
 import {Container, Flex} from '@sentry/scraps/layout';
@@ -107,7 +107,7 @@ class ErrorBoundary extends Component<{children: React.ReactNode}, ErrorBoundary
     }
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     Sentry.withScope(scope => {
       if (isWebpackChunkLoadingError(error)) {
         scope.setFingerprint(['webpack', 'error loading chunk']);

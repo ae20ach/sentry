@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {Fragment} from 'react';
 
 import {withSubscription} from 'getsentry/components/withSubscription';
@@ -6,7 +5,7 @@ import type {Subscription} from 'getsentry/types';
 import {PlanTier} from 'getsentry/types';
 
 type Props = {
-  children: ReactNode;
+  children: React.ReactNode;
   subscription: Subscription;
 };
 

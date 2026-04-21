@@ -1,4 +1,3 @@
-import type {MouseEventHandler} from 'react';
 import {useCallback, useEffect, useRef} from 'react';
 import type {DOMAttributes, FocusableElement} from '@react-types/shared';
 
@@ -35,7 +34,7 @@ export function useResetActiveNavigationGroup(): DOMAttributes<FocusableElement>
     }
   }, []);
 
-  const onMouseMove = useCallback<MouseEventHandler<FocusableElement>>(
+  const onMouseMove = useCallback<React.MouseEventHandler<FocusableElement>>(
     e => {
       requestAnimationFrame(() => {
         const target = e.target as HTMLElement;

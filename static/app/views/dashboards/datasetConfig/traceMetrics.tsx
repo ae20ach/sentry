@@ -1,4 +1,3 @@
-import {type ReactNode} from 'react';
 import pickBy from 'lodash/pickBy';
 
 import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
@@ -213,7 +212,7 @@ function useTraceMetricsSearchScope() {
 
 export function formatTraceMetricsFunction(
   valueToParse: string | string[],
-  defaultValue?: string | ReactNode
+  defaultValue?: string | React.ReactNode
 ) {
   if (Array.isArray(valueToParse)) {
     const parsedFunctions = valueToParse.map(v => parseFunction(v));

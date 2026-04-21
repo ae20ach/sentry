@@ -1,5 +1,3 @@
-import type {HTMLAttributes, Ref} from 'react';
-
 import {Container, Flex, Stack} from '@sentry/scraps/layout';
 import {Text} from '@sentry/scraps/text';
 
@@ -31,8 +29,8 @@ const BENEFITS = [
   },
 ] as const;
 
-interface ScmBenefitsCardProps extends HTMLAttributes<HTMLDivElement> {
-  ref?: Ref<HTMLDivElement>;
+interface ScmBenefitsCardProps extends React.HTMLAttributes<HTMLDivElement> {
+  ref?: React.Ref<HTMLDivElement>;
   showTitle?: boolean;
 }
 

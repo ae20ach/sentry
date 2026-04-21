@@ -1,4 +1,4 @@
-import {Fragment, useState, type CSSProperties, type ReactNode} from 'react';
+import {Fragment, useState} from 'react';
 import styled from '@emotion/styled';
 
 import {Badge, Tag} from '@sentry/scraps/badge';
@@ -38,7 +38,7 @@ type Props = {
     integration: Integration,
     isConnected: boolean
   ) => void;
-  style: CSSProperties;
+  style: React.CSSProperties;
 };
 
 export function ScmIntegrationTreeRow({
@@ -201,7 +201,7 @@ export function ScmIntegrationTreeRow({
   }
 
   if (node.type === 'no-match') {
-    let noMatchMessage: ReactNode;
+    let noMatchMessage: React.ReactNode;
     if (node.search) {
       noMatchMessage = tct('No repos matching "[search]"', {search: node.search});
     } else {
@@ -299,7 +299,7 @@ function RepoRow({
   canAccess: boolean;
   node: Extract<TreeNode, {type: 'repo'}>;
   onToggleRepo: Props['onToggleRepo'];
-  style: CSSProperties;
+  style: React.CSSProperties;
 }) {
   return (
     <RowContainer style={style} role="row" aria-level={3}>
@@ -370,7 +370,7 @@ function DisconnectedRepoRow({
   canAccess: boolean;
   node: Extract<TreeNode, {type: 'disconnected-repo'}>;
   onRemoveDisconnectedRepo: Props['onRemoveDisconnectedRepo'];
-  style: CSSProperties;
+  style: React.CSSProperties;
 }) {
   return (
     <RowContainer style={style} role="row" aria-level={2}>

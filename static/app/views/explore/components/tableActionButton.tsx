@@ -1,15 +1,15 @@
-import {Fragment, type ReactNode} from 'react';
+import {Fragment} from 'react';
 import styled from '@emotion/styled';
 
 interface TableActionButtonProps {
   /**
    * Component to render on desktop (≥ md breakpoint)
    */
-  desktop: ReactNode;
+  desktop: React.ReactNode;
   /**
    * Component to render on mobile (< md breakpoint)
    */
-  mobile: ReactNode;
+  mobile: React.ReactNode;
 }
 
 export function TableActionButton({mobile, desktop}: TableActionButtonProps) {

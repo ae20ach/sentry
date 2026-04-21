@@ -1,4 +1,3 @@
-import type {ComponentType} from 'react';
 import {expectTypeOf} from 'expect-type';
 
 import type {IconGraphProps} from 'sentry/icons';
@@ -11,6 +10,8 @@ describe('SVGIconProps', () => {
     // Before the fix, SVGIconProps inherited `type?: string` from React.SVGAttributes,
     // which made IconGraph incompatible with ComponentType<SVGIconProps> due to the
     // narrower union on `type`.
-    expectTypeOf<ComponentType<IconGraphProps>>().toExtend<ComponentType<SVGIconProps>>();
+    expectTypeOf<React.ComponentType<IconGraphProps>>().toExtend<
+      React.ComponentType<SVGIconProps>
+    >();
   });
 });

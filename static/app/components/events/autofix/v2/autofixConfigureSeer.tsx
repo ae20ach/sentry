@@ -1,4 +1,4 @@
-import {Fragment, type CSSProperties} from 'react';
+import {Fragment} from 'react';
 import styled from '@emotion/styled';
 import {useQuery} from '@tanstack/react-query';
 
@@ -159,14 +159,14 @@ export function AutofixConfigureSeer({event, group, project}: AutofixConfigureSe
   );
 }
 
-export const SeerFeaturesPanel = styled(Panel)<{width: CSSProperties['width']}>`
+export const SeerFeaturesPanel = styled(Panel)<{width: React.CSSProperties['width']}>`
   width: ${p => p.width};
   min-width: ${p => p.width};
   max-width: ${p => p.width};
   margin-bottom: ${p => p.theme.space['2xl']};
 `;
 
-const SeerPreviewPanel = styled(Panel)<{alignSelf: CSSProperties['alignSelf']}>`
+const SeerPreviewPanel = styled(Panel)<{alignSelf: React.CSSProperties['alignSelf']}>`
   align-self: ${p => p.alignSelf};
   width: 70%;
   min-width: 70%;
@@ -196,7 +196,7 @@ const SeerPreviewText = styled('div')`
 `;
 
 export const ImageContainer = styled(Flex)<{
-  aspectRatio?: CSSProperties['aspectRatio'];
+  aspectRatio?: React.CSSProperties['aspectRatio'];
 }>`
   ${p => p.aspectRatio && `aspect-ratio: ${p.aspectRatio}`};
 `;

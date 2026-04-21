@@ -1,4 +1,4 @@
-import {useState, type ReactNode} from 'react';
+import {useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
 import type {DistributedPick} from 'type-fest';
 
@@ -26,7 +26,7 @@ type ChoiceMapperConfig = Extract<JsonFormAdapterFieldConfig, {type: 'choice_map
 interface ChoiceMapperDropdownProps {
   config: ChoiceMapperConfig;
   onChange: (value: Record<string, Record<string, unknown>>) => void;
-  onLabelAdd: (value: string, label: ReactNode) => void;
+  onLabelAdd: (value: string, label: React.ReactNode) => void;
   value: Record<string, Record<string, unknown>>;
   disabled?: boolean;
   indicator?: React.ReactNode;
@@ -34,7 +34,7 @@ interface ChoiceMapperDropdownProps {
 
 interface ChoiceMapperTableProps {
   config: ChoiceMapperConfig;
-  labels: Record<string, ReactNode>;
+  labels: Record<string, React.ReactNode>;
   onSave: (value: Record<string, Record<string, unknown>>) => void;
   onUpdate: (value: Record<string, Record<string, unknown>>) => void;
   value: Record<string, Record<string, unknown>>;

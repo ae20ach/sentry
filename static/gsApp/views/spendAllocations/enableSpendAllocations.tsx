@@ -1,5 +1,3 @@
-import type {Dispatch} from 'react';
-
 import {Button} from '@sentry/scraps/button';
 import {Flex} from '@sentry/scraps/layout';
 
@@ -12,7 +10,7 @@ type Props = {
   fetchSpendAllocations: () => Promise<void>;
   hasScope: boolean;
   orgSlug: string;
-  setErrors: Dispatch<string | null>;
+  setErrors: React.Dispatch<string | null>;
 };
 
 export function EnableSpendAllocations({

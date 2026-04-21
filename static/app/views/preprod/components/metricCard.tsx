@@ -1,5 +1,3 @@
-import type {CSSProperties, ReactNode} from 'react';
-
 import {Button} from '@sentry/scraps/button';
 import {Flex, Stack} from '@sentry/scraps/layout';
 import {Text} from '@sentry/scraps/text';
@@ -7,18 +5,18 @@ import {Tooltip} from '@sentry/scraps/tooltip';
 
 interface MetricCardAction {
   ariaLabel: string;
-  icon: ReactNode;
+  icon: React.ReactNode;
   onClick: () => void;
-  tooltip: ReactNode;
+  tooltip: React.ReactNode;
 }
 
 interface MetricCardProps {
-  children: ReactNode;
-  icon: ReactNode;
+  children: React.ReactNode;
+  icon: React.ReactNode;
   label: string;
-  labelTooltip: ReactNode;
+  labelTooltip: React.ReactNode;
   action?: MetricCardAction;
-  style?: CSSProperties;
+  style?: React.CSSProperties;
 }
 
 export function MetricCard(props: MetricCardProps) {

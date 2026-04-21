@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {OrganizationFixture} from 'sentry-fixture/organization';
 
 import {renderHook} from 'sentry-test/reactTestingLibrary';
@@ -11,7 +10,7 @@ import {
 import {OrganizationContext} from 'sentry/views/organizationContext';
 
 function makeWrapper(organization: Organization) {
-  return function ({children}: {children?: ReactNode}) {
+  return function ({children}: {children?: React.ReactNode}) {
     return (
       <OrganizationContext value={organization}>
         <ReplayPlayerPluginsContextProvider>
@@ -42,7 +41,7 @@ describe('replayPlayerPluginsContext', () => {
     const mockEvents: any[] = [];
 
     const {result} = renderHook(useReplayPlayerPlugins, {
-      wrapper: ({children}: {children?: ReactNode}) => (
+      wrapper: ({children}: {children?: React.ReactNode}) => (
         <OrganizationContext value={mockOrganization}>{children}</OrganizationContext>
       ),
     });

@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {Fragment, useMemo} from 'react';
 import styled from '@emotion/styled';
 import type {LocationDescriptor} from 'history';
@@ -38,7 +37,7 @@ const expandedViewKeys = [
 
 const releaseKeys = ['release', 'releases'];
 
-function renderValueList(values: ReactNode[]) {
+function renderValueList(values: React.ReactNode[]) {
   if (typeof values[0] === 'string') {
     return values[0];
   }

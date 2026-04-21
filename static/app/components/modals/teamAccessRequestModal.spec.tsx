@@ -1,4 +1,3 @@
-import type {PropsWithChildren} from 'react';
 import styled from '@emotion/styled';
 import {MemberFixture} from 'sentry-fixture/member';
 import {OrganizationFixture} from 'sentry-fixture/organization';
@@ -18,7 +17,7 @@ describe('TeamAccessRequestModal', () => {
   const memberId = MemberFixture().id;
   const teamId = TeamFixture().slug;
 
-  const styledWrapper = styled((c: PropsWithChildren) => c.children);
+  const styledWrapper = styled((c: React.PropsWithChildren) => c.children);
   const modalRenderProps: CreateTeamAccessRequestModalProps = {
     Body: styledWrapper(),
     Footer: styledWrapper(),

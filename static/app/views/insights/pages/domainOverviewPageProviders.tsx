@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {NoProjectMessage} from 'sentry/components/noProjectMessage';
 import {PageFiltersContainer} from 'sentry/components/pageFilters/container';
 import type {DatePageFilterProps} from 'sentry/components/pageFilters/date/datePageFilter';
@@ -11,7 +9,7 @@ import {OVERVIEW_PAGE_TITLE} from 'sentry/views/insights/pages/settings';
 import {useDomainViewFilters} from 'sentry/views/insights/pages/useFilters';
 
 interface DomainOverviewPageProvidersProps {
-  children: ReactNode;
+  children: React.ReactNode;
   maxPickableDays: DatePageFilterProps['maxPickableDays'];
 }
 

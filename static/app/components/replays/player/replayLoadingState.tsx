@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
 import {ArchivedReplayAlert} from 'sentry/components/replays/alerts/archivedReplayAlert';
 import {MissingReplayAlert} from 'sentry/components/replays/alerts/missingReplayAlert';
@@ -21,14 +19,14 @@ export function ReplayLoadingState({
   renderMissing,
   renderProcessingError,
 }: {
-  children: (props: {replay: ReplayReader}) => ReactNode;
+  children: (props: {replay: ReplayReader}) => React.ReactNode;
   readerResult: ReplayReaderResult;
-  renderArchived?: (results: ReplayReaderResult) => ReactNode;
-  renderError?: (results: ReplayReaderResult) => ReactNode;
-  renderLoading?: (results: ReplayReaderResult) => ReactNode;
-  renderMissing?: (results: ReplayReaderResult) => ReactNode;
-  renderProcessingError?: (results: ReplayReaderResult) => ReactNode;
-  renderThrottled?: (results: ReplayReaderResult) => ReactNode;
+  renderArchived?: (results: ReplayReaderResult) => React.ReactNode;
+  renderError?: (results: ReplayReaderResult) => React.ReactNode;
+  renderLoading?: (results: ReplayReaderResult) => React.ReactNode;
+  renderMissing?: (results: ReplayReaderResult) => React.ReactNode;
+  renderProcessingError?: (results: ReplayReaderResult) => React.ReactNode;
+  renderThrottled?: (results: ReplayReaderResult) => React.ReactNode;
 }) {
   const organization = useOrganization();
 

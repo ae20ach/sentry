@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import {OrganizationFixture} from 'sentry-fixture/organization';
 
 import {render, screen, userEvent} from 'sentry-test/reactTestingLibrary';
@@ -12,7 +11,9 @@ describe('SubscriptionBox', () => {
   beforeEach(() => {
     onChange.mockReset();
   });
-  function renderComponent(props: Partial<ComponentProps<typeof SubscriptionBox>> = {}) {
+  function renderComponent(
+    props: Partial<React.ComponentProps<typeof SubscriptionBox>> = {}
+  ) {
     return render(
       <SubscriptionBox
         resource="issue"

@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  type Dispatch,
-  type SetStateAction,
-} from 'react';
+import {createContext, useContext, useState} from 'react';
 
 type State = {
   /**
@@ -25,7 +19,7 @@ type State = {
   width: number;
 };
 
-const Context = createContext<[State, Dispatch<SetStateAction<State>>]>([
+const Context = createContext<[State, React.Dispatch<React.SetStateAction<State>>]>([
   {width: 0, height: 0, scale: 0},
   () => {},
 ]);

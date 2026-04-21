@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
 
@@ -48,7 +47,7 @@ interface BuildDetailsMetricCardsProps {
 }
 
 interface MetricCardConfig {
-  icon: ReactNode;
+  icon: React.ReactNode;
   key: string;
   title: string;
   value: string;

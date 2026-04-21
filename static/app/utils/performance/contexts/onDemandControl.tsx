@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {useCallback, useState} from 'react';
 import {useTheme} from '@emotion/react';
 import type {Location} from 'history';
@@ -35,7 +34,7 @@ export function OnDemandControlProvider({
   children,
   location,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   location: Location;
 }) {
   const _forceOnDemandQuery = location?.query.forceOnDemand;

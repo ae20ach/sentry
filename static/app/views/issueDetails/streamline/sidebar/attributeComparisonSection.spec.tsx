@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import {OrganizationFixture} from 'sentry-fixture/organization';
 
 import {render, screen, waitFor} from 'sentry-test/reactTestingLibrary';
@@ -11,7 +10,7 @@ describe('AttributeComparisonSection', () => {
   const openPeriodStart = '2024-01-01T00:00:00Z';
   const openPeriodEnd = '2024-01-01T00:10:00Z';
 
-  const defaultProps: ComponentProps<typeof AttributeComparisonSection> = {
+  const defaultProps: React.ComponentProps<typeof AttributeComparisonSection> = {
     openPeriodStart,
     openPeriodEnd,
     isOpenPeriodLoading: false,

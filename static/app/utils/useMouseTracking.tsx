@@ -1,13 +1,12 @@
-import type {DOMAttributes, MouseEvent, RefObject} from 'react';
 import {useCallback, useRef} from 'react';
 import * as Sentry from '@sentry/react';
 
 type CallbackArgs = {height: number; left: number; top: number; width: number};
 
 type Opts<T extends Element> = {
-  elem: RefObject<T | null>;
+  elem: React.RefObject<T | null>;
   onPositionChange: (args: undefined | CallbackArgs) => void;
-} & DOMAttributes<T>;
+} & React.DOMAttributes<T>;
 
 class AbortError extends Error {
   constructor() {
@@ -56,7 +55,7 @@ export function useMouseTracking<T extends Element>({
   const controller = useRef<AbortController>(new AbortController());
 
   const handlePositionChange = useCallback(
-    async (e: MouseEvent<T>) => {
+    async (e: React.MouseEvent<T>) => {
       if (!elem.current) {
         onPositionChange(undefined);
         return;
@@ -95,11 +94,11 @@ export function useMouseTracking<T extends Element>({
 
   return {
     ...rest,
-    onMouseEnter: (e: MouseEvent<T>) => {
+    onMouseEnter: (e: React.MouseEvent<T>) => {
       handlePositionChange(e);
       onMouseEnter?.(e);
     },
-    onMouseMove: (e: MouseEvent<T>) => {
+    onMouseMove: (e: React.MouseEvent<T>) => {
       // prevent outside elements from firing, for example a tooltip
       if (!elem.current?.contains(e.target as Node)) {
         return;
@@ -108,7 +107,7 @@ export function useMouseTracking<T extends Element>({
       handlePositionChange(e);
       onMouseMove?.(e);
     },
-    onMouseLeave: (e: MouseEvent<T>) => {
+    onMouseLeave: (e: React.MouseEvent<T>) => {
       handleOnMouseLeave();
       onMouseLeave?.(e);
     },

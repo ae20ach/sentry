@@ -1,4 +1,4 @@
-import {useLayoutEffect, useMemo, useRef, useState, type ReactNode} from 'react';
+import {useLayoutEffect, useMemo, useRef, useState} from 'react';
 import isPropValid from '@emotion/is-prop-valid';
 import styled from '@emotion/styled';
 import {useFocusWithin} from '@react-aria/interactions';
@@ -96,7 +96,7 @@ export function getOperatorInfo({
   fieldDefinition: FieldDefinition | null;
   filterToken: TokenResult<Token.FILTER>;
 }): {
-  label: ReactNode;
+  label: React.ReactNode;
   operator: TermOperator;
   options: Array<SelectOption<TermOperator>>;
 } {

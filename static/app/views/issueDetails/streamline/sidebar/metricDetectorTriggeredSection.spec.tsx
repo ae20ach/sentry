@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import {SnubaQueryDataSourceFixture} from 'sentry-fixture/detectors';
 import {EventFixture} from 'sentry-fixture/event';
 import {GroupFixture} from 'sentry-fixture/group';
@@ -48,7 +47,7 @@ describe('MetricDetectorTriggeredSection', () => {
       detectionTime: '2024-01-01T00:00:00Z',
     },
   });
-  const defaultProps: ComponentProps<typeof MetricDetectorTriggeredSection> = {
+  const defaultProps: React.ComponentProps<typeof MetricDetectorTriggeredSection> = {
     group: defaultGroup,
     event: defaultEvent,
   };

@@ -1,4 +1,3 @@
-import type {PropsWithChildren} from 'react';
 import {Fragment} from 'react';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -284,7 +283,7 @@ const CardTitle = styled('span')`
   color: currentColor;
 `;
 
-function CardFigure(props: PropsWithChildren) {
+function CardFigure(props: React.PropsWithChildren) {
   return (
     <Flex as="figure" role="image" align="center" justify="center">
       {props.children}

@@ -1,5 +1,3 @@
-import type {ComponentProps} from 'react';
-
 import {render, screen, userEvent, waitFor} from 'sentry-test/reactTestingLibrary';
 
 import {ChoiceMapperField} from 'sentry/components/forms/fields/choiceMapperField';
@@ -8,7 +6,7 @@ describe('ChoiceMapperField', () => {
   const mockOnChange = jest.fn();
   const mockOnBlur = jest.fn();
 
-  const defaultProps: ComponentProps<typeof ChoiceMapperField> = {
+  const defaultProps: React.ComponentProps<typeof ChoiceMapperField> = {
     name: 'test-choice-mapper',
     addButtonText: 'Add Item',
     formatMessageValue: false,
@@ -124,7 +122,7 @@ describe('ChoiceMapperField', () => {
   });
 
   describe('AsyncCompactSelectForIntegrationConfig', () => {
-    const asyncProps: ComponentProps<typeof ChoiceMapperField> = {
+    const asyncProps: React.ComponentProps<typeof ChoiceMapperField> = {
       ...defaultProps,
       addDropdown: {
         items: [],

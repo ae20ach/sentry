@@ -1,4 +1,4 @@
-import {Fragment, type CSSProperties} from 'react';
+import {Fragment} from 'react';
 import styled from '@emotion/styled';
 
 import seerConfigCheckImg from 'sentry-images/spot/seer-config-check.svg';
@@ -124,7 +124,7 @@ const HeroImage = styled(ImageBase)`
   transform: translateX(-47%) translateY(-35%);
 `;
 
-const Image = styled(ImageBase)<{alignSelf?: CSSProperties['alignSelf']}>`
+const Image = styled(ImageBase)<{alignSelf?: React.CSSProperties['alignSelf']}>`
   align-self: ${p => p.alignSelf ?? 'center'};
 `;
 

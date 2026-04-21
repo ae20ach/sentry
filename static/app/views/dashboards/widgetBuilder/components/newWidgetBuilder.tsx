@@ -1,11 +1,4 @@
-import {
-  Fragment,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-} from 'react';
+import {Fragment, useCallback, useEffect, useRef, useState} from 'react';
 import {closestCorners, DndContext, useDraggable, useDroppable} from '@dnd-kit/core';
 import {css, Global, useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -284,7 +277,7 @@ export function WidgetPreviewContainer({
 
   const {translate, top, left} = dragPosition ?? {};
 
-  const draggableStyle: CSSProperties = {
+  const draggableStyle: React.CSSProperties = {
     transform: isDragEnabled
       ? `translate3d(${isDragging ? translate?.x : 0}px, ${isDragging ? translate?.y : 0}px, 0)`
       : undefined,

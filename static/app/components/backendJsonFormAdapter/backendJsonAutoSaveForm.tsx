@@ -1,4 +1,4 @@
-import {useMemo, useState, type ReactNode} from 'react';
+import {useMemo, useState} from 'react';
 import type {UseMutationOptions} from '@tanstack/react-query';
 import {z} from 'zod';
 
@@ -37,7 +37,7 @@ export function BackendJsonAutoSaveForm<
   mutationOptions,
 }: BackendJsonFormAdapterProps<TField, TData, TContext>) {
   const fieldName = field.name;
-  const [labels, setLabels] = useState<Record<string, ReactNode>>({});
+  const [labels, setLabels] = useState<Record<string, React.ReactNode>>({});
 
   const schema = useMemo(
     () => z.object({[fieldName]: getZodType(field.type)}),

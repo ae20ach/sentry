@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {ExploreStateQueryParamsProvider} from 'sentry/views/explore/exploreStateQueryParamsProvider';
 import {
   defaultAggregateFields,
@@ -10,7 +8,7 @@ import {
 import type {ReadableQueryParamsOptions} from 'sentry/views/explore/queryParams/readableQueryParams';
 
 interface MetricsStateQueryParamsProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
   frozenParams?: Partial<ReadableQueryParamsOptions>;
 }
 

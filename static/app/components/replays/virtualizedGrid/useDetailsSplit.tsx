@@ -1,4 +1,3 @@
-import type {RefObject} from 'react';
 import {useCallback} from 'react';
 import {parseAsInteger, useQueryState} from 'nuqs';
 
@@ -10,7 +9,7 @@ interface OnClickProps {
 }
 
 interface Props {
-  containerRef: RefObject<HTMLDivElement | null>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   frames: undefined | readonly unknown[];
   handleHeight: number;
   urlParamName: string;

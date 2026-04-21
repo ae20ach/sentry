@@ -1,11 +1,4 @@
-import {
-  Fragment,
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-  type ComponentProps,
-} from 'react';
+import {Fragment, useCallback, useMemo, useRef, useState} from 'react';
 import {css, type Theme} from '@emotion/react';
 import styled from '@emotion/styled';
 import {useQueryState} from 'nuqs';
@@ -66,7 +59,7 @@ export function HeaderCell({
   children?: React.ReactNode;
   divider?: boolean;
   sortKey?: string;
-} & Omit<ComponentProps<typeof SimpleTable.HeaderCell>, 'sort'>) {
+} & Omit<React.ComponentProps<typeof SimpleTable.HeaderCell>, 'sort'>) {
   const [sort, setSort] = useDetectorListSort();
   const [, setCursor] = useQueryState('cursor');
   const isSortedByField = sort?.field === sortKey;

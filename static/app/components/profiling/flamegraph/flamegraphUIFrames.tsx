@@ -1,4 +1,3 @@
-import type {CSSProperties} from 'react';
 import {Fragment, useCallback, useEffect, useMemo, useState} from 'react';
 import styled from '@emotion/styled';
 import * as Sentry from '@sentry/react';
@@ -305,7 +304,7 @@ export function FlamegraphUIFrames({
   );
 }
 
-const Canvas = styled('canvas')<{cursor?: CSSProperties['cursor']}>`
+const Canvas = styled('canvas')<{cursor?: React.CSSProperties['cursor']}>`
   width: 100%;
   height: 100%;
   position: absolute;

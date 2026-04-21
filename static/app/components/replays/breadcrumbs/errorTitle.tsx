@@ -1,4 +1,4 @@
-import {Fragment, type MouseEvent} from 'react';
+import {Fragment} from 'react';
 import capitalize from 'lodash/capitalize';
 
 import {Link} from '@sentry/scraps/link';
@@ -11,7 +11,7 @@ import {useOrganization} from 'sentry/utils/useOrganization';
 export function CrumbErrorTitle({frame}: {frame: ErrorFrame}) {
   const organization = useOrganization();
   const {eventId} = useReplayGroupContext();
-  const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.stopPropagation();
   };
 

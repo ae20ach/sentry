@@ -1,4 +1,4 @@
-import {useCallback, useMemo, type DOMAttributes, type FocusEvent} from 'react';
+import {useCallback, useMemo} from 'react';
 import {useGridList, type AriaGridListOptions} from '@react-aria/gridlist';
 import {ListKeyboardDelegate} from '@react-aria/selection';
 import type {ListState} from '@react-stately/list';
@@ -31,7 +31,7 @@ export function useQueryBuilderGrid({
   state: ListState<ParseResultToken>;
   undo: () => void;
 }): {
-  gridProps: DOMAttributes<HTMLDivElement>;
+  gridProps: React.DOMAttributes<HTMLDivElement>;
 } {
   // The default behavior uses vertical naviation, but we want horizontal navigation
   const delegate = useMemo(
@@ -91,7 +91,7 @@ export function useQueryBuilderGrid({
       // we want to handle ourselves.
       onKeyDownCapture: noop,
       onKeyDown,
-      onFocus: (e: FocusEvent) => {
+      onFocus: (e: React.FocusEvent) => {
         // This element should never take focus from the SelectionKeyHandler
         if (
           e.target === ref.current &&
@@ -113,7 +113,7 @@ export function useQueryBuilderGrid({
           state.selectionManager.setFocusedKey(state.collection.getLastKey());
         }
       },
-      onBlur: (e: FocusEvent) => {
+      onBlur: (e: React.FocusEvent) => {
         const nextFocusedElement = e.relatedTarget;
 
         // If we're leaving the grid, update the focused state

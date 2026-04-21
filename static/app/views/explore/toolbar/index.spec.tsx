@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {OrganizationFixture} from 'sentry-fixture/organization';
 import {ProjectFixture} from 'sentry-fixture/project';
 
@@ -28,7 +27,7 @@ import {VisualizeFunction} from 'sentry/views/explore/queryParams/visualize';
 import {SpansQueryParamsProvider} from 'sentry/views/explore/spans/spansQueryParamsProvider';
 import {ExploreToolbar} from 'sentry/views/explore/toolbar';
 
-function Wrapper({children}: {children: ReactNode}) {
+function Wrapper({children}: {children: React.ReactNode}) {
   return <SpansQueryParamsProvider>{children}</SpansQueryParamsProvider>;
 }
 

@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {useCallback, useMemo} from 'react';
 
 import {defined} from 'sentry/utils';
@@ -19,7 +18,7 @@ import type {ReadableQueryParamsOptions} from 'sentry/views/explore/queryParams/
 import type {WritableQueryParams} from 'sentry/views/explore/queryParams/writableQueryParams';
 
 interface LogsLocationQueryParamsProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
   // Will override the frozen params from the location if the key is provided.
   frozenParams?: Partial<ReadableQueryParamsOptions>;
 }

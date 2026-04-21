@@ -1,4 +1,3 @@
-import type {HTMLProps, PropsWithChildren} from 'react';
 import React from 'react';
 import {type Callout as CalloutProps} from '@r4ai/remark-callout';
 
@@ -33,8 +32,8 @@ export const storyMdxComponents = {
   h4: (props: HeadingProps) => <StoryHeading as="h5" size="md" {...props} />,
   h5: (props: HeadingProps) => <StoryHeading as="h6" size="sm" {...props} />,
   h6: (props: HeadingProps) => <StoryHeading as="h6" size="xs" {...props} />,
-  code: (props: HTMLProps<HTMLElement>) => <InlineCode {...props} />,
-  Callout: (props: PropsWithChildren<CalloutProps>) => {
+  code: (props: React.HTMLProps<HTMLElement>) => <InlineCode {...props} />,
+  Callout: (props: React.PropsWithChildren<CalloutProps>) => {
     const children = React.Children.toArray(props.children).filter(value => {
       if (React.isValidElement(value)) {
         if (value.props && typeof value.props === 'object') {

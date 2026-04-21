@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {initializeOrg} from 'sentry-test/initializeOrg';
 import {render, screen, userEvent} from 'sentry-test/reactTestingLibrary';
 
@@ -11,7 +9,7 @@ jest.mock('sentry/views/discover/utils', () => ({
   downloadAsCsv: jest.fn(),
 }));
 
-function Wrapper({children}: {children: ReactNode}) {
+function Wrapper({children}: {children: React.ReactNode}) {
   return <SpansQueryParamsProvider>{children}</SpansQueryParamsProvider>;
 }
 

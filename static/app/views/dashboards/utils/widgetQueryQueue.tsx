@@ -1,4 +1,3 @@
-import type {RefObject} from 'react';
 import {createContext, useContext, useMemo, useRef} from 'react';
 import {metrics} from '@sentry/react';
 import {
@@ -13,7 +12,7 @@ import {useOrganization} from 'sentry/utils/useOrganization';
 type FetchDataFn = () => Promise<void>;
 
 type QueueItem = {
-  fetchDataRef: RefObject<FetchDataFn>;
+  fetchDataRef: React.RefObject<FetchDataFn>;
 };
 
 type WidgetQueryQueue = ReactAsyncQueuer<QueueItem>;

@@ -1,4 +1,4 @@
-import {useCallback, useMemo, useState, type ReactNode} from 'react';
+import {useCallback, useMemo, useState} from 'react';
 
 import {Button, ButtonBar} from '@sentry/scraps/button';
 import {MenuComponents} from '@sentry/scraps/compactSelect';
@@ -251,15 +251,15 @@ function CodeChangesNextStep({autofix, group, runId, section, referrer}: NextSte
 
 interface NextStepTemplateProps {
   isProcessing: boolean;
-  labelNevermind: ReactNode;
-  labelNo: ReactNode;
-  labelRethink: ReactNode;
-  labelYes: ReactNode;
+  labelNevermind: React.ReactNode;
+  labelNo: React.ReactNode;
+  labelRethink: React.ReactNode;
+  labelYes: React.ReactNode;
   onClickNo: (prompt: string) => void;
   onClickYes: () => void;
   placeholderPrompt: string;
-  prompt: ReactNode;
-  rethinkPrompt: ReactNode;
+  prompt: React.ReactNode;
+  rethinkPrompt: React.ReactNode;
   codingAgentIntegrations?: CodingAgentIntegration[];
   onCodingAgentHandoff?: (integration: CodingAgentIntegration) => void;
 }

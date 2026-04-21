@@ -1,4 +1,4 @@
-import {useCallback, useMemo, useState, type ReactNode} from 'react';
+import {useCallback, useMemo, useState} from 'react';
 import type {Location} from 'history';
 
 import {defined} from 'sentry/utils';
@@ -35,7 +35,7 @@ const [
 });
 
 interface MultiMetricsQueryParamsProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
   allowUpTo?: number;
   hasEquations?: boolean;
 }
@@ -87,7 +87,7 @@ function getMultiMetricsQueryParamsFromLocation(
 }
 
 interface LocalMultiMetricsQueryParamsProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
   /**
    * Initial metric queries to seed local state. Typically derived from a
    * saved aggregate string via `parseAggregateExpression`. If empty, the

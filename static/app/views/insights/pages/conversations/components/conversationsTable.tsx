@@ -1,4 +1,4 @@
-import {Fragment, memo, useCallback, type ComponentPropsWithRef} from 'react';
+import {Fragment, memo, useCallback} from 'react';
 import styled from '@emotion/styled';
 
 import {Container, Flex, Stack} from '@sentry/scraps/layout';
@@ -152,7 +152,7 @@ function cleanMarkdownForCell(text: string): string {
     .trim();
 }
 
-type CellContentProps = ComponentPropsWithRef<'div'> & {
+type CellContentProps = React.ComponentPropsWithRef<'div'> & {
   text: string;
 };
 

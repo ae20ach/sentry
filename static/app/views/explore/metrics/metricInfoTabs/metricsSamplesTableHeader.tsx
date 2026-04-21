@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {Tooltip} from '@sentry/scraps/tooltip';
 
 import {t} from 'sentry/locale';
@@ -62,7 +60,7 @@ function FieldHeaderCellWrapper({
   setSorts,
   embedded = false,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   field: SampleTableColumnKey;
   index: number;
   setSorts: (sorts: Sort[]) => void;
@@ -113,8 +111,8 @@ function FieldHeaderCellWrapper({
   );
 }
 
-function getFieldLabel(field: SampleTableColumnKey): ReactNode {
-  const fieldLabels: Record<SampleTableColumnKey, () => ReactNode> = {
+function getFieldLabel(field: SampleTableColumnKey): React.ReactNode {
+  const fieldLabels: Record<SampleTableColumnKey, () => React.ReactNode> = {
     [VirtualTableSampleColumnKey.EXPAND_ROW]: () => null,
     [TraceMetricKnownFieldKey.TRACE]: () => t('Trace ID'),
     [TraceMetricKnownFieldKey.METRIC_VALUE]: () => t('Value'),

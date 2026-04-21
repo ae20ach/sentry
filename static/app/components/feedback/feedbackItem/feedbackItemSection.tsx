@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import styled from '@emotion/styled';
 
 import InteractionStateLayer from '@sentry/scraps/interactionStateLayer';
@@ -9,11 +8,11 @@ import {t} from 'sentry/locale';
 import {useSyncedLocalStorageState} from 'sentry/utils/useSyncedLocalStorageState';
 
 interface Props {
-  children: ReactNode;
+  children: React.ReactNode;
   sectionKey: string;
   collapsible?: boolean;
-  icon?: ReactNode;
-  title?: ReactNode;
+  icon?: React.ReactNode;
+  title?: React.ReactNode;
 }
 
 export function FeedbackItemSection({

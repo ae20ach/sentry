@@ -1,4 +1,3 @@
-import type {RefObject} from 'react';
 import {createContext, useContext, useEffect, useMemo, useReducer, useRef} from 'react';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -106,7 +105,7 @@ type Props = {
   onMouseOver?: EChartMouseOverHandler;
   previousData?: Series[];
   rateUnit?: RateUnit;
-  ref?: RefObject<ReactEchartsRef>;
+  ref?: React.RefObject<ReactEchartsRef>;
   scatterPlot?: Series[];
   showLegend?: boolean;
   stacked?: boolean;

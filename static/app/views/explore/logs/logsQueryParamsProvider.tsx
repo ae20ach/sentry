@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {LogsAnalyticsPageSource} from 'sentry/utils/analytics/logsAnalyticsEvent';
 import {createDefinedContext} from 'sentry/utils/performance/contexts/utils';
 import {LogsAutoRefreshProvider} from 'sentry/views/explore/contexts/logs/logsAutoRefreshContext';
@@ -23,7 +21,7 @@ export const useLogsAnalyticsPageSource = _useLogsAnalyticsPageSource;
 
 interface LogsQueryParamsProviderProps {
   analyticsPageSource: LogsAnalyticsPageSource;
-  children: ReactNode;
+  children: React.ReactNode;
   source: 'location' | 'state';
   freeze?: LogsFrozenContextProviderProps;
   frozenParams?: Partial<ReadableQueryParams>;

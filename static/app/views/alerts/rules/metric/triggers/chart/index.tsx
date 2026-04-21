@@ -1,4 +1,4 @@
-import React, {Fragment, PureComponent, type ComponentProps} from 'react';
+import React, {Fragment, PureComponent} from 'react';
 import type {Theme} from '@emotion/react';
 import styled from '@emotion/styled';
 import type {Location} from 'history';
@@ -597,7 +597,7 @@ class TriggersChart extends PureComponent<Props, State> {
     }
 
     if (isSessionAggregate(aggregate)) {
-      const baseProps: ComponentProps<typeof SessionsRequest> = {
+      const baseProps: React.ComponentProps<typeof SessionsRequest> = {
         api,
         organization,
         project: projects.map(({id}) => Number(id)),

@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {useCallback, useMemo, useRef} from 'react';
 import type {Location} from 'history';
 
@@ -20,7 +19,7 @@ function isSameLocation(a: Location, b: Location): boolean {
 }
 
 interface SpansQueryParamsProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export function SpansQueryParamsProvider({children}: SpansQueryParamsProviderProps) {

@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {Text} from '@sentry/scraps/text';
 
 import {t} from 'sentry/locale';
@@ -9,11 +7,11 @@ import {FieldKind, FieldValueType} from 'sentry/utils/fields';
 import {FieldValueKind} from 'sentry/views/discover/table/types';
 
 interface TypeBadgeProps {
-  deprecatedFields?: ReactNode[];
+  deprecatedFields?: React.ReactNode[];
   func?: ParsedFunction;
   isLogicFilter?: boolean;
   kind?: FieldKind;
-  label?: ReactNode;
+  label?: React.ReactNode;
   valueKind?: FieldValueKind;
   valueType?: FieldValueType;
 }

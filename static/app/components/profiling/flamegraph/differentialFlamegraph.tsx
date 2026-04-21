@@ -1,4 +1,3 @@
-import type {ReactElement} from 'react';
 import {useLayoutEffect, useMemo, useState} from 'react';
 import * as Sentry from '@sentry/react';
 import type {mat3} from 'gl-matrix';
@@ -36,7 +35,9 @@ interface DifferentialFlamegraphProps {
   scheduler: CanvasScheduler;
 }
 
-export function DifferentialFlamegraph(props: DifferentialFlamegraphProps): ReactElement {
+export function DifferentialFlamegraph(
+  props: DifferentialFlamegraphProps
+): React.ReactElement {
   const flamegraphTheme = useFlamegraphTheme();
   const {colorCoding} = useFlamegraphPreferences();
 

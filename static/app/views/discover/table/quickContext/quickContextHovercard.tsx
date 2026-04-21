@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import styled from '@emotion/styled';
 import type {Location} from 'history';
 
@@ -133,7 +132,7 @@ function HoverHeader({
   );
 }
 
-interface ContextProps extends ComponentProps<typeof Hovercard> {
+interface ContextProps extends React.ComponentProps<typeof Hovercard> {
   children: React.ReactNode;
   contextType: ContextType;
   dataRow: EventData;

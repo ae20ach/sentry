@@ -1,4 +1,4 @@
-import {Fragment, type ReactNode} from 'react';
+import {Fragment} from 'react';
 import {useTheme} from '@emotion/react';
 
 import {Button} from '@sentry/scraps/button';
@@ -57,7 +57,7 @@ export function InstallDetailsContent({
     }
   );
 
-  let body: ReactNode;
+  let body: React.ReactNode;
   if (isPending) {
     body = (
       <Flex direction="column" align="center" gap={outerGap}>
@@ -265,7 +265,7 @@ export function InstallDetailsContent({
   return body;
 }
 
-function CodeSignatureInfo({children}: {children: ReactNode}) {
+function CodeSignatureInfo({children}: {children: React.ReactNode}) {
   return (
     <Container
       padding="md"

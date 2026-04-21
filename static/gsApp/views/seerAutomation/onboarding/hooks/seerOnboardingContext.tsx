@@ -6,7 +6,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type RefObject,
 } from 'react';
 import * as Sentry from '@sentry/react';
 import uniqBy from 'lodash/uniqBy';
@@ -27,7 +26,7 @@ import {useIntegrationProvider} from './useIntegrationProvider';
 interface SeerOnboardingContextProps {
   addRepositoryProjectMappings: (additionalMappings: Record<string, string[]>) => void;
   addRootCauseAnalysisRepository: (repoId: string) => void;
-  autoCreatePR: RefObject<boolean | null> | null;
+  autoCreatePR: React.RefObject<boolean | null> | null;
   changeRepositoryProjectMapping: (
     repoId: string,
     index: number,

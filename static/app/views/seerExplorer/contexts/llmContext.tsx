@@ -1,12 +1,4 @@
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-} from 'react';
+import {createContext, useCallback, useContext, useEffect, useMemo, useRef} from 'react';
 
 import {createDefinedContext} from 'sentry/utils/performance/contexts/utils';
 
@@ -108,7 +100,7 @@ function serializeState(
 // LLMContextProvider — root of the entire context tree
 
 interface LLMContextProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 const INITIAL_STATE: LLMContextState = {

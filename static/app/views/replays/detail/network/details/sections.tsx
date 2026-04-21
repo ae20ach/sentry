@@ -1,4 +1,3 @@
-import type {MouseEvent} from 'react';
 import {useEffect, useMemo} from 'react';
 import queryString from 'query-string';
 
@@ -88,7 +87,7 @@ export function GeneralSection({item, startTimestampMs}: SectionProps) {
       value: (
         <TimestampButton
           precision="ms"
-          onClick={(event: MouseEvent) => {
+          onClick={(event: React.MouseEvent) => {
             event.stopPropagation();
             setCurrentTime(item.offsetMs);
           }}

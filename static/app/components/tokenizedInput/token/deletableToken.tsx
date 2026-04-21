@@ -1,4 +1,3 @@
-import type {KeyboardEvent, MouseEvent} from 'react';
 import {useCallback, useRef} from 'react';
 import styled from '@emotion/styled';
 import type {ListState} from '@react-stately/list';
@@ -16,7 +15,9 @@ interface DeletableTokenProps<T> {
   children: React.ReactNode;
   item: Node<T>;
   label: string;
-  onDelete: (evt: KeyboardEvent<HTMLDivElement> | MouseEvent<HTMLButtonElement>) => void;
+  onDelete: (
+    evt: React.KeyboardEvent<HTMLDivElement> | React.MouseEvent<HTMLButtonElement>
+  ) => void;
   state: ListState<T>;
 }
 
@@ -36,7 +37,7 @@ export function DeletableToken<T>({
   });
 
   const onKeyDownCapture = useCallback(
-    (evt: KeyboardEvent<HTMLInputElement>) => {
+    (evt: React.KeyboardEvent<HTMLInputElement>) => {
       if (evt.key === 'ArrowLeft') {
         focusTarget(state, state.collection.getKeyBefore(item.key));
         return;
@@ -51,7 +52,7 @@ export function DeletableToken<T>({
   );
 
   const handleOnKeyDown = useCallback(
-    (evt: KeyboardEvent<HTMLDivElement>) => {
+    (evt: React.KeyboardEvent<HTMLDivElement>) => {
       if (evt.key === 'Backspace' || evt.key === 'Delete') {
         onDelete?.(evt);
       }
@@ -60,7 +61,7 @@ export function DeletableToken<T>({
   );
 
   const handleOnClick = useCallback(
-    (evt: MouseEvent<HTMLDivElement>) => {
+    (evt: React.MouseEvent<HTMLDivElement>) => {
       evt.stopPropagation();
       shiftFocusToChild(evt.currentTarget, item, state);
     },

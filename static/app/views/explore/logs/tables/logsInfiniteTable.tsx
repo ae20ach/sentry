@@ -6,8 +6,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
-  type RefObject,
 } from 'react';
 import styled from '@emotion/styled';
 import * as Sentry from '@sentry/react';
@@ -755,7 +753,7 @@ export function LoadingRenderer({bytesScanned}: {bytesScanned?: number}) {
 }
 
 const StyledLoadingIndicator = styled(LoadingIndicator)<{
-  margin: CSSProperties['margin'];
+  margin: React.CSSProperties['margin'];
 }>`
   ${p => p.margin && `margin: ${p.margin}`};
 `;
@@ -809,7 +807,7 @@ function BackToTopButton({
   );
 }
 
-function useBox<T>(value: T): RefObject<T> {
+function useBox<T>(value: T): React.RefObject<T> {
   const box = useRef(value);
   box.current = value;
   return box;

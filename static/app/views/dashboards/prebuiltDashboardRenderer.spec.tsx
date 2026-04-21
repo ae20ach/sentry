@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {OrganizationFixture} from 'sentry-fixture/organization';
 
 import {render, waitFor} from 'sentry-test/reactTestingLibrary';
@@ -7,7 +6,7 @@ import {PrebuiltDashboardRenderer} from 'sentry/views/dashboards/prebuiltDashboa
 import {PrebuiltDashboardId} from 'sentry/views/dashboards/utils/prebuiltConfigs';
 
 jest.mock('sentry/views/dashboards/detail', () => ({
-  DashboardDetailWithInjectedProps: ({pageAlerts}: {pageAlerts?: ReactNode}) => (
+  DashboardDetailWithInjectedProps: ({pageAlerts}: {pageAlerts?: React.ReactNode}) => (
     <div data-test-id="dashboard-detail">{pageAlerts}</div>
   ),
 }));

@@ -1,12 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  type MouseEventHandler,
-  type ReactNode,
-} from 'react';
+import {useCallback, useEffect, useLayoutEffect, useMemo, useRef} from 'react';
 import {usePopper} from 'react-popper';
 import styled from '@emotion/styled';
 import {type AriaComboBoxProps} from '@react-aria/combobox';
@@ -72,7 +64,7 @@ type SearchQueryBuilderComboboxProps<T extends SelectOptionOrSectionWithKey<stri
    * If the combobox has additional information to display, passing JSX
    * to this prop will display it in an overlay at the top left position.
    */
-  description?: ReactNode;
+  description?: React.ReactNode;
   filterValue?: string;
   /**
    * Whether the combobox is loading async items.
@@ -565,7 +557,7 @@ export function SearchQueryBuilderCombobox<
     DESCRIPTION_POPPER_OPTIONS
   );
 
-  const handleInputClick: MouseEventHandler<HTMLInputElement> = useCallback(
+  const handleInputClick: React.MouseEventHandler<HTMLInputElement> = useCallback(
     e => {
       e.stopPropagation();
       inputProps.onClick?.(e);

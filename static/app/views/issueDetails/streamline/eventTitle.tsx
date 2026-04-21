@@ -1,4 +1,4 @@
-import {type CSSProperties, Fragment} from 'react';
+import {Fragment} from 'react';
 import {css, useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
 // eslint-disable-next-line no-restricted-imports
@@ -38,7 +38,7 @@ type EventNavigationProps = {
    */
   'data-stuck'?: boolean;
   ref?: React.Ref<HTMLDivElement>;
-  style?: CSSProperties;
+  style?: React.CSSProperties;
 };
 
 export const MIN_NAV_HEIGHT = 44;

@@ -1,4 +1,3 @@
-import type {ComponentProps, SyntheticEvent} from 'react';
 import React, {Fragment, memo, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {useTheme} from '@emotion/react';
 import classNames from 'classnames';
@@ -164,7 +163,7 @@ export const LogRowContent = memo(function LogRowContent({
   const [shouldRenderHoverElements, setShouldRenderHoverElements] = useState(false);
 
   // This only applies in embedded views where clicking doesn't expand row details.
-  function onClick(event: SyntheticEvent) {
+  function onClick(event: React.SyntheticEvent) {
     if (onEmbeddedRowClick && event.nativeEvent instanceof MouseEvent) {
       event.preventDefault();
       onEmbeddedRowClick(
@@ -175,7 +174,7 @@ export const LogRowContent = memo(function LogRowContent({
     }
   }
 
-  function onPointerUp(event: SyntheticEvent) {
+  function onPointerUp(event: React.SyntheticEvent) {
     // do not expand the context menu if...
     if (event.target instanceof Element) {
       // ... you clicked a button
@@ -278,7 +277,7 @@ export const LogRowContent = memo(function LogRowContent({
     logEnd,
   };
 
-  const rowInteractProps: ComponentProps<typeof LogTableRow> = isPseudoRow
+  const rowInteractProps: React.ComponentProps<typeof LogTableRow> = isPseudoRow
     ? {isClickable: false}
     : blockRowExpanding
       ? onEmbeddedRowClick

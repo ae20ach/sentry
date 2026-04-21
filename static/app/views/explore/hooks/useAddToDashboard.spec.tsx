@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {act, render, screen, userEvent} from 'sentry-test/reactTestingLibrary';
 
 import {openAddToDashboardModal} from 'sentry/actionCreators/modal';
@@ -13,7 +11,7 @@ import {
 import {SpansQueryParamsProvider} from 'sentry/views/explore/spans/spansQueryParamsProvider';
 import {ChartType} from 'sentry/views/insights/common/components/chart';
 
-function Wrapper({children}: {children: ReactNode}) {
+function Wrapper({children}: {children: React.ReactNode}) {
   return <SpansQueryParamsProvider>{children}</SpansQueryParamsProvider>;
 }
 

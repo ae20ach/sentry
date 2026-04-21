@@ -1,13 +1,4 @@
-import {
-  Fragment,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type Dispatch,
-  type SetStateAction,
-} from 'react';
+import {Fragment, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {skipToken, useQuery} from '@tanstack/react-query';
 import type {Query} from 'history';
 
@@ -465,7 +456,7 @@ function ConfigUrlContainer(
     configQueryKey: ApiQueryKey;
     organizations: Organization[];
     selectedOrgSlug: string | undefined;
-    setSelectedOrgSlug: Dispatch<SetStateAction<string | undefined>>;
+    setSelectedOrgSlug: React.Dispatch<React.SetStateAction<string | undefined>>;
   }
 ) {
   const {
@@ -515,7 +506,7 @@ function ConfigPickerContent({
   integrationConfigs: Integration[];
   organizations: Organization[];
   selectedOrgSlug: string | undefined;
-  setSelectedOrgSlug: Dispatch<SetStateAction<string | undefined>>;
+  setSelectedOrgSlug: React.Dispatch<React.SetStateAction<string | undefined>>;
 }) {
   const {isSuperuser} = ConfigStore.get('user') || {};
   const shouldShowConfigSelector = integrationConfigs.length > 0 && isSuperuser;

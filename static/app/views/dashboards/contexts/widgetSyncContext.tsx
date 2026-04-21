@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {useCallback, useEffect, useMemo, useRef} from 'react';
 import type {EChartsType} from 'echarts';
 import * as echarts from 'echarts';
@@ -21,7 +20,7 @@ const [_WidgetSyncProvider, _useWidgetSyncContext, WidgetSyncContext] =
   });
 
 interface WidgetSyncContextProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
   groupName?: string;
 }
 

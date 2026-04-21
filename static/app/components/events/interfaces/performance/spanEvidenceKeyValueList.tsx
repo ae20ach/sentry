@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {Fragment, useMemo} from 'react';
 import {useTheme, type Theme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -634,7 +633,7 @@ const makeTransactionNameRow = (
 const makeRow = (
   subject: KeyValueListDataItem['subject'],
   value: KeyValueListDataItem['value'],
-  actionButton?: ReactNode
+  actionButton?: React.ReactNode
 ): KeyValueListDataItem => {
   const itemKey = kebabCase(subject ?? '');
 

@@ -1,4 +1,3 @@
-import type {RefObject} from 'react';
 import {useCallback, useEffect, useRef, useState} from 'react';
 
 const RESIZABLE_DEFAULT_WIDTH = 200;
@@ -9,7 +8,7 @@ interface UseResizableOptions {
   /**
    * The ref to the element to be resized.
    */
-  ref: RefObject<HTMLElement | null>;
+  ref: React.RefObject<HTMLElement | null>;
 
   /**
    * The starting size of the container, and the size that is set in the onDoubleClick handler.

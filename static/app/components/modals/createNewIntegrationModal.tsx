@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {Fragment, useState} from 'react';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -77,7 +76,7 @@ function CreateNewIntegrationModal({Body, Header, Footer, closeModal}: ModalRend
         )}
       </RadioChoiceDescription>,
     ],
-  ] as Array<[string, ReactNode, ReactNode]>;
+  ] as Array<[string, React.ReactNode, React.ReactNode]>;
 
   return (
     <Fragment>

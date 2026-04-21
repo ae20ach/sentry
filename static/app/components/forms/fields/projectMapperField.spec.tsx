@@ -1,5 +1,3 @@
-import type {ComponentProps} from 'react';
-
 import {render, screen, userEvent} from 'sentry-test/reactTestingLibrary';
 import {selectEvent} from 'sentry-test/selectEvent';
 
@@ -8,7 +6,7 @@ import {FormModel} from 'sentry/components/forms/model';
 import {RenderField} from './projectMapperField';
 
 describe('ProjectMapperField', () => {
-  const defaultProps: ComponentProps<typeof RenderField> = {
+  const defaultProps: React.ComponentProps<typeof RenderField> = {
     mappedDropdown: {
       placeholder: 'mapped-dropdown-placeholder',
       items: [

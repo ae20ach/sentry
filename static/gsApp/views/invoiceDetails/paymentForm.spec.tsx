@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {OrganizationFixture} from 'sentry-fixture/organization';
 
 import {InvoiceFixture} from 'getsentry-test/fixtures/invoice';
@@ -41,7 +40,7 @@ describe('InvoiceDetails > Payment Form', () => {
     SubscriptionStore.set(organization.slug, {});
   });
 
-  const modalDummy = ({children}: {children?: ReactNode}) => <div>{children}</div>;
+  const modalDummy = ({children}: {children?: React.ReactNode}) => <div>{children}</div>;
 
   it('renders form', async () => {
     const mockget = MockApiClient.addMockResponse({

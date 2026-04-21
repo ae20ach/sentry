@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {useCallback, useMemo} from 'react';
 
 import {defined} from 'sentry/utils';
@@ -39,7 +38,7 @@ const [_MetricMetadataContextProvider, useTraceMetricContext, TraceMetricContext
   });
 
 interface MetricsQueryParamsProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
   queryParams: ReadableQueryParams;
   removeMetric: () => void;
   setQueryParams: (queryParams: ReadableQueryParams) => void;

@@ -1,4 +1,3 @@
-import type {Key} from 'react';
 import {useMemo, useRef, useState} from 'react';
 import styled from '@emotion/styled';
 import {type AriaComboBoxProps} from '@react-aria/combobox';
@@ -189,7 +188,7 @@ function SearchComboBox(props: SearchComboBoxProps) {
   const navigate = useNavigate();
 
   const organization = useOrganization();
-  const handleSelectionChange = (key: Key | null) => {
+  const handleSelectionChange = (key: React.Key | null) => {
     if (!key) {
       return;
     }
@@ -306,7 +305,7 @@ const StyledOverlay = styled(Overlay)`
 `;
 
 function getStoryTreeNodeFromKey(
-  key: Key,
+  key: React.Key,
   props: SearchComboBoxProps
 ): StoryTreeNode | undefined {
   for (const category of props.defaultItems) {

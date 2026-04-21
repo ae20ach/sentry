@@ -1,4 +1,3 @@
-import type {PropsWithChildren} from 'react';
 import {Fragment} from 'react';
 import {ThemeProvider, useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -12,7 +11,7 @@ import {Heading, Text} from '@sentry/scraps/text';
 // eslint-disable-next-line no-restricted-imports
 import {darkTheme} from 'sentry/utils/theme/theme';
 
-function DarkModeProvider(props: PropsWithChildren) {
+function DarkModeProvider(props: React.PropsWithChildren) {
   return <ThemeProvider theme={darkTheme}>{props.children}</ThemeProvider>;
 }
 

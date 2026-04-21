@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useRef,
-  useState,
-  type ChangeEvent,
-  type KeyboardEvent,
-  type SyntheticEvent,
-} from 'react';
+import {useCallback, useRef, useState} from 'react';
 import styled from '@emotion/styled';
 
 import {useSearchQueryBuilder} from 'sentry/components/searchQueryBuilder/context';
@@ -21,7 +14,7 @@ export function PlainTextQueryInput({label}: PlainTextQueryInputProps) {
     useSearchQueryBuilder();
   const [cursorPosition, setCursorPosition] = useState(0);
 
-  const setCursorPositionOnEvent = (event: SyntheticEvent<HTMLTextAreaElement>) => {
+  const setCursorPositionOnEvent = (event: React.SyntheticEvent<HTMLTextAreaElement>) => {
     if (event.currentTarget === document.activeElement) {
       setCursorPosition(event.currentTarget.selectionStart);
     } else {
@@ -30,7 +23,7 @@ export function PlainTextQueryInput({label}: PlainTextQueryInputProps) {
   };
 
   const onChange = useCallback(
-    (e: ChangeEvent<HTMLTextAreaElement>) => {
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setCursorPositionOnEvent(e);
       dispatch({type: 'UPDATE_QUERY', query: e.target.value});
     },
@@ -38,7 +31,7 @@ export function PlainTextQueryInput({label}: PlainTextQueryInputProps) {
   );
 
   const onKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       setCursorPositionOnEvent(e);
 
       if (e.key === 'Enter') {

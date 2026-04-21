@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {Fragment, useEffect, useMemo, useState} from 'react';
 import styled from '@emotion/styled';
 import {parseAsStringLiteral, useQueryState} from 'nuqs';
@@ -209,7 +208,7 @@ function OnboardingContent({
 
   const [jsFramework, setJsFramework] = useState<{
     value: PlatformKey;
-    label?: ReactNode;
+    label?: React.ReactNode;
     textValue?: string;
   }>(jsFrameworkSelectOptions[0]!);
 

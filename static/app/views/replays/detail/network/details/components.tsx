@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {Fragment, useState} from 'react';
 import styled from '@emotion/styled';
 
@@ -41,7 +40,7 @@ export function Warning({warnings}: {warnings: string[]}) {
   return null;
 }
 
-export function SizeTooltip({children}: {children: ReactNode}) {
+export function SizeTooltip({children}: {children: React.ReactNode}) {
   return (
     <Tooltip
       title={t('It is possible the network transfer size is smaller due to compression.')}
@@ -53,7 +52,7 @@ export function SizeTooltip({children}: {children: ReactNode}) {
 
 export type KeyValueTuple = {
   key: string;
-  value: string | ReactNode;
+  value: string | React.ReactNode;
   type?: 'warning' | 'error';
 };
 
@@ -122,9 +121,9 @@ export function SectionItem({
   title,
   titleExtra,
 }: {
-  children: ReactNode;
-  title: ReactNode;
-  titleExtra?: ReactNode;
+  children: React.ReactNode;
+  title: React.ReactNode;
+  titleExtra?: React.ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(true);
 

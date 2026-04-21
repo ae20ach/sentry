@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useReducer, type Reducer} from 'react';
+import {useCallback, useEffect, useReducer} from 'react';
 
 import {parseFilterValueDate} from 'sentry/components/searchQueryBuilder/tokens/filter/parsers/date/parser';
 import {
@@ -934,7 +934,7 @@ export function useQueryBuilderState({
     clearAskSeerFeedback: false,
   };
 
-  const reducer: Reducer<QueryBuilderState, QueryBuilderActions> = useCallback(
+  const reducer: React.Reducer<QueryBuilderState, QueryBuilderActions> = useCallback(
     (state, action): QueryBuilderState => {
       if (disabled) {
         return state;

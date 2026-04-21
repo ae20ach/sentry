@@ -1,4 +1,4 @@
-import {Fragment, type ReactNode} from 'react';
+import {Fragment} from 'react';
 import type {DraggableAttributes, DraggableSyntheticListeners} from '@dnd-kit/core';
 import styled from '@emotion/styled';
 
@@ -19,17 +19,17 @@ export interface QueryFieldProps {
   canDelete?: boolean;
   canDrag?: boolean;
   disabled?: boolean;
-  extraActions?: ReactNode;
-  fieldValidationError?: ReactNode;
+  extraActions?: React.ReactNode;
+  fieldValidationError?: React.ReactNode;
   isDragging?: boolean;
   listeners?: DraggableSyntheticListeners;
   onDelete?: () => void;
   ref?: React.Ref<HTMLDivElement>;
   renderTagOverride?: (
     kind: FieldValueKind,
-    label: ReactNode,
+    label: React.ReactNode,
     meta: FieldValue['meta']
-  ) => ReactNode;
+  ) => React.ReactNode;
   style?: React.CSSProperties;
 }
 

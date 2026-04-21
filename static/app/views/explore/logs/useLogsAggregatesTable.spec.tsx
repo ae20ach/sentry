@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {renderHookWithProviders, waitFor} from 'sentry-test/reactTestingLibrary';
 
 import {LogsAnalyticsPageSource} from 'sentry/utils/analytics/logsAnalyticsEvent';
@@ -7,7 +5,7 @@ import {SAMPLING_MODE} from 'sentry/views/explore/hooks/useProgressiveQuery';
 import {LogsQueryParamsProvider} from 'sentry/views/explore/logs/logsQueryParamsProvider';
 import {useLogsAggregatesTable} from 'sentry/views/explore/logs/useLogsAggregatesTable';
 
-function Wrapper({children}: {children: ReactNode}) {
+function Wrapper({children}: {children: React.ReactNode}) {
   return (
     <LogsQueryParamsProvider
       analyticsPageSource={LogsAnalyticsPageSource.EXPLORE_LOGS}

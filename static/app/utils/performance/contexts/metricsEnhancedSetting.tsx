@@ -1,4 +1,3 @@
-import type {Dispatch, ReactNode} from 'react';
 import {useCallback, useReducer} from 'react';
 import type {Location} from 'history';
 
@@ -14,8 +13,8 @@ export interface MetricsEnhancedSettingContext {
   autoSampleState: AutoSampleState;
   memoizationKey: string;
   metricSettingState: MEPState | null;
-  setAutoSampleState: Dispatch<AutoSampleState>;
-  setMetricSettingState: Dispatch<MEPState>;
+  setAutoSampleState: React.Dispatch<AutoSampleState>;
+  setMetricSettingState: React.Dispatch<MEPState>;
   shouldQueryProvideMEPAutoParams: boolean;
   shouldQueryProvideMEPMetricParams: boolean;
   shouldQueryProvideMEPTransactionParams: boolean;
@@ -72,7 +71,7 @@ export function MEPSettingProvider({
   _hasMEPState,
   forceTransactions,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   _hasMEPState?: MEPState;
   forceTransactions?: boolean;
   location?: Location;

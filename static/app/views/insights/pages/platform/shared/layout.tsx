@@ -1,4 +1,3 @@
-import {type ReactNode} from 'react';
 import styled from '@emotion/styled';
 
 import Feature from 'sentry/components/acl/feature';
@@ -37,7 +36,7 @@ function getFreeTextFromQuery(query: string) {
 }
 
 interface PlatformLandingPageLayoutProps {
-  children: ReactNode;
+  children: React.ReactNode;
   datePageFilterProps: DatePageFilterProps;
 }
 

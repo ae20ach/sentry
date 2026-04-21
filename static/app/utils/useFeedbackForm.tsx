@@ -1,11 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  type ReactNode,
-} from 'react';
+import {createContext, useCallback, useContext, useEffect, useRef} from 'react';
 import type {FeedbackModalIntegration} from '@sentry/core';
 import isEqual from 'lodash/isEqual';
 
@@ -115,7 +108,7 @@ function useOpenForm() {
 /**
  * Provider for the global feedback form context. Should only be rendered in the app root.
  */
-export function GlobalFeedbackForm({children}: {children: ReactNode}) {
+export function GlobalFeedbackForm({children}: {children: React.ReactNode}) {
   const openForm = useOpenForm();
 
   return (

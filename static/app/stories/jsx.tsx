@@ -1,10 +1,9 @@
-import type {ReactNode} from 'react';
 import {Fragment, isValidElement} from 'react';
 import styled from '@emotion/styled';
 
 interface JSXNodeProps {
   name: string;
-  children?: ReactNode;
+  children?: React.ReactNode;
   props?: Record<string, unknown>;
 }
 

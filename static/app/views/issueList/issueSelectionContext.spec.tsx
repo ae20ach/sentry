@@ -1,4 +1,3 @@
-import type {ComponentProps, ReactNode} from 'react';
 import {useLayoutEffect} from 'react';
 
 import {act, render, renderHook} from 'sentry-test/reactTestingLibrary';
@@ -11,7 +10,10 @@ import {
 
 type SelectionState = ReturnType<typeof useIssueSelectionSummary> &
   ReturnType<typeof useIssueSelectionActions>;
-type ProviderProps = Omit<ComponentProps<typeof IssueSelectionProvider>, 'children'>;
+type ProviderProps = Omit<
+  React.ComponentProps<typeof IssueSelectionProvider>,
+  'children'
+>;
 
 function useSelectionState(): SelectionState {
   const summary = useIssueSelectionSummary();
@@ -29,7 +31,7 @@ function SelectionProbe({onUpdate}: {onUpdate: (state: SelectionState) => void})
 
 function renderSelectionHook(providerProps: ProviderProps) {
   return renderHook(useSelectionState, {
-    wrapper: function Wrapper({children}: {children?: ReactNode}) {
+    wrapper: function Wrapper({children}: {children?: React.ReactNode}) {
       return (
         <IssueSelectionProvider {...providerProps}>{children}</IssueSelectionProvider>
       );

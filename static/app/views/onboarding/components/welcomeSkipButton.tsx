@@ -1,5 +1,3 @@
-import {type PropsWithChildren} from 'react';
-
 import {LinkButton} from '@sentry/scraps/button';
 import {Link} from '@sentry/scraps/link';
 
@@ -15,7 +13,7 @@ interface WelcomeSkipButtonProps {
 export function WelcomeSkipButton({
   children,
   asButton,
-}: PropsWithChildren<WelcomeSkipButtonProps>) {
+}: React.PropsWithChildren<WelcomeSkipButtonProps>) {
   const organization = useOrganization();
   const {activateSidebar} = useOnboardingSidebar();
 

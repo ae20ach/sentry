@@ -1,4 +1,3 @@
-import type {MouseEventHandler} from 'react';
 import {memo, useCallback, useMemo, useState} from 'react';
 import styled from '@emotion/styled';
 
@@ -41,8 +40,8 @@ interface FlamegraphDrawerProps {
   profileTransaction: ReturnType<typeof useProfileTransaction> | null;
   referenceNode: FlamegraphFrame;
   rootNodes: FlamegraphFrame[];
-  onResize?: MouseEventHandler<HTMLElement>;
-  onResizeReset?: MouseEventHandler<HTMLElement>;
+  onResize?: React.MouseEventHandler<HTMLElement>;
+  onResizeReset?: React.MouseEventHandler<HTMLElement>;
 }
 
 const FlamegraphDrawer = memo(function FlamegraphDrawer(props: FlamegraphDrawerProps) {

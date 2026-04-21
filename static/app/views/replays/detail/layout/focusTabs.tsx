@@ -1,4 +1,4 @@
-import {useEffect, type ReactNode} from 'react';
+import {useEffect} from 'react';
 
 import {FeatureBadge} from '@sentry/scraps/badge';
 import {Flex, Stack} from '@sentry/scraps/layout';
@@ -30,7 +30,7 @@ function getReplayTabs({
   organization: Organization;
   project?: Project | null;
   replayRecord?: ReplayRecord | null;
-}): Record<TabKey, ReactNode> {
+}): Record<TabKey, React.ReactNode> {
   const hasAiSummary =
     organization.features.includes('replay-ai-summaries') && areAiFeaturesAllowed;
   const hasMobileSummary = organization.features.includes('replay-ai-summaries-mobile');

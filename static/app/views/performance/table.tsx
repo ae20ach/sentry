@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState, type ReactNode} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import type {Theme} from '@emotion/react';
 import type {Location, LocationDescriptorObject} from 'history';
 
@@ -54,8 +54,8 @@ import {
 } from './utils';
 
 type ColumnTitle = {
-  title: string | ReactNode;
-  tooltip?: string | ReactNode;
+  title: string | React.ReactNode;
+  tooltip?: string | React.ReactNode;
 };
 
 const COLUMN_TITLES_OPTIONAL_TOOLTIP = COLUMN_TITLES.map(title => {

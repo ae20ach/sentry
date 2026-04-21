@@ -1,4 +1,4 @@
-import {useCallback, useMemo, type ReactNode} from 'react';
+import {useCallback, useMemo} from 'react';
 import {useSortable} from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
 
@@ -26,7 +26,7 @@ interface VisualizeEquationProps {
   onReplace: (visualize: Visualize) => void;
   visualize: Visualize;
   dragColumnId?: number;
-  label?: ReactNode;
+  label?: React.ReactNode;
   onDelete?: () => void;
 }
 

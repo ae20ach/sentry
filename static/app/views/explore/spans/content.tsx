@@ -1,5 +1,4 @@
 import {Fragment, useMemo} from 'react';
-import type {ReactNode} from 'react';
 import * as Sentry from '@sentry/react';
 
 import {Grid, Stack} from '@sentry/scraps/layout';
@@ -117,7 +116,7 @@ function SpansTabWrapper({children}: SpansTabContextProps) {
 }
 
 interface SpansTabContextProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 function SpansTabTourProvider({children}: SpansTabContextProps) {

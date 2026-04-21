@@ -1,10 +1,9 @@
-import type {ReactNode} from 'react';
 import {createContext, useContext, useMemo} from 'react';
 
 import type {ReplayListRecord} from 'sentry/views/replays/types';
 
 interface Props {
-  children: ReactNode;
+  children: React.ReactNode;
   currentReplay: ReplayListRecord | undefined;
   isLoading: boolean;
   replays: ReplayListRecord[];

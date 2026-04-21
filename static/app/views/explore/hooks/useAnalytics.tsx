@@ -1,4 +1,4 @@
-import {useEffect, useEffectEvent, useMemo, useRef, type RefObject} from 'react';
+import {useEffect, useEffectEvent, useMemo, useRef} from 'react';
 import * as Sentry from '@sentry/react';
 
 import {useOrganizationSeerSetup} from 'sentry/components/events/autofix/useOrganizationSeerSetup';
@@ -1081,7 +1081,7 @@ export function useMetricsAnalytics({
   ]);
 }
 
-function useBox<T>(value: T): RefObject<T> {
+function useBox<T>(value: T): React.RefObject<T> {
   const box = useRef(value);
   box.current = value;
   return box;

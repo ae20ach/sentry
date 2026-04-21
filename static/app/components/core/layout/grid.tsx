@@ -1,4 +1,3 @@
-import type {CSSProperties} from 'react';
 import styled from '@emotion/styled';
 
 import type {SpaceSize} from 'sentry/utils/theme';
@@ -44,22 +43,22 @@ interface GridLayoutProps {
    * Defines named grid areas for child components to reference.
    * Uses CSS grid-template-areas property.
    */
-  areas?: Responsive<CSSProperties['gridTemplateAreas']>;
+  areas?: Responsive<React.CSSProperties['gridTemplateAreas']>;
   /**
    * Specifies the size of auto-generated column tracks.
    * Uses CSS grid-auto-columns property.
    */
-  autoColumns?: Responsive<CSSProperties['gridAutoColumns']>;
+  autoColumns?: Responsive<React.CSSProperties['gridAutoColumns']>;
   /**
    * Specifies the size of auto-generated row tracks.
    * Uses CSS grid-auto-rows property.
    */
-  autoRows?: Responsive<CSSProperties['gridAutoRows']>;
+  autoRows?: Responsive<React.CSSProperties['gridAutoRows']>;
   /**
    * Defines the column tracks of the grid.
    * Uses CSS grid-template-columns property.
    */
-  columns?: Responsive<CSSProperties['gridTemplateColumns']>;
+  columns?: Responsive<React.CSSProperties['gridTemplateColumns']>;
   /**
    * Determines the grid display type.
    */
@@ -86,7 +85,7 @@ interface GridLayoutProps {
    * Defines the row tracks of the grid.
    * Uses CSS grid-template-rows property.
    */
-  rows?: Responsive<CSSProperties['gridTemplateRows']>;
+  rows?: Responsive<React.CSSProperties['gridTemplateRows']>;
 }
 
 export type GridProps<T extends ContainerElement = 'div'> = ContainerProps<T> &

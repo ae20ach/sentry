@@ -1,9 +1,7 @@
-import {type ComponentProps} from 'react';
-
 import {FeedbackButton} from 'sentry/components/feedbackButton/feedbackButton';
 import {t} from 'sentry/locale';
 
-interface AutofixFeedbackProps extends ComponentProps<typeof FeedbackButton> {
+interface AutofixFeedbackProps extends React.ComponentProps<typeof FeedbackButton> {
   iconOnly?: boolean;
 }
 

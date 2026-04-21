@@ -1,4 +1,4 @@
-import {useCallback, type ReactNode} from 'react';
+import {useCallback} from 'react';
 
 import {getPaginationCaption, Pagination} from 'sentry/components/pagination';
 import type {Detector} from 'sentry/types/workflowEngine/detectors';
@@ -16,7 +16,7 @@ interface DetectorListContentProps {
   isError: boolean;
   isLoading: boolean;
   isSuccess: boolean;
-  emptyState?: ReactNode;
+  emptyState?: React.ReactNode;
 }
 
 export function DetectorListContent({

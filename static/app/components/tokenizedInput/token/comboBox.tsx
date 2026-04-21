@@ -1,10 +1,3 @@
-import type {
-  ChangeEventHandler,
-  ClipboardEvent,
-  FocusEventHandler,
-  MouseEventHandler,
-  Ref,
-} from 'react';
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef} from 'react';
 import styled from '@emotion/styled';
 import type {AriaComboBoxProps} from '@react-aria/combobox';
@@ -38,20 +31,20 @@ interface ComboBoxProps {
   inputValue: string;
   items: Array<SelectOptionOrSectionWithKey<string>>;
   ['data-test-id']?: string;
-  onClick?: MouseEventHandler<HTMLInputElement>;
+  onClick?: React.MouseEventHandler<HTMLInputElement>;
   onInputBlur?: () => void;
-  onInputChange?: ChangeEventHandler<HTMLInputElement>;
+  onInputChange?: React.ChangeEventHandler<HTMLInputElement>;
   onInputCommit?: (value: string) => void;
   onInputEscape?: () => void;
-  onInputFocus?: FocusEventHandler<HTMLInputElement>;
+  onInputFocus?: React.FocusEventHandler<HTMLInputElement>;
   onKeyDown?: (evt: KeyboardEvent) => void;
   onKeyDownCapture?: (evt: React.KeyboardEvent<HTMLInputElement>) => void;
   onKeyUp?: (e: KeyboardEvent) => void;
   onOpenChange?: (newOpenState: boolean) => void;
   onOptionSelected?: (option: SelectOptionWithKey<string>) => void;
-  onPaste?: (e: ClipboardEvent<HTMLInputElement>) => void;
+  onPaste?: (e: React.ClipboardEvent<HTMLInputElement>) => void;
   placeholder?: string;
-  ref?: Ref<HTMLInputElement>;
+  ref?: React.Ref<HTMLInputElement>;
   /**
    * Function to determine whether the menu should close when interacting with
    * other elements.
@@ -171,7 +164,7 @@ export function ComboBox({
     ...comboBoxProps,
   });
 
-  const handleComboBoxFocus: FocusEventHandler<HTMLInputElement> = useCallback(
+  const handleComboBoxFocus: React.FocusEventHandler<HTMLInputElement> = useCallback(
     evt => {
       onInputFocus?.(evt);
       state.open();
@@ -179,7 +172,7 @@ export function ComboBox({
     [onInputFocus, state]
   );
 
-  const handleComboBoxBlur: FocusEventHandler<HTMLInputElement> = useCallback(
+  const handleComboBoxBlur: React.FocusEventHandler<HTMLInputElement> = useCallback(
     evt => {
       if (evt.relatedTarget && !shouldCloseOnInteractOutside?.(evt.relatedTarget)) {
         return;
@@ -283,7 +276,7 @@ export function ComboBox({
     },
   });
 
-  const handleInputClick: MouseEventHandler<HTMLInputElement> = useCallback(
+  const handleInputClick: React.MouseEventHandler<HTMLInputElement> = useCallback(
     evt => {
       evt.stopPropagation();
       inputProps.onClick?.(evt);

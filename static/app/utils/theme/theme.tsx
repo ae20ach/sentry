@@ -7,7 +7,6 @@
  * - Light and dark theme definitions
  * - Theme type exports
  */
-import type {CSSProperties} from 'react';
 import {css} from '@emotion/react';
 import {spring, type Transition} from 'framer-motion';
 
@@ -913,7 +912,7 @@ declare module '@emotion/react' {
 }
 
 export type StrictCSSObject = {
-  [K in keyof CSSProperties]?: CSSProperties[K]; // Enforce standard CSS properties
+  [K in keyof React.CSSProperties]?: React.CSSProperties[K]; // Enforce standard CSS properties
 } & Partial<{
   [key: `&${string}`]: StrictCSSObject; // Allow nested selectors
   [key: `> ${string}:last-child`]: StrictCSSObject; // Allow some nested selectors

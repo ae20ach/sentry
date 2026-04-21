@@ -1,4 +1,3 @@
-import type {MouseEvent} from 'react';
 import type {LocationDescriptorObject} from 'history';
 
 import type {GridColumnOrder} from 'sentry/components/tables/gridEditable';
@@ -8,7 +7,7 @@ import type {Sort} from 'sentry/utils/discover/fields';
 interface Props<Key extends string> {
   currentSort: Sort;
   makeSortLinkGenerator: (column: GridColumnOrder<Key>) => () => LocationDescriptorObject;
-  onClick(column: GridColumnOrder<Key>, e: MouseEvent<HTMLAnchorElement>): void;
+  onClick(column: GridColumnOrder<Key>, e: React.MouseEvent<HTMLAnchorElement>): void;
   rightAlignedColumns: Array<GridColumnOrder<string>>;
   sortableColumns: Array<GridColumnOrder<string>>;
 }

@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {useState} from 'react';
 
 import {createDefinedContext} from 'sentry/utils/performance/contexts/utils';
@@ -13,7 +12,7 @@ const [_DashboardsMEPProvider, useDashboardsMEPContext, DashboardsMEPContext] =
     name: 'DashboardsMEPContext',
   });
 
-function DashboardsMEPProvider({children}: {children: ReactNode}) {
+function DashboardsMEPProvider({children}: {children: React.ReactNode}) {
   const [isMetricsData, setIsMetricsData] = useState<boolean | undefined>(undefined); // undefined means not initialized
 
   return (

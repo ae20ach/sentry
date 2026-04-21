@@ -1,4 +1,4 @@
-import {Fragment, type ComponentProps} from 'react';
+import {Fragment} from 'react';
 
 import * as Storybook from 'sentry/stories';
 import type {
@@ -37,7 +37,7 @@ const REPOS: IntegrationRepository[] = [
   {identifier: 'my-org/infra', name: 'my-org/infra', isInstalled: true},
 ];
 
-const BASE_PROPS: ComponentProps<typeof SCMOverviewSection> = {
+const BASE_PROPS: React.ComponentProps<typeof SCMOverviewSection> = {
   canWrite: true,
   organizationSlug: 'my-org',
   isError: false,

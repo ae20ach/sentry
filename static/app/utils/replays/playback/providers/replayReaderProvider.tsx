@@ -1,10 +1,9 @@
-import type {ReactNode} from 'react';
 import {createContext, useContext} from 'react';
 
 import {ReplayReader} from 'sentry/utils/replays/replayReader';
 
 interface Props {
-  children: ReactNode;
+  children: React.ReactNode;
   replay: ReplayReader | null;
 }
 

@@ -1,4 +1,3 @@
-import type {CSSProperties} from 'react';
 import {css} from '@emotion/react';
 import styled from '@emotion/styled';
 import queryString from 'query-string';
@@ -18,7 +17,7 @@ import {makeFeedbackPathname} from 'sentry/views/feedback/pathnames';
 interface Props {
   feedbackItem: FeedbackIssue;
   className?: string;
-  style?: CSSProperties;
+  style?: React.CSSProperties;
 }
 
 const hideDropdown = css`

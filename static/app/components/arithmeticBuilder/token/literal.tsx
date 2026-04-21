@@ -1,4 +1,3 @@
-import type {ChangeEvent, FocusEvent} from 'react';
 import {Fragment, useCallback, useRef, useState} from 'react';
 import type {ListState} from '@react-stately/list';
 import type {KeyboardEvent, Node} from '@react-types/shared';
@@ -97,7 +96,7 @@ function InternalInput({item, state, token}: InternalInputProps) {
   }, [dispatch, inputValue, token, resetInputValue]);
 
   const onInputChange = useCallback(
-    (evt: ChangeEvent<HTMLInputElement>) => {
+    (evt: React.ChangeEvent<HTMLInputElement>) => {
       const text = evt.target.value;
 
       if (text.length <= 0) {
@@ -183,7 +182,7 @@ function InternalInput({item, state, token}: InternalInputProps) {
   }, [dispatch, inputValue, token, resetInputValue]);
 
   const onInputFocus = useCallback(
-    (_evt: FocusEvent<HTMLInputElement>) => {
+    (_evt: React.FocusEvent<HTMLInputElement>) => {
       resetInputValue();
     },
     [resetInputValue]

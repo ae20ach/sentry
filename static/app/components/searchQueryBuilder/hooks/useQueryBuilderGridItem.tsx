@@ -1,4 +1,4 @@
-import {useCallback, type RefObject} from 'react';
+import {useCallback} from 'react';
 import {focusSafely, getFocusableTreeWalker} from '@react-aria/focus';
 import {useGridListItem} from '@react-aria/gridlist';
 import {isMac} from '@react-aria/utils';
@@ -25,7 +25,7 @@ function focusNextGridCell({
   item: Node<ParseResultToken>;
   state: ListState<ParseResultToken>;
   walker: TreeWalker;
-  wrapperRef: RefObject<HTMLElement | null>;
+  wrapperRef: React.RefObject<HTMLElement | null>;
 }) {
   const nextFocusableChild = walker.nextSibling();
   if (nextFocusableChild) {
@@ -56,7 +56,7 @@ function focusPreviousGridCell({
   item: Node<ParseResultToken>;
   state: ListState<ParseResultToken>;
   walker: TreeWalker;
-  wrapperRef: RefObject<HTMLElement | null>;
+  wrapperRef: React.RefObject<HTMLElement | null>;
 }) {
   const previousFocusableChild = walker.previousSibling();
 
@@ -92,7 +92,7 @@ function focusPreviousGridCell({
 export function useQueryBuilderGridItem(
   item: Node<ParseResultToken>,
   state: ListState<ParseResultToken>,
-  ref: RefObject<FocusableElement | null>
+  ref: React.RefObject<FocusableElement | null>
 ) {
   const {wrapperRef} = useSearchQueryBuilder();
   const {rowProps, gridCellProps} = useGridListItem({node: item}, state, ref);

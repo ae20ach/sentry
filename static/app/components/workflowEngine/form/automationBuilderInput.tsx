@@ -1,9 +1,8 @@
-import type {ComponentProps} from 'react';
 import styled from '@emotion/styled';
 
 import {Input} from '@sentry/scraps/input';
 
-export function AutomationBuilderInput(props: ComponentProps<typeof Input>) {
+export function AutomationBuilderInput(props: React.ComponentProps<typeof Input>) {
   return <InlineInput type="text" {...props} />;
 }
 

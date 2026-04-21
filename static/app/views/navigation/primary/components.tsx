@@ -1,4 +1,4 @@
-import {Fragment, useEffect, useRef, type MouseEventHandler} from 'react';
+import {Fragment, useEffect, useRef} from 'react';
 import {createPortal} from 'react-dom';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -356,7 +356,7 @@ interface PrimaryNavigationMenuProps extends PrimaryNavigationItemBaseProps {
   children?: React.ReactNode;
   icon?: React.ReactNode;
   indicator?: 'accent' | 'danger' | 'warning';
-  onOpen?: MouseEventHandler<HTMLButtonElement>;
+  onOpen?: React.MouseEventHandler<HTMLButtonElement>;
   triggerWrap?: React.ComponentType<{children: React.ReactNode}>;
 }
 

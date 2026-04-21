@@ -1,4 +1,4 @@
-import {type CSSProperties, Fragment, useId} from 'react';
+import {Fragment, useId} from 'react';
 import styled from '@emotion/styled';
 
 import {LinkButton} from '@sentry/scraps/button';
@@ -17,7 +17,7 @@ import {useOrganization} from 'sentry/utils/useOrganization';
 interface Props {
   feedbackIssue: FeedbackIssue;
   className?: string;
-  style?: CSSProperties;
+  style?: React.CSSProperties;
 }
 
 export function FeedbackItemUsername({className, feedbackIssue, style}: Props) {

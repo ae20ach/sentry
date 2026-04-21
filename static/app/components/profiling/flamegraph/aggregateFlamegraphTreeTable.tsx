@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useMemo, useState, type MouseEvent} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 import styled from '@emotion/styled';
 
 import InteractionStateLayer from '@sentry/scraps/interactionStateLayer';
@@ -474,7 +474,7 @@ export function AggregateFlamegraphTreeTable({
                 {renderItems.map(r => {
                   const handler = handleRowClick(r.key);
                   return fixedRenderRow(r, {
-                    handleRowClick: (evt: MouseEvent<HTMLElement>) => {
+                    handleRowClick: (evt: React.MouseEvent<HTMLElement>) => {
                       trackAnalytics('profiling_views.flamegraph.click.highlight_frame', {
                         organization,
                         profile_type: profileType,
@@ -501,7 +501,7 @@ export function AggregateFlamegraphTreeTable({
                 {renderItems.map(r => {
                   const handler = handleRowClick(r.key);
                   return dynamicRenderRow(r, {
-                    handleRowClick: (evt: MouseEvent<HTMLElement>) => {
+                    handleRowClick: (evt: React.MouseEvent<HTMLElement>) => {
                       handler(evt);
                     },
                     handleRowMouseEnter: handleRowMouseEnter(r.key),

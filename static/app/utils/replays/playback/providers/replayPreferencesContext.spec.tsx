@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {act, renderHook} from 'sentry-test/reactTestingLibrary';
 
 import {
@@ -13,7 +11,7 @@ import {
 } from 'sentry/utils/replays/playback/providers/replayPreferencesContext';
 
 function makeWrapper(prefsStrategy: PrefsStrategy) {
-  return function ({children}: {children?: ReactNode}) {
+  return function ({children}: {children?: React.ReactNode}) {
     return (
       <ReplayPreferencesContextProvider prefsStrategy={prefsStrategy}>
         {children}

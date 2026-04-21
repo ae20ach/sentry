@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {StaticNoSkipReplayPreferences} from 'sentry/components/replays/preferences/replayPreferences';
 import {ReplayPlayerPluginsContextProvider} from 'sentry/utils/replays/playback/providers/replayPlayerPluginsContext';
 import {ReplayPlayerStateContextProvider} from 'sentry/utils/replays/playback/providers/replayPlayerStateContext';
@@ -11,7 +9,7 @@ export function Providers({
   children,
   replay,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   replay: ReplayReader;
 }) {
   return (

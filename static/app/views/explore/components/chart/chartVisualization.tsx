@@ -1,4 +1,3 @@
-import type {Ref} from 'react';
 import {useMemo} from 'react';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -23,7 +22,7 @@ import {INGESTION_DELAY} from 'sentry/views/insights/settings';
 
 interface ChartVisualizationProps {
   chartInfo: ChartInfo;
-  chartRef?: Ref<ReactEchartsRef>;
+  chartRef?: React.Ref<ReactEchartsRef>;
   chartXRangeSelection?: Partial<ChartXRangeSelectionProps>;
   hidden?: boolean;
 }

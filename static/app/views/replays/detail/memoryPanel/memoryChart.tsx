@@ -1,13 +1,4 @@
-import {
-  memo,
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  type Dispatch,
-  type SetStateAction,
-} from 'react';
+import {memo, useCallback, useEffect, useId, useMemo, useRef} from 'react';
 import {useTheme} from '@emotion/react';
 
 import type {AreaChartProps, AreaChartSeries} from 'sentry/components/charts/areaChart';
@@ -30,7 +21,7 @@ interface Props
     MemoryChartSeriesProps,
     Pick<ReturnType<typeof useReplayContext>, 'currentTime' | 'setCurrentTime'> {
   currentHoverTime: undefined | number;
-  setCurrentHoverTime: Dispatch<SetStateAction<number | undefined>>;
+  setCurrentHoverTime: React.Dispatch<React.SetStateAction<number | undefined>>;
 }
 
 export function MemoryChart({

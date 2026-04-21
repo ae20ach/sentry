@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {makeTestQueryClient} from 'sentry-test/queryClient';
 import {renderHook, waitFor} from 'sentry-test/reactTestingLibrary';
 
@@ -10,7 +8,7 @@ import type {ApiQueryKey, QueryClient} from 'sentry/utils/queryClient';
 import {QueryClientProvider} from 'sentry/utils/queryClient';
 
 function makeWrapper(queryClient: QueryClient) {
-  return function wrapper({children}: {children?: ReactNode}) {
+  return function wrapper({children}: {children?: React.ReactNode}) {
     return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   };
 }

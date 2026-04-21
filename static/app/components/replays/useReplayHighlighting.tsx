@@ -1,4 +1,3 @@
-import type {RefObject} from 'react';
 import {useCallback} from 'react';
 import type {Replayer} from '@sentry-internal/rrweb';
 
@@ -9,7 +8,7 @@ import {
 } from 'sentry/utils/replays/highlightNode';
 
 interface Props {
-  replayerRef: RefObject<Replayer | null>;
+  replayerRef: React.RefObject<Replayer | null>;
 }
 
 type HighlightParams = Parameters<typeof highlightNode>[1];

@@ -1,4 +1,3 @@
-import type {MouseEvent} from 'react';
 import {Fragment, useState} from 'react';
 import styled from '@emotion/styled';
 
@@ -239,7 +238,7 @@ function NativeFrame({
   }
 
   // This isn't possible when the page doesn't have the images loaded section
-  function handleGoToImagesLoaded(e: MouseEvent) {
+  function handleGoToImagesLoaded(e: React.MouseEvent) {
     e.stopPropagation(); // to prevent collapsing if collapsible
 
     if (frame.instructionAddr) {
@@ -260,7 +259,7 @@ function NativeFrame({
       ?.scrollIntoView({block: 'start', behavior: 'smooth'});
   }
 
-  function handleToggleContext(e: MouseEvent) {
+  function handleToggleContext(e: React.MouseEvent) {
     if (!expandable) {
       return;
     }

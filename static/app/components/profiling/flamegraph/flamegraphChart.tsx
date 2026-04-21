@@ -1,4 +1,3 @@
-import type {CSSProperties} from 'react';
 import {Fragment, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import styled from '@emotion/styled';
 import {mat3, vec2} from 'gl-matrix';
@@ -320,7 +319,7 @@ export function FlamegraphChart({
   );
 }
 
-const Canvas = styled('canvas')<{cursor?: CSSProperties['cursor']}>`
+const Canvas = styled('canvas')<{cursor?: React.CSSProperties['cursor']}>`
   width: 100%;
   height: 100%;
   position: absolute;

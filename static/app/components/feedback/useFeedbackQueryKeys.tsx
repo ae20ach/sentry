@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {createContext, useCallback, useContext, useRef, useState} from 'react';
 
 import {getFeedbackItemQueryKey} from 'sentry/components/feedback/getFeedbackItemQueryKey';
@@ -8,7 +7,7 @@ import {parseQueryKey} from 'sentry/utils/api/apiQueryKey';
 import type {ApiQueryKey, InfiniteApiQueryKey} from 'sentry/utils/queryClient';
 
 interface Props {
-  children: ReactNode;
+  children: React.ReactNode;
   organization: Organization;
 }
 

@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {useCallback, useMemo, useState} from 'react';
 
 import type {Sort} from 'sentry/utils/discover/fields';
@@ -15,7 +14,7 @@ import {
 import type {WritableQueryParams} from 'sentry/views/explore/queryParams/writableQueryParams';
 
 interface ExploreStateQueryParamsProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
   defaultAggregateFields: () => AggregateField[];
   defaultAggregateSortBys: (aggregateFields: AggregateField[]) => Sort[];
   defaultFields: () => string[];

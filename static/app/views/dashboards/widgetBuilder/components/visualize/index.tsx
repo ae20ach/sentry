@@ -1,4 +1,4 @@
-import {Fragment, useMemo, useState, type ReactNode} from 'react';
+import {Fragment, useMemo, useState} from 'react';
 import {closestCenter, DndContext, DragOverlay} from '@dnd-kit/core';
 import {arrayMove, SortableContext, verticalListSortingStrategy} from '@dnd-kit/sortable';
 import {css, useTheme} from '@emotion/react';
@@ -134,8 +134,8 @@ function formatColumnOptions(
 }
 
 function _sortFn(
-  a: SelectValue<string> & {value: string; label?: string | ReactNode},
-  b: SelectValue<string> & {value: string; label?: string | ReactNode}
+  a: SelectValue<string> & {value: string; label?: string | React.ReactNode},
+  b: SelectValue<string> & {value: string; label?: string | React.ReactNode}
 ) {
   // The labels should always be strings in this component, but we'll
   // handle the cases where they are not.

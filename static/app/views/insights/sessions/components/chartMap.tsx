@@ -1,5 +1,3 @@
-import type {ReactElement} from 'react';
-
 import CrashFreeSessionsChartWidget from 'sentry/views/insights/common/components/widgets/crashFreeSessionsChartWidget';
 import NewAndResolvedIssueChartWidget from 'sentry/views/insights/common/components/widgets/newAndResolvedIssueChartWidget';
 import ReleaseNewIssuesChartWidget from 'sentry/views/insights/common/components/widgets/releaseNewIssuesChartWidget';
@@ -16,7 +14,7 @@ import type {CHART_TITLES} from 'sentry/views/insights/sessions/settings';
 
 export const CHART_MAP: Record<
   keyof typeof CHART_TITLES,
-  (props: LoadableChartWidgetProps) => ReactElement
+  (props: LoadableChartWidgetProps) => React.ReactElement
 > = {
   CrashFreeSessionsChartWidget,
   UnhealthySessionsChartWidget,

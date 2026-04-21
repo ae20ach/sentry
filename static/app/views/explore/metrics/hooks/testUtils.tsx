@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {
   defaultMetricQuery,
   type BaseMetricQuery,
@@ -9,7 +7,7 @@ import {MetricsQueryParamsProvider} from 'sentry/views/explore/metrics/metricsQu
 import {MultiMetricsQueryParamsProvider} from 'sentry/views/explore/metrics/multiMetricsQueryParams';
 
 interface MockMetricQueryParamsContextProps {
-  children: ReactNode;
+  children: React.ReactNode;
   metricQuery?: Partial<BaseMetricQuery>;
   traceMetric?: TraceMetric;
 }

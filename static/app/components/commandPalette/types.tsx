@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import type {LocationDescriptor} from 'history';
 
 import {queryOptions} from 'sentry/utils/queryClient';
@@ -11,7 +10,7 @@ interface Action {
     /** Additional context or description */
     details?: string;
     /** Icon to render for this action */
-    icon?: ReactNode;
+    icon?: React.ReactNode;
   };
   /** Optional keywords to improve searchability */
   keywords?: string[];

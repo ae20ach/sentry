@@ -1,4 +1,3 @@
-import type {Dispatch} from 'react';
 import {useCallback} from 'react';
 
 import {
@@ -51,7 +50,7 @@ const getSuggestedKey = (key: string) => {
 
 interface TokensProp {
   expression: string;
-  dispatch?: Dispatch<ArithmeticBuilderAction>;
+  dispatch?: React.Dispatch<ArithmeticBuilderAction>;
   references?: Set<string>;
 }
 

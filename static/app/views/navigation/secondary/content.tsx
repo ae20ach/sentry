@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {unreachable} from 'sentry/utils/unreachable';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {usePrimaryNavigation} from 'sentry/views/navigation/primaryNavigationContext';
@@ -12,7 +10,7 @@ import {MonitorsSecondaryNavigation} from 'sentry/views/navigation/secondary/sec
 import {ProjectsSecondaryNavigation} from 'sentry/views/navigation/secondary/sections/projects/projectsSecondaryNavigation';
 import {SettingsSecondaryNavigation} from 'sentry/views/navigation/secondary/sections/settings/settingsSecondaryNavigation';
 
-export function SecondaryNavigationContent(): ReactNode {
+export function SecondaryNavigationContent(): React.ReactNode {
   const {activeGroup} = usePrimaryNavigation();
   const organization = useOrganization();
   switch (activeGroup) {

@@ -1,11 +1,10 @@
-import type {ComponentProps} from 'react';
 import {Item} from '@react-stately/collections';
 
 import {render, screen, userEvent} from 'sentry-test/reactTestingLibrary';
 
 import {ComboBox} from 'sentry/components/tokenizedInput/token/comboBox';
 
-function ComboBoxWrapper(props: Omit<ComponentProps<typeof ComboBox>, 'children'>) {
+function ComboBoxWrapper(props: Omit<React.ComponentProps<typeof ComboBox>, 'children'>) {
   return (
     <ComboBox {...props}>
       {item => (

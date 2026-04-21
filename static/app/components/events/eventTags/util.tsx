@@ -1,4 +1,4 @@
-import {useCallback, useLayoutEffect, useState, type RefObject} from 'react';
+import {useCallback, useLayoutEffect, useState} from 'react';
 import {useResizeObserver} from '@react-aria/utils';
 
 import type {EventTag, EventTagWithMeta} from 'sentry/types/event';
@@ -169,7 +169,7 @@ const ISSUE_DETAILS_COLUMN_BREAKPOINTS = [
  * accurately describe the available space.
  */
 export function useIssueDetailsColumnCount(
-  elementRef: RefObject<HTMLElement | null>
+  elementRef: React.RefObject<HTMLElement | null>
 ): number {
   const calculateColumnCount = useCallback(() => {
     const width = elementRef.current?.clientWidth || 0;

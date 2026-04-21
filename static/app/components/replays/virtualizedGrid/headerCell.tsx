@@ -1,4 +1,3 @@
-import type {CSSProperties, ReactNode} from 'react';
 import styled from '@emotion/styled';
 
 import {Tooltip} from '@sentry/scraps/tooltip';
@@ -15,10 +14,10 @@ export interface SortConfig<RecordType extends BaseRecord> {
 type Props<SortableRecord extends BaseRecord> = {
   field: string;
   handleSort: (fieldName: string) => void;
-  label: ReactNode;
+  label: React.ReactNode;
   sortConfig: SortConfig<SortableRecord>;
-  style: CSSProperties;
-  tooltipTitle: undefined | ReactNode;
+  style: React.CSSProperties;
+  tooltipTitle: undefined | React.ReactNode;
   ref?: React.Ref<HTMLButtonElement>;
 };
 
@@ -26,7 +25,7 @@ const StyledIconInfo = styled(IconInfo)`
   display: block;
 `;
 
-function CatchClicks({children}: {children: ReactNode}) {
+function CatchClicks({children}: {children: React.ReactNode}) {
   return <div onClick={e => e.stopPropagation()}>{children}</div>;
 }
 

@@ -1,4 +1,4 @@
-import {useMemo, type ReactNode} from 'react';
+import {useMemo} from 'react';
 
 import {HookOrDefault} from 'sentry/components/hookOrDefault';
 import type {DatePageFilterProps} from 'sentry/components/pageFilters/date/datePageFilter';
@@ -35,7 +35,7 @@ export interface MaxPickableDaysOptions {
    */
   maxUpgradableDays: NonNullable<DatePageFilterProps['maxPickableDays']>;
   defaultPeriod?: DatePageFilterProps['defaultPeriod'];
-  upsellFooter?: ReactNode;
+  upsellFooter?: React.ReactNode;
 }
 
 export interface UseMaxPickableDaysProps {

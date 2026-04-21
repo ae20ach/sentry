@@ -1,4 +1,4 @@
-import {useMemo, useRef, useState, type ReactNode, useEffect} from 'react';
+import {useMemo, useRef, useState, useEffect} from 'react';
 import {queryOptions} from '@tanstack/react-query';
 import {z} from 'zod';
 
@@ -168,7 +168,7 @@ export function BackendJsonSubmitForm({
 
   // Labels for choice_mapper rows (maps key to display label)
   const [choiceMapperLabels, setChoiceMapperLabels] = useState<
-    Record<string, Record<string, ReactNode>>
+    Record<string, Record<string, React.ReactNode>>
   >({});
 
   const defaultValues = useMemo(

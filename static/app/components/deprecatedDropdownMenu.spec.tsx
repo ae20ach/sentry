@@ -1,12 +1,10 @@
-import type {ComponentProps} from 'react';
-
 import {render, screen, userEvent} from 'sentry-test/reactTestingLibrary';
 
 import {DropdownMenu as DeprecatedDropdownMenu} from 'sentry/components/deprecatedDropdownMenu';
 
 describe('dropdownMenuDeprecated', () => {
   function DeprecatedDropdownImplementation(
-    props: Partial<ComponentProps<typeof DeprecatedDropdownMenu>> = {}
+    props: Partial<React.ComponentProps<typeof DeprecatedDropdownMenu>> = {}
   ) {
     return (
       <DeprecatedDropdownMenu {...props}>

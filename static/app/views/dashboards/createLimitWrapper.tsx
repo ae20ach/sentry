@@ -1,12 +1,10 @@
-import type {ReactNode} from 'react';
-
 import {HookOrDefault} from 'sentry/components/hookOrDefault';
 
 type DashboardCreateLimitWrapperResult = {
   dashboardsLimit: number;
   hasReachedDashboardLimit: boolean;
   isLoading: boolean;
-  limitMessage: ReactNode | null;
+  limitMessage: React.ReactNode | null;
 };
 
 export const DashboardCreateLimitWrapper = HookOrDefault({

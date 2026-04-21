@@ -1,4 +1,3 @@
-import type {RefObject} from 'react';
 import {useCallback, useMemo, useRef} from 'react';
 
 import {defined} from 'sentry/utils';
@@ -21,7 +20,7 @@ type Options = {
 };
 
 type Return = {
-  expandPathsRef: RefObject<Map<number, Set<string>>>;
+  expandPathsRef: React.RefObject<Map<number, Set<string>>>;
   getLogLevels: () => Array<{label: string; value: string}>;
   items: BreadcrumbFrame[];
   logLevel: string[];

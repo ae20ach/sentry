@@ -1,4 +1,3 @@
-import type {ComponentProps, ReactNode} from 'react';
 import type {Theme} from '@emotion/react';
 import styled from '@emotion/styled';
 import * as Sentry from '@sentry/react';
@@ -1036,7 +1035,7 @@ class RuleFormContainer extends DeprecatedAsyncComponent<Props, State> {
     }
   };
 
-  handleRuleSaveFailure = (msg: ReactNode) => {
+  handleRuleSaveFailure = (msg: React.ReactNode) => {
     addErrorMessage(msg);
     metric.endSpan({name: 'saveAlertRule'});
   };
@@ -1279,7 +1278,7 @@ class RuleFormContainer extends DeprecatedAsyncComponent<Props, State> {
       isPreloading = !hasMetricSelected && !isMetricQueryDone;
     }
 
-    const chartProps: ComponentProps<typeof TriggersChart> = {
+    const chartProps: React.ComponentProps<typeof TriggersChart> = {
       organization,
       projects: [project],
       triggers,

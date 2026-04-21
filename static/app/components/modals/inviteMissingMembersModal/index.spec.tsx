@@ -1,4 +1,3 @@
-import type {PropsWithChildren} from 'react';
 import styled from '@emotion/styled';
 import {MissingMembersFixture} from 'sentry-fixture/missingMembers';
 import {OrganizationFixture} from 'sentry-fixture/organization';
@@ -38,7 +37,7 @@ describe('InviteMissingMembersModal', () => {
   TeamStore.loadInitialData([team]);
   const missingMembers = MissingMembersFixture();
 
-  const styledWrapper = styled((c: PropsWithChildren) => c.children);
+  const styledWrapper = styled((c: React.PropsWithChildren) => c.children);
   const modalProps: InviteMissingMembersModalProps = {
     Body: styledWrapper(),
     Header: p => <span>{p.children}</span>,

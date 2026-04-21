@@ -1,4 +1,4 @@
-import {Fragment, type ReactNode} from 'react';
+import {Fragment} from 'react';
 import styled from '@emotion/styled';
 
 import {CodeBlock} from '@sentry/scraps/code';
@@ -106,7 +106,7 @@ export function FullSpanDescription({
 }
 
 type TruncatedQueryClipBoxProps = {
-  children: ReactNode;
+  children: React.ReactNode;
   group: string | null | undefined;
 };
 

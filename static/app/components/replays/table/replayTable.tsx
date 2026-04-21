@@ -1,4 +1,4 @@
-import {useEffect, useRef, type RefObject} from 'react';
+import {useEffect, useRef} from 'react';
 import styled from '@emotion/styled';
 import type {Query} from 'history';
 
@@ -35,7 +35,7 @@ type Props = SortProps & {
   highlightedRowIndex?: number;
   pageLinks?: string | null;
   query?: Query;
-  ref?: RefObject<HTMLDivElement | null>;
+  ref?: React.RefObject<HTMLDivElement | null>;
   stickyHeader?: boolean;
 };
 

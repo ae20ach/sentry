@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import type {UptimeOp} from 'sentry/views/alerts/rules/uptime/types';
 
 export type ConnectorType = 'vertical' | 'horizontal';
@@ -77,5 +75,5 @@ export abstract class TreeNode<T extends UptimeOp = UptimeOp> {
 
   abstract printNode(): string;
 
-  abstract renderRow(): ReactNode;
+  abstract renderRow(): React.ReactNode;
 }

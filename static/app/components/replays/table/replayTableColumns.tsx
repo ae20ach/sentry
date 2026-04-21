@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {useMatches} from 'react-router-dom';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -64,13 +63,13 @@ export interface ReplayTableColumn {
    * Render the content
    * Content will be automatically wrapped with `<SimpleTable.RowCell>`
    */
-  Component: (props: CellProps) => ReactNode;
+  Component: (props: CellProps) => React.ReactNode;
 
   /**
    * Render the header
    * Header will be automatically wrapped with `<SimpleTable.HeaderCell>`
    */
-  Header: string | ((props: HeaderProps) => ReactNode);
+  Header: string | ((props: HeaderProps) => React.ReactNode);
 
   /**
    * If any columns in the table are interactive, we will add an

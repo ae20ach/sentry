@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import {EventFixture} from 'sentry-fixture/event';
 import {GroupFixture} from 'sentry-fixture/group';
 
@@ -53,7 +52,7 @@ describe('SizeAnalysisTriggeredSection', () => {
     },
   });
 
-  const defaultProps: ComponentProps<typeof SizeAnalysisTriggeredSection> = {
+  const defaultProps: React.ComponentProps<typeof SizeAnalysisTriggeredSection> = {
     group: defaultGroup,
     event: defaultEvent,
   };

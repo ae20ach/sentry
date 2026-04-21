@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {PageFilterStateFixture} from 'sentry-fixture/pageFilters';
 import {TimeSeriesFixture} from 'sentry-fixture/timeSeries';
 
@@ -12,7 +11,7 @@ import {useLogsTimeseries} from 'sentry/views/explore/logs/useLogsTimeseries';
 
 jest.mock('sentry/components/pageFilters/usePageFilters');
 
-function Wrapper({children}: {children: ReactNode}) {
+function Wrapper({children}: {children: React.ReactNode}) {
   return (
     <LogsQueryParamsProvider
       analyticsPageSource={LogsAnalyticsPageSource.EXPLORE_LOGS}

@@ -1,11 +1,10 @@
-import type {HTMLAttributes} from 'react';
 import styled from '@emotion/styled';
 import type {MotionNodeAnimationOptions, Transition} from 'framer-motion';
 import {motion} from 'framer-motion';
 
 type Props = {
   animateVariant: MotionNodeAnimationOptions['animate'];
-} & HTMLAttributes<HTMLDivElement>;
+} & React.HTMLAttributes<HTMLDivElement>;
 
 export function PageCorners({animateVariant, ...rest}: Props) {
   const baseTransition: Transition = {type: 'spring', duration: 0.8};

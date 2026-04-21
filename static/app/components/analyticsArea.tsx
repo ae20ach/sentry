@@ -1,4 +1,4 @@
-import {createContext, useContext, type ReactNode} from 'react';
+import {createContext, useContext} from 'react';
 
 const AnalyticsAreaContext = createContext<string>('');
 
@@ -45,7 +45,7 @@ export function AnalyticsArea({
   name,
   overrideParent = false,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   name: string;
   overrideParent?: boolean;
 }) {

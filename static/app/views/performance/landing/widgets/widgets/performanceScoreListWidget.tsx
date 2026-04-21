@@ -1,4 +1,3 @@
-import type {ReactElement} from 'react';
 import {Fragment, useState} from 'react';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -175,7 +174,7 @@ export function PerformanceScoreListWidget(props: PerformanceWidgetProps) {
       Queries={{
         // The queries aren't actually happening here, but we propagate these to manage loading state
         timeseries: {
-          component: (provided): ReactElement => {
+          component: (provided): React.ReactElement => {
             return (
               <Fragment>
                 {provided.children({
@@ -194,7 +193,7 @@ export function PerformanceScoreListWidget(props: PerformanceWidgetProps) {
           },
         },
         transaction: {
-          component: (provided): ReactElement => {
+          component: (provided): React.ReactElement => {
             return (
               <Fragment>
                 {provided.children({

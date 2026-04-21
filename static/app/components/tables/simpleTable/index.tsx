@@ -1,4 +1,3 @@
-import type {ComponentProps, HTMLAttributes, RefObject} from 'react';
 import {css} from '@emotion/react';
 import type {Theme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -10,12 +9,12 @@ import {Panel} from 'sentry/components/panels/panel';
 import {IconArrow} from 'sentry/icons';
 import {defined} from 'sentry/utils';
 
-interface TableProps extends HTMLAttributes<HTMLDivElement> {
-  ref?: RefObject<HTMLDivElement | null>;
+interface TableProps extends React.HTMLAttributes<HTMLDivElement> {
+  ref?: React.RefObject<HTMLDivElement | null>;
 }
 
-interface RowProps extends HTMLAttributes<HTMLDivElement> {
-  ref?: RefObject<HTMLDivElement | null>;
+interface RowProps extends React.HTMLAttributes<HTMLDivElement> {
+  ref?: React.RefObject<HTMLDivElement | null>;
   variant?: 'default' | 'faded';
 }
 
@@ -27,7 +26,7 @@ export function SimpleTable({children, ...props}: TableProps) {
   );
 }
 
-function Header({children, ...props}: HTMLAttributes<HTMLDivElement>) {
+function Header({children, ...props}: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <StyledPanelHeader {...props} role="row">
       {children}
@@ -41,7 +40,7 @@ function HeaderCell({
   handleSortClick,
   divider = defined(children) ? true : false,
   ...props
-}: HTMLAttributes<HTMLDivElement> & {
+}: React.HTMLAttributes<HTMLDivElement> & {
   children?: React.ReactNode;
   divider?: boolean;
   handleSortClick?: () => void;
@@ -84,7 +83,7 @@ function Row({children, variant = 'default', ref, ...props}: RowProps) {
 function RowCell({
   children,
   ...props
-}: ComponentProps<typeof Flex> & {
+}: React.ComponentProps<typeof Flex> & {
   children: React.ReactNode;
 }) {
   return (

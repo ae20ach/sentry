@@ -1,4 +1,4 @@
-import {Fragment, type ReactNode} from 'react';
+import {Fragment} from 'react';
 import styled from '@emotion/styled';
 
 import {Stack} from '@sentry/scraps/layout';
@@ -7,7 +7,7 @@ import {Text} from '@sentry/scraps/text';
 
 // interface + type union because `extends` doesn't play nicely with generics
 interface QuoteBaseProps {
-  children: ReactNode;
+  children: React.ReactNode;
   source?: {
     author?: string;
     href?: string;

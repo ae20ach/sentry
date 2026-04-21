@@ -1,4 +1,3 @@
-import type {RefObject} from 'react';
 import {useCallback} from 'react';
 
 import {useReplayContext} from 'sentry/components/replays/replayContext';
@@ -8,7 +7,7 @@ import {useCurrentHoverTime} from 'sentry/utils/replays/playback/providers/useCu
 import {useMouseTracking} from 'sentry/utils/useMouseTracking';
 
 type Opts<T extends Element> = {
-  elem: RefObject<T | null>;
+  elem: React.RefObject<T | null>;
 };
 
 /**

@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import {destroyAnnouncer} from '@react-aria/live-announcer';
 
 import {
@@ -156,7 +155,7 @@ describe('SearchQueryBuilder', () => {
     jest.restoreAllMocks();
   });
 
-  const defaultProps: ComponentProps<typeof SearchQueryBuilder> = {
+  const defaultProps: React.ComponentProps<typeof SearchQueryBuilder> = {
     getTagValues: jest.fn(() => Promise.resolve([])),
     initialQuery: '',
     filterKeySections: FILTER_KEY_SECTIONS,
@@ -2777,14 +2776,15 @@ describe('SearchQueryBuilder', () => {
 
         await userEvent.click(document.body);
 
-        const updatedFilterKeys: ComponentProps<typeof SearchQueryBuilder>['filterKeys'] =
-          {
-            ...defaultProps.filterKeys,
-            [FieldKey.BROWSER_NAME]: {
-              ...defaultProps.filterKeys[FieldKey.BROWSER_NAME]!,
-              values: ['Safari', 'Opera', 'Firefox', 'Chrome'],
-            },
-          };
+        const updatedFilterKeys: React.ComponentProps<
+          typeof SearchQueryBuilder
+        >['filterKeys'] = {
+          ...defaultProps.filterKeys,
+          [FieldKey.BROWSER_NAME]: {
+            ...defaultProps.filterKeys[FieldKey.BROWSER_NAME]!,
+            values: ['Safari', 'Opera', 'Firefox', 'Chrome'],
+          },
+        };
 
         rerender(
           <SearchQueryBuilder

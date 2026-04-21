@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import {
   GroupOpenPeriodActivityFixture,
   GroupOpenPeriodFixture,
@@ -13,7 +12,7 @@ describe('OpenPeriodTimelineSection', () => {
     MockApiClient.clearMockResponses();
   });
 
-  const defaultProps: ComponentProps<typeof OpenPeriodTimelineSection> = {
+  const defaultProps: React.ComponentProps<typeof OpenPeriodTimelineSection> = {
     eventId: 'event-2',
     groupId: 'group-1',
   };

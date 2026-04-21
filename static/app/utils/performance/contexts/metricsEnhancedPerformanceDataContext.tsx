@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {useCallback, useState} from 'react';
 
 import {useOrganization} from 'sentry/utils/useOrganization';
@@ -27,7 +26,7 @@ export function MEPDataProvider({
   children,
   chartSetting,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   chartSetting?: PerformanceWidgetSetting;
 }) {
   const {setAutoSampleState} = useMEPSettingContext();
@@ -77,7 +76,7 @@ const [_MetricsResultsMetaProvider, _useMetricsResultsMeta] =
   });
 export const useMetricsResultsMeta = _useMetricsResultsMeta;
 
-export function MetricsResultsMetaProvider({children}: {children: ReactNode}) {
+export function MetricsResultsMetaProvider({children}: {children: React.ReactNode}) {
   const [metricsExtractedDataMap, _setMetricsExtractedDataMap] = useState(new Map());
 
   const setIsMetricsExtractedData = useCallback(

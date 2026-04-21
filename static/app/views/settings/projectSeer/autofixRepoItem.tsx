@@ -1,4 +1,4 @@
-import {useEffect, useState, type ChangeEvent} from 'react';
+import {useEffect, useState} from 'react';
 import styled from '@emotion/styled';
 
 import {Button} from '@sentry/scraps/button';
@@ -72,12 +72,12 @@ export function AutofixRepoItem({repo, onRemove, settings, onSettingsChange}: Pr
     setIsDirty(newIsDirty);
   }, [branchInputValue, instructionsValue, branchOverridesValue, originalValues]);
 
-  const handleBranchInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleBranchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
     setBranchInputValue(e.target.value);
   };
 
-  const handleInstructionsChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+  const handleInstructionsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     e.stopPropagation();
     setInstructionsValue(e.target.value);
   };
@@ -213,7 +213,7 @@ export function AutofixRepoItem({repo, onRemove, settings, onSettingsChange}: Pr
                           <InputGroup.Input
                             type="text"
                             value={override.tag_name}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                               updateBranchOverride(index, {
                                 ...override,
                                 tag_name: e.target.value,
@@ -227,7 +227,7 @@ export function AutofixRepoItem({repo, onRemove, settings, onSettingsChange}: Pr
                           <InputGroup.Input
                             type="text"
                             value={override.tag_value}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                               updateBranchOverride(index, {
                                 ...override,
                                 tag_value: e.target.value,
@@ -244,7 +244,7 @@ export function AutofixRepoItem({repo, onRemove, settings, onSettingsChange}: Pr
                           <InputGroup.Input
                             type="text"
                             value={override.branch_name}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                               updateBranchOverride(index, {
                                 ...override,
                                 branch_name: e.target.value,

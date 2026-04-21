@@ -1,4 +1,3 @@
-import type {MouseEventHandler} from 'react';
 import styled from '@emotion/styled';
 
 import {Container, Flex} from '@sentry/scraps/layout';
@@ -9,7 +8,7 @@ import type {Visualize} from 'sentry/views/explore/queryParams/visualize';
 
 interface VisualizeLabelProps {
   label: string;
-  onClick: MouseEventHandler<HTMLDivElement>;
+  onClick: React.MouseEventHandler<HTMLDivElement>;
   visualize: Visualize;
   disableCollapse?: boolean;
 }

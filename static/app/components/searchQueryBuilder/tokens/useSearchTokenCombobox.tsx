@@ -1,4 +1,3 @@
-import type {FocusEvent, KeyboardEvent} from 'react';
 import {useMemo, useRef} from 'react';
 import type {useComboBox} from '@react-aria/combobox';
 import {getItemId, listData} from '@react-aria/listbox';
@@ -80,7 +79,7 @@ export function useSearchTokenCombobox<T>(
     isVirtualized: true,
   });
 
-  const onKeyDown = (e: BaseEvent<KeyboardEvent<any>>) => {
+  const onKeyDown = (e: BaseEvent<React.KeyboardEvent<any>>) => {
     if (e.nativeEvent.isComposing) {
       return;
     }
@@ -117,7 +116,7 @@ export function useSearchTokenCombobox<T>(
     }
   };
 
-  const onBlur = (e: FocusEvent<HTMLInputElement>) => {
+  const onBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const blurFromButton = buttonRef?.current && buttonRef.current === e.relatedTarget;
     const blurIntoPopover = popoverRef.current?.contains(e.relatedTarget);
     // Ignore blur if focused moved to the button(if exists) or into the popover.
@@ -132,7 +131,7 @@ export function useSearchTokenCombobox<T>(
     state.setFocused(false);
   };
 
-  const onFocus = (e: FocusEvent<HTMLInputElement>) => {
+  const onFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     if (state.isFocused) {
       return;
     }
@@ -151,9 +150,9 @@ export function useSearchTokenCombobox<T>(
       onKeyDown: isReadOnly
         ? props.onKeyDown
         : chain(state.isOpen && collectionProps.onKeyDown, onKeyDown, props.onKeyDown),
-      onBlur: onBlur as (e: FocusEvent<Element, Element>) => void,
+      onBlur: onBlur as (e: React.FocusEvent<Element, Element>) => void,
       value: state.inputValue,
-      onFocus: onFocus as (e: FocusEvent<Element, Element>) => void,
+      onFocus: onFocus as (e: React.FocusEvent<Element, Element>) => void,
       autoComplete: 'off',
       validate: undefined,
       [privateValidationStateProp]: state,

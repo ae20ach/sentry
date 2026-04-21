@@ -1,4 +1,4 @@
-import {Fragment, memo, useEffect, useEffectEvent, useMemo, type Key} from 'react';
+import {Fragment, memo, useEffect, useEffectEvent, useMemo} from 'react';
 import styled from '@emotion/styled';
 
 import {Button} from '@sentry/scraps/button';
@@ -73,7 +73,7 @@ function CrossEventQueryingDropdown() {
   const crossEvents = useQueryParamsCrossEvents();
   const setCrossEvents = useSetQueryParamsCrossEvents();
 
-  const onAction = (key: Key) => {
+  const onAction = (key: React.Key) => {
     if (typeof key !== 'string' || !isCrossEventType(key)) {
       return;
     }

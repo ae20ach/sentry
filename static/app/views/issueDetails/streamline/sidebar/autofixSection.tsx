@@ -1,4 +1,4 @@
-import {type CSSProperties, useMemo} from 'react';
+import {useMemo} from 'react';
 import styled from '@emotion/styled';
 import {useQuery} from '@tanstack/react-query';
 
@@ -425,7 +425,7 @@ function useSeerDrawerLink() {
 }
 
 const ImageContainer = styled(Flex)<{
-  aspectRatio?: CSSProperties['aspectRatio'];
+  aspectRatio?: React.CSSProperties['aspectRatio'];
 }>`
   ${p => p.aspectRatio && `aspect-ratio: ${p.aspectRatio}`};
 `;

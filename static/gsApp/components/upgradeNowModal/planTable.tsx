@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {Fragment} from 'react';
 import styled from '@emotion/styled';
 
@@ -144,7 +143,7 @@ function TableItem({
   prev,
   isTotal,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   next: string | number;
   prev: string | number;
   isTotal?: boolean;

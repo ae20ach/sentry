@@ -1,5 +1,3 @@
-import type {ComponentProps, CSSProperties} from 'react';
-
 import type {Tooltip} from '@sentry/scraps/tooltip';
 
 import {HeaderCell} from 'sentry/components/replays/virtualizedGrid/headerCell';
@@ -11,14 +9,14 @@ type Props = {
   handleSort: ReturnType<typeof useSortErrors>['handleSort'];
   index: number;
   sortConfig: SortConfig;
-  style: CSSProperties;
+  style: React.CSSProperties;
   ref?: React.Ref<HTMLButtonElement>;
 };
 
 const COLUMNS: Array<{
   field: SortConfig['by'];
   label: string;
-  tooltipTitle?: ComponentProps<typeof Tooltip>['title'];
+  tooltipTitle?: React.ComponentProps<typeof Tooltip>['title'];
 }> = [
   {field: 'id', label: t('Event ID')},
   {field: 'title', label: t('Title')},

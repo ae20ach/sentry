@@ -1,4 +1,4 @@
-import {createContext, useContext, type FunctionComponent} from 'react';
+import {createContext, useContext} from 'react';
 import {Link as RouterLink} from 'react-router-dom';
 import * as Sentry from '@sentry/react';
 
@@ -6,7 +6,7 @@ import type {LinkProps} from './link';
 
 type LinkBehavior = {
   behavior: (props: LinkProps) => LinkProps;
-  component: FunctionComponent<LinkProps>;
+  component: React.FunctionComponent<LinkProps>;
 };
 
 const LinkBehaviorContext = createContext<LinkBehavior | null>(null);

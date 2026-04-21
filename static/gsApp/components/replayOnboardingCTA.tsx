@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {Fragment, useEffect, useState} from 'react';
 import styled from '@emotion/styled';
 
@@ -265,7 +264,7 @@ const ButtonList = styled((props: GridProps) => (
 `;
 
 type ReplayOnboardingCTAProps = {
-  children: ReactNode;
+  children: React.ReactNode;
   organization: Organization;
   subscription: Subscription;
 };

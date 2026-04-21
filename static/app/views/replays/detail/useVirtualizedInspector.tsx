@@ -1,8 +1,7 @@
-import type {RefObject} from 'react';
 import {useCallback} from 'react';
 
 type Opts = {
-  expandPathsRef: RefObject<Map<number, Set<string>>>;
+  expandPathsRef: React.RefObject<Map<number, Set<string>>>;
   onMeasure: (index: number) => void;
 };
 

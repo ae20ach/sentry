@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {css} from '@emotion/react';
 import styled from '@emotion/styled';
 
@@ -23,9 +22,9 @@ import type {AvatarUser} from 'sentry/types/user';
 import {useProjects} from 'sentry/utils/useProjects';
 
 type SavedEntityTableProps = {
-  children: ReactNode;
-  emptyMessage: ReactNode;
-  header: ReactNode;
+  children: React.ReactNode;
+  emptyMessage: React.ReactNode;
+  header: React.ReactNode;
   isEmpty: boolean;
   isError: boolean;
   isLoading: boolean;
@@ -154,7 +153,7 @@ SavedEntityTable.CellName = function CellName({
   children,
   to,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   to: string;
 }) {
   return <StyledLink to={to}>{children}</StyledLink>;
@@ -290,7 +289,7 @@ SavedEntityTable.CellUser = function CellUser({user}: {user: AvatarUser | null})
 SavedEntityTable.CellTextContent = function CellTextContent({
   children,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
 }) {
   return <OverflowEllipsis>{children}</OverflowEllipsis>;
 };

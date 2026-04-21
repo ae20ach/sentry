@@ -1,4 +1,3 @@
-import type {CSSProperties} from 'react';
 import styled from '@emotion/styled';
 
 import type {Responsive} from '@sentry/scraps/layout';
@@ -9,7 +8,7 @@ import type {RadiusSize} from 'sentry/utils/theme';
 export interface ImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   alt: string;
   src: string;
-  aspectRatio?: CSSProperties['aspectRatio'];
+  aspectRatio?: React.CSSProperties['aspectRatio'];
   height?: string;
   /**
    * Determines if the image should be loaded eagerly or lazily.

@@ -1,4 +1,3 @@
-import type {ReactElement} from 'react';
 import {Fragment} from 'react';
 import styled from '@emotion/styled';
 
@@ -12,7 +11,7 @@ import {SecondaryNavigation} from 'sentry/views/navigation/secondary/components'
 type Props = {
   label: React.ReactNode;
   to: string;
-  badge?: string | number | null | ReactElement;
+  badge?: string | number | null | React.ReactElement;
   id?: string;
   index?: boolean;
   onClick?: (e: React.MouseEvent) => void;
@@ -23,7 +22,7 @@ const LabelHook = HookOrDefault({
   defaultComponent: ({children}) => <Fragment>{children}</Fragment>,
 });
 
-function SettingsNavBadge({badge}: {badge: string | number | null | ReactElement}) {
+function SettingsNavBadge({badge}: {badge: string | number | null | React.ReactElement}) {
   if (badge === 'new' || badge === 'beta' || badge === 'alpha') {
     return <FeatureBadge type={badge} />;
   }

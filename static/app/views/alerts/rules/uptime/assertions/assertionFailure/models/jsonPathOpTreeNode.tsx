@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {JsonPathOpRow} from 'sentry/views/alerts/rules/uptime/assertions/assertionFailure/rows/jsonPathOpRow';
 import type {UptimeJsonPathOp} from 'sentry/views/alerts/rules/uptime/types';
 
@@ -10,7 +8,7 @@ export class JsonPathOpTreeNode extends TreeNode<UptimeJsonPathOp> {
     return `JSON PATH - ${this.id}`;
   }
 
-  renderRow(): ReactNode {
+  renderRow(): React.ReactNode {
     return <JsonPathOpRow node={this} />;
   }
 }

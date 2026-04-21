@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {Fragment, useEffect, useMemo, useRef, useState} from 'react';
 import styled from '@emotion/styled';
 import {parseAsString, useQueryState} from 'nuqs';
@@ -193,7 +192,7 @@ function OnboardingContent({currentProject}: {currentProject: Project}) {
 
   const [sdkProvider, setsdkProvider] = useState<{
     value: SdkProviderEnum;
-    label?: ReactNode;
+    label?: React.ReactNode;
   }>(sdkProviderOptions[0]!);
 
   const [setupMode, setSetupMode] = useQueryState(

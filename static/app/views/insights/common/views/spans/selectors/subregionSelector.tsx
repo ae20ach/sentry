@@ -1,5 +1,3 @@
-import type {ComponentProps} from 'react';
-
 import {
   CompactSelect,
   type SelectOption,
@@ -20,7 +18,7 @@ import {useSpans} from 'sentry/views/insights/common/queries/useDiscover';
 import {SpanFields, subregionCodeToName} from 'sentry/views/insights/types';
 
 type Props = {
-  size?: ComponentProps<typeof CompactSelect>['size'];
+  size?: React.ComponentProps<typeof CompactSelect>['size'];
 };
 
 export function SubregionSelector({size}: Props) {

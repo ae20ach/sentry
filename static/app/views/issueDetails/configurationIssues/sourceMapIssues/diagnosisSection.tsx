@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {LinkButton} from '@sentry/scraps/button';
 import {InlineCode} from '@sentry/scraps/code';
 import {Stack} from '@sentry/scraps/layout';
@@ -16,7 +14,7 @@ import {t, tct} from 'sentry/locale';
 
 function getDiagnosisMessage(
   data: SourceMapDebugBlueThunderResponse | undefined
-): ReactNode | null {
+): React.ReactNode | null {
   if (!data) {
     return (
       <Text>{t('Unable to load source map diagnostic information for this event.')}</Text>
@@ -168,7 +166,7 @@ interface DiagnosisSectionProps {
 export function DiagnosisSection({sourceMapQuery}: DiagnosisSectionProps) {
   const {data, isLoading, isError} = sourceMapQuery;
 
-  function renderContent(): ReactNode {
+  function renderContent(): React.ReactNode {
     if (isLoading) {
       return <LoadingIndicator mini />;
     }

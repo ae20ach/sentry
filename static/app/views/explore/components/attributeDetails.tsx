@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import styled from '@emotion/styled';
 
 import {t} from 'sentry/locale';
@@ -8,7 +7,7 @@ import {TraceItemDataset} from 'sentry/views/explore/types';
 
 interface AttributeDetailsProps {
   column: string;
-  label: ReactNode;
+  label: React.ReactNode;
   traceItemType: TraceItemDataset;
   kind?: FieldKind;
 }

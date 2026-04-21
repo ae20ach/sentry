@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {useState} from 'react';
 import styled from '@emotion/styled';
 
@@ -82,7 +81,7 @@ function AccordionWidget({
 }: {
   clickType: 'count_dead_clicks' | 'count_rage_clicks';
   deadOrRage: 'dead' | 'rage';
-  header: ReactNode;
+  header: React.ReactNode;
 }) {
   const clickVariant = deadOrRage === 'dead' ? 'warning' : 'danger';
   const [selectedListIndex, setSelectListIndex] = useState(-1);

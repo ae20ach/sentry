@@ -1,4 +1,3 @@
-import type {MouseEvent} from 'react';
 import {Fragment, useMemo} from 'react';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -385,8 +384,8 @@ export function GroupActions({group, project, disabled, event}: GroupActionsProp
     ));
   };
 
-  const handleClick = (onClick: (event?: MouseEvent) => void) => {
-    return function (innerEvent: MouseEvent) {
+  const handleClick = (onClick: (event?: React.MouseEvent) => void) => {
+    return function (innerEvent: React.MouseEvent) {
       if (disabled) {
         innerEvent.preventDefault();
         innerEvent.stopPropagation();

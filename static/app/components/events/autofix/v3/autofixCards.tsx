@@ -1,4 +1,4 @@
-import {Fragment, useEffect, useMemo, useRef, type ReactNode} from 'react';
+import {Fragment, useEffect, useMemo, useRef} from 'react';
 import styled from '@emotion/styled';
 
 import {Tag} from '@sentry/scraps/badge';
@@ -380,9 +380,9 @@ export function CodingAgentCard({section}: AutofixCardProps) {
 }
 
 interface ArtifactCardProps {
-  children: ReactNode;
-  icon: ReactNode;
-  title: ReactNode;
+  children: React.ReactNode;
+  icon: React.ReactNode;
+  title: React.ReactNode;
 }
 
 function ArtifactCard({children, icon, title}: ArtifactCardProps) {
@@ -406,7 +406,7 @@ function ArtifactCard({children, icon, title}: ArtifactCardProps) {
 }
 
 interface ArtifactDetailsProps extends FlexProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 function ArtifactDetails({children, ...flexProps}: ArtifactDetailsProps) {

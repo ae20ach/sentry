@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {IncrementalSource, Replayer} from '@sentry-internal/rrweb';
 import {
   RRWebFullSnapshotFrameEventFixture,
@@ -16,7 +15,7 @@ import {
   useReplayUserAction,
 } from 'sentry/utils/replays/playback/providers/replayPlayerStateContext';
 
-function wrapper({children}: {children?: ReactNode}) {
+function wrapper({children}: {children?: React.ReactNode}) {
   return <ReplayPlayerStateContextProvider>{children}</ReplayPlayerStateContextProvider>;
 }
 

@@ -1,4 +1,4 @@
-import {useEffect, useLayoutEffect, useRef, type HTMLAttributes} from 'react';
+import {useEffect, useLayoutEffect, useRef} from 'react';
 import {useTheme, type Interpolation, type Theme} from '@emotion/react';
 import {Replayer} from '@sentry-internal/rrweb';
 
@@ -82,7 +82,7 @@ function useReplayerInstance() {
   return mountPointRef;
 }
 
-interface Props extends HTMLAttributes<HTMLDivElement> {
+interface Props extends React.HTMLAttributes<HTMLDivElement> {
   css?: Interpolation<Theme>;
   inspectable?: boolean;
   offsetMs?: undefined | number;

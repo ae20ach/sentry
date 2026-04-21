@@ -1,4 +1,3 @@
-import type {ProfilerOnRenderCallback, ReactNode} from 'react';
 import {Fragment, Profiler, useEffect, useRef} from 'react';
 import type {MeasurementUnit, Span, TransactionEvent} from '@sentry/core';
 import {browserPerformanceTimeOrigin, timestampInSeconds} from '@sentry/core';
@@ -35,7 +34,11 @@ function getPerformanceTransaction(): Span | undefined {
 /**
  * Callback for React Profiler https://reactjs.org/docs/profiler.html
  */
-export const onRenderCallback: ProfilerOnRenderCallback = (id, phase, actualDuration) => {
+export const onRenderCallback: React.ProfilerOnRenderCallback = (
+  id,
+  phase,
+  actualDuration
+) => {
   try {
     const parentSpan = getPerformanceTransaction();
     if (parentSpan && actualDuration > MIN_UPDATE_SPAN_TIME) {
@@ -137,7 +140,7 @@ export function VisuallyCompleteWithData({
   disabled,
   isLoading,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   hasData: boolean;
   id: string;
   disabled?: boolean;

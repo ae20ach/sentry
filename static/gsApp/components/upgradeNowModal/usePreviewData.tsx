@@ -1,5 +1,3 @@
-import type {ReactElement} from 'react';
-
 import type {Organization} from 'sentry/types/organization';
 import {getApiUrl} from 'sentry/utils/api/getApiUrl';
 import {useApiQuery} from 'sentry/utils/queryClient';
@@ -33,7 +31,7 @@ type Result =
     };
 
 type Props = {
-  children: (props: Result) => ReactElement;
+  children: (props: Result) => React.ReactElement;
   organization: Organization;
   subscription: Subscription;
   enabled?: boolean;

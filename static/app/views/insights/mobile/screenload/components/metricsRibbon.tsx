@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import {useMemo} from 'react';
 import styled from '@emotion/styled';
 
@@ -21,7 +20,7 @@ type TableData = {
 interface BlockProps {
   dataKey: string | ((data?: TableData['data']) => number | undefined);
   title: string;
-  unit: ComponentProps<typeof MetricReadout>['unit'];
+  unit: React.ComponentProps<typeof MetricReadout>['unit'];
   allowZero?: boolean;
   preferredPolarity?: Polarity;
 }

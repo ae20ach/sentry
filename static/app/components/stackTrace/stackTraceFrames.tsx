@@ -1,4 +1,4 @@
-import {Activity, useMemo, useRef, type ComponentType} from 'react';
+import {Activity, useMemo, useRef} from 'react';
 import styled from '@emotion/styled';
 
 import {Container} from '@sentry/scraps/layout';
@@ -23,10 +23,10 @@ function OmittedFramesBanner({omittedFrames}: {omittedFrames: [number, number]})
 }
 
 interface StackTraceFramesProps {
-  frameContextComponent: ComponentType;
+  frameContextComponent: React.ComponentType;
   /** Removes the outer border and border-radius, useful for embedding in hovercards. */
   borderless?: boolean;
-  frameActionsComponent?: ComponentType<{isHovering: boolean}>;
+  frameActionsComponent?: React.ComponentType<{isHovering: boolean}>;
 }
 
 export function StackTraceFrames({

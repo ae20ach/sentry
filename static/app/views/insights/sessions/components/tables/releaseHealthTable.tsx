@@ -1,4 +1,4 @@
-import {useCallback, useMemo, type ReactNode} from 'react';
+import {useCallback, useMemo} from 'react';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
 import type {Location} from 'history';
@@ -130,7 +130,7 @@ export function ReleaseHealthTable({data, isError, isLoading, location, meta}: P
         );
       }
       if (!meta?.fields) {
-        return value as ReactNode;
+        return value as React.ReactNode;
       }
 
       const renderer = getFieldRenderer(column.key, meta.fields, false);

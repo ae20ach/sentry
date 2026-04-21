@@ -1,4 +1,3 @@
-import type {CSSProperties} from 'react';
 import {Fragment, useCallback} from 'react';
 
 import {Button} from '@sentry/scraps/button';
@@ -23,7 +22,7 @@ interface Props {
   feedbackItem: FeedbackIssue;
   size: 'small' | 'medium' | 'large';
   className?: string;
-  style?: CSSProperties;
+  style?: React.CSSProperties;
 }
 
 export function FeedbackActions({

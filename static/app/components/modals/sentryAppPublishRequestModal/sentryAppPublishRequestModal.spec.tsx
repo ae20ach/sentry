@@ -1,4 +1,3 @@
-import type {PropsWithChildren} from 'react';
 import styled from '@emotion/styled';
 import {OrganizationFixture} from 'sentry-fixture/organization';
 import {SentryAppFixture} from 'sentry-fixture/sentryApp';
@@ -9,7 +8,7 @@ import {makeCloseButton} from 'sentry/components/globalModal/components';
 import {SentryAppPublishRequestModal} from 'sentry/components/modals/sentryAppPublishRequestModal/sentryAppPublishRequestModal';
 
 describe('SentryAppDetailsModal', () => {
-  const styledWrapper = styled((c: PropsWithChildren) => c.children);
+  const styledWrapper = styled((c: React.PropsWithChildren) => c.children);
   const sentryApp = SentryAppFixture();
   const onPublishSubmission = jest.fn();
   afterEach(() => {

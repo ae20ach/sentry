@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import omit from 'lodash/omit';
 
 import {CompactSelect, type SelectOption} from '@sentry/scraps/compactSelect';
@@ -123,7 +122,7 @@ const HTTP_ACTION_OPTIONS: Array<SelectOption<string>> = [
   })),
 ];
 
-const LABEL_FOR_MODULE_NAME: Record<ModuleName, ReactNode> = {
+const LABEL_FOR_MODULE_NAME: Record<ModuleName, React.ReactNode> = {
   http: t('HTTP Method'),
   db: t('Command'),
   cache: t('Action'),

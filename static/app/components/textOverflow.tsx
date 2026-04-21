@@ -1,4 +1,3 @@
-import type {CSSProperties} from 'react';
 import {css} from '@emotion/react';
 import styled from '@emotion/styled';
 
@@ -25,7 +24,7 @@ type Props = {
    * @default false
    */
   isParagraph?: boolean;
-  style?: CSSProperties;
+  style?: React.CSSProperties;
 };
 
 export const TextOverflow = styled(

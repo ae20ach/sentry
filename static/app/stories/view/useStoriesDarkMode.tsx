@@ -1,4 +1,3 @@
-import type {PropsWithChildren} from 'react';
 import {ThemeProvider, type Theme} from '@emotion/react';
 
 // these utils are for stories that have forced dark mode
@@ -21,7 +20,7 @@ export const useStoryDarkModeTheme = (): Theme => {
  *
  * ⚠️ DO NOT USE OUTSIDE OF STORIES
  */
-export function StoryDarkModeProvider(props: PropsWithChildren) {
+export function StoryDarkModeProvider(props: React.PropsWithChildren) {
   const theme = useStoryDarkModeTheme();
   return <ThemeProvider theme={theme}>{props.children}</ThemeProvider>;
 }

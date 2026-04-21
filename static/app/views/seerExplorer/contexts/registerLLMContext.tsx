@@ -1,4 +1,3 @@
-import type {ComponentType} from 'react';
 import {useContext, useEffect, useId} from 'react';
 
 import {LLMNodeContext, useLLMContextRegistry} from './llmContext';
@@ -24,8 +23,8 @@ import type {LLMContextNodeType} from './llmContextTypes';
  */
 export function registerLLMContext<P extends Record<string, unknown>>(
   nodeType: LLMContextNodeType,
-  WrappedComponent: ComponentType<P>
-): ComponentType<P> {
+  WrappedComponent: React.ComponentType<P>
+): React.ComponentType<P> {
   function LLMContextWrapper(props: P) {
     const ctx = useLLMContextRegistry();
 

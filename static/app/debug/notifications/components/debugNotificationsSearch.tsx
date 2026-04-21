@@ -1,4 +1,3 @@
-import type {Key} from 'react';
 import {useCallback, useMemo, useRef, useState} from 'react';
 import styled from '@emotion/styled';
 import {type AriaComboBoxProps} from '@react-aria/combobox';
@@ -76,7 +75,7 @@ function SearchComboBox<T extends SearchItem>(props: SearchComboBoxProps<T>) {
   const popoverRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
   const handleSelectionChange = useCallback(
-    (key: Key | null) => {
+    (key: React.Key | null) => {
       if (key) {
         navigate({query: {source: key}}, {replace: true});
       }

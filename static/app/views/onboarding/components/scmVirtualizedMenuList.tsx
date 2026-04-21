@@ -10,7 +10,7 @@
  * Usage: <Select components={{MenuList: ScmVirtualizedMenuList}} />
  */
 
-import {type Ref, useRef} from 'react';
+import {useRef} from 'react';
 import {mergeRefs} from '@react-aria/utils';
 import {useVirtualizer} from '@tanstack/react-virtual';
 
@@ -20,7 +20,7 @@ const MAX_MENU_HEIGHT = 300;
 interface ScmVirtualizedMenuListProps {
   children: React.ReactNode;
   innerProps?: React.HTMLAttributes<HTMLDivElement>;
-  innerRef?: Ref<HTMLDivElement>;
+  innerRef?: React.Ref<HTMLDivElement>;
   maxHeight?: number;
   optionHeight?: number;
 }

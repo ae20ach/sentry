@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import styled from '@emotion/styled';
 import type {Key} from '@react-types/shared';
 import * as Sentry from '@sentry/react';
@@ -200,8 +199,8 @@ function ReplayConfigureDropdownItem({
   title,
   subTitle,
 }: {
-  subTitle: ReactNode;
-  title: ReactNode;
+  subTitle: React.ReactNode;
+  title: React.ReactNode;
 }) {
   return (
     <Flex gap="md" align="center">

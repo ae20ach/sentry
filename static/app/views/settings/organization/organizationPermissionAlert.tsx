@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {Alert, type AlertProps} from '@sentry/scraps/alert';
 
 import {Access} from 'sentry/components/acl/access';
@@ -8,7 +6,7 @@ import type {Scope} from 'sentry/types/core';
 
 interface OrganizationPermissionAlertProps extends Omit<AlertProps, 'variant'> {
   access?: Scope[];
-  message?: ReactNode;
+  message?: React.ReactNode;
 }
 
 export function OrganizationPermissionAlert({

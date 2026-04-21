@@ -1,4 +1,3 @@
-import type {ComponentProps, CSSProperties} from 'react';
 import {useMemo} from 'react';
 import {ClassNames} from '@emotion/react';
 
@@ -27,7 +26,7 @@ interface Props extends ReturnType<typeof useCrumbHandlers> {
   columnIndex: number;
   frame: ErrorFrame;
   startTimestampMs: number;
-  style: CSSProperties;
+  style: React.CSSProperties;
   ref?: React.Ref<HTMLDivElement>;
 }
 
@@ -68,7 +67,7 @@ export function ErrorTableCell({
     onMouseLeave: () => onMouseLeave(frame),
     ref,
     style,
-  } as ComponentProps<typeof Cell>;
+  } as React.ComponentProps<typeof Cell>;
 
   const renderFns = [
     () => (

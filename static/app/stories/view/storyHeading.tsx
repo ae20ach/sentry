@@ -1,4 +1,3 @@
-import type {ReactElement, ReactNode} from 'react';
 import {Fragment, isValidElement} from 'react';
 import styled from '@emotion/styled';
 
@@ -68,7 +67,7 @@ const StyledLinkButton = styled(LinkButton)`
   }
 `;
 
-function stringifyReactNode(child?: ReactNode): string {
+function stringifyReactNode(child?: React.ReactNode): string {
   switch (true) {
     case typeof child === 'string':
       return child;
@@ -86,9 +85,11 @@ function stringifyReactNode(child?: ReactNode): string {
   }
 }
 
-function hasChildren(node: ReactNode): node is ReactElement<{children: ReactNode}> {
+function hasChildren(
+  node: React.ReactNode
+): node is React.ReactElement<{children: React.ReactNode}> {
   return (
-    isValidElement<{children?: ReactNode}>(node) &&
+    isValidElement<{children?: React.ReactNode}>(node) &&
     node.props.children !== null &&
     node.props.children !== undefined
   );

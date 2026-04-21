@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import type {FrameSourceMapDebuggerData} from 'sentry/components/events/interfaces/sourceMapsDebuggerModal';
 import type {Event, Frame} from 'sentry/types/event';
 import type {PlatformKey} from 'sentry/types/project';
@@ -19,7 +17,7 @@ export interface StackTraceViewState {
 }
 
 export interface StackTraceViewStateProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
   defaultIsMinified?: boolean;
   defaultIsNewestFirst?: boolean;
   defaultView?: StackTraceView;
@@ -53,7 +51,7 @@ export type StackTraceMeta = {
 } & Record<string, unknown>;
 
 export interface StackTraceProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
   event: Event;
   stacktrace: StacktraceType;
   /** When true, all frames start collapsed regardless of their position. */

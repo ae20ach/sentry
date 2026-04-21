@@ -1,4 +1,4 @@
-import {useMemo, type ReactNode} from 'react';
+import {useMemo} from 'react';
 
 import {renderHookWithProviders} from 'sentry-test/reactTestingLibrary';
 
@@ -20,7 +20,7 @@ import {ReadableQueryParams} from 'sentry/views/explore/queryParams/readableQuer
 const mockSetQueryParams = jest.fn();
 
 function Wrapper(crossEvents?: CrossEvent[]) {
-  return function ({children}: {children: ReactNode}) {
+  return function ({children}: {children: React.ReactNode}) {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const [query] = useResettableState(defaultQuery);
 

@@ -1,4 +1,4 @@
-import {Children, useState, type ReactNode} from 'react';
+import {Children, useState} from 'react';
 import styled from '@emotion/styled';
 
 import {Button} from '@sentry/scraps/button';
@@ -9,12 +9,12 @@ import {IconChevron} from 'sentry/icons';
 import {t, tn} from 'sentry/locale';
 
 interface Props {
-  children: ReactNode;
+  children: React.ReactNode;
   closeTag: string;
   openTag: string;
   path: string;
   noBasePadding?: boolean;
-  prefix?: ReactNode;
+  prefix?: React.ReactNode;
   /**
    * If provided, indicates the total number of children available on the
    * server-side, which may be greater than the rendered children when data

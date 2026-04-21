@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {ReplayRecordFixture} from 'sentry-fixture/replayRecord';
 
 import {render, screen} from 'sentry-test/reactTestingLibrary';
@@ -15,7 +14,7 @@ function Wrappers({
   children,
   replay = null,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   replay?: ReplayReader | null;
 }) {
   return (

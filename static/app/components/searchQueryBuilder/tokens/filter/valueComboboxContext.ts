@@ -1,4 +1,4 @@
-import {createContext, useContext, type RefObject} from 'react';
+import {createContext, useContext} from 'react';
 
 import type {SelectOptionWithKey} from '@sentry/scraps/compactSelect';
 
@@ -21,7 +21,7 @@ type ValueComboboxMenuContextValue = {
   onSelectAbsoluteDate: (newDateTimeValue: string) => void;
   showDatePicker: boolean;
   token: TokenResult<Token.FILTER>;
-  wrapperRef: RefObject<HTMLDivElement | null>;
+  wrapperRef: React.RefObject<HTMLDivElement | null>;
 };
 
 export const ValueComboboxContext = createContext<ValueComboboxContextValue | null>(null);

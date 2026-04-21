@@ -1,4 +1,4 @@
-import {Fragment, useCallback, useMemo, useRef, useState, type ChangeEvent} from 'react';
+import {Fragment, useCallback, useMemo, useRef, useState} from 'react';
 import styled from '@emotion/styled';
 import {useInfiniteQuery} from '@tanstack/react-query';
 import {useVirtualizer} from '@tanstack/react-virtual';
@@ -125,7 +125,7 @@ export function AddAutofixRepoModal({
               type="text"
               placeholder={t('Search available repositories...')}
               value={modalSearchQuery}
-              onChange={(ev: ChangeEvent<HTMLInputElement>) =>
+              onChange={(ev: React.ChangeEvent<HTMLInputElement>) =>
                 setModalSearchQuery(ev.target.value)
               }
               autoFocus

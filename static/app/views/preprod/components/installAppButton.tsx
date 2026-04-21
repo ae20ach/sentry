@@ -1,5 +1,3 @@
-import type {MouseEvent} from 'react';
-
 import {Button} from '@sentry/scraps/button';
 
 import {IconDownload} from 'sentry/icons';
@@ -24,7 +22,7 @@ export function InstallAppButton({
   variant = 'text',
 }: InstallAppButtonProps) {
   const organization = useOrganization();
-  const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.blur();

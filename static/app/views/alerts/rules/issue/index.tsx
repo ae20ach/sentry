@@ -1,4 +1,3 @@
-import type {ChangeEvent, ReactNode} from 'react';
 import {Fragment} from 'react';
 import styled from '@emotion/styled';
 import * as Sentry from '@sentry/react';
@@ -472,7 +471,7 @@ class IssueRuleEditor extends DeprecatedAsyncComponent<Props, State> {
     addSuccessMessage(isNew ? t('Created alert rule') : t('Updated alert rule'));
   };
 
-  handleRuleSaveFailure(msg: ReactNode) {
+  handleRuleSaveFailure(msg: React.ReactNode) {
     addErrorMessage(msg);
     metric.endSpan({name: 'saveAlertRule'});
   }
@@ -880,7 +879,7 @@ class IssueRuleEditor extends DeprecatedAsyncComponent<Props, State> {
           value={name}
           data-test-id="alert-name"
           placeholder={t('Enter Alert Name')}
-          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+          onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
             this.handleChange('name', event.target.value)
           }
           onBlur={this.handleValidateRuleName}

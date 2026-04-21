@@ -1,4 +1,3 @@
-import type {CSSProperties} from 'react';
 import {useTheme, type Theme} from '@emotion/react';
 import styled from '@emotion/styled';
 
@@ -24,7 +23,7 @@ export interface TimelineItemProps {
   onMouseLeave?: React.MouseEventHandler<HTMLDivElement>;
   ref?: React.Ref<HTMLDivElement>;
   showLastLine?: boolean;
-  style?: CSSProperties;
+  style?: React.CSSProperties;
   timestamp?: React.ReactNode;
   titleTrailingItems?: React.ReactNode;
 }

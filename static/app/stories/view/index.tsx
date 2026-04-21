@@ -1,4 +1,4 @@
-import {Fragment, type PropsWithChildren} from 'react';
+import {Fragment} from 'react';
 import {css, Global, useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
 
@@ -137,7 +137,7 @@ function StoryDetail() {
   );
 }
 
-function StoriesLayout(props: PropsWithChildren) {
+function StoriesLayout(props: React.PropsWithChildren) {
   return (
     <Fragment>
       <GlobalStoryStyles key="global-story-styles" />

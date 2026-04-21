@@ -1,4 +1,3 @@
-import type {KeyboardEvent, MouseEvent} from 'react';
 import {useCallback} from 'react';
 import type {ListState} from '@react-stately/list';
 import type {Node} from '@react-types/shared';
@@ -26,7 +25,7 @@ export function DeletableToken({
   const {dispatch} = useArithmeticBuilder();
 
   const onDelete = useCallback(
-    (evt: KeyboardEvent<HTMLDivElement> | MouseEvent<HTMLButtonElement>) => {
+    (evt: React.KeyboardEvent<HTMLDivElement> | React.MouseEvent<HTMLButtonElement>) => {
       evt.preventDefault();
       evt.stopPropagation();
       const itemKey = state.collection.getKeyBefore(item.key);

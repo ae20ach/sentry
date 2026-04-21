@@ -1,4 +1,4 @@
-import {Fragment, useMemo, type ReactNode} from 'react';
+import {Fragment, useMemo} from 'react';
 import styled from '@emotion/styled';
 import type {LocationDescriptor} from 'history';
 
@@ -37,7 +37,7 @@ type MetricColumnKey =
 type TableColumnKey = 'description' | 'operation' | MetricColumnKey;
 type TableColumn = {
   key: TableColumnKey;
-  name: ReactNode;
+  name: React.ReactNode;
 };
 
 interface EventRegressionTableProps {
@@ -222,7 +222,7 @@ function changeTextVariant(change: number): 'danger' | 'primary' | 'success' {
   return 'primary';
 }
 
-function CellText({children, numeric}: {children?: ReactNode; numeric?: boolean}) {
+function CellText({children, numeric}: {children?: React.ReactNode; numeric?: boolean}) {
   return (
     <Container width="100%" overflow="hidden">
       <Text as="div" align={numeric ? 'right' : undefined} ellipsis tabular={numeric}>

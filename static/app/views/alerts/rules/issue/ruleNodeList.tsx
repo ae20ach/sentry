@@ -1,5 +1,5 @@
 import type React from 'react';
-import {Component, Fragment, type ReactNode} from 'react';
+import {Component, Fragment} from 'react';
 import styled from '@emotion/styled';
 
 import {Select} from '@sentry/scraps/select';
@@ -46,10 +46,10 @@ type Props = {
   placeholder: string;
   project: Project;
   additionalAction?: {
-    label: ReactNode;
+    label: React.ReactNode;
     onClick: () => void;
     option: {
-      label: ReactNode;
+      label: React.ReactNode;
       value: IssueAlertRuleActionTemplate;
     };
   };

@@ -1,4 +1,4 @@
-import {useRef, useState, type ReactNode} from 'react';
+import {useRef, useState} from 'react';
 
 import {Button} from '@sentry/scraps/button';
 import {Flex} from '@sentry/scraps/layout';
@@ -60,7 +60,7 @@ function FieldCellWrapper({
   index,
   embedded = false,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   field: SampleTableColumnKey;
   index: number;
   row: TraceMetricEventsResponseItem;
@@ -209,7 +209,7 @@ export function SampleTableRow({
     );
   };
 
-  const renderMap: Record<SampleTableColumnKey, () => ReactNode> = {
+  const renderMap: Record<SampleTableColumnKey, () => React.ReactNode> = {
     [VirtualTableSampleColumnKey.EXPAND_ROW]: renderExpandRowCell,
     [TraceMetricKnownFieldKey.TRACE]: renderTraceCell,
     [TraceMetricKnownFieldKey.TIMESTAMP]: () =>

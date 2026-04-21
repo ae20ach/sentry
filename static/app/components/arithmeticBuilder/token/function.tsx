@@ -1,4 +1,3 @@
-import type {ChangeEvent, FocusEvent, RefObject} from 'react';
 import {useCallback, useMemo, useRef, useState} from 'react';
 import {css} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -76,7 +75,7 @@ export function ArithmeticTokenFunction({
 type Argument = {label: string; value: string};
 
 interface ArgumentsGridProps extends ArithmeticTokenFunctionProps {
-  rowRef: RefObject<HTMLDivElement | null>;
+  rowRef: React.RefObject<HTMLDivElement | null>;
 }
 
 function ArgumentsGrid({
@@ -129,7 +128,7 @@ interface GridListProps
   arguments: Argument[];
   children: CollectionChildren<TokenAttribute>;
   onArgumentsChange: (index: number, argument: string) => void;
-  rowRef: RefObject<HTMLDivElement | null>;
+  rowRef: React.RefObject<HTMLDivElement | null>;
 }
 
 function ArgumentsGridList({
@@ -212,14 +211,14 @@ interface InternalInputProps {
   argument: Argument;
   argumentIndex: number;
   argumentItem: Node<TokenAttribute>;
-  argumentRef: RefObject<HTMLDivElement | null>;
+  argumentRef: React.RefObject<HTMLDivElement | null>;
   arguments: Argument[];
   argumentsListState: ListState<TokenAttribute>;
   functionItem: Node<Token>;
   functionListState: ListState<Token>;
   functionToken: TokenFunction;
   onArgumentsChange: (index: number, argument: string) => void;
-  rowRef: RefObject<HTMLDivElement | null>;
+  rowRef: React.RefObject<HTMLDivElement | null>;
 }
 
 function InternalInput({
@@ -385,7 +384,7 @@ function InternalInput({
   ]);
 
   const onInputChange = useCallback(
-    (evt: ChangeEvent<HTMLInputElement>) => {
+    (evt: React.ChangeEvent<HTMLInputElement>) => {
       setInputValue(evt.target.value);
       setCurrentValue(evt.target.value);
       setSelectionIndex(evt.target.selectionStart ?? 0);
@@ -436,7 +435,7 @@ function InternalInput({
   }, [resetInputValue]);
 
   const onInputFocus = useCallback(
-    (evt: FocusEvent<HTMLInputElement>) => {
+    (evt: React.FocusEvent<HTMLInputElement>) => {
       // We're stopping propagation because `useGridListItem` in the parent component
       // always steals and sets focus to the first child and we don't want that happening.
       evt.stopPropagation();

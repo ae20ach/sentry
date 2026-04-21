@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import moment from 'moment-timezone';
 
 import {Tag} from '@sentry/scraps/badge';
@@ -54,7 +53,7 @@ export function BillingCycleSelectCard({
     onUpdate(data);
   };
 
-  let cycleInfo: ReactNode;
+  let cycleInfo: React.ReactNode;
   if (isPartnerMigration) {
     if (isAnnual) {
       cycleInfo = t('Billed annually from your selected start date on submission');

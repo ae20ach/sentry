@@ -1,4 +1,3 @@
-import type {ChangeEvent, FocusEvent, MouseEvent, RefObject} from 'react';
 import {Fragment, useCallback, useMemo, useRef, useState} from 'react';
 import styled from '@emotion/styled';
 import {Item, Section} from '@react-stately/collections';
@@ -96,7 +95,7 @@ type FocusTokenLiteral = {
 type FocusToken = FocusTokenFunction | FocusTokenLiteral;
 
 interface InternalInputProps extends ArithmeticTokenFreeTextProps {
-  rowRef: RefObject<HTMLDivElement | null>;
+  rowRef: React.RefObject<HTMLDivElement | null>;
 }
 
 function InternalInput({
@@ -191,7 +190,7 @@ function InternalInput({
   }, [dispatch, inputValue, token, resetInputValue]);
 
   const onInputChange = useCallback(
-    (evt: ChangeEvent<HTMLInputElement>) => {
+    (evt: React.ChangeEvent<HTMLInputElement>) => {
       const text = evt.target.value;
 
       const tokens = tokenizeExpression(text, references);
@@ -313,7 +312,7 @@ function InternalInput({
     resetInputValue();
   }, [dispatch, token, inputValue, resetInputValue]);
 
-  const onInputFocus = useCallback((_evt: FocusEvent<HTMLInputElement>) => {
+  const onInputFocus = useCallback((_evt: React.FocusEvent<HTMLInputElement>) => {
     // TODO
   }, []);
 
@@ -634,7 +633,7 @@ function useReferenceItems({
   }, [references, nextAllowedTokenKinds]);
 }
 
-function stopPropagation(evt: MouseEvent<HTMLElement>) {
+function stopPropagation(evt: React.MouseEvent<HTMLElement>) {
   evt.stopPropagation();
 }
 

@@ -1,4 +1,4 @@
-import {Fragment, type RefObject, useMemo, useRef} from 'react';
+import {Fragment, useMemo, useRef} from 'react';
 import {mergeProps} from '@react-aria/utils';
 import {motion, type MotionProps} from 'framer-motion';
 
@@ -139,7 +139,7 @@ export function Navigation() {
 }
 
 interface PrimaryNavigationItemsProps {
-  listRef?: RefObject<HTMLUListElement | null>;
+  listRef?: React.RefObject<HTMLUListElement | null>;
 }
 
 export function PrimaryNavigationItems({listRef}: PrimaryNavigationItemsProps) {

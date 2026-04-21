@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import {WidgetQueryFixture} from 'sentry-fixture/widgetQuery';
 
 import {render, screen, userEvent, waitFor} from 'sentry-test/reactTestingLibrary';
@@ -18,7 +17,7 @@ function renderWithProvider({
   widgetQuery,
   onSearch,
   onClose,
-}: ComponentProps<typeof SpansSearchBar>) {
+}: React.ComponentProps<typeof SpansSearchBar>) {
   return render(
     <SpansSearchBar widgetQuery={widgetQuery} onSearch={onSearch} onClose={onClose} />,
     {}

@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {Fragment, useCallback, useEffect, useMemo, useState} from 'react';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -77,7 +76,7 @@ const DEFAULT_SORTING_OPTION: SortOption = 'sum()';
 interface SlowestFunctionsWidgetProps<F extends BreakdownFunction> {
   breakdownFunction: F;
   cursorName?: string;
-  header?: ReactNode;
+  header?: React.ReactNode;
   onDataState?: (dataState: DataState) => void;
   userQuery?: string;
   widgetHeight?: string;

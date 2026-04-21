@@ -1,5 +1,5 @@
 import type React from 'react';
-import {Fragment, useCallback, useMemo, useState, type ReactNode} from 'react';
+import {Fragment, useCallback, useMemo, useState} from 'react';
 import {useMatches} from 'react-router-dom';
 import type {Theme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -109,7 +109,7 @@ type Props = {
     pageEventsCount: number;
     pageLinks: string | null;
     totalEventsCount: string | number;
-  }) => ReactNode;
+  }) => React.ReactNode;
 };
 
 export function EventsTable({

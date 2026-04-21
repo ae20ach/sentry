@@ -1,4 +1,3 @@
-import type {Dispatch, RefObject, SetStateAction} from 'react';
 import {
   createContext,
   useCallback,
@@ -13,7 +12,7 @@ import {toArray} from 'sentry/utils/array/toArray';
 import type {ApiQueryKey, InfiniteApiQueryKey} from 'sentry/utils/queryClient';
 
 type QueryKeyValue = undefined | ApiQueryKey | InfiniteApiQueryKey;
-type QueryKeyRef = RefObject<QueryKeyValue>;
+type QueryKeyRef = React.RefObject<QueryKeyValue>;
 
 interface PublicProps {
   /**
@@ -37,7 +36,7 @@ interface PublicProps {
 
 interface InternalProps {
   queryKeyRef: QueryKeyRef;
-  setState: Dispatch<SetStateAction<State>>;
+  setState: React.Dispatch<React.SetStateAction<State>>;
   state: State;
 }
 type MergedProps = Omit<PublicProps, 'queryKey'> & InternalProps;
@@ -122,7 +121,7 @@ const ListItemCheckboxContext = createContext<{
   hits: number;
   knownIds: string[];
   queryKeyRef: QueryKeyRef;
-  setState?: Dispatch<SetStateAction<State>>;
+  setState?: React.Dispatch<React.SetStateAction<State>>;
   state?: State;
 }>({
   hits: 0,

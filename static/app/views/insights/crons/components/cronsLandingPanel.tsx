@@ -1,4 +1,4 @@
-import {Fragment, useEffect, useRef, type ComponentType} from 'react';
+import {Fragment, useEffect, useRef} from 'react';
 import styled from '@emotion/styled';
 
 import {Button} from '@sentry/scraps/button';
@@ -31,7 +31,7 @@ function GuideContent({
   Guide,
   containerRef,
 }: {
-  Guide: ComponentType;
+  Guide: React.ComponentType;
   containerRef: React.RefObject<HTMLDivElement | null>;
 }) {
   return (

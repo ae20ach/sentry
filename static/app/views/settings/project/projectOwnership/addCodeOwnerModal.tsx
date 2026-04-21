@@ -1,4 +1,4 @@
-import {Fragment, useState, type Dispatch, type SetStateAction} from 'react';
+import {Fragment, useState} from 'react';
 import styled from '@emotion/styled';
 import {skipToken, useQuery} from '@tanstack/react-query';
 
@@ -190,7 +190,7 @@ function ApplyCodeMappings({
   codeownersFile: CodeownersFile | undefined;
   mutation: UseMutationResult<CodeOwner, RequestError, TCodeownersVariables, unknown>;
   organization: Organization;
-  setCodeMappingId: Dispatch<SetStateAction<string | null>>;
+  setCodeMappingId: React.Dispatch<React.SetStateAction<string | null>>;
 }) {
   const baseUrl = `/settings/${organization.slug}/integrations/`;
   return (

@@ -1,3 +1,1 @@
-import type {SetStateAction as _SetStateAction, Dispatch} from 'react';
-
-export type SetStateAction<T> = Dispatch<_SetStateAction<T>>;
+export type SetStateAction<T> = React.Dispatch<React.SetStateAction<T>>;

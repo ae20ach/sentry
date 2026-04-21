@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import styled from '@emotion/styled';
 import {OrganizationFixture} from 'sentry-fixture/organization';
 import {TeamFixture} from 'sentry-fixture/team';
@@ -68,7 +67,7 @@ describe('InviteMembersModal', () => {
     mockApiResponses = [defaultMockOrganizationRoles],
   }: {
     mockApiResponses?: MockApiResponseFn[];
-    modalProps?: ComponentProps<typeof InviteMembersModal>;
+    modalProps?: React.ComponentProps<typeof InviteMembersModal>;
     orgAccess?: Scope[];
     orgTeams?: DetailedTeam[];
     roles?: Array<Record<PropertyKey, unknown>>;

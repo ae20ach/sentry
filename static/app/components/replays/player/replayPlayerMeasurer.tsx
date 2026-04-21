@@ -1,4 +1,3 @@
-import type {CSSProperties, ReactNode} from 'react';
 import {useEffect, useRef} from 'react';
 import {css} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -12,7 +11,7 @@ interface Props {
   /**
    * You must pass `styles` into the <ReplayPlayer>
    */
-  children: (styles: CSSProperties) => ReactNode;
+  children: (styles: React.CSSProperties) => React.ReactNode;
 
   /**
    * How to measure and resize the player.

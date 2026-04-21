@@ -1,5 +1,5 @@
 import type React from 'react';
-import {useCallback, useMemo, useRef, useState, type ReducerState} from 'react';
+import {useCallback, useMemo, useRef, useState} from 'react';
 
 import type {ReducerAction} from 'sentry/types/reducerAction';
 
@@ -13,7 +13,7 @@ import type {ReducerAction} from 'sentry/types/reducerAction';
  */
 
 export interface DispatchingReducerMiddleware<R extends React.Reducer<any, any>> {
-  ['before action']: (S: Readonly<ReducerState<R>>, A: ReducerAction<R>) => void;
+  ['before action']: (S: Readonly<React.ReducerState<R>>, A: ReducerAction<R>) => void;
   ['before next state']: (
     P: Readonly<React.ReducerState<R>>,
     S: Readonly<React.ReducerState<R>>,
@@ -72,7 +72,7 @@ export class DispatchingReducerEmitter<R extends React.Reducer<any, any>> {
 }
 
 function update<R extends React.Reducer<any, any>>(
-  state: ReducerState<R>,
+  state: React.ReducerState<R>,
   actions: Array<ReducerAction<R>>,
   reducer: R,
   emitter: DispatchingReducerEmitter<R>
@@ -95,12 +95,16 @@ function update<R extends React.Reducer<any, any>>(
 
 export function useDispatchingReducer<R extends React.Reducer<any, any>>(
   reducer: R,
-  initialState: ReducerState<R>,
-  initializer?: (arg: ReducerState<R>) => ReducerState<R>
-): [ReducerState<R>, React.Dispatch<ReducerAction<R>>, DispatchingReducerEmitter<R>] {
+  initialState: React.ReducerState<R>,
+  initializer?: (arg: React.ReducerState<R>) => React.ReducerState<R>
+): [
+  React.ReducerState<R>,
+  React.Dispatch<ReducerAction<R>>,
+  DispatchingReducerEmitter<R>,
+] {
   const emitter = useMemo(() => new DispatchingReducerEmitter<R>(), []);
   const [state, setState] = useState(
-    initialState ?? (initializer?.(initialState) as ReducerState<R>)
+    initialState ?? (initializer?.(initialState) as React.ReducerState<R>)
   );
 
   const stateRef = useRef(state);

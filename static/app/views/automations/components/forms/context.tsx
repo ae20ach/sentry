@@ -1,5 +1,4 @@
 import {createContext, useContext, useState} from 'react';
-import type {ReactNode} from 'react';
 
 import type {Automation} from 'sentry/types/workflowEngine/automations';
 
@@ -14,7 +13,7 @@ const AutomationFormContext = createContext<AutomationFormContextValue | undefin
 );
 
 interface AutomationFormProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
   automation?: Automation;
 }
 

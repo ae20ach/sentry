@@ -1,4 +1,3 @@
-import type {ReactElement} from 'react';
 import {Fragment} from 'react';
 import styled from '@emotion/styled';
 
@@ -14,7 +13,7 @@ interface RenderLinksInTextProps {
 
 export const renderLinksInText = ({
   exceptionText,
-}: RenderLinksInTextProps): ReactElement => {
+}: RenderLinksInTextProps): React.ReactElement => {
   // https?: Matches both "http" and "https"
   // :\/\/: This is a literal match for "://"
   // (?:www\.)?: Matches URLs with or without "www."
@@ -40,7 +39,7 @@ export const renderLinksInText = ({
     const url = urls[index]!;
     const isUrlValid = isUrl(url);
 
-    let link: ReactElement | undefined;
+    let link: React.ReactElement | undefined;
     if (isUrlValid) {
       link = (
         <ExternalLink

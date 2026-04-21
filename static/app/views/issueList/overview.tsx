@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import styled from '@emotion/styled';
 import * as Sentry from '@sentry/react';
@@ -71,11 +70,11 @@ const DYNAMIC_COUNTS_STATS_PERIODS = new Set(['14d', '24h', 'auto']);
 const MAX_ISSUES_COUNT = 100;
 
 interface Props {
-  headerActions?: ReactNode;
+  headerActions?: React.ReactNode;
   initialQuery?: string;
   shouldFetchOnMount?: boolean;
-  title?: ReactNode;
-  titleDescription?: ReactNode;
+  title?: React.ReactNode;
+  titleDescription?: React.ReactNode;
 }
 
 interface EndpointParams extends Partial<PageFilters['datetime']> {

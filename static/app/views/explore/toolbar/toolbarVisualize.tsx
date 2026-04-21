@@ -1,4 +1,3 @@
-import type {MouseEventHandler, ReactNode} from 'react';
 import {useCallback, useMemo, useState} from 'react';
 import styled from '@emotion/styled';
 import cloneDeep from 'lodash/cloneDeep';
@@ -161,7 +160,7 @@ export function ToolbarVisualize({
 }
 
 interface VisualizeDropdownProps {
-  label: ReactNode;
+  label: React.ReactNode;
   onReplace: (visualize: Visualize) => void;
   visualize: Visualize;
   dragColumnId?: number;
@@ -262,7 +261,7 @@ function ToolbarVisualizeItem({
 
 interface VisualizeLabelProps {
   index: number;
-  onClick: MouseEventHandler<HTMLDivElement>;
+  onClick: React.MouseEventHandler<HTMLDivElement>;
   visualize: Visualize;
 }
 

@@ -1,4 +1,4 @@
-import {useCallback, useMemo, useState, type ComponentProps} from 'react';
+import {useCallback, useMemo, useState} from 'react';
 import styled from '@emotion/styled';
 import {parseAsString, useQueryState} from 'nuqs';
 
@@ -54,7 +54,7 @@ function HeaderCell({
   className?: string;
   divider?: boolean;
   sortKey?: string;
-} & Omit<ComponentProps<typeof SimpleTable.HeaderCell>, 'sort'>) {
+} & Omit<React.ComponentProps<typeof SimpleTable.HeaderCell>, 'sort'>) {
   const location = useLocation();
   const navigate = useNavigate();
   const isSortedByField = sort?.field === sortKey;

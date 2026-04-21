@@ -1,4 +1,4 @@
-import {Fragment, type ReactNode} from 'react';
+import {Fragment} from 'react';
 
 import {Flex} from '@sentry/scraps/layout';
 import {ExternalLink} from '@sentry/scraps/link';
@@ -67,10 +67,10 @@ import {MODULE_DOC_LINK} from 'sentry/views/insights/browser/webVitals/settings'
 
 interface Details {
   colorGraphicsToken: GraphicsVariant;
-  description: ReactNode;
-  icon: ReactNode;
+  description: React.ReactNode;
+  icon: React.ReactNode;
   tabKey: TabKey;
-  title: ReactNode;
+  title: React.ReactNode;
 }
 
 const DEVICE_CONNECTIVITY_MESSAGE: Record<string, string> = {

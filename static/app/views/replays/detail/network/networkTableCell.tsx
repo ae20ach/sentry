@@ -1,4 +1,3 @@
-import type {ComponentProps, CSSProperties} from 'react';
 import {parseAsInteger, useQueryState} from 'nuqs';
 
 import {Tooltip} from '@sentry/scraps/tooltip';
@@ -28,7 +27,7 @@ interface Props extends ReturnType<typeof useCrumbHandlers> {
   onClickCell: (props: {dataIndex: number; rowIndex: number}) => void;
   rowIndex: number;
   startTimestampMs: number;
-  style: CSSProperties;
+  style: React.CSSProperties;
   ref?: React.Ref<HTMLDivElement>;
 }
 
@@ -69,7 +68,7 @@ export function NetworkTableCell({
     onMouseLeave: () => onMouseLeave(frame),
     ref,
     style,
-  } as ComponentProps<typeof Cell>;
+  } as React.ComponentProps<typeof Cell>;
 
   const renderFns = [
     () => (

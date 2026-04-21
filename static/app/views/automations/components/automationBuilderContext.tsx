@@ -1,4 +1,4 @@
-import {createContext, useCallback, useContext, useReducer, type Reducer} from 'react';
+import {createContext, useCallback, useContext, useReducer} from 'react';
 import {uuid4} from '@sentry/core';
 
 import type {
@@ -17,8 +17,8 @@ import {actionNodesMap} from 'sentry/views/automations/components/actionNodes';
 import {dataConditionNodesMap} from 'sentry/views/automations/components/dataConditionNodes';
 
 export function useAutomationBuilderReducer(initialState?: AutomationBuilderState) {
-  const reducer: Reducer<AutomationBuilderState, AutomationBuilderAction> = useCallback(
-    (state, action): AutomationBuilderState => {
+  const reducer: React.Reducer<AutomationBuilderState, AutomationBuilderAction> =
+    useCallback((state, action): AutomationBuilderState => {
       switch (action.type) {
         case 'ADD_WHEN_CONDITION':
           return addWhenCondition(state, action);
@@ -49,9 +49,7 @@ export function useAutomationBuilderReducer(initialState?: AutomationBuilderStat
         default:
           return state;
       }
-    },
-    []
-  );
+    }, []);
 
   const [state, dispatch] = useReducer(
     reducer,

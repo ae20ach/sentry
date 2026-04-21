@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {useEffect, useEffectEvent, useMemo} from 'react';
 import styled from '@emotion/styled';
 
@@ -19,7 +18,7 @@ import type {PlatformKey} from 'sentry/types/project';
 import {useOnboardingQueryParams} from 'sentry/views/onboarding/components/useOnboardingQueryParams';
 
 interface DisabledProduct {
-  reason: ReactNode;
+  reason: React.ReactNode;
   onClick?: () => void;
   requiresUpgrade?: boolean;
 }
@@ -511,7 +510,7 @@ type ProductProps = {
   /**
    * Brief product description
    */
-  description?: ReactNode;
+  description?: React.ReactNode;
   /**
    * If the product is disabled. It contains a reason and an optional onClick handler
    */

@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {Fragment} from 'react';
 import styled from '@emotion/styled';
 
@@ -22,7 +21,7 @@ interface PreprodBuildsDistributionTableProps {
   builds: BuildDetailsApiResponse[];
   organizationSlug: string;
   showProjectColumn: boolean;
-  content?: ReactNode;
+  content?: React.ReactNode;
   onRowClick?: (build: BuildDetailsApiResponse) => void;
 }
 

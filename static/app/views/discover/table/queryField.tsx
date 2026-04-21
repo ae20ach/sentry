@@ -1,4 +1,4 @@
-import {Component, createRef, type ReactNode} from 'react';
+import {Component, createRef} from 'react';
 import {withTheme, type CSSObject, type Theme} from '@emotion/react';
 import styled from '@emotion/styled';
 import cloneDeep from 'lodash/cloneDeep';
@@ -107,9 +107,9 @@ type Props = {
    */
   renderTagOverride?: (
     kind: FieldValueKind,
-    label: ReactNode,
+    label: React.ReactNode,
     meta: FieldValue['meta']
-  ) => ReactNode;
+  ) => React.ReactNode;
   /**
    * Whether or not to add the tag explaining the FieldValueKind of each field
    */
@@ -126,7 +126,10 @@ type Props = {
 
 class _QueryField extends Component<Props> {
   FieldSelectComponents = {
-    SingleValue: ({data, ...props}: SingleValueProps<FieldValueOption>): ReactNode => {
+    SingleValue: ({
+      data,
+      ...props
+    }: SingleValueProps<FieldValueOption>): React.ReactNode => {
       return (
         <components.SingleValue data={data} {...props}>
           <span data-test-id="label">{data.label}</span>

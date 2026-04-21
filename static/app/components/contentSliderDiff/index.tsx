@@ -1,4 +1,4 @@
-import {useRef, type CSSProperties} from 'react';
+import {useRef} from 'react';
 import styled from '@emotion/styled';
 
 import {NegativeSpaceContainer} from 'sentry/components/container/negativeSpaceContainer';
@@ -15,7 +15,7 @@ interface Props {
    * The content to display before the divider. Usually an image or replay.
    */
   before: React.ReactNode;
-  minHeight?: CSSProperties['minHeight'];
+  minHeight?: React.CSSProperties['minHeight'];
   /**
    * A callback function triggered when the divider is clicked (mouse down event).
    * Useful when we want to track analytics.

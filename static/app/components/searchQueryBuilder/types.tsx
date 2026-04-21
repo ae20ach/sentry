@@ -1,11 +1,9 @@
-import type {ReactNode} from 'react';
-
 import type {ParseResult} from 'sentry/components/searchSyntax/parser';
 import type {FieldDefinition} from 'sentry/utils/fields';
 
 export type FilterKeySection = {
   children: string[];
-  label: ReactNode;
+  label: React.ReactNode;
   value: string;
 };
 

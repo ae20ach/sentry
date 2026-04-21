@@ -1,17 +1,15 @@
-import type {ComponentProps, ReactNode} from 'react';
-
 import {ExternalLink} from '@sentry/scraps/link';
 import {Tooltip, type TooltipProps} from '@sentry/scraps/tooltip';
 
 import {tct} from 'sentry/locale';
 
 interface AiPrivacyNoticeProps {
-  linkProps?: Partial<ComponentProps<typeof ExternalLink>>;
+  linkProps?: Partial<React.ComponentProps<typeof ExternalLink>>;
 }
 
 interface AiPrivacyTooltipProps
   extends Omit<TooltipProps, 'title' | 'children'>, AiPrivacyNoticeProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 const AI_PRIVACY_NOTICE_LINK =

@@ -1,4 +1,3 @@
-import type {ReducerState} from 'react';
 import {useMemo, useReducer} from 'react';
 
 import type {ReducerAction} from 'sentry/types/reducerAction';
@@ -20,7 +19,7 @@ type RedoAction = {
 export type UndoableReducerAction<A> = UndoAction | RedoAction | A;
 
 export type UndoableReducer<R extends React.Reducer<any, any>> = React.Reducer<
-  UndoableNode<ReducerState<R>>,
+  UndoableNode<React.ReducerState<R>>,
   UndoableReducerAction<ReducerAction<R>>
 >;
 
@@ -52,14 +51,14 @@ export function makeUndoableReducer<R extends React.Reducer<any, any>>(
   reducer: R
 ): UndoableReducer<R> {
   return (
-    state: UndoableNode<ReducerState<R>>,
+    state: UndoableNode<React.ReducerState<R>>,
     action: UndoableReducerAction<ReducerAction<R>>
   ) => {
     if (isUndoOrRedoAction(action)) {
       return undoableReducer(state, action);
     }
 
-    const newState: UndoableNode<ReducerState<R>> = {
+    const newState: UndoableNode<React.ReducerState<R>> = {
       next: undefined,
       previous: state,
       current: reducer(state.current, action),
@@ -70,18 +69,20 @@ export function makeUndoableReducer<R extends React.Reducer<any, any>>(
   };
 }
 
-type UndoableReducerState<R extends React.Reducer<ReducerState<R>, ReducerAction<R>>> = [
-  ReducerState<R>,
+type UndoableReducerState<
+  R extends React.Reducer<React.ReducerState<R>, ReducerAction<R>>,
+> = [
+  React.ReducerState<R>,
   React.Dispatch<UndoableReducerAction<ReducerAction<R>>>,
   {
-    nextState: ReducerState<R> | undefined;
-    previousState: ReducerState<R> | undefined;
+    nextState: React.ReducerState<R> | undefined;
+    previousState: React.ReducerState<R> | undefined;
   },
 ];
 
 export function useUndoableReducer<
-  R extends React.Reducer<ReducerState<R>, ReducerAction<R>>,
->(reducer: R, initialState: ReducerState<R>): UndoableReducerState<R> {
+  R extends React.Reducer<React.ReducerState<R>, ReducerAction<R>>,
+>(reducer: R, initialState: React.ReducerState<R>): UndoableReducerState<R> {
   const [state, dispatch] = useReducer(makeUndoableReducer(reducer), {
     current: initialState,
     previous: undefined,

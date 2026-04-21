@@ -1,4 +1,3 @@
-import type {PropsWithChildren, ReactNode} from 'react';
 import {Fragment, useMemo, useState} from 'react';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -895,7 +894,11 @@ export function SourceMapsDebuggerModal({
   );
 }
 
-function CheckListItem({children, title, status}: PropsWithChildren<CheckListItemProps>) {
+function CheckListItem({
+  children,
+  title,
+  status,
+}: React.PropsWithChildren<CheckListItemProps>) {
   return (
     <ListItemContainer>
       <Stack align="center">
@@ -1918,7 +1921,7 @@ function ScrapingSourceMapAvailableChecklistItem({
   );
 }
 
-function ExternalLinkWithIcon({href, children}: PropsWithChildren<{href: string}>) {
+function ExternalLinkWithIcon({href, children}: React.PropsWithChildren<{href: string}>) {
   return (
     <ExternalLink href={href}>
       {children} <IconOpen size="xs" />
@@ -1993,7 +1996,7 @@ const CheckList = styled('ul')`
 
 interface CheckListItemProps {
   status: 'none' | 'checked' | 'alert' | 'question';
-  title: ReactNode;
+  title: React.ReactNode;
 }
 
 const ListItemContainer = styled('li')`

@@ -1,4 +1,3 @@
-import type {MouseEvent as ReactMouseEvent} from 'react';
 import React, {Fragment, useCallback, useMemo} from 'react';
 import styled from '@emotion/styled';
 import moment from 'moment-timezone';
@@ -404,7 +403,7 @@ export function UsageStatsOrganization({
   );
 
   const navigateToInboundFilterSettings = useCallback(
-    (event: ReactMouseEvent) => {
+    (event: React.MouseEvent) => {
       event.preventDefault();
       const url = `/settings/${organization.slug}/projects/:projectId/filters/data-filters/`;
       navigateTo(url, navigate, location);

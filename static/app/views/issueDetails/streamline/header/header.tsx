@@ -1,4 +1,4 @@
-import {Fragment, type ComponentProps, type ReactNode} from 'react';
+import {Fragment} from 'react';
 import styled from '@emotion/styled';
 // eslint-disable-next-line no-restricted-imports
 import color from 'color';
@@ -246,8 +246,8 @@ function MaybeTopBarSlot({
   name,
   children,
 }: {
-  children: ReactNode;
-  name: ComponentProps<typeof TopBar.Slot>['name'];
+  children: React.ReactNode;
+  name: React.ComponentProps<typeof TopBar.Slot>['name'];
 }) {
   const hasPageFrameFeature = useHasPageFrameFeature();
   if (hasPageFrameFeature) {

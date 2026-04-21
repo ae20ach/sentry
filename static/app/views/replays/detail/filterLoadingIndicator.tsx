@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {Stack} from '@sentry/scraps/layout';
 import {Tooltip} from '@sentry/scraps/tooltip';
 
@@ -7,7 +5,7 @@ import {LoadingIndicator} from 'sentry/components/loadingIndicator';
 import {t} from 'sentry/locale';
 
 interface Props {
-  children: ReactNode;
+  children: React.ReactNode;
   isLoading: boolean;
 }
 

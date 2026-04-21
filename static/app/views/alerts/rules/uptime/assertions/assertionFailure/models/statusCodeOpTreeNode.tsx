@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {StatusCodeOpRow} from 'sentry/views/alerts/rules/uptime/assertions/assertionFailure/rows/statusCodeOpRow';
 import type {UptimeStatusCodeOp} from 'sentry/views/alerts/rules/uptime/types';
 
@@ -10,7 +8,7 @@ export class StatusCodeOpTreeNode extends TreeNode<UptimeStatusCodeOp> {
     return `STATUS CODE - ${this.id}`;
   }
 
-  renderRow(): ReactNode {
+  renderRow(): React.ReactNode {
     return <StatusCodeOpRow node={this} />;
   }
 }

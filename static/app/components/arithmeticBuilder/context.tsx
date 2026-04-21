@@ -1,4 +1,3 @@
-import type {Dispatch} from 'react';
 import {createContext, useContext} from 'react';
 
 import type {
@@ -10,7 +9,7 @@ import type {FieldDefinition} from 'sentry/utils/fields';
 
 interface ArithmeticBuilderContextData {
   aggregations: string[];
-  dispatch: Dispatch<ArithmeticBuilderAction>;
+  dispatch: React.Dispatch<ArithmeticBuilderAction>;
   focusOverride: FocusOverride | null;
   functionArguments: FunctionArgument[];
   getFieldDefinition: (key: string) => FieldDefinition | null;

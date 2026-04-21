@@ -1,4 +1,4 @@
-import React, {Children, useRef, useState, type ReactNode} from 'react';
+import React, {Children, useRef, useState} from 'react';
 import {css} from '@emotion/react';
 import styled from '@emotion/styled';
 
@@ -185,9 +185,9 @@ export function Card({
 // {null}
 // <Component2/> --> returns a <Card/>
 // Gives us back [<Component1/>, <Component2/>]
-const filterChildren = (children: ReactNode): ReactNode[] => {
+const filterChildren = (children: React.ReactNode): React.ReactNode[] => {
   return Children.toArray(children).filter(
-    (child: ReactNode) => child !== null && child !== undefined
+    (child: React.ReactNode) => child !== null && child !== undefined
   );
 };
 

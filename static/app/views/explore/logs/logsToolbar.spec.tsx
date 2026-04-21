@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {initializeLogsTest} from 'sentry-fixture/log';
 
 import {
@@ -15,7 +14,7 @@ import {LogsToolbar} from 'sentry/views/explore/logs/logsToolbar';
 import {useQueryParamsMode} from 'sentry/views/explore/queryParams/context';
 import {Mode} from 'sentry/views/explore/queryParams/mode';
 
-function Wrapper({children}: {children: ReactNode}) {
+function Wrapper({children}: {children: React.ReactNode}) {
   return (
     <LogsQueryParamsProvider
       analyticsPageSource={LogsAnalyticsPageSource.EXPLORE_LOGS}

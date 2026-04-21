@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {css, type Theme} from '@emotion/react';
 import styled from '@emotion/styled';
 
@@ -12,7 +11,9 @@ import {useProjects} from 'sentry/utils/useProjects';
 type ProjectListProps = {
   projectSlugs: string[];
   className?: string;
-  collapsedProjectsTooltip?: (projects: Array<Project | {slug: string}>) => ReactNode;
+  collapsedProjectsTooltip?: (
+    projects: Array<Project | {slug: string}>
+  ) => React.ReactNode;
   maxVisibleProjects?: number;
 };
 

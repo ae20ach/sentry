@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {Fragment} from 'react';
 import styled from '@emotion/styled';
 
@@ -29,7 +28,7 @@ interface PreprodBuildsSizeTableProps {
   labels: Labels;
   organizationSlug: string;
   showProjectColumn: boolean;
-  content?: ReactNode;
+  content?: React.ReactNode;
   onRowClick?: (build: BuildDetailsApiResponse) => void;
 }
 

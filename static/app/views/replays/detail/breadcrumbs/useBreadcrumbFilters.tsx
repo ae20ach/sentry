@@ -1,4 +1,3 @@
-import type {RefObject} from 'react';
 import {useCallback, useMemo, useRef} from 'react';
 import * as Sentry from '@sentry/react';
 
@@ -19,7 +18,7 @@ type Options = {
 };
 
 type Return = {
-  expandPathsRef: RefObject<Map<number, Set<string>>>;
+  expandPathsRef: React.RefObject<Map<number, Set<string>>>;
   getBreadcrumbTypes: () => Array<{label: string; value: string}>;
   items: ReplayFrame[];
   searchTerm: string;

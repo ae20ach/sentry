@@ -1,4 +1,3 @@
-import type {ReactElement} from 'react';
 import {
   Fragment,
   useCallback,
@@ -250,7 +249,7 @@ const LOADING_OR_FALLBACK_MEMORY_CHART = FlamegraphChartModel.Empty;
 
 const noopFormatDuration = () => '';
 
-export function ContinuousFlamegraph(): ReactElement {
+export function ContinuousFlamegraph(): React.ReactElement {
   const devicePixelRatio = useDevicePixelRatio();
   const dispatch = useDispatchFlamegraphState();
 

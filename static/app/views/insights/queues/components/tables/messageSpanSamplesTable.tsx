@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import {useTheme, type Theme} from '@emotion/react';
 import styled from '@emotion/styled';
 import type {Location} from 'history';
@@ -105,8 +104,8 @@ interface Props {
   error?: Error | null;
   highlightedSpanId?: string;
   meta?: EventsMetaType;
-  onSampleMouseOut?: ComponentProps<typeof GridEditable>['onRowMouseOut'];
-  onSampleMouseOver?: ComponentProps<typeof GridEditable>['onRowMouseOver'];
+  onSampleMouseOut?: React.ComponentProps<typeof GridEditable>['onRowMouseOut'];
+  onSampleMouseOver?: React.ComponentProps<typeof GridEditable>['onRowMouseOver'];
 }
 
 export function MessageSpanSamplesTable({

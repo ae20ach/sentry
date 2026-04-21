@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {render, waitFor} from 'sentry-test/reactTestingLibrary';
 
 import {LLMContextProvider, useLLMContext} from './llmContext';
@@ -40,7 +38,7 @@ function DummyChart({label}: {label?: string}) {
   return <div>{label ?? 'chart'}</div>;
 }
 
-function DummyWidget({title, children}: {children?: ReactNode; title?: string}) {
+function DummyWidget({title, children}: {children?: React.ReactNode; title?: string}) {
   useLLMContext({title: title ?? 'widget', type: 'timeseries', unit: 'ms'});
   return (
     <div>
@@ -50,7 +48,7 @@ function DummyWidget({title, children}: {children?: ReactNode; title?: string}) 
   );
 }
 
-function DummyDashboard({name, children}: {children?: ReactNode; name?: string}) {
+function DummyDashboard({name, children}: {children?: React.ReactNode; name?: string}) {
   useLLMContext({name: name ?? 'dashboard'});
   return (
     <div>

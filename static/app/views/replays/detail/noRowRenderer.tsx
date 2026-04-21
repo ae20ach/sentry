@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {Button} from '@sentry/scraps/button';
 
 import {IconClose} from 'sentry/icons';
@@ -7,7 +5,7 @@ import {t} from 'sentry/locale';
 import {StyledEmptyStateWarning as EmptyState} from 'sentry/views/replays/detail/emptyState';
 
 type Props = {
-  children: ReactNode;
+  children: React.ReactNode;
   clearSearchTerm: () => void;
   unfilteredItems: unknown[];
 };

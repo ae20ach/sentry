@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import {DataScrubbingRelayPiiConfigFixture} from 'sentry-fixture/dataScrubbingRelayPiiConfig';
 import {EventFixture} from 'sentry-fixture/event';
 import {EventEntryStacktraceFixture} from 'sentry-fixture/eventEntryStacktrace';
@@ -49,7 +48,7 @@ function makeStackTraceData(): {
   };
 }
 
-type TestStackTraceProviderProps = ComponentProps<typeof StackTraceProvider> &
+type TestStackTraceProviderProps = React.ComponentProps<typeof StackTraceProvider> &
   Pick<
     StackTraceViewStateProviderProps,
     'defaultIsMinified' | 'defaultIsNewestFirst' | 'defaultView'

@@ -1,5 +1,3 @@
-import type {PropsWithChildren} from 'react';
-
 import {render, screen} from 'sentry-test/reactTestingLibrary';
 
 import EmailVerificationModal from 'sentry/components/modals/emailVerificationModal';
@@ -13,8 +11,8 @@ describe('Email Verification Modal', () => {
 
     render(
       <EmailVerificationModal
-        Body={((p: PropsWithChildren) => p.children) as any}
-        Header={((p: PropsWithChildren) => p.children) as any}
+        Body={((p: React.PropsWithChildren) => p.children) as any}
+        Header={((p: React.PropsWithChildren) => p.children) as any}
       />
     );
     const message = screen.getByText(

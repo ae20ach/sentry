@@ -1,4 +1,3 @@
-import type {MouseEvent} from 'react';
 import styled from '@emotion/styled';
 
 import {Tooltip} from '@sentry/scraps/tooltip';
@@ -16,7 +15,7 @@ type Props = {
   startTimestampMs: number;
   timestampMs: number;
   className?: string;
-  onClick?: (event: MouseEvent) => void;
+  onClick?: (event: React.MouseEvent) => void;
   precision?: 'sec' | 'ms';
 };
 

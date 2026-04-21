@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import {css} from '@emotion/react';
 import styled from '@emotion/styled';
 
@@ -14,11 +13,11 @@ export const StyledPanel = styled(Panel)`
   overflow: hidden;
 `;
 
-interface StyledPanelHeaderProps extends ComponentProps<typeof PanelHeader> {
-  justify: ComponentProps<typeof Flex>['justify'];
+interface StyledPanelHeaderProps extends React.ComponentProps<typeof PanelHeader> {
+  justify: React.ComponentProps<typeof Flex>['justify'];
   children?: React.ReactNode;
   lightText?: boolean;
-  radius?: ComponentProps<typeof Flex>['radius'];
+  radius?: React.ComponentProps<typeof Flex>['radius'];
 }
 
 export function StyledPanelHeader({

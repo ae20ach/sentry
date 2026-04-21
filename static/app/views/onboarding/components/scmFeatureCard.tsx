@@ -1,5 +1,3 @@
-import type {ComponentType, ReactNode} from 'react';
-
 import {Checkbox} from '@sentry/scraps/checkbox';
 import {Container, Flex, Grid} from '@sentry/scraps/layout';
 import {Text} from '@sentry/scraps/text';
@@ -12,12 +10,12 @@ import {ScmSelectableContainer} from './scmSelectableContainer';
 
 interface ScmFeatureCardProps {
   description: string;
-  icon: ComponentType<SVGIconProps>;
+  icon: React.ComponentType<SVGIconProps>;
   isSelected: boolean;
   label: string;
   onClick: () => void;
   disabled?: boolean;
-  disabledReason?: ReactNode;
+  disabledReason?: React.ReactNode;
 }
 
 export function ScmFeatureCard({

@@ -1,12 +1,4 @@
-import {
-  createContext,
-  Fragment,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import {createContext, Fragment, useContext, useEffect, useRef, useState} from 'react';
 import type {To} from 'react-router-dom';
 import {
   closestCenter,
@@ -80,7 +72,7 @@ import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFea
 const MotionContainer = motion.create(Container);
 
 interface SecondarySidebarProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 function SecondarySidebar({children}: SecondarySidebarProps) {
@@ -224,7 +216,7 @@ const ResizeHandle = styled('div')<{atMaxWidth: boolean; atMinWidth: boolean}>`
 `;
 
 interface SecondaryNavigationListProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 function SecondaryNavigationList(props: SecondaryNavigationListProps) {
@@ -237,7 +229,7 @@ function SecondaryNavigationList(props: SecondaryNavigationListProps) {
 }
 
 interface SecondaryNavigationListItemProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 function SecondaryNavigationListItem(props: SecondaryNavigationListItemProps) {
@@ -249,7 +241,7 @@ function SecondaryNavigationListItem(props: SecondaryNavigationListItemProps) {
 }
 
 interface SecondaryNavigationItemProps extends Omit<LinkProps, 'ref' | 'to'> {
-  children: ReactNode;
+  children: React.ReactNode;
   to: To;
   /**
    * Will display the link as active under the given path.
@@ -262,13 +254,13 @@ interface SecondaryNavigationItemProps extends Omit<LinkProps, 'ref' | 'to'> {
    */
   end?: boolean;
   isActive?: boolean;
-  leadingItems?: ReactNode;
+  leadingItems?: React.ReactNode;
   showInteractionStateLayer?: boolean;
-  trailingItems?: ReactNode;
+  trailingItems?: React.ReactNode;
 }
 
 interface SecondaryNavigationHeaderProps {
-  children?: ReactNode;
+  children?: React.ReactNode;
 }
 
 function SecondaryNavigationHeader(props: SecondaryNavigationHeaderProps) {
@@ -330,7 +322,7 @@ function SecondaryNavigationHeader(props: SecondaryNavigationHeaderProps) {
 }
 
 interface SecondaryNavigationBodyProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 function SecondaryNavigationBody(props: SecondaryNavigationBodyProps) {
@@ -349,10 +341,10 @@ function SecondaryNavigationBody(props: SecondaryNavigationBodyProps) {
 
 interface SectionTitleProps {
   canCollapse: boolean;
-  children: ReactNode;
+  children: React.ReactNode;
   isCollapsed: boolean;
   setIsCollapsed: (isCollapsed: boolean) => void;
-  trailingItems?: ReactNode;
+  trailingItems?: React.ReactNode;
 }
 
 function SectionTitle(props: SectionTitleProps) {
@@ -401,11 +393,11 @@ function SectionTitle(props: SectionTitleProps) {
 }
 
 interface SecondaryNavigationSectionProps {
-  children: ReactNode;
+  children: React.ReactNode;
   id: string;
   collapsible?: boolean;
-  title?: ReactNode;
-  trailingItems?: ReactNode;
+  title?: React.ReactNode;
+  trailingItems?: React.ReactNode;
 }
 
 function SecondaryNavigationSection(props: SecondaryNavigationSectionProps) {
@@ -784,7 +776,7 @@ function useReorderableItemContext() {
 }
 
 interface ReorderableListItemProps<T extends {id: string | number}> {
-  children: ReactNode;
+  children: React.ReactNode;
   item: T;
 }
 
@@ -826,7 +818,7 @@ function ReorderableListItem<T extends {id: string | number}>(
 }
 
 interface SecondaryNavigationReorderableListProps<T extends {id: string | number}> {
-  children: (item: T) => ReactNode;
+  children: (item: T) => React.ReactNode;
   items: T[];
   onDragEnd: (items: T[]) => void;
 }
@@ -894,7 +886,7 @@ interface SecondaryNavigationReorderableLinkProps extends Omit<
   SecondaryNavigationItemProps,
   'leadingItems' | 'onClick'
 > {
-  icon: ReactNode;
+  icon: React.ReactNode;
   onNavigate?: () => void;
 }
 

@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {Fragment, useCallback, useEffect, useMemo, useState} from 'react';
 import styled from '@emotion/styled';
 import debounce from 'lodash/debounce';
@@ -35,7 +34,7 @@ interface MetricSelectOption {
   label: string;
   metricName: string;
   metricType: TraceMetricTypeValue;
-  trailingItems: ReactNode;
+  trailingItems: React.ReactNode;
   value: string;
   metricUnit?: string;
 }

@@ -1,4 +1,4 @@
-import {useState, type ReactNode} from 'react';
+import {useState} from 'react';
 import {OrganizationFixture} from 'sentry-fixture/organization';
 
 import {
@@ -38,7 +38,7 @@ function createWrapper(options: WrapperOptions = {}) {
     aggregateSortBys: [{field: 'sum(value,test_metric,distribution,-)', kind: 'desc'}],
   });
 
-  return function Wrapper({children}: {children: ReactNode}) {
+  return function Wrapper({children}: {children: React.ReactNode}) {
     const [stateQueryParams, setStateQueryParams] = useState(
       options.queryParams ?? defaultQueryParams
     );

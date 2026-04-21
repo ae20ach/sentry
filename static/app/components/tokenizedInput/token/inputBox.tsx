@@ -1,11 +1,3 @@
-import type {
-  ChangeEventHandler,
-  ClipboardEventHandler,
-  FocusEventHandler,
-  KeyboardEventHandler,
-  MouseEventHandler,
-  Ref,
-} from 'react';
 import {useCallback, useRef} from 'react';
 import styled from '@emotion/styled';
 import {useTextField} from '@react-aria/textfield';
@@ -19,17 +11,17 @@ interface InputBoxProps {
   inputLabel: string;
   inputValue: string;
   ['data-test-id']?: string;
-  onClick?: MouseEventHandler<HTMLInputElement>;
-  onInputBlur?: FocusEventHandler<HTMLInputElement>;
-  onInputChange?: ChangeEventHandler<HTMLInputElement>;
+  onClick?: React.MouseEventHandler<HTMLInputElement>;
+  onInputBlur?: React.FocusEventHandler<HTMLInputElement>;
+  onInputChange?: React.ChangeEventHandler<HTMLInputElement>;
   onInputCommit?: (value: string) => void;
   onInputEscape?: () => void;
-  onInputFocus?: FocusEventHandler<HTMLInputElement>;
+  onInputFocus?: React.FocusEventHandler<HTMLInputElement>;
   onKeyDown?: (evt: KeyboardEvent) => void;
-  onKeyDownCapture?: KeyboardEventHandler<HTMLInputElement>;
-  onPaste?: ClipboardEventHandler<HTMLInputElement>;
+  onKeyDownCapture?: React.KeyboardEventHandler<HTMLInputElement>;
+  onPaste?: React.ClipboardEventHandler<HTMLInputElement>;
   placeholder?: string;
-  ref?: Ref<HTMLInputElement>;
+  ref?: React.Ref<HTMLInputElement>;
   tabIndex?: number;
 }
 
@@ -71,14 +63,14 @@ export function InputBox({
     [inputValue, onInputCommit, onInputEscape, onKeyDown]
   );
 
-  const handleInputBlur: FocusEventHandler<HTMLInputElement> = useCallback(
+  const handleInputBlur: React.FocusEventHandler<HTMLInputElement> = useCallback(
     evt => {
       onInputBlur?.(evt);
     },
     [onInputBlur]
   );
 
-  const handleInputFocus: FocusEventHandler<HTMLInputElement> = useCallback(
+  const handleInputFocus: React.FocusEventHandler<HTMLInputElement> = useCallback(
     evt => {
       onInputFocus?.(evt);
     },
@@ -98,7 +90,7 @@ export function InputBox({
     inputRef
   );
 
-  const handleInputClick: MouseEventHandler<HTMLInputElement> = useCallback(
+  const handleInputClick: React.MouseEventHandler<HTMLInputElement> = useCallback(
     evt => {
       evt.stopPropagation();
       inputProps.onClick?.(evt);

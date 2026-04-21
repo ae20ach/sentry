@@ -1,4 +1,4 @@
-import {useRef, type Ref} from 'react';
+import {useRef} from 'react';
 
 import {useAutoSaveContext} from '@sentry/scraps/form/autoSaveContext';
 import {Container, Flex} from '@sentry/scraps/layout';
@@ -14,7 +14,10 @@ function SelectInput({
   selectProps,
   ...props
 }: React.ComponentProps<typeof components.Input> & {
-  selectProps?: {'aria-invalid'?: boolean; inputRef?: Ref<{input: HTMLInputElement}>};
+  selectProps?: {
+    'aria-invalid'?: boolean;
+    inputRef?: React.Ref<{input: HTMLInputElement}>;
+  };
 }) {
   return (
     <components.Input
@@ -100,7 +103,7 @@ export type SelectFieldProps<TValue> =
 // This converts the `ref` value of SelectInput into a format
 // that works for BaseField, which expects `fieldProps.ref: Ref<HTMLElement>`
 const applyInputToRef =
-  (ref: Ref<HTMLInputElement>) =>
+  (ref: React.Ref<HTMLInputElement>) =>
   (instance: null | {input: HTMLInputElement}): void => {
     if (instance) {
       if (typeof ref === 'function') {

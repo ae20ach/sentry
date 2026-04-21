@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import {OrganizationFixture} from 'sentry-fixture/organization';
 import {ProjectFixture} from 'sentry-fixture/project';
 import {TeamFixture} from 'sentry-fixture/team';
@@ -9,7 +8,7 @@ import {act, render, screen} from 'sentry-test/reactTestingLibrary';
 import TrialStarter from 'getsentry/components/trialStarter';
 import {SubscriptionStore} from 'getsentry/stores/subscriptionStore';
 
-type RendererProps = Parameters<ComponentProps<typeof TrialStarter>['children']>[0];
+type RendererProps = Parameters<React.ComponentProps<typeof TrialStarter>['children']>[0];
 
 describe('TrialStarter', () => {
   const org = OrganizationFixture();

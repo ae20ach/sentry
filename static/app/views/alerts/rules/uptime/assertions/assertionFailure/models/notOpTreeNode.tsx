@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {NotOpRow} from 'sentry/views/alerts/rules/uptime/assertions/assertionFailure/rows/notOpRow';
 import type {UptimeNotOp} from 'sentry/views/alerts/rules/uptime/types';
 
@@ -14,7 +12,7 @@ export class NotOpTreeNode extends TreeNode<UptimeNotOp> {
     return `NOT - ${this.id}`;
   }
 
-  renderRow(): ReactNode {
+  renderRow(): React.ReactNode {
     return <NotOpRow />;
   }
 }

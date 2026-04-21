@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {Fragment, useCallback, useEffect, useMemo, useState} from 'react';
 import type {Theme} from '@emotion/react';
 import {useTheme} from '@emotion/react';
@@ -53,7 +52,7 @@ interface FunctionTrendsWidgetProps {
   trendFunction: 'p50()' | 'p75()' | 'p95()' | 'p99()';
   trendType: TrendType;
   cursorName?: string;
-  header?: ReactNode;
+  header?: React.ReactNode;
   onDataState?: (dataState: DataState) => void;
   userQuery?: string;
   widgetHeight?: string;
@@ -196,7 +195,7 @@ export function FunctionTrendsWidget({
 
 interface FunctionTrendsWidgetHeaderProps {
   handleCursor: CursorHandler;
-  header: ReactNode;
+  header: React.ReactNode;
   pageLinks: string | null;
   paginationAnalyticsEvent: (direction: string) => void;
   trendType: TrendType;

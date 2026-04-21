@@ -1,4 +1,3 @@
-import type {ReactEventHandler} from 'react';
 import {useState} from 'react';
 import {css} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -37,8 +36,8 @@ type Props = {
   screenshot: EventAttachment;
   screenshotInFocus: number;
   totalScreenshots: number;
-  onNext?: ReactEventHandler;
-  onPrevious?: ReactEventHandler;
+  onNext?: React.ReactEventHandler;
+  onPrevious?: React.ReactEventHandler;
   onlyRenderScreenshot?: boolean;
 };
 

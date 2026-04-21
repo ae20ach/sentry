@@ -1,4 +1,3 @@
-import type {CSSProperties} from 'react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import styled from '@emotion/styled';
 import {vec2} from 'gl-matrix';
@@ -836,8 +835,8 @@ function FlamegraphZoomView({
 }
 
 const Canvas = styled('canvas')<{
-  cursor?: CSSProperties['cursor'];
-  pointerEvents?: CSSProperties['pointerEvents'];
+  cursor?: React.CSSProperties['cursor'];
+  pointerEvents?: React.CSSProperties['pointerEvents'];
 }>`
   left: 0;
   top: 0;

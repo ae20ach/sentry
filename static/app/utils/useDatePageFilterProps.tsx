@@ -1,4 +1,4 @@
-import {useMemo, type ReactNode} from 'react';
+import {useMemo} from 'react';
 
 import type {SelectOptionWithKey} from '@sentry/scraps/compactSelect';
 
@@ -17,7 +17,7 @@ export function useDatePageFilterProps({
 }: UseDatePageFilterPropsProps): DatePageFilterProps {
   return useMemo(() => {
     // ensure the available relative options are always sorted
-    const availableRelativeOptions: Array<[number, string, ReactNode]> = [
+    const availableRelativeOptions: Array<[number, string, React.ReactNode]> = [
       [1 / 24, '1h', t('Last hour')],
       [1, '24h', t('Last 24 hours')],
       [7, '7d', t('Last 7 days')],

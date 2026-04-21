@@ -1,4 +1,4 @@
-import {Component, Fragment, type ComponentProps} from 'react';
+import {Component, Fragment} from 'react';
 import styled from '@emotion/styled';
 import type {Location} from 'history';
 
@@ -251,7 +251,7 @@ const Subtitle = styled('h4')`
 const ResultsHeaderWithApi = withApi(ResultsHeader);
 
 type ResultsHeaderWrapperProps = Omit<
-  ComponentProps<typeof ResultsHeaderWithApi>,
+  React.ComponentProps<typeof ResultsHeaderWithApi>,
   'hasPageFrameFeature'
 >;
 

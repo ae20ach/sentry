@@ -1,4 +1,3 @@
-import type {ComponentPropsWithoutRef} from 'react';
 import styled from '@emotion/styled';
 
 import {InputGroup} from '@sentry/scraps/input';
@@ -56,7 +55,7 @@ const EventDrawerContainerRoot = styled('div')<{hasPageFrameFeature: boolean}>`
     `}
 `;
 
-export function EventDrawerContainer(props: ComponentPropsWithoutRef<'div'>) {
+export function EventDrawerContainer(props: React.ComponentPropsWithoutRef<'div'>) {
   const hasPageFrameFeature = useHasPageFrameFeature();
 
   return (

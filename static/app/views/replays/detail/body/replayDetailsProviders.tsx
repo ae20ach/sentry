@@ -1,4 +1,4 @@
-import {useEffect, type ReactNode} from 'react';
+import {useEffect} from 'react';
 import {useQuery} from '@tanstack/react-query';
 
 import {LocalStorageReplayPreferences} from 'sentry/components/replays/preferences/replayPreferences';
@@ -23,7 +23,7 @@ import {ReplaySummaryContextProvider} from 'sentry/views/replays/detail/ai/repla
 import {type ReplayListQueryReferrer} from 'sentry/views/replays/types';
 
 interface Props {
-  children: ReactNode;
+  children: React.ReactNode;
   projectSlug: string | null;
   replay: ReplayReader;
 }

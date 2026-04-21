@@ -1,4 +1,3 @@
-import type {CSSProperties, ReactNode} from 'react';
 import {Fragment, useCallback, useEffect, useRef} from 'react';
 
 import InteractionStateLayer from '@sentry/scraps/interactionStateLayer';
@@ -65,7 +64,7 @@ type GridEditableProps<
    * in these buttons and updating props to the GridEditable instance.
    */
   headerButtons?: () => React.ReactNode;
-  height?: CSSProperties['height'];
+  height?: React.CSSProperties['height'];
 
   highlightedRowKey?: number;
 
@@ -94,7 +93,7 @@ type GridEditableProps<
    * - `columnSortBy` is not used at the moment, however it might be better to
    *   move sorting into Grid for performance
    */
-  title?: ReactNode;
+  title?: React.ReactNode;
 };
 
 export function GridEditable<

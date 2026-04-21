@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {createContext, useCallback, useContext, useMemo, useReducer, useRef} from 'react';
 import isEqual from 'lodash/isEqual';
 
@@ -35,7 +34,7 @@ interface IssueSelectionActions {
 }
 
 type IssueSelectionProviderProps = {
-  children: ReactNode;
+  children: React.ReactNode;
   visibleGroupIds: string[];
 };
 

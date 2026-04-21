@@ -1,4 +1,4 @@
-import {Fragment, type ReactNode} from 'react';
+import {Fragment} from 'react';
 import orderBy from 'lodash/orderBy';
 
 import {Flex} from '@sentry/scraps/layout';
@@ -39,7 +39,7 @@ function getOpenPeriodActivityLabel(
 
 function getOpenPeriodActivitySubtext(
   activity: GroupOpenPeriod['activities'][number]
-): ReactNode {
+): React.ReactNode {
   const priority = activity.value;
 
   if (!priority) {
@@ -66,7 +66,7 @@ function getOpenPeriodActivityIcon(activity: GroupOpenPeriod['activities'][numbe
   }
 }
 
-function TimelineSection({children}: {children: ReactNode}) {
+function TimelineSection({children}: {children: React.ReactNode}) {
   return (
     <InterimSection title={t('Timeline')} type="timeline">
       {children}

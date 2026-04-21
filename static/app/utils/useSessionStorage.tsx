@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useState, type SetStateAction} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 
 import {sessionStorageWrapper} from 'sentry/utils/sessionStorage';
 
@@ -26,7 +26,7 @@ export function readStorageValue(key: string, initialValue: unknown) {
 export function useSessionStorage<T>(
   key: string,
   initialValue: T
-): [T, (value: SetStateAction<T>) => void, () => void] {
+): [T, (value: React.SetStateAction<T>) => void, () => void] {
   const [state, setState] = useState<T>(() => readStorageValue(key, initialValue));
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export function useSessionStorage<T>(
   }, [key]);
 
   const wrappedSetState = useCallback(
-    (valueOrUpdater: SetStateAction<T>) => {
+    (valueOrUpdater: React.SetStateAction<T>) => {
       setState(prev => {
         // Cast needed: TS can't narrow SetStateAction<T> via typeof when T
         // could itself be a function type.

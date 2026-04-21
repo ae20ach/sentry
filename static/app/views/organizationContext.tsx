@@ -1,4 +1,4 @@
-import {createContext, useEffect, useRef, type ReactNode} from 'react';
+import {createContext, useEffect, useRef} from 'react';
 import * as Sentry from '@sentry/react';
 
 import {switchOrganization} from 'sentry/actionCreators/organizations';
@@ -22,7 +22,7 @@ import {shutdownIntercom} from 'sentry/utils/intercom';
 import {useParams} from 'sentry/utils/useParams';
 
 interface Props {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 /**

@@ -1,4 +1,3 @@
-import type {ComponentProps, ReactNode} from 'react';
 import {ClassNames, useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
 
@@ -16,7 +15,7 @@ function Resource({
   link,
 }: {
   link: string;
-  subtitle: ReactNode;
+  subtitle: React.ReactNode;
   title: string;
 }) {
   const analyticsArea = useAnalyticsArea();
@@ -60,7 +59,7 @@ function Buttons() {
 }
 
 export function LearnMoreButton(
-  hoverCardProps: Partial<ComponentProps<typeof Hovercard>>
+  hoverCardProps: Partial<React.ComponentProps<typeof Hovercard>>
 ) {
   const theme = useTheme();
   return (

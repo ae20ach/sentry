@@ -1,4 +1,4 @@
-import {useState, type ReactElement} from 'react';
+import {useState} from 'react';
 import {OrganizationFixture} from 'sentry-fixture/organization';
 
 import {render, screen, userEvent, waitFor} from 'sentry-test/reactTestingLibrary';
@@ -18,7 +18,7 @@ describe('EAPField', () => {
   ];
   let fieldsMock: any;
 
-  function renderWithVisibilityFeature(ui: ReactElement) {
+  function renderWithVisibilityFeature(ui: React.ReactElement) {
     return render(ui, {organization});
   }
 

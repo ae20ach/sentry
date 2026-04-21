@@ -1,4 +1,4 @@
-import {useMemo, type ReactNode} from 'react';
+import {useMemo} from 'react';
 import styled from '@emotion/styled';
 
 import {Tag} from '@sentry/scraps/badge';
@@ -227,9 +227,9 @@ export function CodingAgentPreview({section}: ArtifactPreviewProps) {
 }
 
 interface ArtifactCardProps {
-  children: ReactNode;
-  icon: ReactNode;
-  title: ReactNode;
+  children: React.ReactNode;
+  icon: React.ReactNode;
+  title: React.ReactNode;
 }
 
 function ArtifactCard({children, icon, title}: ArtifactCardProps) {

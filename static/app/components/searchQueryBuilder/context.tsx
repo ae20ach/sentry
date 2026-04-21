@@ -6,7 +6,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type Dispatch,
 } from 'react';
 import * as Sentry from '@sentry/react';
 
@@ -47,7 +46,7 @@ interface SearchQueryBuilderContextData {
   disallowFreeText: boolean;
   disallowLogicalOperators: boolean;
   disallowWildcard: boolean;
-  dispatch: Dispatch<QueryBuilderActions>;
+  dispatch: React.Dispatch<QueryBuilderActions>;
   displayAskSeer: boolean;
   displayAskSeerFeedback: boolean;
   enableAISearch: boolean;

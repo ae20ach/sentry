@@ -1,5 +1,4 @@
 import {useCallback, useState} from 'react';
-import type {MouseEvent} from 'react';
 import styled from '@emotion/styled';
 
 import {addErrorMessage} from 'sentry/actionCreators/indicator';
@@ -32,7 +31,7 @@ export default function OrganizationJoinRequest() {
   }, []);
 
   const handleCancel = useCallback(
-    (e: MouseEvent) => {
+    (e: React.MouseEvent) => {
       e.preventDefault();
       testableWindowLocation.assign(`/auth/login/${orgId}/`);
     },

@@ -1,4 +1,4 @@
-import {useRef, type ReactNode} from 'react';
+import {useRef} from 'react';
 
 import {Button, type ButtonProps} from '@sentry/scraps/button';
 
@@ -8,7 +8,7 @@ import {t} from 'sentry/locale';
 import {useFeedbackForm} from 'sentry/utils/useFeedbackForm';
 
 interface Props extends Omit<ButtonProps, 'children'> {
-  children?: ReactNode;
+  children?: React.ReactNode;
   feedbackOptions?: UseFeedbackOptions;
 }
 

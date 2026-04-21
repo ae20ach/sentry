@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {OrganizationFixture} from 'sentry-fixture/organization';
 
 import {act, renderHookWithProviders, screen} from 'sentry-test/reactTestingLibrary';
@@ -31,7 +30,7 @@ function TestableMetricComponent() {
   );
 }
 
-function Wrapper({children}: {children: ReactNode}) {
+function Wrapper({children}: {children: React.ReactNode}) {
   const organization = useOrganization();
   const hasEquations = canUseMetricsEquations(organization);
   return (

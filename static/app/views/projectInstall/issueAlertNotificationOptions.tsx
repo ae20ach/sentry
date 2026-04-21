@@ -1,4 +1,4 @@
-import {Fragment, useCallback, useEffect, useMemo, useState, type ReactNode} from 'react';
+import {Fragment, useCallback, useEffect, useMemo, useState} from 'react';
 
 import {Stack} from '@sentry/scraps/layout';
 
@@ -66,7 +66,7 @@ export const enum MultipleCheckboxOptions {
 }
 
 export type IntegrationChannel = {
-  label: ReactNode;
+  label: React.ReactNode;
   value: string;
   new?: boolean;
 };

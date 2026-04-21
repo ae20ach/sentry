@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useRef, type ReactNode} from 'react';
+import {useCallback, useEffect, useRef} from 'react';
 import styled from '@emotion/styled';
 import {mergeRefs} from '@react-aria/utils';
 
@@ -10,7 +10,7 @@ import {useNavigate} from 'sentry/utils/useNavigate';
 
 interface SeerDrawerBody {
   aiAutofix: ReturnType<typeof useAiAutofix>;
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export function SeerDrawerBody({children, aiAutofix}: SeerDrawerBody) {

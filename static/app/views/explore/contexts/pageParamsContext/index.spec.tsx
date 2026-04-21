@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {act, render} from 'sentry-test/reactTestingLibrary';
 
 import {Mode} from 'sentry/views/explore/contexts/pageParamsContext/mode';
@@ -23,7 +21,7 @@ import {VisualizeFunction} from 'sentry/views/explore/queryParams/visualize';
 import {SpansQueryParamsProvider} from 'sentry/views/explore/spans/spansQueryParamsProvider';
 import {ChartType} from 'sentry/views/insights/common/components/chart';
 
-function Wrapper({children}: {children: ReactNode}) {
+function Wrapper({children}: {children: React.ReactNode}) {
   return <SpansQueryParamsProvider>{children}</SpansQueryParamsProvider>;
 }
 

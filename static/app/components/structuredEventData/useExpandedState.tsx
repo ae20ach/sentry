@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {createContext, useCallback, useContext, useMemo, useRef} from 'react';
 
 import {uniq} from 'sentry/utils/array/uniq';
@@ -16,7 +15,7 @@ const Context = createContext<{
 });
 
 interface Props {
-  children: ReactNode;
+  children: React.ReactNode;
   initialExpandedPaths: () => string[];
   onToggleExpand?: (expandedPaths: string[], path: string, state: State) => void;
 }

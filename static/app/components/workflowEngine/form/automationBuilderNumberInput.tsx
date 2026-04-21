@@ -1,9 +1,10 @@
-import type {ComponentProps} from 'react';
 import styled from '@emotion/styled';
 
 import {NumberInput} from '@sentry/scraps/input';
 
-export function AutomationBuilderNumberInput(props: ComponentProps<typeof NumberInput>) {
+export function AutomationBuilderNumberInput(
+  props: React.ComponentProps<typeof NumberInput>
+) {
   return <InlineNumberInput min={0} {...props} />;
 }
 

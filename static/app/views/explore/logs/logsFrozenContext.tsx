@@ -1,4 +1,3 @@
-import type {ReactNode, ReactPortal} from 'react';
 import {useMemo} from 'react';
 
 import {ALL_ACCESS_PROJECTS} from 'sentry/components/pageFilters/constants';
@@ -55,23 +54,23 @@ export type LogsFrozenContextProviderProps =
   | LogsNotFrozenProviderProps;
 
 interface LogsFrozenForTracesProviderWithChildrenProps
-  extends ReactPortal, LogsFrozenForTracesProviderProps {}
+  extends React.ReactPortal, LogsFrozenForTracesProviderProps {}
 
 interface LogsFrozenForTraceProviderWithChildrenProps
-  extends ReactPortal, LogsFrozenForTraceProviderProps {}
+  extends React.ReactPortal, LogsFrozenForTraceProviderProps {}
 
 interface LogsFrozenForSpanProviderWithChildrenProps
-  extends ReactPortal, LogsFrozenForSpanProviderProps {}
+  extends React.ReactPortal, LogsFrozenForSpanProviderProps {}
 
 interface LogsFrozenForReplayProviderWithChildrenProps
-  extends ReactPortal, LogsFrozenForReplayProviderProps {}
+  extends React.ReactPortal, LogsFrozenForReplayProviderProps {}
 
 type LogsFrozenContextProviderWithChildrenProps =
   | LogsFrozenForTracesProviderWithChildrenProps
   | LogsFrozenForTraceProviderWithChildrenProps
   | LogsFrozenForSpanProviderWithChildrenProps
   | LogsFrozenForReplayProviderWithChildrenProps
-  | {children: ReactNode};
+  | {children: React.ReactNode};
 
 function isLogsFrozenForTracesProviderWithChildrenProps(
   value: LogsFrozenContextProviderWithChildrenProps

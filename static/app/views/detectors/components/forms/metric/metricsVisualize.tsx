@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {Fragment, useCallback, useContext, useEffect, useMemo, useState} from 'react';
 import styled from '@emotion/styled';
 import debounce from 'lodash/debounce';
@@ -38,7 +37,7 @@ import {makeMetricsAggregate} from 'sentry/views/explore/metrics/utils';
 interface MetricSelectOption extends SelectOption<string> {
   metricName: string;
   metricType: TraceMetricTypeValue;
-  trailingItems: ReactNode;
+  trailingItems: React.ReactNode;
   metricUnit?: string;
 }
 

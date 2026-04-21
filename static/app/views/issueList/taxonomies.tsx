@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {t} from 'sentry/locale';
 import {IssueCategory} from 'sentry/types/group';
 
@@ -14,7 +12,7 @@ export const ISSUE_TAXONOMY_CONFIG: Record<
   IssueTaxonomy,
   {
     categories: IssueCategory[];
-    description: ReactNode;
+    description: React.ReactNode;
     key: string;
     label: string;
     featureFlag?: string;

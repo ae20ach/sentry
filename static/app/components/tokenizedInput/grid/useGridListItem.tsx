@@ -1,4 +1,3 @@
-import type {FocusEvent, RefObject} from 'react';
 import {useCallback, useMemo} from 'react';
 import {useGridListItem as useGridListItemAria} from '@react-aria/gridlist';
 import type {ListState} from '@react-stately/list';
@@ -9,7 +8,7 @@ import {shiftFocusToChild} from 'sentry/components/tokenizedInput/token/utils';
 interface UseGridListItemOptions<T> {
   focusable: boolean;
   item: Node<T>;
-  ref: RefObject<HTMLDivElement | null>;
+  ref: React.RefObject<HTMLDivElement | null>;
   state: ListState<T>;
 }
 
@@ -22,7 +21,7 @@ export function useGridListItem<T>({
   const {rowProps, gridCellProps} = useGridListItemAria({node: item}, state, ref);
 
   const onFocus = useCallback(
-    (evt: FocusEvent<HTMLDivElement>) => {
+    (evt: React.FocusEvent<HTMLDivElement>) => {
       if (focusable) {
         shiftFocusToChild(evt.currentTarget, item, state);
       }

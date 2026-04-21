@@ -1,5 +1,3 @@
-import type {ComponentProps} from 'react';
-
 import {CompactSelect} from '@sentry/scraps/compactSelect';
 import {OverlayTrigger} from '@sentry/scraps/overlayTrigger';
 
@@ -15,7 +13,7 @@ import {ModuleName} from 'sentry/views/insights/types';
 interface Props {
   clearSpansTableCursor?: boolean;
   moduleName?: ModuleName;
-  size?: ComponentProps<typeof CompactSelect>['size'];
+  size?: React.ComponentProps<typeof CompactSelect>['size'];
 }
 
 export function DeviceClassSelector({

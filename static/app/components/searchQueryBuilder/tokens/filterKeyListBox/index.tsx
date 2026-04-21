@@ -1,4 +1,4 @@
-import {Fragment, useEffect, useMemo, useRef, type ReactNode} from 'react';
+import {Fragment, useEffect, useMemo, useRef} from 'react';
 import {createPortal} from 'react-dom';
 import {css} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -56,7 +56,7 @@ function ListBoxSectionButton({
   selected,
   children,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   onClick: () => void;
   selected: boolean;
 }) {

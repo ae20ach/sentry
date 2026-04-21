@@ -1,4 +1,4 @@
-import {useMemo, type ReactNode} from 'react';
+import {useMemo} from 'react';
 
 import {Flex, Stack} from '@sentry/scraps/layout';
 import {Heading, Text} from '@sentry/scraps/text';
@@ -27,7 +27,7 @@ interface ComparisonMetric {
   base: number;
   diff: number;
   head: number;
-  icon: ReactNode;
+  icon: React.ReactNode;
   key: string;
   labelTooltip: string;
   percentageChange: number;

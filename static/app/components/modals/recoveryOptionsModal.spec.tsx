@@ -1,4 +1,3 @@
-import type {PropsWithChildren} from 'react';
 import styled from '@emotion/styled';
 import {
   AllAuthenticatorsFixture,
@@ -24,7 +23,7 @@ describe('RecoveryOptionsModal', () => {
   });
 
   function renderComponent() {
-    const styledWrapper = styled((c: PropsWithChildren) => c.children);
+    const styledWrapper = styled((c: React.PropsWithChildren) => c.children);
 
     render(
       <RecoveryOptionsModal

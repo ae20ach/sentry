@@ -1,4 +1,3 @@
-import type {MouseEventHandler} from 'react';
 import styled from '@emotion/styled';
 
 import {Alert} from '@sentry/scraps/alert';
@@ -18,7 +17,7 @@ export function NewSecretHandler({
   provider,
   onGoBack,
 }: {
-  onGoBack: MouseEventHandler;
+  onGoBack: React.MouseEventHandler;
   provider: string;
   secret: string;
 }) {

@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {defaultLogFields} from 'sentry/views/explore/contexts/logs/fields';
 import {defaultSortBys} from 'sentry/views/explore/contexts/pageParamsContext/sortBys';
 import {ExploreStateQueryParamsProvider} from 'sentry/views/explore/exploreStateQueryParamsProvider';
@@ -11,7 +9,7 @@ import {defaultGroupBys} from 'sentry/views/explore/queryParams/groupBy';
 import type {ReadableQueryParamsOptions} from 'sentry/views/explore/queryParams/readableQueryParams';
 
 interface LogsStateQueryParamsProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
   frozenParams?: Partial<ReadableQueryParamsOptions>;
 }
 

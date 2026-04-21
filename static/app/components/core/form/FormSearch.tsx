@@ -1,7 +1,5 @@
-import type {ReactNode} from 'react';
-
 interface FormSearchProps {
-  children: ReactNode;
+  children: React.ReactNode;
   /**
    * Route pattern for SettingsSearch (e.g., '/settings/account/details/').
    * This prop is used by the static extraction script to associate

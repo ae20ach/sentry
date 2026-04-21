@@ -1,11 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
+import {createContext, useCallback, useContext, useMemo, useState} from 'react';
 
 import {useHotkeys} from '@sentry/scraps/hotkey';
 
@@ -29,7 +22,7 @@ const SeerExplorerContext = createContext<SeerExplorerContextValue>({
   toggleSeerExplorer: () => {},
 });
 
-export function SeerExplorerContextProvider({children}: {children: ReactNode}) {
+export function SeerExplorerContextProvider({children}: {children: React.ReactNode}) {
   // Initialize the global explorer panel state. Includes hotkeys.
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);

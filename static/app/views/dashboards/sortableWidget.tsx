@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState, type ComponentProps} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import styled from '@emotion/styled';
 import cloneDeep from 'lodash/cloneDeep';
 
@@ -124,7 +124,7 @@ export function SortableWidget(props: Props) {
     setTableWidths(widths);
   };
 
-  const widgetProps: ComponentProps<typeof WidgetCard> = {
+  const widgetProps: React.ComponentProps<typeof WidgetCard> = {
     widget: {...widget, queries: queries ?? widget.queries, tableWidths},
     isEditingDashboard,
     widgetLimitReached,

@@ -1,5 +1,3 @@
-import type {Dispatch, SetStateAction} from 'react';
-
 import {InputGroup} from '@sentry/scraps/input';
 
 import {IconSearch} from 'sentry/icons';
@@ -7,7 +5,7 @@ import {t} from 'sentry/locale';
 
 interface Props {
   includeFeatureFlagsTab: boolean;
-  onChange: Dispatch<SetStateAction<string>>;
+  onChange: React.Dispatch<React.SetStateAction<string>>;
   search: string;
 }
 

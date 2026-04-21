@@ -1,5 +1,3 @@
-import type {ComponentProps, CSSProperties} from 'react';
-
 import {ExternalLink} from '@sentry/scraps/link';
 import type {Tooltip} from '@sentry/scraps/tooltip';
 
@@ -12,14 +10,14 @@ type Props = {
   handleSort: ReturnType<typeof useSortNetwork>['handleSort'];
   index: number;
   sortConfig: SortConfig;
-  style: CSSProperties;
+  style: React.CSSProperties;
   ref?: React.Ref<HTMLButtonElement>;
 };
 
 const COLUMNS: Array<{
   field: SortConfig['by'];
   label: string;
-  tooltipTitle?: ComponentProps<typeof Tooltip>['title'];
+  tooltipTitle?: React.ComponentProps<typeof Tooltip>['title'];
 }> = [
   {field: 'method', label: t('Method')},
   {

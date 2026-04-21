@@ -1,4 +1,3 @@
-import type {ReactElement} from 'react';
 import {Fragment, useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import * as Sentry from '@sentry/react';
 import type {mat3} from 'gl-matrix';
@@ -46,7 +45,7 @@ interface AggregateFlamegraphProps {
   status: QueryStatus;
 }
 
-export function AggregateFlamegraph(props: AggregateFlamegraphProps): ReactElement {
+export function AggregateFlamegraph(props: AggregateFlamegraphProps): React.ReactElement {
   const dispatch = useDispatchFlamegraphState();
 
   const flamegraph = useFlamegraph();

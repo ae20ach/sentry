@@ -1,4 +1,4 @@
-import {Fragment, lazy, Suspense, type ReactNode} from 'react';
+import {Fragment, lazy, Suspense} from 'react';
 import {css} from '@emotion/react';
 
 import {Button, type ButtonProps} from '@sentry/scraps/button';
@@ -16,7 +16,7 @@ const LazyComparisonModal = lazy(
 );
 
 interface Props {
-  children: ReactNode;
+  children: React.ReactNode;
   frameOrEvent: HydrationErrorFrame | Event;
   initialLeftOffsetMs: number;
   initialRightOffsetMs: number;

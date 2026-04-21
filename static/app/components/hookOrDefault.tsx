@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import {lazy, Suspense, useEffect, useState} from 'react';
 
 import {HookStore} from 'sentry/stores/hookStore';
@@ -47,8 +46,8 @@ export function HookOrDefault<H extends HookName>({
   hookName,
   defaultComponent,
   defaultComponentPromise,
-}: Params<H>): React.FunctionComponent<ComponentProps<ReturnType<Hooks[H]>>> {
-  type Props = ComponentProps<ReturnType<Hooks[H]>>;
+}: Params<H>): React.FunctionComponent<React.ComponentProps<ReturnType<Hooks[H]>>> {
+  type Props = React.ComponentProps<ReturnType<Hooks[H]>>;
 
   // Defining the props here is unnecessary and slow for typescript
   function getDefaultComponent(): React.ComponentType<any> | undefined {

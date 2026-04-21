@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import {Fragment, useState} from 'react';
 import {css} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -80,7 +79,7 @@ export function ScreenshotModal({
 
   const {dateCreated, size, mimetype} = currentEventAttachment;
 
-  let paginationProps: ComponentProps<typeof ScreenshotPagination> | null = null;
+  let paginationProps: React.ComponentProps<typeof ScreenshotPagination> | null = null;
   if (screenshots.length > 1 && defined(currentAttachmentIndex)) {
     paginationProps = {
       previousDisabled: currentAttachmentIndex === 0,

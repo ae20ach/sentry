@@ -1,11 +1,4 @@
-import {
-  Fragment,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type RefCallback,
-} from 'react';
+import {Fragment, useCallback, useEffect, useMemo, useState} from 'react';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
 import isEqual from 'lodash/isEqual';
@@ -213,7 +206,7 @@ function WidgetBuilderSlideoutInner({
     [setIsPreviewDraggable]
   );
 
-  const observeForDraggablePreview = useCallback<RefCallback<HTMLDivElement>>(
+  const observeForDraggablePreview = useCallback<React.RefCallback<HTMLDivElement>>(
     elem => {
       if (elem) {
         observer.observe(elem);

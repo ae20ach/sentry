@@ -1,4 +1,4 @@
-import {Fragment, useState, type ReactNode} from 'react';
+import {Fragment, useState} from 'react';
 import {ClassNames} from '@emotion/react';
 import {useInfiniteQuery} from '@tanstack/react-query';
 
@@ -18,7 +18,7 @@ import {useOrganization} from 'sentry/utils/useOrganization';
 import {useSessionStorage} from 'sentry/utils/useSessionStorage';
 
 interface Props {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export function ReplaySlugChooser({children}: Props) {
@@ -96,7 +96,13 @@ export function ReplaySlugChooser({children}: Props) {
   );
 }
 
-function Content({children, replaySlug}: {children: ReactNode; replaySlug: string}) {
+function Content({
+  children,
+  replaySlug,
+}: {
+  children: React.ReactNode;
+  replaySlug: string;
+}) {
   const organization = useOrganization();
   const readerResult = useLoadReplayReader({
     orgSlug: organization.slug,

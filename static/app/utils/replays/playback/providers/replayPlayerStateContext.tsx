@@ -1,4 +1,3 @@
-import type {Dispatch, ReactNode} from 'react';
 import {createContext, useCallback, useContext, useReducer} from 'react';
 import type {PlayerState, Replayer, SpeedState} from '@sentry-internal/rrweb';
 import {ReplayerEvents} from '@sentry-internal/rrweb';
@@ -9,7 +8,7 @@ import {clamp} from 'sentry/utils/number/clamp';
 import type {Dimensions} from 'sentry/utils/replays/types';
 
 type ReplayerAction =
-  | {dispatch: Dispatch<ReplayerAction>; replayer: Replayer; type: 'didMountPlayer'}
+  | {dispatch: React.Dispatch<ReplayerAction>; replayer: Replayer; type: 'didMountPlayer'}
   | {replayer: Replayer; type: 'didUnmountPlayer'}
   | {type: 'didStart'}
   | {type: 'didPause'}
@@ -55,10 +54,14 @@ function createInitialState(): State {
 }
 
 const StateContext = createContext<State>(createInitialState());
-const DispatchContext = createContext<Dispatch<ReplayerAction>>(() => {});
+const DispatchContext = createContext<React.Dispatch<ReplayerAction>>(() => {});
 const UserActionContext = createContext((_action: UserAction) => {});
 
-export function ReplayPlayerStateContextProvider({children}: {children: ReactNode}) {
+export function ReplayPlayerStateContextProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [state, dispatch] = useReducer(stateReducer, null, createInitialState);
 
   const handleUserAction = useCallback(
@@ -205,7 +208,7 @@ type SkipEventArg = {speed: number};
 type StateChangeEventArg = {player: PlayerState} | {speed: SpeedState};
 
 function makeReplayerEventMap(
-  dispatch: Dispatch<ReplayerAction>
+  dispatch: React.Dispatch<ReplayerAction>
 ): Record<ReplayerEvents, EventHandler> {
   return {
     [ReplayerEvents.Start]: () => {
@@ -254,7 +257,10 @@ function makeReplayerEventMap(
   };
 }
 
-function subscribeToReplayer(replayer: Replayer, dispatch: Dispatch<ReplayerAction>) {
+function subscribeToReplayer(
+  replayer: Replayer,
+  dispatch: React.Dispatch<ReplayerAction>
+) {
   const eventMap = makeReplayerEventMap(dispatch);
   Object.entries(eventMap).forEach(([name, handler]) => {
     replayer.on(name, handler);

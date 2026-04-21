@@ -1,4 +1,4 @@
-import {useEffect, useRef, type Ref} from 'react';
+import {useEffect, useRef} from 'react';
 import {mergeRefs} from '@react-aria/utils';
 
 import {useAutoSaveContext} from '@sentry/scraps/form/autoSaveContext';
@@ -12,7 +12,7 @@ import {FieldMeta} from './meta';
 
 export type BaseFieldProps<T extends HTMLElement> = {
   disabled?: boolean | string;
-  ref?: Ref<T>;
+  ref?: React.Ref<T>;
 };
 type FieldChildrenProps<T extends HTMLElement> = {
   'aria-describedby': string;
@@ -21,7 +21,7 @@ type FieldChildrenProps<T extends HTMLElement> = {
   id: string;
   name: string;
   onBlur: () => void;
-  ref: Ref<T>;
+  ref: React.Ref<T>;
 };
 
 export const useAutoSaveIndicator = () => {

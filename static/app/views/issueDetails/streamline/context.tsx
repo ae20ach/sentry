@@ -1,12 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useReducer,
-  type Dispatch,
-  type Reducer,
-} from 'react';
+import {createContext, useCallback, useContext, useMemo, useReducer} from 'react';
 
 import type {DetectorDetails} from 'sentry/views/issueDetails/streamline/sidebar/detectorSection';
 
@@ -116,7 +108,7 @@ export interface SectionConfig {
 }
 
 interface IssueDetailsContextType extends IssueDetailsState {
-  dispatch: Dispatch<IssueDetailsActions>;
+  dispatch: React.Dispatch<IssueDetailsActions>;
 }
 
 const initialState: IssueDetailsState = {
@@ -210,7 +202,7 @@ function updateEventSection(
  * `useIssueDetails` instead. This hook is just meant to create state for the provider.
  */
 export function IssueDetailsContextProvider({children}: {children: React.ReactNode}) {
-  const reducer: Reducer<IssueDetailsState, IssueDetailsActions> = useCallback(
+  const reducer: React.Reducer<IssueDetailsState, IssueDetailsActions> = useCallback(
     (state, action): IssueDetailsState => {
       switch (action.type) {
         case 'UPDATE_SIDEBAR_STATE':

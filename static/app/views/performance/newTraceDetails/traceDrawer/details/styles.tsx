@@ -1,4 +1,4 @@
-import {Fragment, useMemo, useState, type PropsWithChildren} from 'react';
+import {Fragment, useMemo, useState} from 'react';
 import {css, useTheme, type Theme} from '@emotion/react';
 import styled from '@emotion/styled';
 import {useHover} from '@react-aria/interactions';
@@ -128,7 +128,7 @@ const TitleText = styled('div')`
   font-weight: bold;
 `;
 
-function TitleWithTestId(props: PropsWithChildren) {
+function TitleWithTestId(props: React.PropsWithChildren) {
   return <Title data-test-id="trace-drawer-title">{props.children}</Title>;
 }
 

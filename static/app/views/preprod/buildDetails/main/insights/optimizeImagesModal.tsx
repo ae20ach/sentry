@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {CodeBlock} from '@sentry/scraps/code';
 import {Flex} from '@sentry/scraps/layout';
 import {Heading, Text} from '@sentry/scraps/text';
@@ -27,7 +25,7 @@ cwebp -lossless input.png -o output.webp
 # Convert JPEG to lossless WebP
 cwebp -lossless input.jpg -o output.webp`;
 
-function getOptimizeImagesContent(platform?: Platform): ReactNode {
+function getOptimizeImagesContent(platform?: Platform): React.ReactNode {
   return platform === 'android' ? (
     <Flex direction="column" gap="2xl">
       <Text>

@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import type {Location} from 'history';
 
@@ -41,7 +40,7 @@ const [_QueryParamsContextProvider, useQueryParamsContext, QueryParamsContext] =
   });
 
 interface QueryParamsContextProps {
-  children: ReactNode;
+  children: React.ReactNode;
   isUsingDefaultFields: boolean;
   queryParams: ReadableQueryParams;
   setQueryParams: (queryParams: WritableQueryParams) => void;

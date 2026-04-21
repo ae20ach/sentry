@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {createContext, useCallback, useContext, useMemo} from 'react';
 import styled from '@emotion/styled';
 import noop from 'lodash/noop';
@@ -7,7 +6,7 @@ import {Checkbox} from '@sentry/scraps/checkbox';
 import {Flex} from '@sentry/scraps/layout';
 
 type Props<T> = {
-  children: ReactNode;
+  children: React.ReactNode;
   name: string;
   value: T[];
   className?: string;
@@ -16,7 +15,7 @@ type Props<T> = {
 };
 
 type CheckboxItemProps<T> = {
-  children: ReactNode;
+  children: React.ReactNode;
   value: T;
   className?: string;
   disabled?: boolean;

@@ -1,4 +1,4 @@
-import {Fragment, useCallback, useState, type ComponentProps} from 'react';
+import {Fragment, useCallback, useState} from 'react';
 import {AnimatePresence} from 'framer-motion';
 
 import {Alert} from '@sentry/scraps/alert';
@@ -55,7 +55,7 @@ export function SlideOverPanelSkeletonPlayground() {
 }
 
 interface PanelContentsProps {
-  onClick: ComponentProps<typeof Button>['onClick'];
+  onClick: React.ComponentProps<typeof Button>['onClick'];
 }
 
 function PanelContents({onClick}: PanelContentsProps) {

@@ -1,4 +1,4 @@
-import {Fragment, useCallback, useRef, type CSSProperties} from 'react';
+import {Fragment, useCallback, useRef} from 'react';
 
 import {ContentSliderDiff} from 'sentry/components/contentSliderDiff';
 import {useDiffCompareContext} from 'sentry/components/replays/diff/diffCompareContext';
@@ -12,7 +12,7 @@ import {ReplayReaderProvider} from 'sentry/utils/replays/playback/providers/repl
 import {useOrganization} from 'sentry/utils/useOrganization';
 
 interface Props {
-  minHeight?: CSSProperties['minHeight'];
+  minHeight?: React.CSSProperties['minHeight'];
 }
 
 export function ReplaySliderDiff({minHeight}: Props) {

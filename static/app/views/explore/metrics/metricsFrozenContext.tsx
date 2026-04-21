@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {useMemo} from 'react';
 
 import {ALL_ACCESS_PROJECTS} from 'sentry/components/pageFilters/constants';
@@ -29,7 +28,7 @@ const [_MetricsFrozenContextProvider, _useMetricsFrozenContext, MetricsFrozenCon
 
 export interface MetricsFrozenForTracesProviderProps {
   traceIds: string[];
-  children?: ReactNode;
+  children?: React.ReactNode;
   tracePeriod?: TracePeriod;
 }
 

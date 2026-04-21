@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {useCallback} from 'react';
 import styled from '@emotion/styled';
 
@@ -15,7 +14,7 @@ import {useOrganization} from 'sentry/utils/useOrganization';
 
 interface Props {
   allowShowSnippet: boolean;
-  description: ReactNode;
+  description: React.ReactNode;
   frame: ReplayFrame | WebVitalFrame;
   onShowSnippet: () => void;
   showSnippet: boolean;

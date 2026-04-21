@@ -1,4 +1,3 @@
-import type {DOMAttributes, MouseEventHandler} from 'react';
 import styled from '@emotion/styled';
 
 import {IconGrabbable} from 'sentry/icons';
@@ -6,15 +5,17 @@ import {IconGrabbable} from 'sentry/icons';
 type Props = {
   'data-is-held': boolean;
   'data-slide-direction': 'leftright' | 'updown';
-  onDoubleClick: MouseEventHandler<HTMLElement>;
-  onMouseDown: MouseEventHandler<HTMLElement>;
+  onDoubleClick: React.MouseEventHandler<HTMLElement>;
+  onMouseDown: React.MouseEventHandler<HTMLElement>;
 };
 
-export const SplitDivider = styled((props: Props & DOMAttributes<HTMLDivElement>) => (
-  <div {...props}>
-    <IconGrabbable size="sm" />
-  </div>
-))<Props>`
+export const SplitDivider = styled(
+  (props: Props & React.DOMAttributes<HTMLDivElement>) => (
+    <div {...props}>
+      <IconGrabbable size="sm" />
+    </div>
+  )
+)<Props>`
   display: grid;
   place-items: center;
   height: 100%;

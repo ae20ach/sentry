@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {PageFilterStateFixture} from 'sentry-fixture/pageFilters';
 import {TimeSeriesFixture} from 'sentry-fixture/timeSeries';
 
@@ -11,7 +10,7 @@ import {SpansQueryParamsProvider} from 'sentry/views/explore/spans/spansQueryPar
 
 jest.mock('sentry/components/pageFilters/usePageFilters');
 
-function Wrapper({children}: {children: ReactNode}) {
+function Wrapper({children}: {children: React.ReactNode}) {
   return <SpansQueryParamsProvider>{children}</SpansQueryParamsProvider>;
 }
 

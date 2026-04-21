@@ -1,4 +1,3 @@
-import type {RefObject} from 'react';
 import {useCallback} from 'react';
 import screenfull from 'screenfull';
 
@@ -8,7 +7,7 @@ interface Props<Element extends HTMLElement> {
    * Calling `useFullscreen()` a second time will create a different instance of
    * `ref` and `enter.
    */
-  elementRef: RefObject<Element | null>;
+  elementRef: React.RefObject<Element | null>;
 }
 
 interface Return {

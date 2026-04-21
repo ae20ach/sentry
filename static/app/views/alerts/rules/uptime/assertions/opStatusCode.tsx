@@ -1,4 +1,4 @@
-import {useId, type ChangeEventHandler, type FocusEventHandler} from 'react';
+import {useId} from 'react';
 
 import {CompactSelect} from '@sentry/scraps/compactSelect';
 import {InputGroup} from '@sentry/scraps/input';
@@ -35,7 +35,7 @@ export function AssertionOpStatusCode({
   );
   const selectedOption = statusCodeOptions.find(opt => opt.value === value.operator.cmp);
 
-  const handleInputChange: ChangeEventHandler<HTMLInputElement> = e => {
+  const handleInputChange: React.ChangeEventHandler<HTMLInputElement> = e => {
     const rawValue = e.target.value;
     // Only allow digits, up to 3 characters
     if (!/^\d*$/.test(rawValue) || rawValue.length > 3) {
@@ -50,7 +50,7 @@ export function AssertionOpStatusCode({
     onChange({...value, value: newValue});
   };
 
-  const handleInputBlur: FocusEventHandler<HTMLInputElement> = e => {
+  const handleInputBlur: React.FocusEventHandler<HTMLInputElement> = e => {
     const newValue = parseInt(e.target.value, 10);
     // Clamp status code to valid HTTP range (100-599) on blur
     if (isNaN(newValue)) {

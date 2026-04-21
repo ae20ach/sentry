@@ -1,4 +1,3 @@
-import type {CSSProperties} from 'react';
 import {isValidElement, useEffect, useRef} from 'react';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -37,7 +36,7 @@ interface Props {
   extraction?: Extraction;
   index?: number;
   ref?: React.Ref<HTMLDivElement>;
-  style?: CSSProperties;
+  style?: React.CSSProperties;
   updateDimensions?: () => void;
 }
 

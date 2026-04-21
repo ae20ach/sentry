@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import styled from '@emotion/styled';
 
 import {Button, LinkButton} from '@sentry/scraps/button';
@@ -14,7 +13,7 @@ import {useOrganization} from 'sentry/utils/useOrganization';
 import type {OnExpandCallback} from 'sentry/views/replays/detail/useVirtualizedInspector';
 
 type MouseCallback = (frame: ReplayFrame, nodeId?: number) => void;
-type LayoutShift = Record<string, ReactNode[]>;
+type LayoutShift = Record<string, React.ReactNode[]>;
 
 interface Props {
   frame: ReplayFrame;
@@ -41,14 +40,14 @@ export function BreadcrumbWebVital({
   }
 
   const selectors = extraction?.selectors;
-  const webVitalData: Record<string, number | ReactNode | LayoutShift[]> = {
+  const webVitalData: Record<string, number | React.ReactNode | LayoutShift[]> = {
     value: frame.data.value,
   };
 
   if (isCLSFrame(frame) && frame.data.attributions && selectors) {
     const layoutShifts: LayoutShift[] = [];
     for (const attr of frame.data.attributions) {
-      const elements: ReactNode[] = [];
+      const elements: React.ReactNode[] = [];
       if ('nodeIds' in attr && Array.isArray(attr.nodeIds)) {
         attr.nodeIds.forEach(nodeId => {
           if (selectors.get(nodeId)) {

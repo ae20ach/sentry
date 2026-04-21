@@ -1,12 +1,4 @@
-import {
-  Children,
-  createContext,
-  isValidElement,
-  useContext,
-  useState,
-  type ReactElement,
-  type ReactNode,
-} from 'react';
+import {Children, createContext, isValidElement, useContext, useState} from 'react';
 
 import {Button} from '@sentry/scraps/button';
 import {Image, type ImageProps} from '@sentry/scraps/image';
@@ -39,7 +31,7 @@ function useShowcaseContext(): ShowcaseContextValue {
   return ctx;
 }
 
-function Step({children}: {children: ReactNode}) {
+function Step({children}: {children: React.ReactNode}) {
   return <Stack gap="md">{children}</Stack>;
 }
 
@@ -47,7 +39,7 @@ function StepImage(props: ImageProps) {
   return <Image objectFit="contain" {...props} />;
 }
 
-function StepTitle({children}: {children: ReactNode}) {
+function StepTitle({children}: {children: React.ReactNode}) {
   const {current, stepCount} = useShowcaseContext();
   return (
     <Stack gap="md">
@@ -61,7 +53,7 @@ function StepTitle({children}: {children: ReactNode}) {
   );
 }
 
-function StepContent({children}: {children: ReactNode}) {
+function StepContent({children}: {children: React.ReactNode}) {
   return <Stack gap="xl">{children}</Stack>;
 }
 
@@ -71,7 +63,7 @@ function StepContent({children}: {children: ReactNode}) {
  * - No children: renders default Back/Next/Done buttons.
  * - With children: rendered alongside the default navigation buttons.
  */
-function StepActions({children}: {children?: ReactNode}) {
+function StepActions({children}: {children?: React.ReactNode}) {
   const {advance, back, close, hasNext, hasPrevious} = useShowcaseContext();
 
   return (
@@ -92,7 +84,7 @@ function StepActions({children}: {children?: ReactNode}) {
 }
 
 type FeatureShowcaseProps = ModalRenderProps & {
-  children: ReactNode;
+  children: React.ReactNode;
   /**
    * Called when the showcase advances to a new step.
    */
@@ -127,7 +119,7 @@ function FeatureShowcase({closeModal, children, onStepChange}: FeatureShowcasePr
   const [current, setCurrent] = useState(0);
 
   const steps = Children.toArray(children).filter(
-    (child): child is ReactElement => isValidElement(child) && child.type === Step
+    (child): child is React.ReactElement => isValidElement(child) && child.type === Step
   );
 
   const stepCount = steps.length;

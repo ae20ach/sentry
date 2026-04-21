@@ -1,4 +1,4 @@
-import {startTransition, useEffect, useRef, useState, type FormEvent} from 'react';
+import {startTransition, useEffect, useRef, useState} from 'react';
 import {keyframes} from '@emotion/react';
 import styled from '@emotion/styled';
 import {AnimatePresence, motion} from 'framer-motion';
@@ -249,7 +249,7 @@ export function AutofixOutputStream({
     },
   });
 
-  const handleSend = (e: FormEvent) => {
+  const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (isInitializingRun) {
       // don't send message during loading state

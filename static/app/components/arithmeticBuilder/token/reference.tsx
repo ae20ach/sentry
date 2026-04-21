@@ -1,4 +1,3 @@
-import type {ChangeEvent} from 'react';
 import {useCallback, useMemo, useRef, useState} from 'react';
 import {Item, Section} from '@react-stately/collections';
 import type {ListState} from '@react-stately/list';
@@ -113,7 +112,7 @@ function InternalInput({item, state, token, rowRef}: InternalInputProps) {
     setIsCurrentlyEditing(false);
   }, []);
 
-  const onInputChange = useCallback((evt: ChangeEvent<HTMLInputElement>) => {
+  const onInputChange = useCallback((evt: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(evt.target.value);
   }, []);
 

@@ -1,4 +1,3 @@
-import {type ReactNode} from 'react';
 import {OrganizationFixture} from 'sentry-fixture/organization';
 
 import {render, screen} from 'sentry-test/reactTestingLibrary';
@@ -17,7 +16,7 @@ function Wrapper({
   children,
   queryParams,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   queryParams: ReadableQueryParams;
 }) {
   return (
@@ -78,7 +77,7 @@ describe('MetricToolbar', () => {
       />,
       {
         organization,
-        additionalWrapper: ({children}: {children: ReactNode}) => (
+        additionalWrapper: ({children}: {children: React.ReactNode}) => (
           <Wrapper queryParams={queryParams}>{children}</Wrapper>
         ),
       }
@@ -123,7 +122,7 @@ describe('MetricToolbar', () => {
       />,
       {
         organization,
-        additionalWrapper: ({children}: {children: ReactNode}) => (
+        additionalWrapper: ({children}: {children: React.ReactNode}) => (
           <Wrapper queryParams={queryParams}>{children}</Wrapper>
         ),
       }

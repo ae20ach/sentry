@@ -1,4 +1,3 @@
-import type {MouseEvent, ReactNode} from 'react';
 import styled from '@emotion/styled';
 
 import {Button} from '@sentry/scraps/button';
@@ -11,7 +10,7 @@ import {SplitDivider} from 'sentry/views/replays/detail/layout/splitDivider';
 
 interface Props extends Omit<ReturnType<typeof useResizableDrawer>, 'size' | 'setSize'> {
   onClose: () => void;
-  children?: ReactNode;
+  children?: React.ReactNode;
 }
 
 export function DetailsSplitDivider({
@@ -35,7 +34,7 @@ export function DetailsSplitDivider({
           aria-label={t('Hide details')}
           priority="transparent"
           icon={<IconClose size="sm" variant="muted" />}
-          onClick={(e: MouseEvent) => {
+          onClick={(e: React.MouseEvent) => {
             e.preventDefault();
             onClose();
           }}

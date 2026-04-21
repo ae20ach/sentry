@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {OrganizationFixture} from 'sentry-fixture/organization';
 import {UserFixture} from 'sentry-fixture/user';
 
@@ -55,7 +54,7 @@ function getMockOrganizationFixture({features}: {features: string[]}) {
   return mockOrg;
 }
 
-function TopBarActionsWrapper({children}: {children: ReactNode}) {
+function TopBarActionsWrapper({children}: {children: React.ReactNode}) {
   return (
     <SecondaryNavigationContextProvider>
       <TopBar.Slot.Provider>

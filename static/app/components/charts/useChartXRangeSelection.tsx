@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type DependencyList,
-} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
 import type {BrushComponentOption, EChartsOption, ToolboxComponentOption} from 'echarts';
 import * as echarts from 'echarts';
@@ -97,7 +90,7 @@ export type ChartXRangeSelectionProps = {
   /**
    * The dependencies to be used to re-activate selection or re-paint the box.
    */
-  deps?: DependencyList;
+  deps?: React.DependencyList;
 
   /**
    * Whether selection is disabled.

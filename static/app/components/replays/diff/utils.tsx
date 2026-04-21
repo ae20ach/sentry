@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import styled from '@emotion/styled';
 
 import {Flex} from '@sentry/scraps/layout';
@@ -10,7 +9,7 @@ import {t} from 'sentry/locale';
 interface BeforeAfterProps {
   offset: number;
   startTimestampMs: number;
-  children?: ReactNode;
+  children?: React.ReactNode;
 }
 
 function ReplayDiffTooltip({
@@ -18,7 +17,7 @@ function ReplayDiffTooltip({
   offset,
   startTimestampMs,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   offset: number;
   startTimestampMs: number;
 }) {

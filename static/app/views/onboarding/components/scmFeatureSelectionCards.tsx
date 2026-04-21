@@ -1,5 +1,3 @@
-import type {ComponentType} from 'react';
-
 import {Flex, Grid} from '@sentry/scraps/layout';
 import {Heading, Text} from '@sentry/scraps/text';
 
@@ -20,7 +18,7 @@ import {ScmFeatureCard} from './scmFeatureCard';
 
 type FeatureMeta = {
   description: string;
-  icon: ComponentType<SVGIconProps>;
+  icon: React.ComponentType<SVGIconProps>;
   label: string;
   alwaysEnabled?: boolean;
 };

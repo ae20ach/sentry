@@ -1,4 +1,3 @@
-import type {ReactElement} from 'react';
 import * as Sentry from '@sentry/react';
 import {jsonrepair} from 'jsonrepair';
 
@@ -36,8 +35,8 @@ export function formatMongoDBQuery(query: string, command: string) {
     }
   }
 
-  const tokens: ReactElement[] = [];
-  const tempTokens: ReactElement[] = [];
+  const tokens: React.ReactElement[] = [];
+  const tempTokens: React.ReactElement[] = [];
 
   const queryEntries = Object.entries(queryObject);
   queryEntries.forEach(([key, val]) => {
@@ -144,6 +143,10 @@ function jsonToTokenizedString(value: JSONValue | JSONValue[], key?: string): st
   return '';
 }
 
-function stringToToken(str: string, keyProp: string, isBold?: boolean): ReactElement {
+function stringToToken(
+  str: string,
+  keyProp: string,
+  isBold?: boolean
+): React.ReactElement {
   return isBold ? <b key={keyProp}>{str}</b> : <span key={keyProp}>{str}</span>;
 }

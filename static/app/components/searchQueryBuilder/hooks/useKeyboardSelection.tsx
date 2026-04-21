@@ -1,11 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useRef,
-  type ReactNode,
-} from 'react';
+import {createContext, useCallback, useContext, useMemo, useRef} from 'react';
 import type {ListState} from '@react-stately/list';
 import type {Key} from '@react-types/shared';
 
@@ -115,7 +108,7 @@ const KeyboardSelectionContext = createContext<KeyboardSelectionData>({
  * Focus is lost when a selection is enabled, so this context is necessary
  * to keep track of the latest cursor position.
  */
-export function KeyboardSelection({children}: {children: ReactNode}) {
+export function KeyboardSelection({children}: {children: React.ReactNode}) {
   const state = useKeyboardSelectionState();
 
   return <KeyboardSelectionContext value={state}>{children}</KeyboardSelectionContext>;

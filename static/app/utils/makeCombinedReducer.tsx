@@ -1,21 +1,19 @@
-import type {Reducer} from 'react';
-
 import type {ReducerAction} from 'sentry/types/reducerAction';
 
 type ReducersObject<S = any, A = any> = {
-  [K in keyof S]: Reducer<S, A>;
+  [K in keyof S]: React.Reducer<S, A>;
 };
 
 type ReducersState<M> = M extends ReducersObject
   ? {
-      [P in keyof M]: M[P] extends Reducer<infer S, any> ? S : never;
+      [P in keyof M]: M[P] extends React.Reducer<infer S, any> ? S : never;
     }
   : never;
 
 type ReducerFromReducersObject<M> = M extends {
   [P in keyof M]: infer R;
 }
-  ? R extends Reducer<any, any>
+  ? R extends React.Reducer<any, any>
     ? R
     : never
   : never;
@@ -25,7 +23,7 @@ type ReducerActions<M> = M extends ReducersObject
   : never;
 
 type CombinedState<S> = {} & S;
-type CombinedReducer<M extends ReducersObject> = Reducer<
+type CombinedReducer<M extends ReducersObject> = React.Reducer<
   CombinedState<ReducersState<M>>,
   ReducerActions<M>
 >;

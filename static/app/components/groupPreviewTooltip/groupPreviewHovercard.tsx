@@ -1,11 +1,10 @@
-import type {ComponentProps} from 'react';
 import {css, useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
 
 import {Hovercard} from 'sentry/components/hovercard';
 import {useMedia} from 'sentry/utils/useMedia';
 
-interface GroupPreviewHovercardProps extends ComponentProps<typeof Hovercard> {
+interface GroupPreviewHovercardProps extends React.ComponentProps<typeof Hovercard> {
   hide?: boolean;
 }
 

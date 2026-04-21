@@ -1,4 +1,3 @@
-import type {RefObject} from 'react';
 import {useMemo} from 'react';
 import type {AriaGridListOptions} from '@react-aria/gridlist';
 import {useGridList as useGridListAria} from '@react-aria/gridlist';
@@ -7,7 +6,7 @@ import type {ListState} from '@react-stately/list';
 
 interface UseGridListProps<T> {
   props: AriaGridListOptions<T>;
-  ref: RefObject<HTMLDivElement | null>;
+  ref: React.RefObject<HTMLDivElement | null>;
   state: ListState<T>;
 }
 

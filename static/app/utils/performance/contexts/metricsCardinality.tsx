@@ -1,4 +1,3 @@
-import type {ComponentProps, ReactNode} from 'react';
 import {Fragment, useEffect} from 'react';
 import type {Location} from 'history';
 
@@ -42,7 +41,7 @@ const [_Provider, _useContext, _Context] =
  * make dozens of requests on pages such as performance landing and dashboards.
  */
 export function MetricsCardinalityProvider(props: {
-  children: ReactNode;
+  children: React.ReactNode;
   location: Location;
   organization: Organization;
   sendOutcomeAnalytics?: boolean;
@@ -136,7 +135,7 @@ export function MetricsCardinalityProvider(props: {
 }
 
 function Provider(
-  props: ComponentProps<typeof _Provider> & {
+  props: React.ComponentProps<typeof _Provider> & {
     organization: Organization;
     sendOutcomeAnalytics?: boolean;
   }

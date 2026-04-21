@@ -1,11 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  type Dispatch,
-  type ReactNode,
-  type SetStateAction,
-} from 'react';
+import {createContext, useContext, useState} from 'react';
 
 import type {Event} from 'sentry/types/event';
 import {ReplayReader} from 'sentry/utils/replays/replayReader';
@@ -18,8 +11,8 @@ type ContextType = {
   replay: ReplayReader;
   rightOffsetMs: number;
   rightTimestampMs: number;
-  setLeftOffsetMs: Dispatch<SetStateAction<number>>;
-  setRightOffsetMs: Dispatch<SetStateAction<number>>;
+  setLeftOffsetMs: React.Dispatch<React.SetStateAction<number>>;
+  setRightOffsetMs: React.Dispatch<React.SetStateAction<number>>;
 };
 
 const Context = createContext<ContextType>({
@@ -47,7 +40,7 @@ interface Props {
   initialLeftOffsetMs: number;
   initialRightOffsetMs: number;
   replay: ReplayReader;
-  children?: ReactNode;
+  children?: React.ReactNode;
 }
 
 export function DiffCompareContextProvider({

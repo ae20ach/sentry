@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {PageFilterStateFixture} from 'sentry-fixture/pageFilters';
 import {
   createTraceMetricFixtures,
@@ -26,7 +25,7 @@ function createWrapper({
   queryParams: ReadableQueryParams;
   traceMetric: TraceMetric;
 }) {
-  return function Wrapper({children}: {children: ReactNode}) {
+  return function Wrapper({children}: {children: React.ReactNode}) {
     return (
       <MultiMetricsQueryParamsProvider>
         <MetricsQueryParamsProvider

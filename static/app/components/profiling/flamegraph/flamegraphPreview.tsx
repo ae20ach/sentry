@@ -1,4 +1,3 @@
-import type {CSSProperties} from 'react';
 import {useCallback, useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import styled from '@emotion/styled';
 import {vec2, type mat3} from 'gl-matrix';
@@ -364,8 +363,8 @@ export function computePreviewConfigView(
 }
 
 const Canvas = styled('canvas')<{
-  cursor?: CSSProperties['cursor'];
-  pointerEvents?: CSSProperties['pointerEvents'];
+  cursor?: React.CSSProperties['cursor'];
+  pointerEvents?: React.CSSProperties['pointerEvents'];
 }>`
   left: 0;
   top: 0;

@@ -1,4 +1,4 @@
-import {useMemo, type ReactNode} from 'react';
+import {useMemo} from 'react';
 import type Fuse from 'fuse.js';
 
 import {useSearchQueryBuilder} from 'sentry/components/searchQueryBuilder/context';
@@ -90,7 +90,7 @@ function getFilterSearchValues(
     const fieldDef = getFieldDefinition(key.key);
     const values = key.values ?? fieldDef?.values ?? [];
 
-    const addItem = (value: string, description: ReactNode = '') => {
+    const addItem = (value: string, description: React.ReactNode = '') => {
       acc.push({
         value,
         description: typeof description === 'string' ? description : '',

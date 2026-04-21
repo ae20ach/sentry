@@ -1,10 +1,9 @@
-import type {ReactNode} from 'react';
 import styled from '@emotion/styled';
 
 import {DrawerBody} from 'sentry/components/globalDrawer/components';
 
 interface SeerDrawerBody {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export function SeerDrawerBody({children}: SeerDrawerBody) {

@@ -1,5 +1,3 @@
-import type {ComponentProps} from 'react';
-
 import {Flex} from '@sentry/scraps/layout';
 
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
@@ -23,7 +21,7 @@ export function NoContext({isLoading}: NoContextProps) {
 }
 
 export function QuickContextHoverWrapper(
-  props: ComponentProps<typeof QuickContextHovercard>
+  props: React.ComponentProps<typeof QuickContextHovercard>
 ) {
   return (
     <Flex align="center" gap="sm">

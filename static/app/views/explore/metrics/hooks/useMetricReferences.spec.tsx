@@ -1,5 +1,3 @@
-import type {ReactNode} from 'react';
-
 import {renderHookWithProviders} from 'sentry-test/reactTestingLibrary';
 
 import {Mode} from 'sentry/views/explore/contexts/pageParamsContext/mode';
@@ -13,7 +11,7 @@ import {VisualizeFunction} from 'sentry/views/explore/queryParams/visualize';
 
 import {useMetricReferences} from './useMetricReferences';
 
-function Wrapper({children}: {children: ReactNode}) {
+function Wrapper({children}: {children: React.ReactNode}) {
   return <MultiMetricsQueryParamsProvider>{children}</MultiMetricsQueryParamsProvider>;
 }
 

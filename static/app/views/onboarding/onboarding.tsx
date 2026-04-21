@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useState, type PropsWithChildren} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import styled from '@emotion/styled';
 import {AnimatePresence, motion} from 'framer-motion';
 
@@ -115,7 +115,7 @@ interface ContainerVariableProps {
   id: OnboardingStepId;
 }
 
-function ContainerVariable(props: PropsWithChildren<ContainerVariableProps>) {
+function ContainerVariable(props: React.PropsWithChildren<ContainerVariableProps>) {
   const newWelcomeUIStep = props.hasNewWelcomeUI && props.id === OnboardingStepId.WELCOME;
   const Component = newWelcomeUIStep
     ? OnboardingContainerNewWelcomeUI
@@ -133,7 +133,9 @@ interface OnboardingStepVariableProps {
   id: OnboardingStepId;
 }
 
-function OnboardingStepVariable(props: PropsWithChildren<OnboardingStepVariableProps>) {
+function OnboardingStepVariable(
+  props: React.PropsWithChildren<OnboardingStepVariableProps>
+) {
   const Component =
     props.hasNewWelcomeUI && props.id === OnboardingStepId.WELCOME
       ? OnboardingStepNewUi

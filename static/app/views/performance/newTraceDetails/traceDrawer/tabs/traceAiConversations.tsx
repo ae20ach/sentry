@@ -1,4 +1,4 @@
-import {type Key, useCallback, useMemo, useState} from 'react';
+import {useCallback, useMemo, useState} from 'react';
 import styled from '@emotion/styled';
 
 import {LinkButton} from '@sentry/scraps/button';
@@ -40,7 +40,7 @@ export function TraceAiConversations({
   const [activeSubTab, setActiveSubTab] = useState(`chat-${conversationIds[0]}`);
   const [selectedSpanId, setSelectedSpanId] = useState<string | null>(null);
 
-  const handleTabChange = useCallback((key: Key) => {
+  const handleTabChange = useCallback((key: React.Key) => {
     setActiveSubTab(String(key));
     setSelectedSpanId(null);
   }, []);

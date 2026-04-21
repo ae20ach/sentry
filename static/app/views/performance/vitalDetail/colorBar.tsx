@@ -1,10 +1,9 @@
-import type {ReactNode} from 'react';
 import styled from '@emotion/styled';
 
 type ColorStop = {
   color: string;
   percent: number;
-  renderBarStatus?: (barStatus: ReactNode, key: string) => ReactNode;
+  renderBarStatus?: (barStatus: React.ReactNode, key: string) => React.ReactNode;
 };
 
 interface Props extends React.HTMLAttributes<HTMLDivElement> {

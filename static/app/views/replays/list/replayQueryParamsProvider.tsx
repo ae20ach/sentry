@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {useCallback, useMemo} from 'react';
 import type {Location} from 'history';
 
@@ -51,7 +50,7 @@ function getTargetWithReadableQueryParams(
 }
 
 interface ReplayQueryParamsProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export function ReplayQueryParamsProvider({children}: ReplayQueryParamsProviderProps) {

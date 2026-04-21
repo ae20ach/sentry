@@ -1,4 +1,3 @@
-import type {ReactNode} from 'react';
 import {useQueryClient} from '@tanstack/react-query';
 
 import {Button} from '@sentry/scraps/button';
@@ -33,12 +32,18 @@ type IssueViewsHeaderProps = {
   onRealtimeChange: (active: boolean) => void;
   realtimeActive: boolean;
   selectedProjectIds: number[];
-  title: ReactNode;
-  description?: ReactNode;
-  headerActions?: ReactNode;
+  title: React.ReactNode;
+  description?: React.ReactNode;
+  headerActions?: React.ReactNode;
 };
 
-function PageTitle({title, description}: {title: ReactNode; description?: ReactNode}) {
+function PageTitle({
+  title,
+  description,
+}: {
+  title: React.ReactNode;
+  description?: React.ReactNode;
+}) {
   const organization = useOrganization();
   const {data: groupSearchView} = useSelectedGroupSearchView();
   const user = useUser();

@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import {useEffect} from 'react';
 import {css} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -32,7 +31,7 @@ import type {Subscription} from 'getsentry/types';
 import {trackGetsentryAnalytics} from 'getsentry/utils/trackGetsentryAnalytics';
 
 type Props = ModalRenderProps &
-  Omit<ComponentProps<typeof ActionButtons>, 'hasPriceChange'> & {
+  Omit<React.ComponentProps<typeof ActionButtons>, 'hasPriceChange'> & {
     organization: Organization;
     subscription: Subscription;
   };

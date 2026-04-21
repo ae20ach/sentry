@@ -1,4 +1,4 @@
-import {useMemo, type ReactNode} from 'react';
+import {useMemo} from 'react';
 
 import {renderHookWithProviders} from 'sentry-test/reactTestingLibrary';
 
@@ -21,7 +21,7 @@ import {ReadableQueryParams} from 'sentry/views/explore/queryParams/readableQuer
 
 const mockSetQueryParams = jest.fn();
 
-function Wrapper({children}: {children: ReactNode}) {
+function Wrapper({children}: {children: React.ReactNode}) {
   const [query] = useResettableState(defaultQuery);
 
   const readableQueryParams = useMemo(

@@ -1,11 +1,9 @@
-import type {ReactNode} from 'react';
-
 import {act, renderHookWithProviders} from 'sentry-test/reactTestingLibrary';
 
 import {Tab, useTab} from 'sentry/views/explore/hooks/useTab';
 import {SpansQueryParamsProvider} from 'sentry/views/explore/spans/spansQueryParamsProvider';
 
-function Wrapper({children}: {children: ReactNode}) {
+function Wrapper({children}: {children: React.ReactNode}) {
   return <SpansQueryParamsProvider>{children}</SpansQueryParamsProvider>;
 }
 
