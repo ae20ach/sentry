@@ -1,4 +1,4 @@
-import {useCallback, useMemo, useRef} from 'react';
+import {useCallback, useRef} from 'react';
 
 import {Flex} from '@sentry/scraps/layout';
 import {ExternalLink} from '@sentry/scraps/link';
@@ -6,12 +6,8 @@ import {ExternalLink} from '@sentry/scraps/link';
 import {Placeholder} from 'sentry/components/placeholder';
 import {JumpButtons} from 'sentry/components/replays/jumpButtons';
 import {useReplayContext} from 'sentry/components/replays/replayContext';
-import {
-  useJumpButtons,
-  type VisibleRange,
-} from 'sentry/components/replays/useJumpButtons';
+import {useJumpButtons} from 'sentry/components/replays/useJumpButtons';
 import {GridTable} from 'sentry/components/replays/virtualizedGrid/gridTable';
-import {OverflowHidden} from 'sentry/components/replays/virtualizedGrid/overflowHidden';
 import {SplitPanel} from 'sentry/components/replays/virtualizedGrid/splitPanel';
 import {useDetailsSplit} from 'sentry/components/replays/virtualizedGrid/useDetailsSplit';
 import {t, tct} from 'sentry/locale';
@@ -28,29 +24,34 @@ import {
   COLUMN_COUNT,
   NetworkHeaderCell,
 } from 'sentry/views/replays/detail/network/networkHeaderCell';
+import {NetworkPaginationRow} from 'sentry/views/replays/detail/network/networkPaginationRow';
 import {NetworkTableCell} from 'sentry/views/replays/detail/network/networkTableCell';
+import {
+  NETWORK_DETAILS_SPLIT_HANDLE_HEIGHT,
+  NETWORK_TABLE_BODY_ROW_HEIGHT,
+  NETWORK_TABLE_DEFAULT_COLUMN_WIDTH,
+  NETWORK_TABLE_DYNAMIC_COLUMN_INDEX,
+  NETWORK_TABLE_HEADER_HEIGHT,
+  NETWORK_TABLE_MIN_DYNAMIC_COLUMN_WIDTH,
+  NETWORK_TABLE_OVERSCAN,
+  NETWORK_TABLE_STATIC_COLUMN_WIDTHS,
+} from 'sentry/views/replays/detail/network/networkTableLayout';
 import {useNetworkFilters} from 'sentry/views/replays/detail/network/useNetworkFilters';
+import {
+  useNetworkListDetailUrlPageSync,
+  useNetworkListPaging,
+  useNetworkListVirtualSync,
+} from 'sentry/views/replays/detail/network/useNetworkListTable';
 import {useSortNetwork} from 'sentry/views/replays/detail/network/useSortNetwork';
 import {NoRowRenderer} from 'sentry/views/replays/detail/noRowRenderer';
 import {useVirtualizedGrid} from 'sentry/views/replays/detail/useVirtualizedGrid';
 import {VirtualTable} from 'sentry/views/replays/detail/virtualizedTableLayout';
-import {
-  getTimelineRowClassName,
-  getVisibleRangeFromVirtualRows,
-} from 'sentry/views/replays/detail/virtualizedTableUtils';
-
-const HEADER_HEIGHT = 25;
-const BODY_HEIGHT = 25;
-const RESIZEABLE_HANDLE_HEIGHT = 90;
-const DEFAULT_COLUMN_WIDTH = 88;
-const DYNAMIC_COLUMN_INDEX = 2;
-const MIN_DYNAMIC_COLUMN_WIDTH = 180;
-const OVERSCAN = 20;
-const STATIC_COLUMN_WIDTHS = [76, 76, 0, 88, 88, 98, 116];
+import {getTimelineRowClassName} from 'sentry/views/replays/detail/virtualizedTableUtils';
 
 export function NetworkList() {
   const organization = useOrganization();
   const replay = useReplayReader();
+  const replayId = replay?.getReplay()?.id;
   const {currentTime} = useReplayContext();
   const [currentHoverTime] = useCurrentHoverTime();
   const {onMouseEnter, onMouseLeave, onClickTimestamp} = useCrumbHandlers();
@@ -66,6 +67,20 @@ export function NetworkList() {
   const clearSearchTerm = () => setSearchTerm('');
   const {handleSort, items, sortConfig} = useSortNetwork({items: filteredItems});
 
+  const {
+    didInitialDetailPageSyncRef,
+    handleScrollToTableRow,
+    onNextPage,
+    onPreviousPage,
+    pageItems,
+    pageOffset,
+    pendingScrollToIndexRef,
+    safePage,
+    scrollGeneration,
+    setPage,
+    totalPages,
+  } = useNetworkListPaging(items, replayId);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const {
     gridTemplateColumns,
@@ -75,32 +90,24 @@ export function NetworkList() {
     virtualizer,
     wrapperRef,
   } = useVirtualizedGrid({
-    defaultColumnWidth: DEFAULT_COLUMN_WIDTH,
-    dynamicColumnIndex: DYNAMIC_COLUMN_INDEX,
-    minDynamicColumnWidth: MIN_DYNAMIC_COLUMN_WIDTH,
-    overscan: OVERSCAN,
-    rowCount: items.length,
-    rowHeight: BODY_HEIGHT,
-    staticColumnWidths: STATIC_COLUMN_WIDTHS,
+    defaultColumnWidth: NETWORK_TABLE_DEFAULT_COLUMN_WIDTH,
+    dynamicColumnIndex: NETWORK_TABLE_DYNAMIC_COLUMN_INDEX,
+    minDynamicColumnWidth: NETWORK_TABLE_MIN_DYNAMIC_COLUMN_WIDTH,
+    overscan: NETWORK_TABLE_OVERSCAN,
+    rowCount: pageItems.length,
+    rowHeight: NETWORK_TABLE_BODY_ROW_HEIGHT,
+    staticColumnWidths: NETWORK_TABLE_STATIC_COLUMN_WIDTHS,
   });
 
-  const handleScrollToTableRow = useCallback(
-    (row: number) => {
-      setTimeout(() => {
-        virtualizer.scrollToIndex(row - 1, {align: 'auto'});
-      }, 50);
-    },
-    [virtualizer]
-  );
-
-  const visibleRange = useMemo<VisibleRange>(() => {
-    return getVisibleRangeFromVirtualRows({
-      indexOffset: 1,
-      scrollOffset: virtualizer.scrollOffset ?? 0,
-      viewportHeight: virtualizer.scrollRect?.height ?? 0,
-      virtualRows,
-    });
-  }, [virtualRows, virtualizer.scrollOffset, virtualizer.scrollRect?.height]);
+  const {visibleRange} = useNetworkListVirtualSync({
+    pageItemsLength: pageItems.length,
+    pageOffset,
+    pendingScrollToIndexRef,
+    safePage,
+    scrollGeneration,
+    virtualRows,
+    virtualizer,
+  });
 
   const {
     handleClick: onClickToJump,
@@ -123,7 +130,7 @@ export function NetworkList() {
   } = useDetailsSplit({
     containerRef,
     frames: networkFrames,
-    handleHeight: RESIZEABLE_HANDLE_HEIGHT,
+    handleHeight: NETWORK_DETAILS_SPLIT_HANDLE_HEIGHT,
     urlParamName: 'n_detail_row',
     onShowDetails: useCallback(
       ({dataIndex, rowIndex}: {dataIndex: number; rowIndex: number}) => {
@@ -150,6 +157,16 @@ export function NetworkList() {
     }, [isNetworkDetailsSetup, organization]),
   });
 
+  useNetworkListDetailUrlPageSync({
+    didInitialDetailPageSyncRef,
+    itemsLength: items.length,
+    pendingScrollToIndexRef,
+    replayId,
+    safePage,
+    selectedIndex,
+    setPage,
+  });
+
   const selectedItem = selectedIndex === null ? null : (items[selectedIndex] ?? null);
 
   return (
@@ -164,122 +181,141 @@ export function NetworkList() {
           }}
         >
           {networkFrames ? (
-            <OverflowHidden>
-              <VirtualTable ref={wrapperRef}>
-                <VirtualTable.BodyScrollContainer ref={scrollContainerRef}>
-                  <VirtualTable.HeaderViewport style={{width: totalColumnWidth}}>
-                    <VirtualTable.HeaderRow
-                      style={{
-                        gridTemplateColumns,
-                      }}
-                    >
-                      {Array.from({length: COLUMN_COUNT}, (_, columnIndex) => (
-                        <NetworkHeaderCell
-                          key={columnIndex}
-                          handleSort={handleSort}
-                          index={columnIndex}
-                          sortConfig={sortConfig}
-                          style={{height: HEADER_HEIGHT}}
-                        />
-                      ))}
-                    </VirtualTable.HeaderRow>
-                  </VirtualTable.HeaderViewport>
-                  {items.length === 0 ? (
-                    <VirtualTable.NoRowsContainer>
-                      <NoRowRenderer
-                        unfilteredItems={networkFrames}
-                        clearSearchTerm={clearSearchTerm}
+            <Flex
+              direction="column"
+              height="100%"
+              minHeight={0}
+              overflow="hidden"
+              position="relative"
+            >
+              <Flex flex={1} direction="column" minHeight={0} position="relative">
+                <VirtualTable ref={wrapperRef}>
+                  <VirtualTable.BodyScrollContainer ref={scrollContainerRef}>
+                    <VirtualTable.HeaderViewport style={{width: totalColumnWidth}}>
+                      <VirtualTable.HeaderRow
+                        style={{
+                          gridTemplateColumns,
+                        }}
                       >
-                        {replay?.getReplay()?.sdk.name?.includes('flutter')
-                          ? tct(
-                              'No network requests recorded. Make sure you are using either the [link1:Sentry Dio] or the [link2:Sentry HTTP] integration.',
-                              {
-                                link1: (
-                                  <ExternalLink href="https://docs.sentry.io/platforms/dart/integrations/dio/" />
-                                ),
-                                link2: (
-                                  <ExternalLink href="https://docs.sentry.io/platforms/dart/integrations/http-integration/" />
-                                ),
-                              }
-                            )
-                          : t('No network requests recorded')}
-                      </NoRowRenderer>
-                    </VirtualTable.NoRowsContainer>
-                  ) : (
-                    <VirtualTable.Content
-                      style={{
-                        height: virtualizer.getTotalSize(),
-                        width: totalColumnWidth,
-                      }}
-                    >
-                      <VirtualTable.Offset
-                        offset={virtualRows[0]?.start ?? 0}
-                        style={{width: totalColumnWidth}}
+                        {Array.from({length: COLUMN_COUNT}, (_, columnIndex) => (
+                          <NetworkHeaderCell
+                            key={columnIndex}
+                            handleSort={handleSort}
+                            index={columnIndex}
+                            sortConfig={sortConfig}
+                            style={{height: NETWORK_TABLE_HEADER_HEIGHT}}
+                          />
+                        ))}
+                      </VirtualTable.HeaderRow>
+                    </VirtualTable.HeaderViewport>
+                    {items.length === 0 ? (
+                      <VirtualTable.NoRowsContainer>
+                        <NoRowRenderer
+                          unfilteredItems={networkFrames}
+                          clearSearchTerm={clearSearchTerm}
+                        >
+                          {replay?.getReplay()?.sdk.name?.includes('flutter')
+                            ? tct(
+                                'No network requests recorded. Make sure you are using either the [link1:Sentry Dio] or the [link2:Sentry HTTP] integration.',
+                                {
+                                  link1: (
+                                    <ExternalLink href="https://docs.sentry.io/platforms/dart/integrations/dio/" />
+                                  ),
+                                  link2: (
+                                    <ExternalLink href="https://docs.sentry.io/platforms/dart/integrations/http-integration/" />
+                                  ),
+                                }
+                              )
+                            : t('No network requests recorded')}
+                        </NoRowRenderer>
+                      </VirtualTable.NoRowsContainer>
+                    ) : (
+                      <VirtualTable.Content
+                        style={{
+                          height: virtualizer.getTotalSize(),
+                          width: totalColumnWidth,
+                        }}
                       >
-                        {virtualRows.map(virtualRow => {
-                          const network = items[virtualRow.index];
-                          if (!network) {
-                            return null;
-                          }
+                        <VirtualTable.Offset
+                          offset={virtualRows[0]?.start ?? 0}
+                          style={{width: totalColumnWidth}}
+                        >
+                          {virtualRows.map(virtualRow => {
+                            const network = pageItems[virtualRow.index];
+                            if (!network) {
+                              return null;
+                            }
 
-                          const rowIndex = virtualRow.index + 1;
-                          const isByTimestamp = sortConfig.by === 'startTimestamp';
-                          const hasOccurred = currentTime >= network.offsetMs;
-                          const isBeforeHover =
-                            currentHoverTime === undefined ||
-                            currentHoverTime >= network.offsetMs;
-                          const isAsc = isByTimestamp ? sortConfig.asc : false;
+                            const rowIndex = pageOffset + virtualRow.index + 1;
+                            const isByTimestamp = sortConfig.by === 'startTimestamp';
+                            const hasOccurred = currentTime >= network.offsetMs;
+                            const isBeforeHover =
+                              currentHoverTime === undefined ||
+                              currentHoverTime >= network.offsetMs;
+                            const isAsc = isByTimestamp ? sortConfig.asc : false;
 
-                          const rowClassName = getTimelineRowClassName({
-                            hasHoverTime: currentHoverTime !== undefined,
-                            hasOccurred,
-                            isAsc,
-                            isBeforeHover,
-                            isByTimestamp,
-                            isLastDataRow: virtualRow.index === items.length - 1,
-                          });
+                            const rowClassName = getTimelineRowClassName({
+                              hasHoverTime: currentHoverTime !== undefined,
+                              hasOccurred,
+                              isAsc,
+                              isBeforeHover,
+                              isByTimestamp,
+                              isLastDataRow:
+                                pageOffset + virtualRow.index === items.length - 1,
+                            });
 
-                          return (
-                            <VirtualTable.BodyRow
-                              useTransparentBorders
-                              key={virtualRow.key}
-                              className={rowClassName}
-                              data-index={virtualRow.index}
-                              style={{
-                                gridTemplateColumns,
-                                height: BODY_HEIGHT,
-                              }}
-                            >
-                              {Array.from({length: COLUMN_COUNT}, (_, columnIndex) => (
-                                <NetworkTableCell
-                                  key={`${virtualRow.key}-${columnIndex}`}
-                                  columnIndex={columnIndex}
-                                  frame={network}
-                                  onMouseEnter={onMouseEnter}
-                                  onMouseLeave={onMouseLeave}
-                                  onClickCell={onClickCell}
-                                  onClickTimestamp={onClickTimestamp}
-                                  rowIndex={rowIndex}
-                                  startTimestampMs={startTimestampMs}
-                                  style={{height: BODY_HEIGHT}}
-                                />
-                              ))}
-                            </VirtualTable.BodyRow>
-                          );
-                        })}
-                      </VirtualTable.Offset>
-                    </VirtualTable.Content>
-                  )}
-                </VirtualTable.BodyScrollContainer>
-              </VirtualTable>
-              {sortConfig.by === 'startTimestamp' && items.length ? (
-                <JumpButtons
-                  jump={showJumpUpButton ? 'up' : showJumpDownButton ? 'down' : undefined}
-                  onClick={onClickToJump}
-                  tableHeaderHeight={HEADER_HEIGHT}
-                />
-              ) : null}
-            </OverflowHidden>
+                            return (
+                              <VirtualTable.BodyRow
+                                useTransparentBorders
+                                key={virtualRow.key}
+                                className={rowClassName}
+                                data-index={virtualRow.index}
+                                style={{
+                                  gridTemplateColumns,
+                                  height: NETWORK_TABLE_BODY_ROW_HEIGHT,
+                                }}
+                              >
+                                {Array.from({length: COLUMN_COUNT}, (_, columnIndex) => (
+                                  <NetworkTableCell
+                                    key={`${virtualRow.key}-${columnIndex}`}
+                                    columnIndex={columnIndex}
+                                    frame={network}
+                                    onMouseEnter={onMouseEnter}
+                                    onMouseLeave={onMouseLeave}
+                                    onClickCell={onClickCell}
+                                    onClickTimestamp={onClickTimestamp}
+                                    rowIndex={rowIndex}
+                                    startTimestampMs={startTimestampMs}
+                                    style={{height: NETWORK_TABLE_BODY_ROW_HEIGHT}}
+                                  />
+                                ))}
+                              </VirtualTable.BodyRow>
+                            );
+                          })}
+                        </VirtualTable.Offset>
+                      </VirtualTable.Content>
+                    )}
+                  </VirtualTable.BodyScrollContainer>
+                </VirtualTable>
+                {sortConfig.by === 'startTimestamp' && items.length ? (
+                  <JumpButtons
+                    jump={
+                      showJumpUpButton ? 'up' : showJumpDownButton ? 'down' : undefined
+                    }
+                    onClick={onClickToJump}
+                    tableHeaderHeight={NETWORK_TABLE_HEADER_HEIGHT}
+                  />
+                ) : null}
+              </Flex>
+              <NetworkPaginationRow
+                onNextPage={onNextPage}
+                onPreviousPage={onPreviousPage}
+                pageOffset={pageOffset}
+                safePage={safePage}
+                totalCount={items.length}
+                totalPages={totalPages}
+              />
+            </Flex>
           ) : (
             <Placeholder height="100%" />
           )}

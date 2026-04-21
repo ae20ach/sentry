@@ -1,5 +1,11 @@
 import {useCallback, useMemo} from 'react';
-import {parseAsBoolean, parseAsString, parseAsStringLiteral, useQueryState} from 'nuqs';
+import {
+  parseAsBoolean,
+  parseAsInteger,
+  parseAsString,
+  parseAsStringLiteral,
+  useQueryState,
+} from 'nuqs';
 
 import type {SpanFrame} from 'sentry/utils/replays/types';
 
@@ -36,6 +42,10 @@ export function useSortNetwork({items}: Opts) {
     'n_detail_row',
     parseAsString.withDefault('').withOptions({history: 'push', throttleMs: 0})
   );
+  const [, setNetworkPage] = useQueryState(
+    'n_page',
+    parseAsInteger.withDefault(0).withOptions({history: 'push', throttleMs: 0})
+  );
 
   const sortConfig = useMemo(
     () =>
@@ -58,8 +68,9 @@ export function useSortNetwork({items}: Opts) {
         setSortBy(fieldName);
       }
       setDetailRow('');
+      setNetworkPage(0);
     },
-    [sortConfig, setSortAsc, setSortBy, setDetailRow]
+    [sortConfig, setSortAsc, setSortBy, setDetailRow, setNetworkPage]
   );
 
   return {

@@ -1,0 +1,200 @@
+---
+title: PaginationFooter
+description: Right-aligned page summary with previous and next controls for lists and tables.
+category: navigation
+source: '@sentry/scraps/paginationFooter'
+resources:
+  js: https://github.com/getsentry/sentry/blob/master/static/app/components/core/paginationFooter/paginationFooter.tsx
+  a11y:
+    WCAG 2.1.1: https://www.w3.org/TR/WCAG22/#keyboard
+    WCAG 2.4.7: https://www.w3.org/TR/WCAG22/#focus-visible
+    WCAG 2.5.8: https://www.w3.org/TR/WCAG22/#target-size-minimum
+    WAI-ARIA Button Pattern: https://www.w3.org/WAI/ARIA/apg/patterns/button/
+---
+
+import {useState} from 'react';
+
+import {PaginationFooter} from '@sentry/scraps/paginationFooter';
+import {Flex, Stack} from '@sentry/scraps/layout';
+import {Text} from '@sentry/scraps/text';
+
+import * as Storybook from 'sentry/stories';
+
+export const documentation = import('!!type-loader!@sentry/scraps/paginationFooter');
+
+`<PaginationFooter>` shows an optional muted caption (for example, “Showing 1–25 of 100”) plus icon-only previous and next buttons. It does not own page state: your caller updates URLs, query cursors, or local `useState` and passes `isPreviousDisabled` / `isNextDisabled` plus handlers.
+
+For issues-stream style pagination that reads `Link` response headers and pushes cursor query params, prefer the `<Pagination>` wrapper in `sentry/components/pagination`, which composes this footer.
+
+```jsx
+<PaginationFooter
+  caption="Page 2 of 10"
+  isPreviousDisabled={false}
+  isNextDisabled={false}
+  onPrevious={() => {}}
+  onNext={() => {}}
+/>
+```
+
+## When to use
+
+Use `<PaginationFooter>` when you need a consistent scraps footer for **client-side** paging, nested panels, or custom data sources where you already compute the caption and enabled state.
+
+For **cursor-based** list paging that syncs with the location bar, use `<Pagination>` instead so link parsing and navigation stay consistent.
+
+> [!NOTE]
+>
+> The root element sets `data-test-id="pagination"` for integration tests.
+
+## Sizes
+
+`size` controls caption typography and spacing between the caption and buttons. `normal` matches the default issues stream footer; `small` fits compact contexts such as nested tables or replay detail panels.
+
+export function NormalPaginationDemo() {
+  const [page, setPage] = useState(2);
+  const totalPages = 6;
+  return (
+    <PaginationFooter
+      caption={`Page ${page} of ${totalPages}`}
+      isPreviousDisabled={page <= 1}
+      isNextDisabled={page >= totalPages}
+      onPrevious={() => setPage(p => Math.max(1, p - 1))}
+      onNext={() => setPage(p => Math.min(totalPages, p + 1))}
+      size="normal"
+    />
+  );
+}
+
+export function SmallPaginationDemo() {
+  const [page, setPage] = useState(2);
+  const totalPages = 6;
+  return (
+    <PaginationFooter
+      caption={`Page ${page} of ${totalPages}`}
+      isPreviousDisabled={page <= 1}
+      isNextDisabled={page >= totalPages}
+      onPrevious={() => setPage(p => Math.max(1, p - 1))}
+      onNext={() => setPage(p => Math.min(totalPages, p + 1))}
+      size="small"
+    />
+  );
+}
+
+<Storybook.Demo>
+  <Stack gap="lg">
+    <Flex direction="column" gap="xs">
+      <Text size="sm" variant="muted">
+        size=&quot;normal&quot; (default)
+      </Text>
+      <NormalPaginationDemo />
+    </Flex>
+    <Flex direction="column" gap="xs">
+      <Text size="sm" variant="muted">
+        size=&quot;small&quot;
+      </Text>
+      <SmallPaginationDemo />
+    </Flex>
+  </Stack>
+</Storybook.Demo>
+
+```jsx
+<PaginationFooter
+  size="normal"
+  caption="Page 2 of 6"
+  isPreviousDisabled={false}
+  isNextDisabled={false}
+  onPrevious={() => {}}
+  onNext={() => {}}
+/>
+
+<PaginationFooter
+  size="small"
+  caption="Page 2 of 6"
+  isPreviousDisabled={false}
+  isNextDisabled={false}
+  onPrevious={() => {}}
+  onNext={() => {}}
+/>
+```
+
+## Button size override
+
+`buttonSize` overrides the default icon button size implied by `size`. Use this when embedding the footer in layouts that already assume a specific `Button` scale (for example, matching legacy `<Pagination size="md" />`).
+
+<Storybook.Demo>
+  <PaginationFooter
+    buttonSize="md"
+    caption='Buttons use md while caption follows size="normal"'
+    isNextDisabled={false}
+    isPreviousDisabled={false}
+    onNext={() => {}}
+    onPrevious={() => {}}
+    size="normal"
+  />
+</Storybook.Demo>
+
+```jsx
+<PaginationFooter
+  size="normal"
+  buttonSize="md"
+  caption="…"
+  isPreviousDisabled={false}
+  isNextDisabled={false}
+  onPrevious={() => {}}
+  onNext={() => {}}
+/>
+```
+
+## Disabled states
+
+Disable previous on the first page and next on the last page (or when there is no additional data). Both controls can be disabled when pagination is not available.
+
+export function DisabledEndsDemo() {
+  const [page, setPage] = useState(1);
+  const totalPages = 3;
+  return (
+    <PaginationFooter
+      caption={`Page ${page} of ${totalPages}`}
+      isPreviousDisabled={page <= 1}
+      isNextDisabled={page >= totalPages}
+      onPrevious={() => setPage(p => Math.max(1, p - 1))}
+      onNext={() => setPage(p => Math.min(totalPages, p + 1))}
+      size="normal"
+    />
+  );
+}
+
+<Storybook.Demo>
+  <DisabledEndsDemo />
+</Storybook.Demo>
+
+```jsx
+const totalPages = 3;
+const [page, setPage] = useState(1);
+
+<PaginationFooter
+  caption={`Page ${page} of ${totalPages}`}
+  isPreviousDisabled={page <= 1}
+  isNextDisabled={page >= totalPages}
+  onPrevious={() => setPage(p => Math.max(1, p - 1))}
+  onNext={() => setPage(p => Math.min(totalPages, p + 1))}
+/>;
+```
+
+## Accessibility
+
+This component meets [WCAG 2.2 AA](https://www.w3.org/TR/WCAG22/) expectations for its building blocks:
+
+- **Keyboard**: Previous and next are focusable `Button` controls (WCAG 2.1.1).
+- **Focus visibility**: Uses the standard button focus ring (WCAG 2.4.7).
+- **Target size**: Meets minimum touch target when default sizes are used (WCAG 2.5.8).
+- **Names**: Previous and next use `aria-label` via the scraps `Button` pattern.
+
+### Developer responsibilities
+
+- Provide a **caption** that makes the current range or position clear when that information matters for understanding the list (“Showing 1–25 of 100”, not only “Next”).
+
+## See also
+
+- [`Pagination`](https://github.com/getsentry/sentry/blob/master/static/app/components/pagination.tsx) (`sentry/components/pagination`) — cursor and URL-aware paging for list endpoints
+- [Button](/stories/core/button/) — underlying control for the icon actions

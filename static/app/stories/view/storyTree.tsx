@@ -187,7 +187,7 @@ export const COMPONENT_SUBCATEGORY_CONFIG: Record<
   },
   navigation: {
     label: 'Navigation',
-    components: ['link', 'tabs', 'menulistitem'],
+    components: ['link', 'paginationfooter', 'tabs', 'menulistitem'],
   },
   status: {
     label: 'Status',

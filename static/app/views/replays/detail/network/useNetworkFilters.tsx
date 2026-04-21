@@ -25,6 +25,7 @@ export type FilterFields = {
   f_n_type: string[];
   n_detail_row?: string;
   n_detail_tab?: string;
+  n_page?: string;
 };
 
 type Options = {
@@ -76,6 +77,7 @@ export function useNetworkFilters({networkFrames}: Options): Return {
         ...arg,
         n_detail_row: undefined,
         n_detail_tab: undefined,
+        n_page: undefined,
       });
     },
     [setFilter]

@@ -1,12 +1,9 @@
 import {useCallback} from 'react';
-import styled from '@emotion/styled';
 import type {Query} from 'history';
 
-import {Button, ButtonBar} from '@sentry/scraps/button';
-import {Flex} from '@sentry/scraps/layout';
+import {PaginationFooter} from '@sentry/scraps/paginationFooter';
 
-import {IconChevron} from 'sentry/icons';
-import {t, tct} from 'sentry/locale';
+import {tct} from 'sentry/locale';
 import {defined} from 'sentry/utils';
 import {parseCursor} from 'sentry/utils/cursor';
 import {parseLinkHeader} from 'sentry/utils/parseLinkHeader';
@@ -68,37 +65,18 @@ export function Pagination({
   const cursorHandler = onCursor ?? defaultCursorHandler;
 
   return (
-    <Flex
-      justify="end"
-      align="center"
-      margin="2xl 0 0 0"
+    <PaginationFooter
+      buttonSize={size}
       className={className}
-      data-test-id="pagination"
-    >
-      {caption && <PaginationCaption>{caption}</PaginationCaption>}
-      <ButtonBar>
-        <Button
-          icon={<IconChevron direction="left" />}
-          aria-label={t('Previous')}
-          size={size}
-          disabled={previousDisabled}
-          onClick={() => {
-            cursorHandler(links.previous?.cursor, path, query, -1);
-            paginationAnalyticsEvent?.('Previous');
-          }}
-        />
-        <Button
-          icon={<IconChevron direction="right" />}
-          aria-label={t('Next')}
-          size={size}
-          disabled={nextDisabled}
-          onClick={() => {
-            cursorHandler(links.next?.cursor, path, query, 1);
-            paginationAnalyticsEvent?.('Next');
-          }}
-        />
-      </ButtonBar>
-    </Flex>
+      caption={caption}
+      isNextDisabled={nextDisabled}
+      isPreviousDisabled={previousDisabled}
+      margin="2xl 0 0 0"
+      paginationAnalyticsEvent={paginationAnalyticsEvent}
+      size="normal"
+      onNext={() => cursorHandler(links.next?.cursor, path, query, 1)}
+      onPrevious={() => cursorHandler(links.previous?.cursor, path, query, -1)}
+    />
   );
 }
 
@@ -131,9 +109,3 @@ export function getPaginationCaption({
     total: total.toLocaleString(),
   });
 }
-
-const PaginationCaption = styled('span')`
-  color: ${p => p.theme.tokens.content.secondary};
-  font-size: ${p => p.theme.font.size.md};
-  margin-right: ${p => p.theme.space.xl};
-`;

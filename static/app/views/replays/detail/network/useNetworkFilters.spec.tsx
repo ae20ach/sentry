@@ -217,6 +217,7 @@ describe('useNetworkFilters', () => {
         query: {
           n_detail_row: '0',
           n_detail_tab: 'response',
+          n_page: '2',
         },
       } as Location<FilterFields>)
       .mockReturnValueOnce({
@@ -225,6 +226,7 @@ describe('useNetworkFilters', () => {
           f_n_type: [TYPE_OPTION.value],
           n_detail_row: '0',
           n_detail_tab: 'response',
+          n_page: '2',
         },
       } as Location<FilterFields>)
       .mockReturnValueOnce({
@@ -234,6 +236,7 @@ describe('useNetworkFilters', () => {
           f_n_status: [STATUS_OPTION.value],
           n_detail_row: '0',
           n_detail_tab: 'response',
+          n_page: '2',
         },
       } as Location<FilterFields>);
 
