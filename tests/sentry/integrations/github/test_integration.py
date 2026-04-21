@@ -13,13 +13,13 @@ import responses
 from django.http import HttpResponse
 from django.urls import reverse
 
-import sentry
 from sentry.constants import ObjectStatus
 from sentry.integrations.github import client
 from sentry.integrations.github import integration as github_integration
 from sentry.integrations.github.client import (
     MINIMUM_REQUESTS,
     GitHubApiClient,
+    GitHubBaseClient,
     GithubSetupApiClient,
 )
 from sentry.integrations.github.integration import (
@@ -56,7 +56,6 @@ from sentry.testutils.asserts import (
 from sentry.testutils.cases import APITestCase, IntegrationTestCase
 from sentry.testutils.helpers import with_feature
 from sentry.testutils.helpers.integrations import get_installation_of_type
-from sentry.testutils.helpers.options import override_options
 from sentry.testutils.silo import assume_test_silo_mode, control_silo_test
 from sentry.users.services.user.serial import serialize_rpc_user
 from sentry.utils.cache import cache
@@ -637,7 +636,7 @@ class GitHubIntegrationTest(IntegrationTestCase):
             GitHubIntegration, integration, self.organization.id
         )
 
-        with patch.object(sentry.integrations.github.client.GitHubBaseClient, "page_size", 1):
+        with patch.object(GitHubBaseClient, "page_size", 1):
             result = installation.get_repositories()
             assert result == [
                 {
@@ -672,10 +671,8 @@ class GitHubIntegrationTest(IntegrationTestCase):
         )
 
         with (
-            patch.object(
-                sentry.integrations.github.client.GitHubBaseClient, "page_number_limit", 1
-            ),
-            patch.object(sentry.integrations.github.client.GitHubBaseClient, "page_size", 1),
+            patch.object(GitHubBaseClient, "page_number_limit", 1),
+            patch.object(GitHubBaseClient, "page_size", 1),
         ):
             result = installation.get_repositories()
             assert result == [
