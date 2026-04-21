@@ -258,7 +258,7 @@ def run_eap_group_search(
     selected_columns, orderby = EAP_SORT_STRATEGIES[sort_field]
     score_column = selected_columns[1]  # e.g. "last_seen()" or "count()"
 
-    projects = list(Project.objects.filter(id__in=project_ids))
+    projects = list(Project.objects.filter(id__in=project_ids, organization_id=organization.id))
     if not projects:
         return ([], 0)
 
