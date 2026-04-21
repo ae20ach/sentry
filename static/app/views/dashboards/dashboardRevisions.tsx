@@ -419,7 +419,7 @@ const HistoryItem = styled('div')`
   }
 
   &[aria-selected='true'] {
-    background-color: ${p => p.theme.tokens.transparent.accent.muted};
+    background-color: ${p => p.theme.tokens.background.transparent.accent.muted};
   }
 `;
 
