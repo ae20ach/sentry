@@ -37,7 +37,7 @@ def is_event_challenge(data: Mapping[str, Any]) -> bool:
 
 class SeerResolutionResult(NamedTuple):
     organization_id: int | None
-    error_reason: SeerSlackHaltReason | None
+    halt_reason: SeerSlackHaltReason | None
 
 
 @all_silo_function
@@ -45,6 +45,11 @@ def resolve_seer_organization_for_slack_user(
     *,
     integration: RpcIntegration,
     slack_user_id: str,
+    channel_id: str,
+    thread_ts: str,
+    message_ts: str,
+    event_type: str,
+    text: str,
 ) -> SeerResolutionResult:
     """
     Resolve and validate an organization/user for a Seer Slack event.
@@ -69,7 +74,7 @@ def resolve_seer_organization_for_slack_user(
     user = user_service.get_user(identity.user_id) if identity else None
     if not user:
         return SeerResolutionResult(
-            organization_id=None, error_reason=SeerSlackHaltReason.IDENTITY_NOT_LINKED
+            organization_id=None, halt_reason=SeerSlackHaltReason.IDENTITY_NOT_LINKED
         )
 
     ois = integration_service.get_organization_integrations(
@@ -79,7 +84,7 @@ def resolve_seer_organization_for_slack_user(
     )
     if not ois:
         return SeerResolutionResult(
-            organization_id=None, error_reason=SeerSlackHaltReason.NO_VALID_INTEGRATION
+            organization_id=None, halt_reason=SeerSlackHaltReason.NO_VALID_INTEGRATION
         )
 
     for oi in ois:
@@ -92,10 +97,10 @@ def resolve_seer_organization_for_slack_user(
             continue
         if ctx.member is None:
             continue
-        return SeerResolutionResult(organization_id=oi.organization_id, error_reason=None)
+        return SeerResolutionResult(organization_id=oi.organization_id, halt_reason=None)
 
     return SeerResolutionResult(
-        organization_id=None, error_reason=SeerSlackHaltReason.NO_VALID_ORGANIZATION
+        organization_id=None, halt_reason=SeerSlackHaltReason.NO_VALID_ORGANIZATION
     )
 
 
@@ -142,7 +147,13 @@ class SlackEventRequest(SlackDMRequest):
     @all_silo_function
     def resolve_seer_organization(self) -> SeerResolutionResult:
         return resolve_seer_organization_for_slack_user(
-            integration=self.integration, slack_user_id=self.user_id
+            integration=self.integration,
+            slack_user_id=self.user_id,
+            channel_id=self.channel_id,
+            thread_ts=self.thread_ts,
+            message_ts=self.dm_data.get("ts", ""),
+            event_type=self.dm_data.get("type", ""),
+            text=self.text,
         )
 
     @property

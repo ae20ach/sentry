@@ -327,26 +327,26 @@ class SlackEventRequestSeerResolutionTest(TestCase):
             self.identity.delete()
         result = self.slack_request.resolve_seer_organization()
         assert result.organization_id is None
-        assert result.error_reason == SeerSlackHaltReason.IDENTITY_NOT_LINKED
+        assert result.halt_reason == SeerSlackHaltReason.IDENTITY_NOT_LINKED
 
     def test_no_organization_integrations(self):
         with assume_test_silo_mode_of(OrganizationIntegration):
             OrganizationIntegration.objects.filter(integration_id=self.integration.id).delete()
         result = self.slack_request.resolve_seer_organization()
         assert result.organization_id is None
-        assert result.error_reason == SeerSlackHaltReason.NO_VALID_INTEGRATION
+        assert result.halt_reason == SeerSlackHaltReason.NO_VALID_INTEGRATION
 
     def test_org_not_found(self):
         self.organization.delete()
         result = self.slack_request.resolve_seer_organization()
         assert result.organization_id is None
-        assert result.error_reason == SeerSlackHaltReason.NO_VALID_ORGANIZATION
+        assert result.halt_reason == SeerSlackHaltReason.NO_VALID_ORGANIZATION
 
     def test_org_not_active(self):
         self.organization.update(status=OrganizationStatus.PENDING_DELETION)
         result = self.slack_request.resolve_seer_organization()
         assert result.organization_id is None
-        assert result.error_reason == SeerSlackHaltReason.NO_VALID_ORGANIZATION
+        assert result.halt_reason == SeerSlackHaltReason.NO_VALID_ORGANIZATION
 
     @patch(
         "sentry.integrations.slack.requests.event.SlackExplorerEntrypoint.has_access",
@@ -355,7 +355,7 @@ class SlackEventRequestSeerResolutionTest(TestCase):
     def test_org_no_seer_access(self, mock_access):
         result = self.slack_request.resolve_seer_organization()
         assert result.organization_id is None
-        assert result.error_reason == SeerSlackHaltReason.NO_VALID_ORGANIZATION
+        assert result.halt_reason == SeerSlackHaltReason.NO_VALID_ORGANIZATION
 
     def test_user_not_member(self):
         non_member = self.create_user()
@@ -363,7 +363,7 @@ class SlackEventRequestSeerResolutionTest(TestCase):
             self.identity.update(user=non_member)
         result = self.slack_request.resolve_seer_organization()
         assert result.organization_id is None
-        assert result.error_reason == SeerSlackHaltReason.NO_VALID_ORGANIZATION
+        assert result.halt_reason == SeerSlackHaltReason.NO_VALID_ORGANIZATION
 
     @patch(
         "sentry.integrations.slack.requests.event.SlackExplorerEntrypoint.has_access",
@@ -372,7 +372,7 @@ class SlackEventRequestSeerResolutionTest(TestCase):
     def test_resolves_valid_organization(self, mock_access):
         result = self.slack_request.resolve_seer_organization()
         assert result.organization_id == self.organization.id
-        assert result.error_reason is None
+        assert result.halt_reason is None
 
 
 class SlackActionRequestTest(TestCase):
