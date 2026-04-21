@@ -72,7 +72,7 @@ const FloatingEventNavigation = styled(Sticky)`
   z-index: ${p => p.theme.zIndex.header};
   border-radius: ${p => p.theme.radius.md} ${p => p.theme.radius.md} 0 0;
 
-  &[data-stuck] > div {
+  &[data-stuck] {
     border-radius: 0;
   }
 `;
