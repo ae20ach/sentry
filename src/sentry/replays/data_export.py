@@ -463,8 +463,8 @@ def save_to_storage(destination_bucket: str, filename: str, contents: str) -> No
 )
 def export_replay_row_set_async(
     project_id: int,
-    start: datetime,
-    end: datetime,
+    start: datetime | str,
+    end: datetime | str,
     destination_bucket: str,
     max_rows_to_export: int,
     limit: int = EXPORT_QUERY_ROWS_PER_PAGE,
@@ -475,8 +475,8 @@ def export_replay_row_set_async(
     Export all replay rows which belong to the project and exist within the range.
 
     :param project_id: Sentry Project ID.
-    :param start: Inclusive, minimum date in the queried range.
-    :param end: Exclusive, maximum date in the queried range.
+    :param start: Inclusive, minimum date in the queried range. Can be datetime or ISO string.
+    :param end: Exclusive, maximum date in the queried range. Can be datetime or ISO string.
     :param destination_bucket: Which bucket the resulting CSV will be uploaded for.
     :param max_rows_to_export: The maximum number of rows which may be executed by this task
         chain. The max_rows_to_export value should match the number of rows present in your range.
@@ -489,6 +489,12 @@ def export_replay_row_set_async(
         never overlap with previous runs.
     :param num_pages: The maximum number of pages to query per task.
     """
+    # Convert ISO strings to datetime objects (needed for msgpack serialization compatibility)
+    if isinstance(start, str):
+        start = datetime.fromisoformat(start)
+    if isinstance(end, str):
+        end = datetime.fromisoformat(end)
+
     assert limit > 0, "Limit must be greater than 0."
     assert offset >= 0, "Offset must be greater than or equal to 0."
     assert start < end, "Start must be before end date."
@@ -521,8 +527,8 @@ def export_replay_row_set_async(
 
         export_replay_row_set_async.delay(
             project_id=project_id,
-            start=start,
-            end=end,
+            start=start.isoformat(),
+            end=end.isoformat(),
             limit=limit,
             offset=next_offset,
             destination_bucket=destination_bucket,
@@ -558,8 +564,8 @@ def export_replay_project_async(
     for start, end, max_rows_to_export in get_replay_date_query_ranges(project_id):
         export_replay_row_set_async.delay(
             project_id=project_id,
-            start=start,
-            end=end,
+            start=start.isoformat(),
+            end=end.isoformat(),
             destination_bucket=destination_bucket,
             max_rows_to_export=max_rows_to_export,
             limit=limit,
