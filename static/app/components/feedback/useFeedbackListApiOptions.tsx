@@ -92,12 +92,16 @@ export function useFeedbackListApiOptions(props: Props) {
 export function useFeedbackListInfiniteApiOptions(props: Props) {
   const {fixedQueryView, mailbox, orgSlug, prefetch} = useFeedbackListQuery(props);
 
-  return apiOptions.asInfinite<FeedbackIssueListItem[]>()(
-    '/organizations/$organizationIdOrSlug/issues/',
-    {
-      path: fixedQueryView ? {organizationIdOrSlug: orgSlug} : skipToken,
-      query: fixedQueryView ? buildQuery({fixedQueryView, mailbox, prefetch}) : undefined,
-      staleTime: 0,
-    }
-  );
+  return useMemo(() => {
+    return apiOptions.asInfinite<FeedbackIssueListItem[]>()(
+      '/organizations/$organizationIdOrSlug/issues/',
+      {
+        path: fixedQueryView ? {organizationIdOrSlug: orgSlug} : skipToken,
+        query: fixedQueryView
+          ? buildQuery({fixedQueryView, mailbox, prefetch})
+          : undefined,
+        staleTime: 0,
+      }
+    );
+  }, [orgSlug, prefetch, fixedQueryView, mailbox]);
 }
