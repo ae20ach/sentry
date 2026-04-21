@@ -150,6 +150,11 @@ class RepoTreesIntegration(ABC):
                     3600 * (index % 24),
                 )
             except ApiError as error:
+                logger.warning(
+                    "Repo tree fetch failed. Continuing execution.",
+                    extra=extra,
+                    exc_info=True,
+                )
                 if self.get_client().should_count_api_error(error, extra):
                     connection_error_count += 1
             except Exception:
