@@ -2426,11 +2426,6 @@ class BuildWidgetTimeseriesParamsTest(TestCase):
         assert all_params[0]["dataset"] == "logs"
         assert all_params[0]["yAxis"] == ["count(message)"]
 
-    def test_unsupported_widget_type_returns_empty_list(self) -> None:
-        widget = self._make_widget(widget_type=DashboardWidgetTypes.ERROR_EVENTS)
-
-        assert build_widget_timeseries_params(widget, QueryDict()) == []
-
     def test_multiple_queries_returns_one_dict_each_in_order(self) -> None:
         widget = self._make_widget(
             queries=[

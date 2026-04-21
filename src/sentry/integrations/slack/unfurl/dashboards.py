@@ -118,6 +118,10 @@ def _unfurl_dashboards(
         if widget is None:
             continue
 
+        is_supported_dataset = widget.widget_type in _WIDGET_TYPE_TO_DATASET
+        if not is_supported_dataset:
+            continue
+
         display_type = _TIMESERIES_DISPLAY_TYPES.get(widget.display_type)
         if display_type is None:
             continue
@@ -208,22 +212,10 @@ def _get_widget(
 def build_widget_timeseries_params(
     widget: DashboardWidget, url_params: QueryDict
 ) -> list[dict[str, str | list[str]]]:
-    """Build one events-timeseries param dict per widget query.
-
-    Returns an empty list when the widget type isn't backed by an EAP
-    trace-item dataset (spans, logs) or when the widget has no queries.
-
-    Expects ``widget.dashboardwidgetquery_set`` to be prefetched in
-    ``order``; otherwise this will issue a query.
-
-    Each returned dict uses list values for multi-valued params.
-    ``client.get`` iterates ``params.items()`` and only honors multiple
-    values when the value is a ``list``; a ``QueryDict`` would silently
-    drop all but the last value.
-    """
+    """Build one events-timeseries param dict per widget query."""
     dataset = _WIDGET_TYPE_TO_DATASET.get(widget.widget_type)
     if dataset is None:
-        return []
+        raise ValueError(f"Unsupported widget type: {widget.widget_type}")
 
     return [
         _params_for_widget_query(wq, url_params, dataset)
