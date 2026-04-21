@@ -174,16 +174,24 @@ export function CronDetectorDetails({detector, project}: CronDetectorDetailsProp
                 </PageFilterBar>
                 {hasPageFrameFeature ? (
                   <Flex align="center" gap="sm" marginLeft="auto">
+                    <TimezoneOverride
+                      monitor={dataSource.queryObj}
+                      size="sm"
+                      userTimezone={userTimezone}
+                      onTimezoneSelected={setTimezoneOverride}
+                    />
                     <DisableDetectorAction detector={detector} />
                     <EditDetectorAction detector={detector} />
                   </Flex>
                 ) : null}
               </Flex>
-              <TimezoneOverride
-                monitor={dataSource.queryObj}
-                userTimezone={userTimezone}
-                onTimezoneSelected={setTimezoneOverride}
-              />
+              {hasPageFrameFeature ? null : (
+                <TimezoneOverride
+                  monitor={dataSource.queryObj}
+                  userTimezone={userTimezone}
+                  onTimezoneSelected={setTimezoneOverride}
+                />
+              )}
             </Flex>
             <DisabledAlert
               detector={detector}
