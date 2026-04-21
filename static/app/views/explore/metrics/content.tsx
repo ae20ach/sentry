@@ -155,21 +155,21 @@ function MetricsHeader() {
           </Fragment>
         )}
       </Layout.HeaderContent>
-      <Layout.HeaderActions>
-        {hasPageFrameFeature ? (
-          <TopBar.Slot name="feedback">
-            <FeedbackButton
-              feedbackOptions={metricsFeedbackOptions}
-              aria-label={t('Give Feedback')}
-              tooltipProps={{title: t('Give Feedback')}}
-            >
-              {null}
-            </FeedbackButton>
-          </TopBar.Slot>
-        ) : (
+      {hasPageFrameFeature ? (
+        <TopBar.Slot name="feedback">
+          <FeedbackButton
+            feedbackOptions={metricsFeedbackOptions}
+            aria-label={t('Give Feedback')}
+            tooltipProps={{title: t('Give Feedback')}}
+          >
+            {null}
+          </FeedbackButton>
+        </TopBar.Slot>
+      ) : (
+        <Layout.HeaderActions>
           <FeedbackButton feedbackOptions={metricsFeedbackOptions} />
-        )}
-      </Layout.HeaderActions>
+        </Layout.HeaderActions>
+      )}
     </Layout.Header>
   );
 }
