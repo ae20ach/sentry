@@ -170,6 +170,27 @@ def run_night_shift_for_org(
         sentry_sdk.metrics.count("night_shift.triage_action", count, attributes={"action": action})
     sentry_sdk.metrics.distribution("night_shift.org_run_duration", time.monotonic() - start_time)
 
+    seer_run_id_by_group: dict[int, str | None] = {}
+    if not dry_run:
+        # Populate each candidate group's FK cache so trigger_autofix_explorer doesn't
+        # re-fetch group.project on every call. Group.organization is a property that
+        # delegates to self.project.organization, so caching the org on the project is
+        # enough to avoid both lookups.
+        projects_by_id = {}
+        for p in eligible_projects:
+            p.organization = organization
+            projects_by_id[p.id] = p
+        for c in candidates:
+            c.group.project = projects_by_id[c.group.project_id]
+
+        issues = _run_autofix_for_candidates(
+            run=run,
+            candidates=candidates,
+            preferences=preferences,
+            log_extra=log_extra,
+        )
+        seer_run_id_by_group = {i.group_id: i.seer_run_id for i in issues}
+
     logger.info(
         "night_shift.candidates_selected",
         extra={
@@ -177,33 +198,15 @@ def run_night_shift_for_org(
             "num_eligible_projects": len(eligible_projects),
             "num_candidates": len(candidates),
             "dry_run": dry_run,
-            "candidates": [{"group_id": c.group.id, "action": c.action} for c in candidates],
+            "candidates": [
+                {
+                    "group_id": c.group.id,
+                    "action": c.action,
+                    "seer_run_id": seer_run_id_by_group.get(c.group.id),
+                }
+                for c in candidates
+            ],
         },
-    )
-
-    if dry_run:
-        logger.info(
-            "night_shift.dry_run_completed",
-            extra={**log_extra, "num_candidates": len(candidates)},
-        )
-        return agent_run_id
-
-    # Populate each candidate group's FK cache so trigger_autofix_explorer doesn't
-    # re-fetch group.project on every call. Group.organization is a property that
-    # delegates to self.project.organization, so caching the org on the project is
-    # enough to avoid both lookups.
-    projects_by_id = {}
-    for p in eligible_projects:
-        p.organization = organization
-        projects_by_id[p.id] = p
-    for c in candidates:
-        c.group.project = projects_by_id[c.group.project_id]
-
-    _run_autofix_for_candidates(
-        run=run,
-        candidates=candidates,
-        preferences=preferences,
-        log_extra=log_extra,
     )
 
     return agent_run_id
@@ -280,10 +283,11 @@ def _run_autofix_for_candidates(
     candidates: Sequence[TriageResult],
     preferences: dict[int, SeerProjectPreference | None],
     log_extra: dict[str, object],
-) -> None:
+) -> list[SeerNightShiftRunIssue]:
     """
     For each fixable triage candidate, trigger a Seer autofix run and persist the
-    resulting run id onto a newly created SeerNightShiftRunIssue row.
+    resulting run id onto a newly created SeerNightShiftRunIssue row. Returns the
+    list of rows that were created.
     """
     fixable_candidates = [
         c for c in candidates if c.action in (TriageAction.AUTOFIX, TriageAction.ROOT_CAUSE_ONLY)
@@ -293,7 +297,7 @@ def _run_autofix_for_candidates(
             "night_shift.no_fixable_candidates",
             extra={**log_extra, "num_candidates": len(candidates)},
         )
-        return
+        return []
 
     referrer = referrer_map[SeerAutomationSource.NIGHT_SHIFT]
 
@@ -326,13 +330,6 @@ def _run_autofix_for_candidates(
             )
             continue
 
-        if seer_run_id is None:
-            logger.warning(
-                "night_shift.autofix_trigger_returned_none",
-                extra={**log_extra, "group_id": c.group.id},
-            )
-            continue
-
         issues.append(
             SeerNightShiftRunIssue(
                 run=run,
@@ -345,3 +342,5 @@ def _run_autofix_for_candidates(
     SeerNightShiftRunIssue.objects.bulk_create(issues)
 
     sentry_sdk.metrics.count("night_shift.autofix_triggered", len(issues))
+
+    return issues
