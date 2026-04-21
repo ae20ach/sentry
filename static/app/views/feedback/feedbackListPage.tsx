@@ -234,7 +234,12 @@ export default function FeedbackListPage() {
                 </FeedbackButton>
               </TopBar.Slot>
             </Layout.Header>
-            <Stack flex={1} minHeight={0} overflow="hidden" padding="lg xl">
+            <Stack
+              flex={1}
+              minHeight={0}
+              overflow="hidden"
+              padding={{sm: 'xl', lg: 'xl 3xl'}}
+            >
               <PageContent
                 hideTop={hideTop}
                 hasFeedbackContent={hasFeedbackContent}
