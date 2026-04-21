@@ -131,6 +131,19 @@ export function SupergroupDetailDrawer({
 
 const PAGE_SIZE = 25;
 
+/**
+ * Max member IDs we can embed in an `issue.id:[…]` clause before the GET URL
+ * gets too big. Below the limit we filter the stream query *to* our members;
+ * above it we invert: query the stream unfiltered and intersect locally.
+ */
+const HOIST_INLINE_ID_LIMIT = 200;
+
+/**
+ * When a supergroup is too big to inline its IDs, we look at this many top
+ * stream results and keep the ones that happen to be members.
+ */
+const HOIST_STREAM_SCAN_SIZE = 100;
+
 function SupergroupIssueList({
   groupIds,
   memberList,
@@ -154,8 +167,8 @@ function SupergroupIssueList({
   } = location.query;
   const query = typeof searchQuery === 'string' ? searchQuery : '';
 
-  // Search with the stream query across all member issues so matched issues
-  // can be hoisted to page 1 before pagination.
+  const inlineIdListFits = groupIds.length <= HOIST_INLINE_ID_LIMIT;
+
   const {data: matchedGroups, isPending: matchedPending} = useQuery({
     ...apiOptions.as<Group[]>()('/organizations/$organizationIdOrSlug/issues/', {
       path: {organizationIdOrSlug: organization.slug},
@@ -165,37 +178,57 @@ function SupergroupIssueList({
         statsPeriod,
         start,
         end,
-        query: `${query} issue.id:[${groupIds.join(',')}]`,
-        per_page: PAGE_SIZE,
+        query: inlineIdListFits ? `${query} issue.id:[${groupIds.join(',')}]` : query,
+        per_page: inlineIdListFits ? PAGE_SIZE : HOIST_STREAM_SCAN_SIZE,
       },
       staleTime: 30_000,
     }),
-    enabled: !!filterWithCurrentSearch,
+    enabled: !!filterWithCurrentSearch && groupIds.length > 0,
   });
 
-  const matchedIds = new Set(matchedGroups?.map(g => g.id));
-  const sortedGroupIds = [...groupIds].sort(
-    (a, b) => Number(matchedIds.has(String(b))) - Number(matchedIds.has(String(a)))
+  const matchedIds = useMemo(() => {
+    if (!matchedGroups) {
+      return new Set<string>();
+    }
+    if (inlineIdListFits) {
+      return new Set(matchedGroups.map(g => g.id));
+    }
+    const memberSet = new Set(groupIds.map(String));
+    return new Set(matchedGroups.map(g => g.id).filter(id => memberSet.has(id)));
+  }, [matchedGroups, inlineIdListFits, groupIds]);
+
+  // When filtering with the stream query, wait for the match so the IDs we
+  // fetch reflect the hoisted ordering.
+  const pageFetchReady = !filterWithCurrentSearch || !matchedPending;
+  const sortedGroupIds = useMemo(
+    () =>
+      filterWithCurrentSearch
+        ? [...groupIds].sort(
+            (a, b) =>
+              Number(matchedIds.has(String(b))) - Number(matchedIds.has(String(a)))
+          )
+        : groupIds,
+    [filterWithCurrentSearch, groupIds, matchedIds]
   );
 
-  const totalPages = Math.ceil(sortedGroupIds.length / PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(sortedGroupIds.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
-  const pageGroupIds = sortedGroupIds.slice(
+  const visibleIds = sortedGroupIds.slice(
     safePage * PAGE_SIZE,
     (safePage + 1) * PAGE_SIZE
   );
 
-  // Fetch all groups on this page
-  const {data: allGroups, isPending: allPending} = useQuery(
-    apiOptions.as<Group[]>()('/organizations/$organizationIdOrSlug/issues/', {
+  const {data: allGroups, isPending: allPending} = useQuery({
+    ...apiOptions.as<Group[]>()('/organizations/$organizationIdOrSlug/issues/', {
       path: {organizationIdOrSlug: organization.slug},
       query: {
-        group: pageGroupIds.map(String),
+        group: visibleIds.map(String),
         project: ALL_ACCESS_PROJECTS,
       },
       staleTime: 30_000,
-    })
-  );
+    }),
+    enabled: pageFetchReady,
+  });
 
   if (allPending || (filterWithCurrentSearch && matchedPending)) {
     return (
@@ -214,7 +247,7 @@ function SupergroupIssueList({
             <DrawerColumnHeaders />
           </LoadingHeader>
           <PanelBody>
-            {pageGroupIds.map(id => (
+            {visibleIds.map(id => (
               <LoadingStreamGroup key={id} withChart withColumns={DRAWER_COLUMNS} />
             ))}
           </PanelBody>
@@ -224,11 +257,10 @@ function SupergroupIssueList({
   }
 
   const groupMap = new Map(allGroups?.map(g => [g.id, g]));
-
-  const sortedGroups = pageGroupIds
+  const sortedGroups = visibleIds
     .map(id => groupMap.get(String(id)))
-    .filter((g): g is Group => g !== undefined);
-
+    .filter((g): g is Group => g !== undefined)
+    .sort((a, b) => Number(matchedIds.has(b.id)) - Number(matchedIds.has(a.id)));
   const visibleGroupIds = sortedGroups.map(g => g.id);
 
   return (
