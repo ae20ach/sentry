@@ -163,7 +163,7 @@ function TableHeader() {
             icon={<IconAdd />}
             size="sm"
           >
-            {t('Create Alert')}
+            {t('Create Automation')}
           </LinkButton>
         ) : null}
       </Flex>
