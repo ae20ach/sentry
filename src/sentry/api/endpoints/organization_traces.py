@@ -186,18 +186,18 @@ class OrganizationTracesEndpoint(OrganizationTracesEndpointBase):
                 ),
             )
 
-        return self.paginate(
-            request=request,
-            paginator=GenericOffsetPaginator(data_fn=executor.execute),
-            on_results=lambda results: self.handle_results_with_meta(
-                request,
-                organization,
-                snuba_params.project_ids,
-                results,
-                standard_meta=True,
-                dataset=Dataset.SpansIndexed,
-            ),
-        )
+            return self.paginate(
+                request=request,
+                paginator=GenericOffsetPaginator(data_fn=executor.execute),
+                on_results=lambda results: self.handle_results_with_meta(
+                    request,
+                    organization,
+                    snuba_params.project_ids,
+                    results,
+                    standard_meta=True,
+                    dataset=Dataset.SpansIndexed,
+                ),
+            )
 
 
 class TracesExecutor:
