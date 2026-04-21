@@ -61,6 +61,7 @@ function AutomationDocumentTitle() {
 function AutomationBreadcrumbs() {
   const title = useFormField('name');
   const organization = useOrganization();
+  const hasPageFrameFeature = useHasPageFrameFeature();
   return (
     <Breadcrumbs
       crumbs={[
@@ -68,7 +69,7 @@ function AutomationBreadcrumbs() {
           label: t('Alerts'),
           to: makeAutomationBasePathname(organization.slug),
         },
-        {label: title ? title : t('New Alert')},
+        {label: hasPageFrameFeature ? t('New Alert') : title || t('New Alert')},
       ]}
     />
   );

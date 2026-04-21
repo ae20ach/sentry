@@ -60,9 +60,16 @@ function AutomationDocumentTitle() {
   return <SentryDocumentTitle title={title ?? t('Edit Alert')} />;
 }
 
-function AutomationBreadcrumbs({automationId}: {automationId: string}) {
+function AutomationBreadcrumbs({
+  automationId,
+  automationName,
+}: {
+  automationId: string;
+  automationName: string;
+}) {
   const title = useFormField('name');
   const organization = useOrganization();
+  const hasPageFrameFeature = useHasPageFrameFeature();
   return (
     <Breadcrumbs
       crumbs={[
@@ -71,7 +78,7 @@ function AutomationBreadcrumbs({automationId}: {automationId: string}) {
           to: makeAutomationBasePathname(organization.slug),
         },
         {
-          label: title,
+          label: hasPageFrameFeature ? automationName : title,
           to: makeAutomationDetailsPathname(organization.slug, automationId),
         },
         {label: t('Configure')},
@@ -240,7 +247,10 @@ function AutomationEditForm({automation}: {automation: Automation}) {
                 {hasPageFrameFeature ? (
                   <Fragment>
                     <TopBar.Slot name="title">
-                      <AutomationBreadcrumbs automationId={params.automationId} />
+                      <AutomationBreadcrumbs
+                        automationId={params.automationId}
+                        automationName={automation.name}
+                      />
                     </TopBar.Slot>
                     <Heading as="h1" ellipsis>
                       <EditableAutomationName />
@@ -248,7 +258,10 @@ function AutomationEditForm({automation}: {automation: Automation}) {
                   </Fragment>
                 ) : (
                   <Fragment>
-                    <AutomationBreadcrumbs automationId={params.automationId} />
+                    <AutomationBreadcrumbs
+                      automationId={params.automationId}
+                      automationName={automation.name}
+                    />
                     <Layout.Title>
                       <EditableAutomationName />
                     </Layout.Title>
