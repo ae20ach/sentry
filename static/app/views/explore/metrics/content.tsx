@@ -105,6 +105,7 @@ function MetricsHeader() {
   const {data: savedQuery} = useGetSavedQuery(pageId);
   const hasPageFrameFeature = useHasPageFrameFeature();
   const hasEquations = canUseMetricsEquations(organization);
+  const onboardingProject = useOnboardingProject({property: 'hasTraceMetrics'});
 
   const hasSavedQueryTitle =
     defined(pageId) && defined(savedQuery) && savedQuery.name.length > 0;
@@ -180,25 +181,27 @@ function MetricsHeader() {
       </Layout.HeaderContent>
       {hasPageFrameFeature ? (
         <Fragment>
-          <TopBar.Slot name="actions">
-            <ToolbarVisualizeAddChart
-              add={addMetricQuery}
-              disabled={isAddMetricDisabled}
-              label={t('Add Metric')}
-              display="button"
-              size="sm"
-            />
-            {hasEquations && (
+          {defined(onboardingProject) ? null : (
+            <TopBar.Slot name="actions">
               <ToolbarVisualizeAddChart
-                size="sm"
+                add={addMetricQuery}
+                disabled={isAddMetricDisabled}
+                label={t('Add Metric')}
                 display="button"
-                add={addEquationQuery}
-                disabled={metricQueries.length >= MAX_METRICS_ALLOWED}
-                label={t('Add Equation')}
+                size="sm"
               />
-            )}
-            <MetricSaveAs size="sm" />
-          </TopBar.Slot>
+              {hasEquations && (
+                <ToolbarVisualizeAddChart
+                  size="sm"
+                  display="button"
+                  add={addEquationQuery}
+                  disabled={metricQueries.length >= MAX_METRICS_ALLOWED}
+                  label={t('Add Equation')}
+                />
+              )}
+              <MetricSaveAs size="sm" />
+            </TopBar.Slot>
+          )}
           <TopBar.Slot name="feedback">
             <FeedbackButton
               feedbackOptions={metricsFeedbackOptions}
