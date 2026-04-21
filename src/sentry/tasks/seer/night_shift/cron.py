@@ -17,10 +17,7 @@ from sentry.seer.autofix.constants import (
     AutofixAutomationTuningSettings,
     SeerAutomationSource,
 )
-from sentry.seer.autofix.issue_summary import (
-    _apply_user_preference_upper_bound,
-    referrer_map,
-)
+from sentry.seer.autofix.issue_summary import referrer_map
 from sentry.seer.autofix.utils import AutofixStoppingPoint, bulk_read_preferences
 from sentry.seer.models.night_shift import SeerNightShiftRun, SeerNightShiftRunIssue
 from sentry.seer.models.seer_api_models import SeerProjectPreference
@@ -124,7 +121,7 @@ def run_night_shift_for_org(
         return None
 
     try:
-        eligible_projects, preferences = _get_eligible_projects(organization)
+        eligible_projects, _ = _get_eligible_projects(organization)
     except Exception:
         _fail_run(
             run,
@@ -186,7 +183,6 @@ def run_night_shift_for_org(
         issues = _run_autofix_for_candidates(
             run=run,
             candidates=candidates,
-            preferences=preferences,
             log_extra=log_extra,
         )
         seer_run_id_by_group = {i.group_id: i.seer_run_id for i in issues}
@@ -281,7 +277,6 @@ def _get_eligible_projects(
 def _run_autofix_for_candidates(
     run: SeerNightShiftRun,
     candidates: Sequence[TriageResult],
-    preferences: dict[int, SeerProjectPreference | None],
     log_extra: dict[str, object],
 ) -> list[SeerNightShiftRunIssue]:
     """
@@ -303,17 +298,11 @@ def _run_autofix_for_candidates(
 
     issues = []
     for c in fixable_candidates:
-        # Triage action sets the furthest step the automated run is allowed to reach;
-        # user preference may further clamp it to a more conservative stopping point.
-        preference = preferences.get(c.group.project_id)
-        fixability_suggestion = (
+        # Ignore automated_run_stopping_point preference — its default blocks PR creation.
+        stopping_point = (
             AutofixStoppingPoint.ROOT_CAUSE
             if c.action == TriageAction.ROOT_CAUSE_ONLY
             else AutofixStoppingPoint.OPEN_PR
-        )
-        stopping_point = _apply_user_preference_upper_bound(
-            fixability_suggestion,
-            preference.automated_run_stopping_point if preference else None,
         )
 
         try:

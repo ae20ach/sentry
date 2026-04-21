@@ -342,10 +342,7 @@ class TestRunNightShiftForOrg(TestCase, SnubaTestCase):
             call.kwargs["group"].id: call.kwargs["stopping_point"]
             for call in mock_trigger.call_args_list
         }
-        # AUTOFIX suggests OPEN_PR but the project default preference is CODE_CHANGES,
-        # so the conservative clamp wins.
-        assert stopping_points_by_group[autofix_group.id] == AutofixStoppingPoint.CODE_CHANGES
-        # ROOT_CAUSE_ONLY is always more conservative than any user preference.
+        assert stopping_points_by_group[autofix_group.id] == AutofixStoppingPoint.OPEN_PR
         assert stopping_points_by_group[root_cause_group.id] == AutofixStoppingPoint.ROOT_CAUSE
 
         run = SeerNightShiftRun.objects.get(organization=org)
