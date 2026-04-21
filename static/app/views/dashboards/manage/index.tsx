@@ -788,7 +788,7 @@ function ManageDashboards() {
 const StyledActions = styled('div')`
   display: grid;
   grid-template-columns: auto max-content max-content max-content;
-  gap: ${p => p.theme.space.xl};
+  gap: ${p => p.theme.space.md};
   margin-bottom: ${p => p.theme.space.xl};
 
   @media (max-width: ${p => p.theme.breakpoints.sm}) {
