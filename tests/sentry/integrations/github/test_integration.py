@@ -13,7 +13,6 @@ import responses
 from django.http import HttpResponse
 from django.urls import reverse
 
-from fixtures.github import INSTALLATION_EVENT_EXAMPLE
 from sentry.constants import ObjectStatus
 from sentry.integrations.github import client
 from sentry.integrations.github import integration as github_integration
@@ -545,6 +544,8 @@ class GitHubIntegrationTest(IntegrationTestCase):
     @patch("sentry.integrations.utils.metrics.EventLifecycle.record_event")
     @override_options({"github-app.webhook-secret": ""})
     def test_github_user_mismatch(self, mock_record: MagicMock) -> None:
+        from fixtures.github import INSTALLATION_EVENT_EXAMPLE
+
         self._stub_github()
         self._setup_without_existing_installations()
 
