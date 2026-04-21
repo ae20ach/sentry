@@ -61,7 +61,7 @@ export function MetricDetectorDetails({detector, project}: MetricDetectorDetails
             <TransactionsDatasetWarning />
           )}
           {showExtrapolationModeWarning && <MigratedAlertWarning detector={detector} />}
-          <Flex align="center" gap="sm" justify="between" flexWrap="wrap">
+          <Flex align="center" gap="sm" justify="between" wrap="wrap">
             <MetricTimePeriodSelect dataset={detectorDataset} interval={interval} />
             {hasPageFrameFeature ? (
               <Flex align="center" gap="sm" marginLeft="auto">

@@ -67,7 +67,7 @@ export function UptimeDetectorDetails({detector, project}: UptimeDetectorDetails
       <DetectorDetailsHeader detector={detector} project={project} />
       <DetailLayout.Body>
         <DetailLayout.Main>
-          <Flex align="center" gap="sm" justify="between" flexWrap="wrap">
+          <Flex align="center" gap="sm" justify="between" wrap="wrap">
             <DatePageFilter />
             {hasPageFrameFeature ? (
               <Flex align="center" gap="sm" marginLeft="auto">

@@ -167,7 +167,7 @@ export function CronDetectorDetails({detector, project}: CronDetectorDetailsProp
         <DetailLayout.Body>
           <DetailLayout.Main>
             <Flex gap="sm" justify="between" align="center">
-              <Flex align="center" gap="sm" justify="between" flexWrap="wrap" flex="1">
+              <Flex align="center" gap="sm" justify="between" wrap="wrap" flex="1">
                 <PageFilterBar condensed>
                   <EnvironmentPageFilter />
                   <DatePageFilter />
