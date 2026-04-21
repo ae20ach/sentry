@@ -4,6 +4,7 @@ import logging
 import time
 from collections.abc import Sequence
 from datetime import timedelta
+from typing import Any
 
 import sentry_sdk
 
@@ -47,7 +48,7 @@ FEATURE_NAMES = [
     namespace=seer_tasks,
     processing_deadline_duration=15 * 60,
 )
-def schedule_night_shift() -> None:
+def schedule_night_shift(**kwargs: Any) -> None:
     """
     Nightly scheduler: iterates active orgs in batches, checks feature flags
     in bulk, and dispatches per-org worker tasks with jitter.
@@ -91,13 +92,14 @@ def run_night_shift_for_org(
     organization_id: int,
     dry_run: bool = False,
     max_candidates: int | None = None,
-) -> None:
+    **kwargs: Any,
+) -> int | None:
     try:
         organization = Organization.objects.get(
             id=organization_id, status=OrganizationStatus.ACTIVE
         )
     except Organization.DoesNotExist:
-        return
+        return None
 
     sentry_sdk.set_tags(
         {
@@ -118,7 +120,7 @@ def run_night_shift_for_org(
                     "organization_slug": organization.slug,
                 },
             )
-            return
+            return None
     except Exception:
         logger.exception(
             "night_shift.failed_to_get_eligible_projects",
@@ -126,7 +128,7 @@ def run_night_shift_for_org(
                 "organization_id": organization_id,
             },
         )
-        return
+        return None
 
     sentry_sdk.metrics.distribution("night_shift.eligible_projects", len(eligible_projects))
 
@@ -145,6 +147,8 @@ def run_night_shift_for_org(
         candidates, agent_run_id = agentic_triage_strategy(
             eligible_projects, organization, resolved_max_candidates
         )
+        if agent_run_id is not None:
+            run.update(extras={**run.extras, "agent_run_id": agent_run_id})
 
         if candidates:
             SeerNightShiftRunIssue.objects.bulk_create(
@@ -168,7 +172,7 @@ def run_night_shift_for_org(
             },
         )
         run.update(error_message="Night shift run failed")
-        return
+        return None
 
     sentry_sdk.metrics.distribution("night_shift.candidates_selected", len(candidates))
     for c in candidates:
@@ -204,6 +208,8 @@ def run_night_shift_for_org(
                 if _trigger_autofix_for_candidate(c.group, organization, stopping_point):
                     autofix_triggered += 1
     sentry_sdk.metrics.count("night_shift.autofix_triggered", autofix_triggered)
+
+    return agent_run_id
 
 
 def _get_eligible_orgs_from_batch(
@@ -274,11 +280,20 @@ def _get_eligible_projects(
 
     preferences = bulk_read_preferences(organization, list(project_map))
 
-    projects = [
+    candidates = [
         project_map[pid]
         for pid, pref in preferences.items()
         if pref is not None
         and pref.repositories
         and pref.autofix_automation_tuning != AutofixAutomationTuningSettings.OFF
+    ]
+    if not candidates:
+        return [], preferences
+
+    flag_result = features.batch_has(["projects:seer-night-shift"], projects=candidates)
+    projects = [
+        p
+        for p in candidates
+        if (flag_result or {}).get(f"project:{p.id}", {}).get("projects:seer-night-shift", False)
     ]
     return projects, preferences

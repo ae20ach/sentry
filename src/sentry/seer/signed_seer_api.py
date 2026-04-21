@@ -2,7 +2,7 @@ import hashlib
 import hmac
 import logging
 from enum import StrEnum
-from typing import Any, NotRequired, TypedDict
+from typing import Any, Literal, NotRequired, TypedDict
 from urllib.parse import urlparse
 
 import orjson
@@ -12,7 +12,12 @@ from urllib3 import BaseHTTPResponse, HTTPConnectionPool, Retry
 
 from sentry.net.http import connection_from_url
 from sentry.utils import metrics
-from sentry.viewer_context import ViewerContext, encode_viewer_context, get_viewer_context
+from sentry.viewer_context import (
+    ViewerContext,
+    encode_viewer_context,
+    get_viewer_context,
+    observe_viewer_context_propagation,
+)
 
 
 class SeerViewerContext(TypedDict, total=False):
@@ -137,6 +142,7 @@ def make_signed_seer_api_request(
     }
 
     resolved = _resolve_viewer_context(viewer_context)
+    observe_viewer_context_propagation("seer_rpc_out", ctx=resolved)
     if resolved:
         try:
             headers["X-Viewer-Context"] = encode_viewer_context(resolved)
@@ -209,6 +215,10 @@ class ExplorerIndexRequest(TypedDict):
     projects: list[ExplorerIndexProject]
 
 
+class ExplorerExportIndexesRequest(TypedDict):
+    org_id: int
+
+
 class ExplorerIndexSentryKnowledgeRequest(TypedDict):
     replace_existing: bool
 
@@ -222,6 +232,8 @@ class LlmGenerateRequest(TypedDict):
     temperature: float
     max_tokens: int
     response_schema: NotRequired[dict[str, Any]]
+    timeout: NotRequired[float | None]
+    reasoning: NotRequired[Literal["off", "low", "med", "high"] | None]
 
 
 class RepoDetails(TypedDict):
@@ -303,6 +315,20 @@ def make_bulk_remove_repositories_request(
     return make_signed_seer_api_request(
         seer_autofix_default_connection_pool,
         "/v1/project-preference/bulk-remove-repositories",
+        body=orjson.dumps(body),
+        timeout=timeout,
+        viewer_context=viewer_context,
+    )
+
+
+def make_explorer_export_indexes_request(
+    body: ExplorerExportIndexesRequest,
+    viewer_context: SeerViewerContext,
+    timeout: int | float | None = None,
+) -> BaseHTTPResponse:
+    return make_signed_seer_api_request(
+        seer_autofix_default_connection_pool,
+        "/v1/automation/explorer/export-indexes",
         body=orjson.dumps(body),
         timeout=timeout,
         viewer_context=viewer_context,
