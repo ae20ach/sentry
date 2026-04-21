@@ -96,7 +96,7 @@ class OrganizationDashboardRevisionRestoreEndpoint(OrganizationDashboardBase):
             return Response(serializer.errors, status=400)
 
         try:
-            with transaction.atomic(router.db_for_write(Dashboard)):
+            with transaction.atomic(router.db_for_write(DashboardRevision)):
                 if snapshot is not None:
                     DashboardRevision.create_for_dashboard(
                         dashboard, request.user, snapshot, source="pre-restore"
