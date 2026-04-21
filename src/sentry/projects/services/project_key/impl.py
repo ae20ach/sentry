@@ -40,3 +40,26 @@ class DatabaseBackedProjectKeyService(ProjectKeyService):
         self, *, cell_name: str, project_id: int, role: ProjectKeyRole
     ) -> RpcProjectKey | None:
         return self._get_project_key(project_id=project_id, role=role)
+
+    def create_project_key(
+        self, *, organization_id: int, project_id: int, label: str | None = None
+    ) -> RpcProjectKey | None:
+        from sentry.models.project import Project
+
+        try:
+            project = Project.objects.get(id=project_id, organization_id=organization_id)
+        except Project.DoesNotExist:
+            return None
+
+        key = ProjectKey.objects.create(project=project, label=label)
+        return serialize_project_key(key)
+
+    def delete_project_key(self, *, organization_id: int, project_id: int, public_key: str) -> bool:
+        # Scope by organization+project so a stolen or malformed key value
+        # can't delete keys on an unrelated project.
+        deleted_count, _ = ProjectKey.objects.filter(
+            project__organization_id=organization_id,
+            project_id=project_id,
+            public_key=public_key,
+        ).delete()
+        return deleted_count > 0

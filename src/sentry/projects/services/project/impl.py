@@ -192,3 +192,28 @@ class DatabaseBackedProjectService(ProjectService):
             project.save()
 
         return serialize_project(project)
+
+    def delete_project(self, *, organization_id: int, project_id: int) -> bool:
+        from sentry.constants import ObjectStatus
+        from sentry.deletions.models.scheduleddeletion import CellScheduledDeletion
+
+        try:
+            project = Project.objects.get(id=project_id, organization_id=organization_id)
+        except Project.DoesNotExist:
+            return False
+
+        if project.is_internal_project():
+            # Match the project-details endpoint's protection; callers
+            # should never hit this for Stripe Projects resources, but be
+            # defensive.
+            return False
+
+        # Atomic ACTIVE→PENDING_DELETION guards against double-delete races;
+        # if the row is already PENDING_DELETION, ``updated`` is 0 and we
+        # short-circuit (the earlier call already scheduled deletion).
+        updated = Project.objects.filter(id=project.id, status=ObjectStatus.ACTIVE).update(
+            status=ObjectStatus.PENDING_DELETION
+        )
+        if updated:
+            CellScheduledDeletion.schedule(project, days=0)
+        return True

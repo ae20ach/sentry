@@ -116,5 +116,15 @@ class ProjectService(RpcService):
     ) -> RpcProject:
         pass
 
+    @cell_rpc_method(resolve=ByOrganizationId())
+    @abstractmethod
+    def delete_project(self, *, organization_id: int, project_id: int) -> bool:
+        """Soft-delete a project: mark it ``PENDING_DELETION`` and schedule a
+        ``ScheduledDeletion``, matching the behavior of the project DELETE
+        endpoint. Returns True if the project existed and was marked for
+        deletion, False otherwise (idempotent no-op).
+        """
+        pass
+
 
 project_service = ProjectService.create_delegation()

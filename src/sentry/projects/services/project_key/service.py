@@ -42,5 +42,27 @@ class ProjectKeyService(RpcService):
     ) -> RpcProjectKey | None:
         pass
 
+    @cell_rpc_method(resolve=ByOrganizationId())
+    @abstractmethod
+    def create_project_key(
+        self, *, organization_id: int, project_id: int, label: str | None = None
+    ) -> RpcProjectKey | None:
+        """Create a new ProjectKey for the given project.
+
+        ``label`` is the display name shown in the Keys list UI. Returns the
+        serialized key, or None if the project does not exist.
+        """
+        pass
+
+    @cell_rpc_method(resolve=ByOrganizationId())
+    @abstractmethod
+    def delete_project_key(self, *, organization_id: int, project_id: int, public_key: str) -> bool:
+        """Delete a ProjectKey by its public key value.
+
+        Returns True if a matching key existed and was deleted, False
+        otherwise (idempotent no-op).
+        """
+        pass
+
 
 project_key_service = ProjectKeyService.create_delegation()
