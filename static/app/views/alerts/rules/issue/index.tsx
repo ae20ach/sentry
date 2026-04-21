@@ -1234,7 +1234,7 @@ class IssueRuleEditor extends DeprecatedAsyncComponent<Props, State> {
             ) : null
           }
         >
-          <List symbol="colored-numeric">
+          <List>
             {loading && <SemiTransparentLoadingMask data-test-id="loading-mask" />}
             <StyledListItem>
               <StepHeader>{t('Select an environment and project')}</StepHeader>
@@ -1732,11 +1732,7 @@ const StyledFieldWrapper = styled('div')`
   }
 `;
 
-const ContentIndent = styled('div')`
-  @media (min-width: ${p => p.theme.breakpoints.sm}) {
-    margin-left: ${p => p.theme.space['3xl']};
-  }
-`;
+const ContentIndent = styled('div')``;
 
 const AcknowledgeLabel = styled('label')`
   display: flex;
