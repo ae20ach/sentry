@@ -70,13 +70,20 @@ export function DetectorDetailsDefaultHeaderContent({
 
 function DetectorDetailsDefaultActions({detector}: {detector: Detector}) {
   const hasPageFrameFeature = useHasPageFrameFeature();
+  const shouldUseLocalDetailActions =
+    hasPageFrameFeature &&
+    (detector.type === 'cron' ||
+      detector.type === 'metric_issue' ||
+      detector.type === 'uptime');
 
   return hasPageFrameFeature ? (
     <Fragment>
-      <TopBar.Slot name="actions">
-        <DisableDetectorAction detector={detector} />
-        <EditDetectorAction detector={detector} />
-      </TopBar.Slot>
+      {shouldUseLocalDetailActions ? null : (
+        <TopBar.Slot name="actions">
+          <DisableDetectorAction detector={detector} />
+          <EditDetectorAction detector={detector} />
+        </TopBar.Slot>
+      )}
       <MonitorFeedbackButton />
     </Fragment>
   ) : (
