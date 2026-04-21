@@ -52,39 +52,6 @@ export default function SavedQueriesView() {
           </Layout.HeaderContent>
           {hasPageFrameFeature ? (
             <Fragment>
-              <TopBar.Slot name="actions">
-                {hasLogsFeature ? (
-                  <DropdownMenu
-                    items={items}
-                    trigger={triggerProps => (
-                      <Button
-                        {...triggerProps}
-                        priority="primary"
-                        icon={<IconAdd />}
-                        size="sm"
-                        aria-label={t('Save as')}
-                        onClick={e => {
-                          e.stopPropagation();
-                          e.preventDefault();
-
-                          triggerProps.onClick?.(e);
-                        }}
-                      >
-                        {t('Create Query')}
-                      </Button>
-                    )}
-                  />
-                ) : (
-                  <LinkButton
-                    priority="primary"
-                    icon={<IconAdd />}
-                    size="sm"
-                    to={getExploreUrl({organization, visualize: []})}
-                  >
-                    {t('Create Query')}
-                  </LinkButton>
-                )}
-              </TopBar.Slot>
               <TopBar.Slot name="feedback">
                 <FeedbackButton
                   aria-label={t('Give Feedback')}
