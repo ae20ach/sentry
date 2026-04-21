@@ -14,6 +14,7 @@ import {
 import {QUERY_PAGE_LIMIT} from 'sentry/views/explore/logs/constants';
 import {LogsExportModal} from 'sentry/views/explore/logs/logsExportModal';
 import {OurLogKnownFieldKey} from 'sentry/views/explore/logs/types';
+import {TraceItemDataset} from 'sentry/views/explore/types';
 
 const mockAddSuccessMessage = jest.fn();
 
@@ -38,6 +39,12 @@ jest.mock('sentry/components/exports/useDataExport', () => ({
   get useDataExport() {
     return mockUseDataExport;
   },
+}));
+
+const mockTrackAnalytics = jest.fn();
+
+jest.mock('sentry/utils/analytics', () => ({
+  trackAnalytics: (...args: unknown[]) => mockTrackAnalytics(...args),
 }));
 
 const organization = OrganizationFixture({features: ['discover-query']});
@@ -88,6 +95,13 @@ describe('LogsExportModal', () => {
 
     await userEvent.click(screen.getByRole('button', {name: 'Cancel'}));
 
+    expect(mockTrackAnalytics).toHaveBeenCalledWith(
+      'logs.export_modal',
+      expect.objectContaining({
+        action: 'cancel',
+        close_reason: 'cancel_button',
+      })
+    );
     expect(closeModal).toHaveBeenCalled();
   });
 
@@ -108,6 +122,16 @@ describe('LogsExportModal', () => {
     });
     expect(mockHandleDataExport).not.toHaveBeenCalled();
     expect(addSuccessMessage).toHaveBeenCalledWith('Downloading file to your browser.');
+    expect(mockTrackAnalytics).toHaveBeenCalledWith(
+      'explore.table_exported',
+      expect.objectContaining({
+        export_type: 'browser_sync',
+        export_row_limit: 100,
+        export_file_format: 'csv',
+        query: queryInfo.query,
+        traceItemDataset: TraceItemDataset.LOGS,
+      })
+    );
   });
 
   it('calls handleDataExport when row limit is above the sync limit', async () => {
@@ -135,5 +159,14 @@ describe('LogsExportModal', () => {
 
     expect(mockDownloadLogs).not.toHaveBeenCalled();
     expect(mockAddSuccessMessage).not.toHaveBeenCalled();
+    expect(mockTrackAnalytics).toHaveBeenCalledWith(
+      'explore.table_exported',
+      expect.objectContaining({
+        export_type: 'export_download',
+        export_row_limit: aboveSyncLimit,
+        export_file_format: 'csv',
+        traceItemDataset: TraceItemDataset.LOGS,
+      })
+    );
   });
 });
