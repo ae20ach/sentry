@@ -234,7 +234,7 @@ export default function AutomationNewSettings() {
       <AutomationFormProvider>
         <AutomationDocumentTitle />
         <Stack flex={1}>
-          <Layout.Header background="primary">
+          <Layout.Header {...(hasPageFrame ? {} : {background: 'primary'})}>
             <HeaderInner maxWidth={maxWidth}>
               <Layout.HeaderContent>
                 <AutomationBreadcrumbs />
@@ -249,8 +249,8 @@ export default function AutomationNewSettings() {
           </Layout.Header>
           <Layout.Body
             maxWidth={maxWidth}
-            padding={hasPageFrame ? undefined : '0'}
             margin={hasPageFrame ? '0' : {sm: 'xl', md: '2xl 3xl'}}
+            {...(hasPageFrame ? {} : {padding: '0'})}
           >
             <Layout.Main width="full">
               <AutomationBuilderErrorContext.Provider
