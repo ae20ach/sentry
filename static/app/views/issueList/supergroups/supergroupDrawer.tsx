@@ -132,17 +132,12 @@ export function SupergroupDetailDrawer({
 const PAGE_SIZE = 25;
 
 /**
- * Max member IDs we can embed in an `issue.id:[…]` clause before the GET URL
- * gets too big. Below the limit we filter the stream query *to* our members;
- * above it we invert: query the stream unfiltered and intersect locally.
+ * How many items we're willing to hoist. Doubles as the inline-id cap (members
+ * we'll embed in `issue.id:[…]` before the URL gets too big) and the stream-
+ * scan window (top stream results we inspect when the id list is too big to
+ * inline).
  */
-const HOIST_INLINE_ID_LIMIT = 200;
-
-/**
- * When a supergroup is too big to inline its IDs, we look at this many top
- * stream results and keep the ones that happen to be members.
- */
-const HOIST_STREAM_SCAN_SIZE = 100;
+const HOIST_LIMIT = 100;
 
 function SupergroupIssueList({
   groupIds,
@@ -167,7 +162,7 @@ function SupergroupIssueList({
   } = location.query;
   const query = typeof searchQuery === 'string' ? searchQuery : '';
 
-  const inlineIdListFits = groupIds.length <= HOIST_INLINE_ID_LIMIT;
+  const inlineIdListFits = groupIds.length <= HOIST_LIMIT;
 
   const {data: matchedGroups, isPending: matchedPending} = useQuery({
     ...apiOptions.as<Group[]>()('/organizations/$organizationIdOrSlug/issues/', {
@@ -179,7 +174,7 @@ function SupergroupIssueList({
         start,
         end,
         query: inlineIdListFits ? `${query} issue.id:[${groupIds.join(',')}]` : query,
-        per_page: inlineIdListFits ? PAGE_SIZE : HOIST_STREAM_SCAN_SIZE,
+        per_page: HOIST_LIMIT,
       },
       staleTime: 30_000,
     }),
