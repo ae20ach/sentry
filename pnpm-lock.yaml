@@ -433,7 +433,7 @@ importers:
         version: 0.6.0
       nuqs:
         specifier: 2.7.1
-        version: 2.7.1(react-router-dom@6.30.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-router@6.30.3(react@19.2.3))(react@19.2.3)
+        version: 2.7.1(react-router-dom@7.14.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-router@7.14.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
       papaparse:
         specifier: ^5.3.2
         version: 5.3.2
@@ -483,8 +483,8 @@ importers:
         specifier: ^2.3.0
         version: 2.3.0(@popperjs/core@2.11.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       react-router-dom:
-        specifier: 6.30.3
-        version: 6.30.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+        specifier: 7.14.2
+        version: 7.14.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       react-select:
         specifier: 4.3.1
         version: 4.3.1(@types/react@19.2.1)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -3673,6 +3673,9 @@ packages:
   '@types/node@22.19.15':
     resolution: {integrity: sha512-F0R/h2+dsy5wJAUe3tAU6oqa2qbWY5TpNfL/RGmo1y38hiyO1w3x2jPtt76wmuaJI4DQnOBu21cNXQ2STIUUWg==}
 
+  '@types/node@22.19.17':
+    resolution: {integrity: sha512-wGdMcf+vPYM6jikpS/qhg6WiqSV/OhG+jeeHT/KlVqxYfD40iYJf9/AE1uQxVWFvU7MipKRkRv8NSHiCGgPr8Q==}
+
   '@types/node@22.19.2':
     resolution: {integrity: sha512-LPM2G3Syo1GLzXLGJAKdqoU35XvrWzGJ21/7sgZTUpbkBaOasTj8tjwn6w+hCkqaa1TfJ/w67rJSwYItlJ2mYw==}
 
@@ -4377,6 +4380,11 @@ packages:
     resolution: {integrity: sha512-lGe34o6EHj9y3Kts9R4ZYs/Gr+6N7MCaMlIFA3F1R2O5/m7K06AxfSeO5530PEERE6/WyEg3lsuyw4GHlPZHog==}
     engines: {node: ^4.5.0 || >= 5.9}
 
+  baseline-browser-mapping@2.10.20:
+    resolution: {integrity: sha512-1AaXxEPfXT+GvTBJFuy4yXVHWJBXa4OdbIebGN/wX5DlsIkU0+wzGnd2lOzokSk51d5LUmqjgBLRLlypLUqInQ==}
+    engines: {node: '>=6.0.0'}
+    hasBin: true
+
   baseline-browser-mapping@2.10.7:
     resolution: {integrity: sha512-1ghYO3HnxGec0TCGBXiDLVns4eCSx4zJpxnHrlqFQajmhfKMQBzUGDdkMK7fUW7PTHTeLf+j87aTuKuuwWzMGw==}
     engines: {node: '>=6.0.0'}
@@ -4439,6 +4447,11 @@ packages:
 
   browserslist@4.28.1:
     resolution: {integrity: sha512-ZC5Bd0LgJXgwGqUknZY/vkUQ04r8NXnJZ3yYi4vDmSiZmC/pdSN0NbNRPxZpbtO4uAfDUAFffO8IZoM3Gj8IkA==}
+    engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
+    hasBin: true
+
+  browserslist@4.28.2:
+    resolution: {integrity: sha512-48xSriZYYg+8qXna9kwqjIVzuQxi+KYWp2+5nCYnYKPTr0LvD89Jqk2Or5ogxz0NUMfIjhh2lIUX/LyX9B4oIg==}
     engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
     hasBin: true
 
@@ -4506,6 +4519,9 @@ packages:
 
   caniuse-lite@1.0.30001760:
     resolution: {integrity: sha512-7AAMPcueWELt1p3mi13HR/LHH0TJLT11cnwDJEs3xA4+CK/PLKeO9Kl1oru24htkyUKtkGCvAx4ohB0Ttry8Dw==}
+
+  caniuse-lite@1.0.30001788:
+    resolution: {integrity: sha512-6q8HFp+lOQtcf7wBK+uEenxymVWkGKkjFpCvw5W25cmMwEDU45p1xQFBQv8JDlMMry7eNxyBaR+qxgmTUZkIRQ==}
 
   cbor2@1.12.0:
     resolution: {integrity: sha512-3Cco8XQhi27DogSp9Ri6LYNZLi/TBY/JVnDe+mj06NkBjW/ZYOtekaEU4wZ4xcRMNrFkDv8KNtOAqHyDfz3lYg==}
@@ -4729,6 +4745,10 @@ packages:
   cookie@0.7.2:
     resolution: {integrity: sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w==}
     engines: {node: '>= 0.6'}
+
+  cookie@1.1.1:
+    resolution: {integrity: sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ==}
+    engines: {node: '>=18'}
 
   copy-anything@2.0.3:
     resolution: {integrity: sha512-GK6QUtisv4fNS+XcI7shX0Gx9ORg7QqIznyfho79JTnX1XhLiyZHfftvGiziqzRiEi/Bjhgpi+D2o7HxJFPnDQ==}
@@ -5136,6 +5156,9 @@ packages:
 
   electron-to-chromium@1.5.313:
     resolution: {integrity: sha512-QBMrTWEf00GXZmJyx2lbYD45jpI3TUFnNIzJ5BBc8piGUDwMPa1GV6HJWTZVvY/eiN3fSopl7NRbgGp9sZ9LTA==}
+
+  electron-to-chromium@1.5.341:
+    resolution: {integrity: sha512-1sZTssferjgDgaqRTc0ieP+ozzpOy7LQTPTtEW3yQFn4+ORdIAZWV5BthXPyHF7YqLvFJCUPhNhdAJQYlYUgiw==}
 
   emittery@0.13.1:
     resolution: {integrity: sha512-DeWwawk6r5yR9jFgnDKYt4sLS0LmHJJi3ZOnb5/JdbYwj3nW+FxQnHIjhBKz8YLC7oRNPVM9NQ47I3CVx34eqQ==}
@@ -5871,10 +5894,12 @@ packages:
 
   glob@10.4.5:
     resolution: {integrity: sha512-7Bv8RF0k6xjo7d4A/PxYLbUCfb6c+Vpd2/mB2yRDlew7Jb5hEXiCD9ibfO7wpk8i4sevK6DFny9h7EYbM3/sHg==}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   glob@10.5.0:
     resolution: {integrity: sha512-DfXN8DfhJ7NH3Oe7cFmu3NCu1wKbkReJ8TorzSAFbSKrlNaQSKfIzqYqVY8zlbs2NLBbWpRiU52GX2PbaBVNkg==}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   glob@11.1.0:
@@ -7283,6 +7308,9 @@ packages:
   node-releases@2.0.27:
     resolution: {integrity: sha512-nmh3lCkYZ3grZvqcCH+fjmQ7X+H0OeZgP40OierEaAptX4XofMh5kwNbWh7lBduUzCcV/8kZ+NDLCwm2iorIlA==}
 
+  node-releases@2.0.37:
+    resolution: {integrity: sha512-1h5gKZCF+pO/o3Iqt5Jp7wc9rH3eJJ0+nh/CIoiRwjRxde/hAHyLPXYN4V3CqKAbiZPSeJFSWHmJsbkicta0Eg==}
+
   nopt@7.2.1:
     resolution: {integrity: sha512-taM24ViiimT/XntxbPyJQzCG+p4EKOpgD3mxFwW38mGjVUrfERQOeY4EDHjdnptttfHuHQXFx+lTP08Q+mLa/w==}
     engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
@@ -7876,18 +7904,22 @@ packages:
       react: '>= 16.3'
       react-dom: '>= 16.3'
 
-  react-router-dom@6.30.3:
-    resolution: {integrity: sha512-pxPcv1AczD4vso7G4Z3TKcvlxK7g7TNt3/FNGMhfqyntocvYKj+GCatfigGDjbLozC4baguJ0ReCigoDJXb0ag==}
-    engines: {node: '>=14.0.0'}
+  react-router-dom@7.14.2:
+    resolution: {integrity: sha512-YZcM5ES8jJSM+KrJ9BdvHHqlnGTg5tH3sC5ChFRj4inosKctdyzBDhOyyHdGk597q2OT6NTrCA1OvB/YDwfekQ==}
+    engines: {node: '>=20.0.0'}
     peerDependencies:
-      react: '>=16.8'
-      react-dom: '>=16.8'
+      react: '>=18'
+      react-dom: '>=18'
 
-  react-router@6.30.3:
-    resolution: {integrity: sha512-XRnlbKMTmktBkjCLE8/XcZFlnHvr2Ltdr1eJX4idL55/9BbORzyZEaIkBFDhFGCEWBBItsVrDxwx3gnisMitdw==}
-    engines: {node: '>=14.0.0'}
+  react-router@7.14.2:
+    resolution: {integrity: sha512-yCqNne6I8IB6rVCH7XUvlBK7/QKyqypBFGv+8dj4QBFJiiRX+FG7/nkdAvGElyvVZ/HQP5N19wzteuTARXi5Gw==}
+    engines: {node: '>=20.0.0'}
     peerDependencies:
-      react: '>=16.8'
+      react: '>=18'
+      react-dom: '>=18'
+    peerDependenciesMeta:
+      react-dom:
+        optional: true
 
   react-select@4.3.1:
     resolution: {integrity: sha512-HBBd0dYwkF5aZk1zP81Wx5UsLIIT2lSvAY2JiJo199LjoLHoivjn9//KsmvQMEFGNhe58xyuOITjfxKCcGc62Q==}
@@ -8219,6 +8251,9 @@ packages:
   serve-static@1.16.2:
     resolution: {integrity: sha512-VqpjJZKadQB/PEbEwvFdO43Ax5dFBZ2UECszz8bQ7pi7wt//PWe1P6MN7eCnjsatYtBT6EuiClbjSWP2WrIoTw==}
     engines: {node: '>= 0.8.0'}
+
+  set-cookie-parser@2.7.2:
+    resolution: {integrity: sha512-oeM1lpU/UvhTxw+g3cIfxXHyJRc/uidd3yK1P242gzHds0udQBYzs3y8j4gCCW+ZJ7ad0yctld8RYO+bdurlvw==}
 
   set-function-length@1.2.2:
     resolution: {integrity: sha512-pgRc4hJ4/sNjWCSS9AmnS40x3bNMDTknHgL5UaMBTMyJnU90EgWh1Rz+MC9eFu4BuN/UwZjKQuY/1v3rM7HMfg==}
@@ -8573,8 +8608,8 @@ packages:
     resolution: {integrity: sha512-g9ljZiwki/LfxmQADO3dEY1CbpmXT5Hm2fJ+QaGKwSXUylMybePR7/67YW7jOrrvjEgL1Fmz5kzyAjWVWLlucg==}
     engines: {node: '>=6'}
 
-  tapable@2.3.2:
-    resolution: {integrity: sha512-1MOpMXuhGzGL5TTCZFItxCc0AARf1EZFQkGqMm7ERKj8+Hgr5oLvJOVFcC+lRmR8hCe2S3jC4T5D7Vg/d7/fhA==}
+  tapable@2.3.3:
+    resolution: {integrity: sha512-uxc/zpqFg6x7C8vOE7lh6Lbda8eEL9zmVm/PLeTPBRhh1xCgdWaQ+J1CUieGpIfm2HdtsUpRv+HshiasBMcc6A==}
     engines: {node: '>=6'}
 
   terser-webpack-plugin@5.4.0:
@@ -9106,6 +9141,7 @@ packages:
   whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
+    deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
   whatwg-mimetype@4.0.0:
     resolution: {integrity: sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==}
@@ -12816,6 +12852,10 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
+  '@types/node@22.19.17':
+    dependencies:
+      undici-types: 6.21.0
+
   '@types/node@22.19.2':
     dependencies:
       undici-types: 6.21.0
@@ -13643,6 +13683,8 @@ snapshots:
 
   base64id@2.0.0: {}
 
+  baseline-browser-mapping@2.10.20: {}
+
   baseline-browser-mapping@2.10.7: {}
 
   batch@0.6.1: {}
@@ -13733,6 +13775,14 @@ snapshots:
       node-releases: 2.0.27
       update-browserslist-db: 1.2.3(browserslist@4.28.1)
 
+  browserslist@4.28.2:
+    dependencies:
+      baseline-browser-mapping: 2.10.20
+      caniuse-lite: 1.0.30001788
+      electron-to-chromium: 1.5.341
+      node-releases: 2.0.37
+      update-browserslist-db: 1.2.3(browserslist@4.28.2)
+
   bser@2.1.1:
     dependencies:
       node-int64: 0.4.0
@@ -13798,6 +13848,8 @@ snapshots:
   camelcase@6.3.0: {}
 
   caniuse-lite@1.0.30001760: {}
+
+  caniuse-lite@1.0.30001788: {}
 
   cbor2@1.12.0: {}
 
@@ -13983,6 +14035,8 @@ snapshots:
   cookie@0.7.1: {}
 
   cookie@0.7.2: {}
+
+  cookie@1.1.1: {}
 
   copy-anything@2.0.3:
     dependencies:
@@ -14359,6 +14413,8 @@ snapshots:
 
   electron-to-chromium@1.5.313: {}
 
+  electron-to-chromium@1.5.341: {}
+
   emittery@0.13.1: {}
 
   emmet@2.4.11:
@@ -14413,7 +14469,7 @@ snapshots:
   enhanced-resolve@5.20.1:
     dependencies:
       graceful-fs: 4.2.11
-      tapable: 2.3.2
+      tapable: 2.3.3
 
   entities@2.0.0: {}
 
@@ -16466,7 +16522,7 @@ snapshots:
 
   jest-worker@27.5.1:
     dependencies:
-      '@types/node': 22.19.15
+      '@types/node': 22.19.17
       merge-stream: 2.0.0
       supports-color: 8.1.1
 
@@ -17389,6 +17445,8 @@ snapshots:
 
   node-releases@2.0.27: {}
 
+  node-releases@2.0.37: {}
+
   nopt@7.2.1:
     dependencies:
       abbrev: 2.0.0
@@ -17429,13 +17487,13 @@ snapshots:
     dependencies:
       boolbase: 1.0.0
 
-  nuqs@2.7.1(react-router-dom@6.30.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-router@6.30.3(react@19.2.3))(react@19.2.3):
+  nuqs@2.7.1(react-router-dom@7.14.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-router@7.14.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3):
     dependencies:
       '@standard-schema/spec': 1.0.0
       react: 19.2.3
     optionalDependencies:
-      react-router: 6.30.3(react@19.2.3)
-      react-router-dom: 6.30.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      react-router: 7.14.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      react-router-dom: 7.14.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
 
   nwsapi@2.2.20: {}
 
@@ -18032,17 +18090,19 @@ snapshots:
       react-dom: 19.2.3(react@19.2.3)
       react-draggable: 4.5.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
 
-  react-router-dom@6.30.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
+  react-router-dom@7.14.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
     dependencies:
-      '@remix-run/router': 1.23.2
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)
-      react-router: 6.30.3(react@19.2.3)
+      react-router: 7.14.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
 
-  react-router@6.30.3(react@19.2.3):
+  react-router@7.14.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
     dependencies:
-      '@remix-run/router': 1.23.2
+      cookie: 1.1.1
       react: 19.2.3
+      set-cookie-parser: 2.7.2
+    optionalDependencies:
+      react-dom: 19.2.3(react@19.2.3)
 
   react-select@4.3.1(@types/react@19.2.1)(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
     dependencies:
@@ -18494,6 +18554,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  set-cookie-parser@2.7.2: {}
+
   set-function-length@1.2.2:
     dependencies:
       define-data-property: 1.1.4
@@ -18936,7 +18998,7 @@ snapshots:
 
   tapable@2.3.0: {}
 
-  tapable@2.3.2: {}
+  tapable@2.3.3: {}
 
   terser-webpack-plugin@5.4.0(@swc/core@1.15.24)(esbuild@0.25.10)(webpack@5.99.6(@swc/core@1.15.24)(esbuild@0.25.10)):
     dependencies:
@@ -19325,6 +19387,12 @@ snapshots:
       escalade: 3.2.0
       picocolors: 1.1.1
 
+  update-browserslist-db@1.2.3(browserslist@4.28.2):
+    dependencies:
+      browserslist: 4.28.2
+      escalade: 3.2.0
+      picocolors: 1.1.1
+
   uri-js@4.4.1:
     dependencies:
       punycode: 2.3.1
@@ -19561,7 +19629,7 @@ snapshots:
       '@webassemblyjs/wasm-edit': 1.14.1
       '@webassemblyjs/wasm-parser': 1.14.1
       acorn: 8.16.0
-      browserslist: 4.28.1
+      browserslist: 4.28.2
       chrome-trace-event: 1.0.4
       enhanced-resolve: 5.20.1
       es-module-lexer: 1.7.0
@@ -19574,7 +19642,7 @@ snapshots:
       mime-types: 2.1.35
       neo-async: 2.6.2
       schema-utils: 4.3.3
-      tapable: 2.3.2
+      tapable: 2.3.3
       terser-webpack-plugin: 5.4.0(@swc/core@1.15.24)(esbuild@0.25.10)(webpack@5.99.6(@swc/core@1.15.24)(esbuild@0.25.10))
       watchpack: 2.5.1
       webpack-sources: 3.3.4
