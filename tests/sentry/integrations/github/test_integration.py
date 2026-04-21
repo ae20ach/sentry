@@ -13,6 +13,7 @@ import responses
 from django.http import HttpResponse
 from django.urls import reverse
 
+import sentry
 from sentry.constants import ObjectStatus
 from sentry.integrations.github import client
 from sentry.integrations.github import integration as github_integration
@@ -58,6 +59,8 @@ from sentry.testutils.helpers.integrations import get_installation_of_type
 from sentry.testutils.silo import assume_test_silo_mode, control_silo_test
 from sentry.users.services.user.serial import serialize_rpc_user
 from sentry.utils.cache import cache
+
+_ = sentry
 
 TREE_RESPONSES = {
     "xyz": {"status_code": 200, "body": {"tree": [{"path": "src/xyz.py", "type": "blob"}]}},
