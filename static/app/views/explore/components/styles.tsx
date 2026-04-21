@@ -16,7 +16,7 @@ export const ExploreControlSection = styled('aside')<{expanded: boolean}>`
     ${p =>
       p.expanded
         ? css`
-            width: 343px; /* 300px for the toolbar + padding */
+            width: 332px; /* 300px for the toolbar + padding */
             padding: ${p.theme.space.md} ${p.theme.space.xl};
             border-right: 1px solid ${p.theme.tokens.border.primary};
           `
