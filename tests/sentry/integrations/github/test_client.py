@@ -433,6 +433,22 @@ class GitHubApiClientTest(TestCase):
         with pytest.raises(ApiError):
             self.install.get_cached_repo_files(self.repo.name, "master", 0)
 
+    @responses.activate
+    def test_get_cached_repo_files_raises_403_with_not_found_body(self) -> None:
+        responses.add(
+            method=responses.GET,
+            url=f"https://api.github.com/repos/{self.repo.name}/git/trees/master?recursive=1",
+            status=403,
+            json={"message": "Not Found."},
+        )
+        repo_key = f"github:repo:{self.repo.name}:source-code"
+
+        with pytest.raises(ApiError):
+            self.install.get_cached_repo_files(self.repo.name, "master", 0)
+
+        # Do not cache permission failures as missing resources.
+        assert cache.get(repo_key) is None
+
     @mock.patch("sentry.integrations.github.client.get_jwt", return_value="jwt_token_1")
     @responses.activate
     def test_update_comment(self, get_jwt) -> None:

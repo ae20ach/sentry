@@ -314,6 +314,8 @@ def should_include(file_path: str) -> bool:
 def _is_not_found_error(error: ApiError) -> bool:
     if error.code == 404:
         return True
+    if error.code is not None:
+        return False
 
     error_message = error.json.get("message") if error.json else error.text
     return error_message in ("Not Found", "Not Found.")

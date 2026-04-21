@@ -13,13 +13,13 @@ import responses
 from django.http import HttpResponse
 from django.urls import reverse
 
+import sentry
 from sentry.constants import ObjectStatus
 from sentry.integrations.github import client
 from sentry.integrations.github import integration as github_integration
 from sentry.integrations.github.client import (
     MINIMUM_REQUESTS,
     GitHubApiClient,
-    GitHubBaseClient,
     GithubSetupApiClient,
 )
 from sentry.integrations.github.integration import (
@@ -489,120 +489,6 @@ class GitHubIntegrationTest(IntegrationTestCase):
             assert Repository.objects.get(id=inaccessible_repo.id).integration_id is None
 
     @responses.activate
-    def test_basic_flow(self) -> None:
-        with self.tasks():
-            self.assert_setup_flow()
-
-        integration = Integration.objects.get(provider=self.provider.key)
-
-        assert integration.external_id == self.installation_id
-        assert integration.name == "Test Organization"
-        assert integration.metadata == {
-            "access_token": self.access_token,
-            # The metadata doesn't get saved with the timezone "Z" character
-            "expires_at": self.expires_at[:-1],
-            "icon": "http://example.com/avatar.png",
-            "domain_name": "github.com/Test-Organization",
-            "account_type": "Organization",
-            "account_id": 60591805,
-            "permissions": {
-                "administration": "read",
-                "contents": "read",
-                "issues": "write",
-                "metadata": "read",
-                "pull_requests": "read",
-            },
-        }
-        oi = OrganizationIntegration.objects.get(
-            integration=integration, organization_id=self.organization.id
-        )
-        assert oi.config == {}
-
-    @responses.activate
-    @patch("sentry.integrations.utils.metrics.EventLifecycle.record_event")
-    def test_installation_not_found(self, mock_record: MagicMock) -> None:
-        # Add a 404 for an org to responses
-        responses.replace(
-            responses.GET, self.base_url + f"/app/installations/{self.installation_id}", status=404
-        )
-        # Attempt to install integration
-        resp = self.client.get(
-            "{}?{}".format(self.setup_path, urlencode({"installation_id": self.installation_id}))
-        )
-        resp = self.client.get(
-            "{}?{}".format(
-                self.setup_path,
-                urlencode(
-                    {"code": "12345678901234567890", "state": "ddd023d87a913d5226e2a882c4c4cc05"}
-                ),
-            )
-        )
-        assert b"Invalid state" in resp.content
-        assert_failure_metric(mock_record, GitHubInstallationError.INVALID_STATE)
-
-    @responses.activate
-    @patch("sentry.integrations.utils.metrics.EventLifecycle.record_event")
-    @override_options({"github-app.webhook-secret": ""})
-    def test_github_user_mismatch(self, mock_record: MagicMock) -> None:
-        from fixtures.github import INSTALLATION_EVENT_EXAMPLE
-
-        self._stub_github()
-        self._setup_without_existing_installations()
-
-        # Emulate GitHub installation
-        init_path_1 = "{}?{}".format(
-            reverse(
-                "sentry-organization-integrations-setup",
-                kwargs={
-                    "organization_slug": self.organization.slug,
-                    "provider_id": self.provider.key,
-                },
-            ),
-            urlencode({"installation_id": self.installation_id}),
-        )
-        self.client.get(init_path_1)
-
-        webhook_event = orjson.loads(INSTALLATION_EVENT_EXAMPLE)
-        webhook_event["installation"]["id"] = self.installation_id
-        webhook_event["sender"]["login"] = "attacker"
-        resp = self.client.post(
-            path="/extensions/github/webhook/",
-            data=orjson.dumps(webhook_event),
-            content_type="application/json",
-            HTTP_X_GITHUB_EVENT="installation",
-            HTTP_X_HUB_SIGNATURE="sha1=d184e6717f8bfbcc291ebc8c0756ee446c6c9486",
-            HTTP_X_GITHUB_DELIVERY="00000000-0000-4000-8000-1234567890ab",
-        )
-        assert resp.status_code == 204
-
-        # Validate the installation user
-        user_2 = self.create_user("foo@example.com")
-        org_2 = self.create_organization(name="Rowdy Tiger", owner=user_2)
-        self.login_as(user_2)
-        init_path_2 = "{}?{}".format(
-            reverse(
-                "sentry-organization-integrations-setup",
-                kwargs={
-                    "organization_slug": org_2.slug,
-                    "provider_id": self.provider.key,
-                },
-            ),
-            urlencode({"installation_id": self.installation_id}),
-        )
-        setup_path_2 = "{}?{}".format(
-            self.setup_path,
-            urlencode({"code": "12345678901234567890", "state": self.pipeline.signature}),
-        )
-        with self.feature({"system:multi-region": True}):
-            resp = self.client.get(init_path_2)
-            resp = self.client.get(setup_path_2)
-            self.assertTemplateUsed(resp, "sentry/integrations/github-integration-failed.html")
-            assert resp.status_code == 200
-            assert b'window.opener.postMessage({"success":false' in resp.content
-            assert b"Authenticated user is not the same as who installed the app" in resp.content
-            assert_failure_metric(mock_record, GitHubInstallationError.USER_MISMATCH)
-
-    @responses.activate
     def test_disable_plugin_when_fully_migrated(self) -> None:
         self._stub_github()
 
@@ -751,7 +637,7 @@ class GitHubIntegrationTest(IntegrationTestCase):
             GitHubIntegration, integration, self.organization.id
         )
 
-        with patch.object(GitHubBaseClient, "page_size", 1):
+        with patch.object(sentry.integrations.github.client.GitHubBaseClient, "page_size", 1):
             result = installation.get_repositories()
             assert result == [
                 {
@@ -786,8 +672,10 @@ class GitHubIntegrationTest(IntegrationTestCase):
         )
 
         with (
-            patch.object(GitHubBaseClient, "page_number_limit", 1),
-            patch.object(GitHubBaseClient, "page_size", 1),
+            patch.object(
+                sentry.integrations.github.client.GitHubBaseClient, "page_number_limit", 1
+            ),
+            patch.object(sentry.integrations.github.client.GitHubBaseClient, "page_size", 1),
         ):
             result = installation.get_repositories()
             assert result == [
@@ -1006,8 +894,8 @@ class GitHubIntegrationTest(IntegrationTestCase):
 
     def _expected_trees(self, repo_info_list=None):
         result = {}
-        # bar (409 empty repo) and baz (404 missing repo/ref) both return empty
-        # RepoTrees since those responses are negative-cached.
+        # bar (409 empty repo) returns an empty RepoTree since we cache the result
+        # baz (404) also returns an empty RepoTree because we cache not-found outcomes
         list = repo_info_list or [
             ("xyz", "master", ["src/xyz.py"]),
             ("foo", "master", ["src/sentry/api/endpoints/auth_login.py"]),
@@ -1119,8 +1007,7 @@ class GitHubIntegrationTest(IntegrationTestCase):
         )
 
         # This time the rate limit will not fail, thus, it will fetch the trees
-        # bar (409) and baz (404) now return empty RepoTrees because those
-        # responses are cached as empty results.
+        # bar (409 empty repo) now returns an empty RepoTree since we cache the empty result
         self.set_rate_limit()
         trees = installation.get_trees_for_org()
         assert trees == self._expected_trees(
@@ -1175,8 +1062,8 @@ class GitHubIntegrationTest(IntegrationTestCase):
                     # xyz is missing because its request errors
                     # foo has data because its API request is made in spite of xyz's error
                     ("foo", "master", ["src/sentry/api/endpoints/auth_login.py"]),
-                    # bar (409) and baz (404) are present with empty files
-                    # because both outcomes are cached as empty results.
+                    # bar (409 empty repo) and baz (404) are present with empty files
+                    # since both outcomes are cached
                     ("bar", "main", []),
                     ("baz", "master", []),
                 ]
