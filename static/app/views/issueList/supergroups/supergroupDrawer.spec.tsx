@@ -58,7 +58,11 @@ describe('SupergroupDetailDrawer', () => {
       {
         organization,
         initialRouterConfig: {
-          location: {pathname: '/', query: {query: 'is:unresolved'}},
+          route: '/organizations/:orgId/issues/',
+          location: {
+            pathname: '/organizations/:orgId/issues/',
+            query: {query: 'is:unresolved'},
+          },
         },
       }
     );
