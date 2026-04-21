@@ -23,6 +23,7 @@ import {
   getGroupReprocessingStatus,
   ReprocessingStatus,
 } from 'sentry/views/issueDetails/utils';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 function GroupLayoutBody({children}: {children: React.ReactNode}) {
   const {isSidebarOpen} = useIssueDetails();
@@ -49,6 +50,7 @@ export function GroupDetailsLayout({
   const issueTypeConfig = getConfigForIssueType(group, group.project);
   const hasFilterBar = issueTypeConfig.header.filterBar.enabled;
   const groupReprocessingStatus = getGroupReprocessingStatus(group);
+  const hasPageFrameFeature = useHasPageFrameFeature();
 
   return (
     <IssueDetailsContextProvider>
@@ -86,13 +88,18 @@ export function GroupDetailsLayout({
                 <GroupContent>
                   {groupReprocessingStatus !== ReprocessingStatus.REPROCESSING &&
                     issueTypeConfig.header.eventNavigation.enabled && (
-                      <NavigationSidebarWrapper hasToggleSidebar={!hasFilterBar}>
+                      <NavigationSidebarWrapper
+                        hasToggleSidebar={!hasFilterBar}
+                        hasPageFrame={hasPageFrameFeature}
+                      >
                         <IssueEventNavigation event={event} group={group} />
                         {/* Since the event details header is disabled, display the sidebar toggle here */}
                         {!hasFilterBar && <ToggleSidebar size="sm" />}
                       </NavigationSidebarWrapper>
                     )}
-                  <ContentPadding>{children}</ContentPadding>
+                  <ContentPadding hasPageFrame={hasPageFrameFeature}>
+                    {children}
+                  </ContentPadding>
                 </GroupContent>
               </div>
             )}
@@ -131,19 +138,24 @@ const GroupContent = styled('section')`
 `;
 
 const NavigationSidebarWrapper = styled('div')<{
+  hasPageFrame: boolean;
   hasToggleSidebar: boolean;
 }>`
   position: relative;
   display: flex;
   gap: ${p => p.theme.space.xs};
-  padding: ${p =>
-    p.hasToggleSidebar
-      ? `${p.theme.space.md} 0 ${p.theme.space.sm} ${p.theme.space['2xl']}`
-      : `${p.theme.space.sm} ${p.theme.space['2xl']} ${p.theme.space.xs} ${p.theme.space['2xl']}`};
+  padding: ${p => {
+    const horizontal = p.hasPageFrame ? p.theme.space.xl : p.theme.space['2xl'];
+    return p.hasToggleSidebar
+      ? `${p.theme.space.md} 0 ${p.theme.space.sm} ${horizontal}`
+      : `${p.theme.space.sm} ${horizontal} ${p.theme.space.xs} ${horizontal}`;
+  }};
 `;
 
-const ContentPadding = styled('div')`
+const ContentPadding = styled('div')<{hasPageFrame: boolean}>`
   min-height: 100vh;
-  padding: 0 ${p => p.theme.space['2xl']} ${p => p.theme.space['2xl']}
-    ${p => p.theme.space['2xl']};
+  padding: ${p => {
+    const horizontal = p.hasPageFrame ? p.theme.space.xl : p.theme.space['2xl'];
+    return `0 ${horizontal} ${p.theme.space['2xl']} ${horizontal}`;
+  }};
 `;

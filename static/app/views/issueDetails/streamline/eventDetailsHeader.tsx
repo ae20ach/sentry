@@ -44,6 +44,7 @@ import {
   ReprocessingStatus,
   useEnvironmentsFromUrl,
 } from 'sentry/views/issueDetails/utils';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 interface EventDetailsHeaderProps {
   group: Group;
@@ -61,6 +62,7 @@ export function EventDetailsHeader({group, event, project}: EventDetailsHeaderPr
   const issueTypeConfig = getConfigForIssueType(group, project);
   const {dispatch} = useIssueDetails();
   const groupReprocessingStatus = getGroupReprocessingStatus(group);
+  const hasPageFrameFeature = useHasPageFrameFeature();
 
   const hasSetStatsPeriod =
     location.query.statsPeriod || location.query.start || location.query.end;
@@ -102,11 +104,16 @@ export function EventDetailsHeader({group, event, project}: EventDetailsHeaderPr
   const searchBarEnabled = issueTypeConfig.header.filterBar.searchBar?.enabled !== false;
 
   return (
-    <PageErrorBoundary mini message={t('There was an error loading the event filters')}>
+    <PageErrorBoundary
+      mini
+      message={t('There was an error loading the event filters')}
+      hasPageFrame={hasPageFrameFeature}
+    >
       <DetailsContainer
         role="group"
         aria-description={t('Event filtering controls')}
         hasFilterBar={issueTypeConfig.header.filterBar.enabled}
+        hasPageFrame={hasPageFrameFeature}
       >
         {issueTypeConfig.header.filterBar.enabled && (
           <TourElement<IssueDetailsTour>
@@ -277,14 +284,14 @@ function EnvironmentSelector({group, event, project}: EventDetailsHeaderProps) {
   return <EnvironmentPageFilter triggerProps={{style}} />;
 }
 
-const DetailsContainer = styled('div')<{hasFilterBar: boolean}>`
+const DetailsContainer = styled('div')<{hasFilterBar: boolean; hasPageFrame: boolean}>`
   position: relative;
   display: flex;
   flex-direction: column;
   gap: ${p => p.theme.space.lg};
   background: ${p => p.theme.tokens.background.secondary};
-  padding-left: ${p => p.theme.space['2xl']};
-  padding-right: ${p => p.theme.space['2xl']};
+  padding-left: ${p => (p.hasPageFrame ? p.theme.space.xl : p.theme.space['2xl'])};
+  padding-right: ${p => (p.hasPageFrame ? p.theme.space.xl : p.theme.space['2xl'])};
   padding-top: ${p => p.theme.space.lg};
 
   @media (min-width: ${p => p.theme.breakpoints.lg}) {
@@ -315,10 +322,13 @@ const OccurrenceSummarySection = styled(OccurrenceSummary)`
   border: 1px solid ${p => p.theme.tokens.border.transparent.neutral.muted};
 `;
 
-const PageErrorBoundary = styled(ErrorBoundary)`
+const PageErrorBoundary = styled(ErrorBoundary, {
+  shouldForwardProp: prop => prop !== 'hasPageFrame',
+})<{hasPageFrame: boolean}>`
   margin: 0;
   border: 0px solid ${p => p.theme.tokens.border.transparent.neutral.muted};
   border-width: 0 1px 1px 0;
   border-radius: 0;
-  padding: ${p => p.theme.space.lg} ${p => p.theme.space['2xl']};
+  padding: ${p => p.theme.space.lg}
+    ${p => (p.hasPageFrame ? p.theme.space.xl : p.theme.space['2xl'])};
 `;

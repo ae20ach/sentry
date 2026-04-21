@@ -60,6 +60,7 @@ export function StreamlinedGroupHeader({event, group, project}: GroupHeaderProps
   const location = useLocation();
   const organization = useOrganization();
   const {baseUrl} = useGroupDetailsRoute();
+  const hasPageFrameFeature = useHasPageFrameFeature();
 
   const {sort: _sort, ...query} = location.query;
   const {count: eventCount, userCount} = group;
@@ -94,7 +95,7 @@ export function StreamlinedGroupHeader({event, group, project}: GroupHeaderProps
 
   return (
     <Fragment>
-      <Header>
+      <Header hasPageFrame={hasPageFrameFeature}>
         <Flex justify="between">
           <Flex align="center" gap="md">
             <MaybeTopBarSlot name="title">
@@ -213,7 +214,11 @@ export function StreamlinedGroupHeader({event, group, project}: GroupHeaderProps
       >
         {tourProps => (
           <div {...tourProps}>
-            <ActionBar isComplete={isComplete} role="banner">
+            <ActionBar
+              isComplete={isComplete}
+              hasPageFrame={hasPageFrameFeature}
+              role="banner"
+            >
               <GroupActions
                 group={group}
                 project={project}
@@ -295,9 +300,10 @@ function HeaderActions({group}: {group: Group}) {
   return null;
 }
 
-const Header = styled('header')`
+const Header = styled('header')<{hasPageFrame: boolean}>`
   background-color: ${p => p.theme.tokens.background.primary};
-  padding: ${p => p.theme.space.md} ${p => p.theme.space['2xl']};
+  padding: ${p => p.theme.space.md}
+    ${p => (p.hasPageFrame ? p.theme.space.xl : p.theme.space['2xl'])};
 `;
 
 const HeaderGrid = styled('div')`
@@ -345,12 +351,13 @@ const Subtext = styled('span')`
   white-space: nowrap;
 `;
 
-const ActionBar = styled('div')<{isComplete: boolean}>`
+const ActionBar = styled('div')<{hasPageFrame: boolean; isComplete: boolean}>`
   display: flex;
   justify-content: space-between;
   gap: ${p => p.theme.space.md};
   flex-wrap: wrap;
-  padding: ${p => p.theme.space.md} 24px;
+  padding: ${p => p.theme.space.md}
+    ${p => (p.hasPageFrame ? p.theme.space.xl : p.theme.space['2xl'])};
   border-bottom: 1px solid ${p => p.theme.tokens.border.primary};
   position: relative;
   transition: background 0.3s ease-in-out;
@@ -371,7 +378,7 @@ const ActionBar = styled('div')<{isComplete: boolean}>`
     position: absolute;
     top: 0;
     right: 0;
-    left: 24px;
+    left: ${p => (p.hasPageFrame ? p.theme.space.xl : p.theme.space['2xl'])};
     bottom: unset;
     height: 1px;
     /* eslint-disable-next-line @sentry/scraps/use-semantic-token */
