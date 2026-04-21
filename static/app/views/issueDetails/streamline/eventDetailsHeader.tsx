@@ -283,7 +283,8 @@ const DetailsContainer = styled('div')<{hasFilterBar: boolean}>`
   flex-direction: column;
   gap: ${p => p.theme.space.lg};
   background: ${p => p.theme.tokens.background.secondary};
-  padding-inline: var(--issue-details-inset, ${p => p.theme.space['2xl']});
+  padding-left: var(--issue-details-inset, ${p => p.theme.space['2xl']});
+  padding-right: var(--issue-details-inset, ${p => p.theme.space['2xl']});
   padding-top: ${p => p.theme.space.lg};
 
   @media (min-width: ${p => p.theme.breakpoints.lg}) {
@@ -319,6 +320,6 @@ const PageErrorBoundary = styled(ErrorBoundary)`
   border: 0px solid ${p => p.theme.tokens.border.transparent.neutral.muted};
   border-width: 0 1px 1px 0;
   border-radius: 0;
-  padding-block: ${p => p.theme.space.lg};
-  padding-inline: var(--issue-details-inset, ${p => p.theme.space['2xl']});
+  padding: ${p => p.theme.space.lg}
+    var(--issue-details-inset, ${p => p.theme.space['2xl']});
 `;

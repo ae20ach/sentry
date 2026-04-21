@@ -161,6 +161,6 @@ const NavigationSidebarWrapper = styled('div')<{
 
 const ContentPadding = styled('div')`
   min-height: 100vh;
-  padding-inline: var(--issue-details-inset, ${p => p.theme.space['2xl']});
-  padding-bottom: ${p => p.theme.space['2xl']};
+  padding: 0 var(--issue-details-inset, ${p => p.theme.space['2xl']})
+    ${p => p.theme.space['2xl']} var(--issue-details-inset, ${p => p.theme.space['2xl']});
 `;

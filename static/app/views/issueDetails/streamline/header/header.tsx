@@ -297,8 +297,8 @@ function HeaderActions({group}: {group: Group}) {
 
 const Header = styled('header')`
   background-color: ${p => p.theme.tokens.background.primary};
-  padding-block: ${p => p.theme.space.md};
-  padding-inline: var(--issue-details-inset, ${p => p.theme.space['2xl']});
+  padding: ${p => p.theme.space.md}
+    var(--issue-details-inset, ${p => p.theme.space['2xl']});
 `;
 
 const HeaderGrid = styled('div')`
@@ -351,8 +351,8 @@ const ActionBar = styled('div')<{isComplete: boolean}>`
   justify-content: space-between;
   gap: ${p => p.theme.space.md};
   flex-wrap: wrap;
-  padding-block: ${p => p.theme.space.md};
-  padding-inline: var(--issue-details-inset, ${p => p.theme.space['2xl']});
+  padding: ${p => p.theme.space.md}
+    var(--issue-details-inset, ${p => p.theme.space['2xl']});
   border-bottom: 1px solid ${p => p.theme.tokens.border.primary};
   position: relative;
   transition: background 0.3s ease-in-out;
