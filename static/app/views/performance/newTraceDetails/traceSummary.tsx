@@ -6,6 +6,7 @@ import {Link} from '@sentry/scraps/link';
 import {FeedbackButton} from 'sentry/components/feedbackButton/feedbackButton';
 import {useFeedbackSDKIntegration} from 'sentry/components/feedbackButton/useFeedbackSDKIntegration';
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
+import {normalizeDateTimeParams} from 'sentry/components/pageFilters/parse';
 import {IconInfo} from 'sentry/icons/iconInfo';
 import {IconLightning} from 'sentry/icons/iconLightning';
 import {IconStats} from 'sentry/icons/iconStats';
@@ -160,7 +161,8 @@ export function TraceSummarySection({traceSlug}: {traceSlug: string}) {
                   traceSlug,
                   location,
                   spanId: span.spanId,
-                  dateSelection: {},
+                  timestamp: location.query.timestamp as string | undefined,
+                  dateSelection: normalizeDateTimeParams(location.query),
                 })}
               >
                 {span.spanOp}

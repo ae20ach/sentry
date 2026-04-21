@@ -61,6 +61,10 @@ export function getTraceDetailsUrl({
   dateSelection: any;
   location: Location;
   organization: Organization;
+  // Required: omitting the timestamp forces the old, slow trace view (see
+  // shouldForceRouteToOldView). Callers must pass it, even if the value is
+  // undefined in a genuinely unknown case.
+  timestamp: string | number | undefined;
   traceSlug: string;
   demo?: string;
   eventId?: string;
@@ -70,7 +74,6 @@ export function getTraceDetailsUrl({
   // targetId represents the span id of the transaction. It will replace eventId once all links
   // to trace view are updated to use spand ids of transactions instead of event ids.
   targetId?: string;
-  timestamp?: string | number;
   view?: DomainView;
 }): LocationDescriptorObject {
   const baseUrl = getBaseTraceUrl(organization, source, view);
