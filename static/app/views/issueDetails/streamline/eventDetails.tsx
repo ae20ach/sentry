@@ -61,7 +61,7 @@ function StickyEventNav({event, group}: {event: Event; group: Group}) {
   }, [nav, dispatch, stickyTopOffset]);
 
   return (
-    <FloatingEventNavigation style={{top: stickyTopOffset}}>
+    <FloatingEventNavigation>
       <EventTitle event={event} group={group} ref={setNav} />
     </FloatingEventNavigation>
   );
