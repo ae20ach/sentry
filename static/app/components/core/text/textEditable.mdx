@@ -1,0 +1,99 @@
+---
+title: TextEditable
+description: TextEditable extends the Text component with inline editing functionality. It renders a transparent edit button alongside the text value, and swaps to an input with a Save button when clicked.
+category: typography
+source: '@sentry/scraps/text'
+resources:
+  js: https://github.com/getsentry/sentry/blob/master/static/app/components/core/text/textEditable.tsx
+---
+
+import {useState} from 'react';
+
+import {Stack} from '@sentry/scraps/layout';
+import {TextEditable} from '@sentry/scraps/text';
+
+import * as Storybook from 'sentry/stories';
+
+export const documentation = import('!!type-loader!@sentry/scraps/text/textEditable');
+
+In display mode, `TextEditable` renders the text value alongside a transparent edit button. Clicking the button swaps the text for an input and the edit button for a primary Save button. The `onChange` callback fires when the user presses Enter or clicks Save. Pressing Escape cancels the edit.
+
+export function BasicDemo() {
+  const [value, setValue] = useState('Click the edit icon to change me');
+  return <TextEditable onChange={setValue}>{value}</TextEditable>;
+}
+
+<Storybook.Demo>
+  <BasicDemo />
+</Storybook.Demo>
+
+```jsx
+function Example() {
+  const [value, setValue] = useState('Click the edit icon to change me');
+  return <TextEditable onChange={setValue}>{value}</TextEditable>;
+}
+```
+
+## Text Variants
+
+All `Text` component visual props — `variant`, `size`, `bold`, `italic`, and others — are forwarded to the displayed text.
+
+export function VariantsDemo() {
+  const [primary, setPrimary] = useState('Primary text');
+  const [muted, setMuted] = useState('Muted text');
+  const [large, setLarge] = useState('Large bold text');
+  const [small, setSmall] = useState('Small text');
+  return (
+    <Stack gap="md">
+      <TextEditable onChange={setPrimary}>{primary}</TextEditable>
+      <TextEditable variant="muted" onChange={setMuted}>
+        {muted}
+      </TextEditable>
+      <TextEditable size="lg" bold onChange={setLarge}>
+        {large}
+      </TextEditable>
+      <TextEditable size="sm" onChange={setSmall}>
+        {small}
+      </TextEditable>
+    </Stack>
+  );
+}
+
+<Storybook.Demo>
+  <VariantsDemo />
+</Storybook.Demo>
+
+```jsx
+<TextEditable onChange={setValue}>{value}</TextEditable>
+<TextEditable variant="muted" onChange={setValue}>{value}</TextEditable>
+<TextEditable size="lg" bold onChange={setValue}>{value}</TextEditable>
+<TextEditable size="sm" onChange={setValue}>{value}</TextEditable>
+```
+
+## Placeholder
+
+Use `placeholder` to display hint text when the value is empty.
+
+export function PlaceholderDemo() {
+  const [value, setValue] = useState('');
+  return (
+    <TextEditable placeholder="Enter a name" onChange={setValue}>
+      {value}
+    </TextEditable>
+  );
+}
+
+<Storybook.Demo>
+  <PlaceholderDemo />
+</Storybook.Demo>
+
+```jsx
+<TextEditable placeholder="Enter a name" onChange={setValue}>
+  {value}
+</TextEditable>
+```
+
+## Keyboard Interaction
+
+- **Enter** — commits the new value and calls `onChange`
+- **Escape** — cancels the edit and restores the previous value

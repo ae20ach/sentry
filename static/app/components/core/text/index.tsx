@@ -3,3 +3,5 @@ export {Text} from './text';
 export {Heading} from './heading';
 export type {HeadingProps, HeadingPropsWithRenderFunction} from './heading';
 export {Prose} from './prose';
+export {TextEditable} from './textEditable';
+export type {TextEditableProps} from './textEditable';
