@@ -1,3 +1,4 @@
+import type {ComponentProps} from 'react';
 import {useCallback, useMemo} from 'react';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -135,7 +136,7 @@ export default function AutomationNewSettings() {
   const theme = useTheme();
   const maxWidth = theme.breakpoints.lg;
   const hasPageFrame = useHasPageFrameFeature();
-  const bodyMargin = hasPageFrame
+  const bodyMargin: ComponentProps<typeof Layout.Body>['margin'] = hasPageFrame
     ? {sm: 'xl lg', md: '2xl xl'}
     : {sm: 'xl', md: '2xl 3xl'};
   const initialData = useInitialFormData();
