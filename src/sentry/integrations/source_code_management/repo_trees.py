@@ -214,9 +214,11 @@ class RepoTreesIntegration(ABC):
                 )
             except ApiError as error:
                 if _is_not_found_error(error):
-                    logger.info(
+                    # Keep visibility when transient 404s happen while still
+                    # caching an empty result to avoid repeated API calls.
+                    logger.warning(
                         "Caching empty files result for missing repo or ref",
-                        extra={"repo": repo_full_name},
+                        extra={"repo": repo_full_name, "error_code": error.code},
                     )
                 else:
                     raise
