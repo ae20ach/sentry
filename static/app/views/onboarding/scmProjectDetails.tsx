@@ -16,6 +16,7 @@ import type {Team} from 'sentry/types/organization';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {slugify} from 'sentry/utils/slugify';
 import {useOrganization} from 'sentry/utils/useOrganization';
+import {useProjects} from 'sentry/utils/useProjects';
 import {useTeams} from 'sentry/utils/useTeams';
 import {
   DEFAULT_ISSUE_ALERT_OPTIONS_VALUES,
@@ -36,11 +37,13 @@ export function ScmProjectDetails({onComplete}: StepProps) {
   const {
     selectedPlatform,
     selectedFeatures,
+    createdProjectSlug,
     setCreatedProjectSlug,
     projectDetailsForm,
     setProjectDetailsForm,
   } = useOnboardingContext();
-  const {teams} = useTeams();
+  const {teams, fetching: isLoadingTeams} = useTeams();
+  const {projects, initiallyLoaded: projectsLoaded} = useProjects();
   const createProjectAndRules = useCreateProjectAndRules();
   useEffect(() => {
     trackAnalytics('onboarding.scm_project_details_step_viewed', {organization});
@@ -100,11 +103,28 @@ export function ScmProjectDetails({onComplete}: StepProps) {
     });
   }
 
+  // Block submission until teams and the projects store have loaded so the
+  // reuse check below can't be bypassed by a race.
   const canSubmit =
     projectNameResolved.length > 0 &&
     teamSlugResolved.length > 0 &&
     !!selectedPlatform &&
-    !createProjectAndRules.isPending;
+    !createProjectAndRules.isPending &&
+    !isLoadingTeams &&
+    projectsLoaded;
+
+  const projectStillExists =
+    !!createdProjectSlug && projects.some(p => p.slug === createdProjectSlug);
+
+  const savedAlert = projectDetailsForm?.alertRuleConfig;
+  const nothingChanged =
+    !!projectDetailsForm &&
+    projectNameResolved === projectDetailsForm.projectName &&
+    teamSlugResolved === projectDetailsForm.teamSlug &&
+    alertRuleConfig.alertSetting === savedAlert?.alertSetting &&
+    alertRuleConfig.interval === savedAlert?.interval &&
+    alertRuleConfig.metric === savedAlert?.metric &&
+    alertRuleConfig.threshold === savedAlert?.threshold;
 
   async function handleCreateProject() {
     if (!selectedPlatform || !canSubmit) {
@@ -112,6 +132,18 @@ export function ScmProjectDetails({onComplete}: StepProps) {
     }
 
     trackAnalytics('onboarding.scm_project_details_create_clicked', {organization});
+
+    // User navigated back and clicked Create without changing anything; skip
+    // to setup-docs without creating a duplicate. Any actual change abandons
+    // the previous project and creates a new one, matching legacy onboarding.
+    if (projectStillExists && createdProjectSlug && nothingChanged) {
+      trackAnalytics('onboarding.scm_project_details_create_succeeded', {
+        organization,
+        project_slug: createdProjectSlug,
+      });
+      onComplete(undefined, selectedFeatures ? {product: selectedFeatures} : undefined);
+      return;
+    }
 
     try {
       const {project} = await createProjectAndRules.mutateAsync({
