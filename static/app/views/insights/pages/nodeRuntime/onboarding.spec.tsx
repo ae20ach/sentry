@@ -9,7 +9,8 @@ describe('NodeRuntimeMetricsOnboarding', () => {
     expect(
       screen.getByRole('heading', {name: 'Monitor Node.js Runtime Metrics'})
     ).toBeInTheDocument();
-    expect(screen.getByText(/@sentry\/node 10\.47\.0 or later/)).toBeInTheDocument();
+    expect(screen.getByText('@sentry/node 10.47.0')).toBeInTheDocument();
+    expect(screen.getByText(/or later/)).toBeInTheDocument();
     expect(
       screen.getByText(/Data appears after the first collection interval/)
     ).toBeInTheDocument();
