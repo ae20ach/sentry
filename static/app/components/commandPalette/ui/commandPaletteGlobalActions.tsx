@@ -379,6 +379,12 @@ export function GlobalCommandPaletteActions() {
                       _query: string,
                       {state}: CMDKResourceContext
                     ): CMDKQueryOptions =>
+                      // `projects` is intentionally omitted from the queryKey:
+                      // TanStack serializes the entire key for cache lookups, and
+                      // including the full projects array would be too costly —
+                      // some orgs have thousands of projects.
+                      // `params.projectId` is sufficient to bust the cache when
+                      // the active project changes.
                       // eslint-disable-next-line @tanstack/query/exhaustive-deps
                       cmdkQueryOptions({
                         queryKey: [

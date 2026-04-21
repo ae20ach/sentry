@@ -848,7 +848,7 @@ function makeMenuItemFromAction(
 ): CommandPaletteActionMenuItem {
   const prefix = prefixMap.get(action.key);
   const isExternal = 'to' in action ? isExternalLocation(action.to) : false;
-  const trailingItems =
+  const linkIndicator =
     'to' in action ? (
       <Flex
         align="center"
@@ -859,6 +859,13 @@ function makeMenuItemFromAction(
           {isExternal ? <IconOpen /> : <IconLink />}
         </IconDefaultsProvider>
       </Flex>
+    ) : undefined;
+  const trailingItems =
+    (action.display.trailingItem ?? linkIndicator) ? (
+      <Fragment>
+        {action.display.trailingItem}
+        {linkIndicator}
+      </Fragment>
     ) : undefined;
 
   return {

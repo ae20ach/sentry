@@ -19,6 +19,7 @@ interface DisplayProps {
   label: string;
   details?: string;
   icon?: React.ReactNode;
+  trailingItem?: React.ReactNode;
 }
 
 interface CMDKActionDataBase {
