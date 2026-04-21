@@ -407,7 +407,7 @@ export function FiltersBar({
               icon={<IconClock />}
               priority={hasPageFrameFeature ? 'default' : 'transparent'}
               showChevron={false}
-              size={hasPageFrameFeature ? 'sm' : 'xs'}
+              size={hasPageFrameFeature ? 'md' : 'xs'}
             />
           )}
           menuTitle={t('Interval')}
