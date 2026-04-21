@@ -26,6 +26,7 @@ export function SetupDocs({recentCreatedProject: project, genBackButton}: StepPr
   const navigate = useNavigate();
   const {inExperiment: hasScmOnboarding} = useExperiment({
     feature: 'onboarding-scm-experiment',
+    reportExposure: false,
   });
   const products = useMemo<ProductSolution[]>(
     () => decodeList(location.query.product ?? []) as ProductSolution[],
