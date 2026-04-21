@@ -13,8 +13,8 @@ import {FeedbackSearch} from 'sentry/components/feedback/feedbackSearch';
 import {FeedbackSetupPanel} from 'sentry/components/feedback/feedbackSetupPanel';
 import {FeedbackList} from 'sentry/components/feedback/list/feedbackList';
 import {FeedbackSummaryCategories} from 'sentry/components/feedback/summaryCategories/feedbackSummaryCategories';
+import {FeedbackApiOptions} from 'sentry/components/feedback/useFeedbackApiOptions';
 import {useHaveSelectedProjectsSetupFeedback} from 'sentry/components/feedback/useFeedbackOnboarding';
-import {FeedbackQueryKeys} from 'sentry/components/feedback/useFeedbackQueryKeys';
 import {useFeedbackSlug} from 'sentry/components/feedback/useFeedbackSlug';
 import {useRedirectToFeedbackFromEvent} from 'sentry/components/feedback/useRedirectToFeedbackFromEvent';
 import {FeedbackButton} from 'sentry/components/feedbackButton/feedbackButton';
@@ -148,7 +148,7 @@ export default function FeedbackListPage() {
   return (
     <SentryDocumentTitle title={t('User Feedback')} orgSlug={organization.slug}>
       <FullViewport>
-        <FeedbackQueryKeys organization={organization}>
+        <FeedbackApiOptions organization={organization}>
           <Layout.Header unified>
             <Layout.HeaderContent unified>
               <Layout.Title>
@@ -250,7 +250,7 @@ export default function FeedbackListPage() {
               </Stack>
             </ErrorBoundary>
           </PageFiltersContainer>
-        </FeedbackQueryKeys>
+        </FeedbackApiOptions>
       </FullViewport>
     </SentryDocumentTitle>
   );
