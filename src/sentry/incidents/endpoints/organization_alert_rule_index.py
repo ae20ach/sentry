@@ -325,7 +325,7 @@ def translate_metric_alert_to_detector_payload(data: dict[str, Any]) -> dict[str
                 if alert_threshold is not None:
                     trigger["alertThreshold"] = translate_threshold(threshold_type, alert_threshold)
 
-            if data.get("resolveThreshold") is not None:
+            if resolve_threshold is not None:
                 resolve_threshold = translate_threshold(threshold_type, resolve_threshold)
 
         for trigger in triggers:
