@@ -4,6 +4,7 @@ import styled from '@emotion/styled';
 import * as Sentry from '@sentry/react';
 
 import {Flex, Stack} from '@sentry/scraps/layout';
+import {Heading} from '@sentry/scraps/text';
 
 import {addSuccessMessage} from 'sentry/actionCreators/indicator';
 import {Breadcrumbs} from 'sentry/components/breadcrumbs';
@@ -41,7 +42,6 @@ import {
   validateAutomationBuilderState,
 } from 'sentry/views/automations/components/automationFormData';
 import {EditableAutomationName} from 'sentry/views/automations/components/editableAutomationName';
-import {EditableAutomationTitle} from 'sentry/views/automations/components/editableAutomationTitle';
 import {EditAutomationActions} from 'sentry/views/automations/components/editAutomationActions';
 import {getAutomationAnalyticsPayload} from 'sentry/views/automations/components/forms/common/getAutomationAnalyticsPayload';
 import {AutomationFormProvider} from 'sentry/views/automations/components/forms/context';
@@ -72,31 +72,6 @@ function AutomationBreadcrumbs({automationId}: {automationId: string}) {
         },
         {
           label: title,
-          to: makeAutomationDetailsPathname(organization.slug, automationId),
-        },
-        {label: t('Configure')},
-      ]}
-    />
-  );
-}
-
-function PageFrameAutomationBreadcrumbs({
-  automationId,
-  automationName,
-}: {
-  automationId: string;
-  automationName: string;
-}) {
-  const organization = useOrganization();
-  return (
-    <Breadcrumbs
-      crumbs={[
-        {
-          label: t('Alerts'),
-          to: makeAutomationBasePathname(organization.slug),
-        },
-        {
-          label: automationName,
           to: makeAutomationDetailsPathname(organization.slug, automationId),
         },
         {label: t('Configure')},
@@ -265,14 +240,11 @@ function AutomationEditForm({automation}: {automation: Automation}) {
                 {hasPageFrameFeature ? (
                   <Fragment>
                     <TopBar.Slot name="title">
-                      <PageFrameAutomationBreadcrumbs
-                        automationId={params.automationId}
-                        automationName={automation.name}
-                      />
+                      <AutomationBreadcrumbs automationId={params.automationId} />
                     </TopBar.Slot>
-                    <EditableAutomationTitle>
+                    <Heading as="h1" ellipsis>
                       <EditableAutomationName />
-                    </EditableAutomationTitle>
+                    </Heading>
                   </Fragment>
                 ) : (
                   <Fragment>

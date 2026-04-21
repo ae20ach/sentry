@@ -8,6 +8,7 @@ import {parseAsNativeArrayOf, parseAsString, useQueryState} from 'nuqs';
 
 import {Button} from '@sentry/scraps/button';
 import {Flex, Stack} from '@sentry/scraps/layout';
+import {Heading} from '@sentry/scraps/text';
 
 import {addSuccessMessage} from 'sentry/actionCreators/indicator';
 import {Breadcrumbs} from 'sentry/components/breadcrumbs';
@@ -38,7 +39,6 @@ import {
   validateAutomationBuilderState,
 } from 'sentry/views/automations/components/automationFormData';
 import {EditableAutomationName} from 'sentry/views/automations/components/editableAutomationName';
-import {EditableAutomationTitle} from 'sentry/views/automations/components/editableAutomationTitle';
 import {getAutomationAnalyticsPayload} from 'sentry/views/automations/components/forms/common/getAutomationAnalyticsPayload';
 import {AutomationFormProvider} from 'sentry/views/automations/components/forms/context';
 import {useCreateAutomation} from 'sentry/views/automations/hooks';
@@ -69,21 +69,6 @@ function AutomationBreadcrumbs() {
           to: makeAutomationBasePathname(organization.slug),
         },
         {label: title ? title : t('New Alert')},
-      ]}
-    />
-  );
-}
-
-function PageFrameAutomationBreadcrumbs() {
-  const organization = useOrganization();
-  return (
-    <Breadcrumbs
-      crumbs={[
-        {
-          label: t('Alerts'),
-          to: makeAutomationBasePathname(organization.slug),
-        },
-        {label: t('New Alert')},
       ]}
     />
   );
@@ -257,11 +242,11 @@ export default function AutomationNewSettings() {
                 {hasPageFrameFeature ? (
                   <Fragment>
                     <TopBar.Slot name="title">
-                      <PageFrameAutomationBreadcrumbs />
+                      <AutomationBreadcrumbs />
                     </TopBar.Slot>
-                    <EditableAutomationTitle>
+                    <Heading as="h1" ellipsis>
                       <EditableAutomationName />
-                    </EditableAutomationTitle>
+                    </Heading>
                   </Fragment>
                 ) : (
                   <Fragment>
