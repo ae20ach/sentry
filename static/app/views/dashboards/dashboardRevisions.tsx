@@ -147,7 +147,7 @@ function DashboardRevisionsModal({
               {isRestoreError && (
                 <Alert variant="danger">{t('Failed to restore this revision.')}</Alert>
               )}
-              <Flex justify="flex-end" gap="sm">
+              <Flex justify="end" gap="sm">
                 <Button size="sm" onClick={closeModal}>
                   {t('Cancel')}
                 </Button>
@@ -364,9 +364,7 @@ function DashboardMinimap({widgets}: {widgets: Widget[]}) {
             }
           >
             <WidgetTileIcon>
-              {DISPLAY_TYPE_ICONS[widget.displayType as DisplayType] ?? (
-                <IconGraph size="sm" />
-              )}
+              {DISPLAY_TYPE_ICONS[widget.displayType] ?? <IconGraph size="sm" />}
             </WidgetTileIcon>
             <WidgetTileTitle>{widget.title}</WidgetTileTitle>
           </WidgetTile>
@@ -452,7 +450,7 @@ const WidgetTile = styled('div')`
 const WidgetTileIcon = styled('div')`
   display: flex;
   align-items: center;
-  color: ${p => p.theme.tokens.content.muted};
+  color: ${p => p.theme.tokens.content.secondary};
   flex-shrink: 0;
 `;
 
