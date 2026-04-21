@@ -118,7 +118,7 @@ function DashboardRevisionsModal({
     },
     onSuccess: () => {
       closeModal();
-      window.location.reload();
+      window.location.assign(window.location.pathname);
     },
   });
 
