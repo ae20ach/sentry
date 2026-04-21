@@ -8,7 +8,6 @@ import {ProjectPageFilter} from 'sentry/components/pageFilters/project/projectPa
 import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
 import {IconAdd} from 'sentry/icons';
 import {t} from 'sentry/locale';
-import type {DetectorType} from 'sentry/types/workflowEngine/detectors';
 import {defined} from 'sentry/utils';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useNavigate} from 'sentry/utils/useNavigate';
@@ -20,14 +19,12 @@ import {useCanCreateDetector} from 'sentry/views/detectors/utils/useCanCreateDet
 import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 interface TableHeaderProps {
-  detectorType?: DetectorType;
   showAssigneeFilter?: boolean;
   showTimeRangeSelector?: boolean;
   showTypeFilter?: boolean;
 }
 
 export function DetectorListHeader({
-  detectorType,
   showAssigneeFilter = true,
   showTypeFilter = true,
   showTimeRangeSelector = false,
@@ -70,7 +67,7 @@ export function DetectorListHeader({
           <LinkButton
             to={{
               pathname: makeMonitorCreatePathname(organization.slug),
-              query: {project, detectorType},
+              query: {project},
             }}
             priority="primary"
             icon={<IconAdd />}

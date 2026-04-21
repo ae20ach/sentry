@@ -34,7 +34,7 @@ export default function MetricDetectorsList() {
         description={description}
         docsUrl={DOCS_URL}
       >
-        <DetectorListHeader detectorType="metric_issue" showTypeFilter={false} />
+        <DetectorListHeader showTypeFilter={false} />
         <DetectorListContent
           isError={detectorListQuery.isError}
           isLoading={detectorListQuery.isLoading}

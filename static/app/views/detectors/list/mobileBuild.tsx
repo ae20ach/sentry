@@ -27,10 +27,7 @@ export default function MobileBuildDetectorsList() {
           description={DESCRIPTION}
           docsUrl={DOCS_URL}
         >
-          <DetectorListHeader
-            detectorType="preprod_size_analysis"
-            showTypeFilter={false}
-          />
+          <DetectorListHeader showTypeFilter={false} />
           <DetectorListContent
             isError={detectorListQuery.isError}
             isLoading={detectorListQuery.isLoading}

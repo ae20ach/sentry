@@ -113,11 +113,7 @@ export default function UptimeDetectorsList() {
           <InsightsRedirectNotice>
             {t('Uptime monitors have been moved from Insights to Monitors.')}
           </InsightsRedirectNotice>
-          <DetectorListHeader
-            detectorType="uptime_domain_failure"
-            showTimeRangeSelector
-            showTypeFilter={false}
-          />
+          <DetectorListHeader showTimeRangeSelector showTypeFilter={false} />
           <DetectorListContent
             isError={detectorListQuery.isError}
             isLoading={detectorListQuery.isLoading}
