@@ -65,8 +65,10 @@ import {useStarredIssueViews} from 'sentry/views/navigation/secondary/sections/i
 import {makeProjectsPathname} from 'sentry/views/projects/pathname';
 import {openSeerExplorer} from 'sentry/views/seerExplorer/openSeerExplorer';
 import {getUserOrgNavigationConfiguration} from 'sentry/views/settings/organization/userOrgNavigationConfiguration';
+import {getNavigationConfiguration} from 'sentry/views/settings/project/navigationConfiguration';
 
 import {CMDKAction} from './cmdk';
+import type {CMDKResourceContext} from './cmdk';
 import {CommandPaletteSlot} from './commandPaletteSlot';
 
 const DSN_ICONS: React.ReactElement[] = [
@@ -370,20 +372,55 @@ export function GlobalCommandPaletteActions() {
           )}
         </CMDKAction>
 
-        <CMDKAction
-          display={{label: t('Project Settings'), icon: <IconSettings />}}
-          limit={4}
-        >
-          {projects.map(project => (
-            <CMDKAction
-              key={project.id}
-              display={{
-                label: project.slug,
-                icon: <ProjectAvatar project={project} size={16} />,
-              }}
-              to={`/settings/${organization.slug}/projects/${project.slug}/`}
-            />
-          ))}
+        <CMDKAction display={{label: t('Project Settings'), icon: <IconSettings />}}>
+          {getNavigationConfiguration({organization}).flatMap(section =>
+            section.items
+              .filter(navItem => {
+                if (!navItem.show) return true;
+                return typeof navItem.show === 'function'
+                  ? (navItem.show as () => boolean)()
+                  : navItem.show;
+              })
+              .map(navItem => {
+                const suffix = navItem.path.replace(
+                  '/settings/:orgId/projects/:projectId/',
+                  ''
+                );
+                return (
+                  <CMDKAction
+                    key={navItem.path}
+                    display={{label: navItem.title, icon: <IconSettings />}}
+                    keywords={navItem.keywords}
+                    prompt={t('Select a project...')}
+                    resource={(
+                      _query: string,
+                      {state}: CMDKResourceContext
+                    ): CMDKQueryOptions =>
+                      cmdkQueryOptions({
+                        queryKey: [
+                          'project-settings',
+                          organization.slug,
+                          suffix,
+                          projects,
+                        ],
+                        queryFn: () =>
+                          projects.map(project => ({
+                            display: {
+                              label: project.slug,
+                              icon: <ProjectAvatar project={project} size={16} />,
+                            },
+                            to: `/settings/${organization.slug}/projects/${project.slug}/${suffix}`,
+                          })),
+                        enabled: state === 'selected',
+                        staleTime: Infinity,
+                      })
+                    }
+                  >
+                    {data => data.map((result, i) => renderAsyncResult(result, i))}
+                  </CMDKAction>
+                );
+              })
+          )}
         </CMDKAction>
       </CMDKAction>
 
@@ -481,23 +518,6 @@ export function GlobalCommandPaletteActions() {
       </CMDKAction>
 
       <CMDKAction display={{label: t('DSN')}} keywords={[t('client keys')]}>
-        <CMDKAction
-          display={{label: t('Project DSN Keys'), icon: <IconLock locked />}}
-          keywords={[t('client keys'), t('dsn keys')]}
-          limit={4}
-        >
-          {projects.map(project => (
-            <CMDKAction
-              key={project.id}
-              display={{
-                label: project.name,
-                icon: <ProjectAvatar project={project} size={16} />,
-              }}
-              keywords={[`dsn ${project.name}`, `dsn ${project.slug}`]}
-              to={`/settings/${organization.slug}/projects/${project.slug}/keys/`}
-            />
-          ))}
-        </CMDKAction>
         {hasDsnLookup && (
           <CMDKAction
             display={{

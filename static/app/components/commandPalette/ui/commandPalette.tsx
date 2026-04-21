@@ -307,7 +307,7 @@ export function CommandPalette(props: CommandPaletteProps) {
   const isLoading =
     (state.query.length > 0 && debouncedQuery !== state.query) || isFetchingQueries > 0;
   const isEmptyPromptQuery =
-    state.action?.value.prompt !== undefined && state.query.length === 0;
+    state.action?.value.prompt !== undefined && (state.query.length === 0 || isLoading);
 
   return (
     <Fragment>
