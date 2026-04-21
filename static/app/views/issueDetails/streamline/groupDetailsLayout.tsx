@@ -1,3 +1,4 @@
+import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
 
 import {t} from 'sentry/locale';
@@ -51,65 +52,74 @@ export function GroupDetailsLayout({
   const hasFilterBar = issueTypeConfig.header.filterBar.enabled;
   const groupReprocessingStatus = getGroupReprocessingStatus(group);
   const hasPageFrameFeature = useHasPageFrameFeature();
+  const theme = useTheme();
+
+  // Align the issue-details content with the page-frame top bar (`xl`
+  // inset) while preserving the legacy 24px (`2xl`) inset when the
+  // page-frame feature is off. Consumed via var(--issue-details-inset).
+  const insetStyle = hasPageFrameFeature
+    ? ({'--issue-details-inset': theme.space.xl} as React.CSSProperties)
+    : undefined;
 
   return (
     <IssueDetailsContextProvider>
-      <StreamlinedGroupHeader group={group} event={event ?? null} project={project} />
-      <GroupLayoutBody>
-        <div>
-          <SharedTourElement<IssueDetailsTour>
-            id={IssueDetailsTour.AGGREGATES}
-            demoTourId={DemoTourStep.ISSUES_AGGREGATES}
-            tourContext={IssueDetailsTourContext}
-            title={t('See overall impact')}
-            description={t(
-              "Here you'll see aggregate metrics like frequency over time, total affected users, and where it occurs (environment, release, device, etc.)."
-            )}
-            position="bottom"
-          >
-            {tourProps => (
-              <div {...tourProps}>
-                <EventDetailsHeader event={event} group={group} project={project} />
-              </div>
-            )}
-          </SharedTourElement>
-          <SharedTourElement<IssueDetailsTour>
-            id={IssueDetailsTour.EVENT_DETAILS}
-            demoTourId={DemoTourStep.ISSUES_EVENT_DETAILS}
-            tourContext={IssueDetailsTourContext}
-            title={t('Investigate the issue')}
-            description={t(
-              'See all the issue context including the stack trace, tags, screenshots and connected replays, logs, and traces.'
-            )}
-            position="top"
-          >
-            {tourProps => (
-              <div {...tourProps}>
-                <GroupContent>
-                  {groupReprocessingStatus !== ReprocessingStatus.REPROCESSING &&
-                    issueTypeConfig.header.eventNavigation.enabled && (
-                      <NavigationSidebarWrapper
-                        hasToggleSidebar={!hasFilterBar}
-                        hasPageFrame={hasPageFrameFeature}
-                      >
-                        <IssueEventNavigation event={event} group={group} />
-                        {/* Since the event details header is disabled, display the sidebar toggle here */}
-                        {!hasFilterBar && <ToggleSidebar size="sm" />}
-                      </NavigationSidebarWrapper>
-                    )}
-                  <ContentPadding hasPageFrame={hasPageFrameFeature}>
-                    {children}
-                  </ContentPadding>
-                </GroupContent>
-              </div>
-            )}
-          </SharedTourElement>
-        </div>
-        <StreamlinedSidebar group={group} event={event} project={project} />
-      </GroupLayoutBody>
+      <InsetScope style={insetStyle}>
+        <StreamlinedGroupHeader group={group} event={event ?? null} project={project} />
+        <GroupLayoutBody>
+          <div>
+            <SharedTourElement<IssueDetailsTour>
+              id={IssueDetailsTour.AGGREGATES}
+              demoTourId={DemoTourStep.ISSUES_AGGREGATES}
+              tourContext={IssueDetailsTourContext}
+              title={t('See overall impact')}
+              description={t(
+                "Here you'll see aggregate metrics like frequency over time, total affected users, and where it occurs (environment, release, device, etc.)."
+              )}
+              position="bottom"
+            >
+              {tourProps => (
+                <div {...tourProps}>
+                  <EventDetailsHeader event={event} group={group} project={project} />
+                </div>
+              )}
+            </SharedTourElement>
+            <SharedTourElement<IssueDetailsTour>
+              id={IssueDetailsTour.EVENT_DETAILS}
+              demoTourId={DemoTourStep.ISSUES_EVENT_DETAILS}
+              tourContext={IssueDetailsTourContext}
+              title={t('Investigate the issue')}
+              description={t(
+                'See all the issue context including the stack trace, tags, screenshots and connected replays, logs, and traces.'
+              )}
+              position="top"
+            >
+              {tourProps => (
+                <div {...tourProps}>
+                  <GroupContent>
+                    {groupReprocessingStatus !== ReprocessingStatus.REPROCESSING &&
+                      issueTypeConfig.header.eventNavigation.enabled && (
+                        <NavigationSidebarWrapper hasToggleSidebar={!hasFilterBar}>
+                          <IssueEventNavigation event={event} group={group} />
+                          {/* Since the event details header is disabled, display the sidebar toggle here */}
+                          {!hasFilterBar && <ToggleSidebar size="sm" />}
+                        </NavigationSidebarWrapper>
+                      )}
+                    <ContentPadding>{children}</ContentPadding>
+                  </GroupContent>
+                </div>
+              )}
+            </SharedTourElement>
+          </div>
+          <StreamlinedSidebar group={group} event={event} project={project} />
+        </GroupLayoutBody>
+      </InsetScope>
     </IssueDetailsContextProvider>
   );
 }
+
+const InsetScope = styled('div')`
+  display: contents;
+`;
 
 const StyledLayoutBody = styled('div')<{
   sidebarOpen: boolean;
@@ -138,24 +148,19 @@ const GroupContent = styled('section')`
 `;
 
 const NavigationSidebarWrapper = styled('div')<{
-  hasPageFrame: boolean;
   hasToggleSidebar: boolean;
 }>`
   position: relative;
   display: flex;
   gap: ${p => p.theme.space.xs};
-  padding: ${p => {
-    const horizontal = p.hasPageFrame ? p.theme.space.xl : p.theme.space['2xl'];
-    return p.hasToggleSidebar
-      ? `${p.theme.space.md} 0 ${p.theme.space.sm} ${horizontal}`
-      : `${p.theme.space.sm} ${horizontal} ${p.theme.space.xs} ${horizontal}`;
-  }};
+  padding: ${p =>
+    p.hasToggleSidebar
+      ? `${p.theme.space.md} 0 ${p.theme.space.sm} var(--issue-details-inset, ${p.theme.space['2xl']})`
+      : `${p.theme.space.sm} var(--issue-details-inset, ${p.theme.space['2xl']}) ${p.theme.space.xs} var(--issue-details-inset, ${p.theme.space['2xl']})`};
 `;
 
-const ContentPadding = styled('div')<{hasPageFrame: boolean}>`
+const ContentPadding = styled('div')`
   min-height: 100vh;
-  padding: ${p => {
-    const horizontal = p.hasPageFrame ? p.theme.space.xl : p.theme.space['2xl'];
-    return `0 ${horizontal} ${p.theme.space['2xl']} ${horizontal}`;
-  }};
+  padding-inline: var(--issue-details-inset, ${p => p.theme.space['2xl']});
+  padding-bottom: ${p => p.theme.space['2xl']};
 `;
