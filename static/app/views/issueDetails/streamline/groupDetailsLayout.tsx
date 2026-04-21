@@ -58,9 +58,6 @@ export function GroupDetailsLayout({
 
   return (
     <IssueDetailsContextProvider>
-      {/* Align the issue-details content with the page-frame top bar (`xl`
-          inset) while preserving the legacy 24px (`2xl`) inset when the
-          page-frame feature is off. Consumed via var(--issue-details-inset). */}
       <Container
         display="contents"
         style={
