@@ -3,7 +3,7 @@ import styled from '@emotion/styled';
 import {useQuery} from '@tanstack/react-query';
 
 import {LinkButton} from '@sentry/scraps/button';
-import {Stack} from '@sentry/scraps/layout';
+import {Flex, Stack} from '@sentry/scraps/layout';
 import {ExternalLink} from '@sentry/scraps/link';
 
 import {addErrorMessage, addSuccessMessage} from 'sentry/actionCreators/indicator';
@@ -27,6 +27,7 @@ import {
 import type {RequestError} from 'sentry/utils/requestError/requestError';
 import {useApi} from 'sentry/utils/useApi';
 import {withOrganization} from 'sentry/utils/withOrganization';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 import {SettingsPageHeader} from 'sentry/views/settings/components/settingsPageHeader';
 import {OrganizationAuthTokensAuthTokenRow} from 'sentry/views/settings/organizationAuthTokens/authTokenRow';
 
@@ -103,6 +104,7 @@ export function OrganizationAuthTokensIndex({
   organization: Organization;
 }) {
   const api = useApi();
+  const hasPageFrame = useHasPageFrameFeature();
   const queryClient = useQueryClient();
 
   const {
@@ -173,7 +175,7 @@ export function OrganizationAuthTokensIndex({
           />
           <SettingsPageHeader
             title={t('Organization Tokens')}
-            action={createNewToken}
+            action={hasPageFrame ? undefined : createNewToken}
             subtitle={
               <Stack gap="md">
                 <div>
@@ -192,6 +194,12 @@ export function OrganizationAuthTokensIndex({
               </Stack>
             }
           />
+
+          {hasPageFrame && (
+            <Flex justify="end" marginBottom="xl">
+              {createNewToken}
+            </Flex>
+          )}
 
           <ResponsivePanelTable
             isLoading={isPending || isError}

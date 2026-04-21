@@ -1,5 +1,5 @@
 import {LinkButton} from '@sentry/scraps/button';
-import {Stack} from '@sentry/scraps/layout';
+import {Flex, Stack} from '@sentry/scraps/layout';
 import {ExternalLink} from '@sentry/scraps/link';
 
 import {
@@ -23,6 +23,7 @@ import {
   useQueryClient,
 } from 'sentry/utils/queryClient';
 import {useApi} from 'sentry/utils/useApi';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 import {ApiTokenRow} from 'sentry/views/settings/account/apiTokenRow';
 import {SettingsPageHeader} from 'sentry/views/settings/components/settingsPageHeader';
 
@@ -31,6 +32,7 @@ const API_TOKEN_QUERY_KEY = [getApiUrl('/api-tokens/')] as const;
 
 function ApiTokens() {
   const api = useApi();
+  const hasPageFrame = useHasPageFrameFeature();
   const queryClient = useQueryClient();
 
   const {
@@ -112,7 +114,7 @@ function ApiTokens() {
     <SentryDocumentTitle title={PAGE_TITLE}>
       <SettingsPageHeader
         title={PAGE_TITLE}
-        action={action}
+        action={hasPageFrame ? undefined : action}
         subtitle={
           <Stack gap="md">
             <div>
@@ -131,6 +133,11 @@ function ApiTokens() {
           </Stack>
         }
       />
+      {hasPageFrame && (
+        <Flex justify="end" marginBottom="xl">
+          {action}
+        </Flex>
+      )}
       <PanelTable
         headers={[t('Token'), t('Created On'), t('Scopes'), '']}
         isEmpty={isEmpty}
