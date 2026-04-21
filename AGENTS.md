@@ -189,7 +189,7 @@ Workflow steering (commit, pre-commit, hybrid cloud, etc.) lives in **skills** (
 
 ## Viewer/Organization Context
 
-- Viewer identity is wired through the app via the `ViewerContext` contextvar; use `sentry.viewer_context.get_viewer_context()` instead of explicitly threading org/user identity through internal calls when the current viewer is in scope.
+- Viewer identity is wired through the app via the `ViewerContext` contextvar; use `sentry.viewer_context.get_viewer_context()` instead of explicitly threading org/user identity when the current viewer is in scope.
 
 ## Agent Skills
 
