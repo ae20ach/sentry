@@ -712,7 +712,7 @@ describe('Onboarding', () => {
     });
 
     it('fires scm_welcome_continue_clicked on start click and not the legacy event', async () => {
-      renderOnboarding('welcome');
+      const {router} = renderOnboarding('welcome');
 
       await userEvent.click(screen.getByTestId('onboarding-welcome-start'));
 
@@ -724,6 +724,14 @@ describe('Onboarding', () => {
         'growth.onboarding_clicked_instrument_app',
         expect.anything()
       );
+
+      // Wait for the scm-connect navigation to settle so its mounted-effect
+      // fetches hit the mocked endpoints before afterEach clears responses.
+      await waitFor(() => {
+        expect(router.location.pathname).toBe(
+          `/onboarding/${scmOrganization.slug}/scm-connect/`
+        );
+      });
     });
 
     it('auto-selects existing integration and shows connected view', async () => {
@@ -771,7 +779,7 @@ describe('Onboarding', () => {
     it('skip for now advances to next step without skipping onboarding', async () => {
       const {router} = renderOnboarding('scm-connect');
 
-      expect(await screen.findByText('Connect a repository')).toBeInTheDocument();
+      expect(await screen.findByText('Connect a repo')).toBeInTheDocument();
 
       await userEvent.click(screen.getByRole('button', {name: 'Skip for now'}));
 
@@ -780,6 +788,30 @@ describe('Onboarding', () => {
           `/onboarding/${scmOrganization.slug}/scm-platform-features/`
         );
       });
+    });
+
+    it('header skip button fires scm-connect analytics', async () => {
+      renderOnboarding('scm-connect');
+
+      await screen.findByText('Connect a repo');
+
+      const buttons = screen.getAllByRole('button', {name: 'Skip setup'});
+      expect(buttons).toHaveLength(1);
+      await userEvent.click(buttons[0]!);
+
+      expect(trackAnalytics).toHaveBeenCalledWith(
+        'onboarding.scm_header_skip_clicked',
+        expect.objectContaining({
+          step: 'scm-connect',
+        })
+      );
+    });
+
+    it('hides the welcome footer skip button in favor of the header button', () => {
+      renderOnboarding('welcome');
+
+      const buttons = screen.getAllByRole('button', {name: 'Skip setup'});
+      expect(buttons).toHaveLength(1);
     });
 
     it('renders scm-platform-features step and advances to scm-project-details', async () => {
@@ -1052,7 +1084,7 @@ describe('Onboarding', () => {
       const {router} = renderOnboarding('scm-connect');
 
       // Wait for the step to render
-      await screen.findByText('Connect a repository');
+      await screen.findByText('Connect a repo');
 
       await userEvent.click(screen.getByRole('button', {name: 'Back'}));
 

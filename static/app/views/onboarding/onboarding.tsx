@@ -35,6 +35,7 @@ import {useHasNewWelcomeUI} from 'sentry/views/onboarding/useHasNewWelcomeUI';
 import {useOnboardingSidebar} from 'sentry/views/onboarding/useOnboardingSidebar';
 
 import {NewWelcomeUI} from './components/newWelcome';
+import {OnboardingSkipButton} from './components/onboardingSkipButton';
 import {Stepper} from './components/stepper';
 import {PlatformSelection} from './platformSelection';
 import {ScmConnect} from './scmConnect';
@@ -78,18 +79,21 @@ const scmOnboardingSteps: StepDescriptor[] = [
     id: OnboardingStepId.SCM_CONNECT,
     title: t('Connect repository'),
     Component: ScmConnect,
+    hasFooter: true,
     cornerVariant: 'top-left',
   },
   {
     id: OnboardingStepId.SCM_PLATFORM_FEATURES,
     title: t('Platform & features'),
     Component: ScmPlatformFeatures,
+    hasFooter: true,
     cornerVariant: 'top-left',
   },
   {
     id: OnboardingStepId.SCM_PROJECT_DETAILS,
     title: t('Project details'),
     Component: ScmProjectDetails,
+    hasFooter: true,
     cornerVariant: 'top-left',
   },
   {
@@ -112,30 +116,42 @@ function WelcomeVariable(props: StepProps) {
 interface ContainerVariableProps {
   hasFooter: boolean;
   hasNewWelcomeUI: boolean;
+  hasScmOnboarding: boolean;
   id: OnboardingStepId;
 }
 
 function ContainerVariable(props: PropsWithChildren<ContainerVariableProps>) {
   const newWelcomeUIStep = props.hasNewWelcomeUI && props.id === OnboardingStepId.WELCOME;
-  const Component = newWelcomeUIStep
-    ? OnboardingContainerNewWelcomeUI
-    : OnboardingContainer;
+
+  if (newWelcomeUIStep && !props.hasScmOnboarding) {
+    return (
+      <OnboardingContainerNewWelcomeUI hasFooter>
+        {props.children}
+      </OnboardingContainerNewWelcomeUI>
+    );
+  }
 
   return (
-    <Component hasFooter={props.hasFooter || newWelcomeUIStep}>
+    <OnboardingContainer
+      hasFooter={props.hasFooter || newWelcomeUIStep}
+      hasScmOnboarding={props.hasScmOnboarding}
+    >
       {props.children}
-    </Component>
+    </OnboardingContainer>
   );
 }
 
 interface OnboardingStepVariableProps {
   hasNewWelcomeUI: boolean;
+  hasScmOnboarding: boolean;
   id: OnboardingStepId;
 }
 
 function OnboardingStepVariable(props: PropsWithChildren<OnboardingStepVariableProps>) {
   const Component =
-    props.hasNewWelcomeUI && props.id === OnboardingStepId.WELCOME
+    props.hasNewWelcomeUI &&
+    props.id === OnboardingStepId.WELCOME &&
+    !props.hasScmOnboarding
       ? OnboardingStepNewUi
       : OnboardingStep;
 
@@ -148,7 +164,6 @@ function OnboardingStepVariable(props: PropsWithChildren<OnboardingStepVariableP
       transition={{
         staggerChildren: 0.2,
       }}
-      key={props.id}
       data-test-id={`onboarding-step-${props.id}`}
     >
       {props.children}
@@ -291,6 +306,21 @@ export function OnboardingWithoutContext() {
     navigate(query ? normalizeUrl({pathname, query}) : normalizeUrl(pathname));
   };
 
+  const genBackButton = () => {
+    if (!hasScmOnboarding || stepIndex <= 0) {
+      return null;
+    }
+    return (
+      <Button
+        onClick={() => handleGoBack()}
+        icon={<IconArrow direction="left" />}
+        priority="link"
+      >
+        {t('Back')}
+      </Button>
+    );
+  };
+
   const genSkipOnboardingLink = () => {
     const source = `targeted-onboarding-${stepId}`;
     return (
@@ -329,7 +359,7 @@ export function OnboardingWithoutContext() {
     <Stack as="main" flexGrow={1} data-test-id="targeted-onboarding">
       <SentryDocumentTitle title={stepObj.title} />
       <Header>
-        <LogoSvg />
+        <LogoSvg showWordmark={!hasScmOnboarding} />
         {stepIndex !== -1 && (
           <StyledStepper
             numSteps={onboardingSteps.length}
@@ -344,23 +374,27 @@ export function OnboardingWithoutContext() {
             }}
           />
         )}
-        <UpsellWrapper>
+        <HeaderActions>
           <Hook
             name="onboarding:targeted-onboarding-header"
             source="targeted-onboarding"
           />
-        </UpsellWrapper>
+          {hasScmOnboarding && <OnboardingSkipButton stepId={stepObj.id} />}
+        </HeaderActions>
       </Header>
       <ContainerVariable
         hasFooter={containerHasFooter}
         id={stepObj.id}
         hasNewWelcomeUI={hasNewWelcomeUI}
+        hasScmOnboarding={hasScmOnboarding}
       >
-        <AdaptivePageCorners
-          // Controls the current corner variant
-          animateVariant={stepIndex === 0 ? 'top-right' : 'top-left'}
-        />
-        {stepIndex > 0 && (
+        {hasScmOnboarding ? null : (
+          <AdaptivePageCorners
+            // Controls the current corner variant
+            animateVariant={stepIndex === 0 ? 'top-right' : 'top-left'}
+          />
+        )}
+        {stepIndex > 0 && !hasScmOnboarding && (
           <BackMotionDiv
             initial="initial"
             animate="visible"
@@ -385,7 +419,12 @@ export function OnboardingWithoutContext() {
           </BackMotionDiv>
         )}
         <AnimatePresence mode="wait" onExitComplete={updateAnimationState}>
-          <OnboardingStepVariable id={stepObj.id} hasNewWelcomeUI={hasNewWelcomeUI}>
+          <OnboardingStepVariable
+            key={stepObj.id}
+            id={stepObj.id}
+            hasNewWelcomeUI={hasNewWelcomeUI}
+            hasScmOnboarding={hasScmOnboarding}
+          >
             {stepObj.Component && (
               <stepObj.Component
                 data-test-id={`onboarding-step-${stepObj.id}`}
@@ -397,6 +436,7 @@ export function OnboardingWithoutContext() {
                 }}
                 recentCreatedProject={recentCreatedProject}
                 genSkipOnboardingLink={genSkipOnboardingLink}
+                genBackButton={genBackButton}
               />
             )}
           </OnboardingStepVariable>
@@ -414,7 +454,9 @@ function Onboarding() {
   );
 }
 
-const OnboardingContainerNewWelcomeUI = styled('div')<{hasFooter: boolean}>`
+const OnboardingContainerNewWelcomeUI = styled('div')<{
+  hasFooter: boolean;
+}>`
   flex-grow: 1;
   display: flex;
   flex-direction: column;
@@ -433,13 +475,16 @@ const OnboardingContainerNewWelcomeUI = styled('div')<{hasFooter: boolean}>`
   }
 `;
 
-const OnboardingContainer = styled('div')<{hasFooter: boolean}>`
+const OnboardingContainer = styled('div')<{
+  hasFooter: boolean;
+  hasScmOnboarding: boolean;
+}>`
   flex-grow: 1;
   display: flex;
   flex-direction: column;
   position: relative;
   background: ${p => p.theme.tokens.background.primary};
-  padding: 120px ${p => p.theme.space['2xl']};
+  padding: ${p => (p.hasScmOnboarding ? '60px' : '120px')} ${p => p.theme.space['2xl']};
   width: 100%;
   margin: 0 auto;
   padding-bottom: ${p => p.hasFooter && '72px'};
@@ -459,10 +504,12 @@ const Header = styled('header')`
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   justify-items: stretch;
+  @media (max-width: ${p => p.theme.breakpoints.xl}) {
+    grid-template-columns: min-content 1fr;
+  }
 `;
 
 const LogoSvg = styled(LogoSentry)`
-  width: 130px;
   height: 30px;
   color: ${p => p.theme.tokens.content.primary};
 `;
@@ -490,7 +537,7 @@ const AdaptivePageCorners = styled(PageCorners)`
 
 const StyledStepper = styled(Stepper)`
   justify-self: center;
-  @media (max-width: ${p => p.theme.breakpoints.md}) {
+  @media (max-width: ${p => p.theme.breakpoints.xl}) {
     display: none;
   }
 `;
@@ -509,9 +556,12 @@ const SkipOnboardingLink = styled(Link)`
   margin: auto ${p => p.theme.space['3xl']};
 `;
 
-const UpsellWrapper = styled('div')`
+const HeaderActions = styled('div')`
   grid-column: 3;
-  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: ${p => p.theme.space.md};
 `;
 
 export default Onboarding;
