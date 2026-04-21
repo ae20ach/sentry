@@ -249,10 +249,8 @@ export default function AutomationNewSettings() {
           </Layout.Header>
           <Layout.Body
             maxWidth={maxWidth}
-            padding="0"
-            margin={
-              hasPageFrame ? {sm: 'xl lg', md: '2xl xl'} : {sm: 'xl', md: '2xl 3xl'}
-            }
+            padding={hasPageFrame ? undefined : '0'}
+            margin={hasPageFrame ? '0' : {sm: 'xl', md: '2xl 3xl'}}
           >
             <Layout.Main width="full">
               <AutomationBuilderErrorContext.Provider
