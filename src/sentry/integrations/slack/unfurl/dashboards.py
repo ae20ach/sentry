@@ -68,6 +68,7 @@ _TIMESERIES_DISPLAY_TYPES = {
 _WIDGET_TYPE_TO_DATASET = {
     DashboardWidgetTypes.SPANS: SupportedTraceItemType.SPANS,
     DashboardWidgetTypes.LOGS: SupportedTraceItemType.LOGS,
+    DashboardWidgetTypes.TRACEMETRICS: SupportedTraceItemType.TRACEMETRICS,
 }
 
 

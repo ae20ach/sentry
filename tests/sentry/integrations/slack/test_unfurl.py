@@ -2426,6 +2426,18 @@ class BuildWidgetTimeseriesParamsTest(TestCase):
         assert all_params[0]["dataset"] == "logs"
         assert all_params[0]["yAxis"] == ["count(message)"]
 
+    def test_tracemetrics_widget(self) -> None:
+        widget = self._make_widget(
+            widget_type=DashboardWidgetTypes.TRACEMETRICS,
+            queries=[{"aggregates": ["sum(value)"]}],
+        )
+
+        all_params = build_widget_timeseries_params(widget, QueryDict("statsPeriod=7d"))
+
+        assert len(all_params) == 1
+        assert all_params[0]["dataset"] == "tracemetrics"
+        assert all_params[0]["yAxis"] == ["sum(value)"]
+
     def test_multiple_queries_returns_one_dict_each_in_order(self) -> None:
         widget = self._make_widget(
             queries=[
