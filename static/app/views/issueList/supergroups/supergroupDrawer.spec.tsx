@@ -67,7 +67,6 @@ describe('SupergroupDetailDrawer', () => {
       }
     );
 
-    // Skeletons share data-test-id="group", wait for real content first.
     expect(await screen.findByText('MATCHED_MEMBER')).toBeInTheDocument();
     const rows = screen.getAllByTestId('group');
     expect(rows[0]).toHaveTextContent('MATCHED_MEMBER');
