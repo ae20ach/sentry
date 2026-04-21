@@ -1,6 +1,8 @@
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
 
+import {Container} from '@sentry/scraps/layout';
+
 import {t} from 'sentry/locale';
 import type {Event} from 'sentry/types/event';
 import type {Group} from 'sentry/types/group';
@@ -54,16 +56,19 @@ export function GroupDetailsLayout({
   const hasPageFrameFeature = useHasPageFrameFeature();
   const theme = useTheme();
 
-  // Align the issue-details content with the page-frame top bar (`xl`
-  // inset) while preserving the legacy 24px (`2xl`) inset when the
-  // page-frame feature is off. Consumed via var(--issue-details-inset).
-  const insetStyle = hasPageFrameFeature
-    ? ({'--issue-details-inset': theme.space.xl} as React.CSSProperties)
-    : undefined;
-
   return (
     <IssueDetailsContextProvider>
-      <InsetScope style={insetStyle}>
+      {/* Align the issue-details content with the page-frame top bar (`xl`
+          inset) while preserving the legacy 24px (`2xl`) inset when the
+          page-frame feature is off. Consumed via var(--issue-details-inset). */}
+      <Container
+        display="contents"
+        style={
+          hasPageFrameFeature
+            ? ({'--issue-details-inset': theme.space.xl} as React.CSSProperties)
+            : undefined
+        }
+      >
         <StreamlinedGroupHeader group={group} event={event ?? null} project={project} />
         <GroupLayoutBody>
           <div>
@@ -112,14 +117,10 @@ export function GroupDetailsLayout({
           </div>
           <StreamlinedSidebar group={group} event={event} project={project} />
         </GroupLayoutBody>
-      </InsetScope>
+      </Container>
     </IssueDetailsContextProvider>
   );
 }
-
-const InsetScope = styled('div')`
-  display: contents;
-`;
 
 const StyledLayoutBody = styled('div')<{
   sidebarOpen: boolean;
