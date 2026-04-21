@@ -139,8 +139,8 @@ export function BillingPlans() {
         for (let i = 0; i < maxTiers; i++) {
           if (i === 0) {
             row = [
-              formatCurrency(planDetails.pricing.Platform!.monthly),
-              formatCurrency(planDetails.pricing.Platform!.annual),
+              formatCurrency(planDetails.pricing.Platform?.monthly ?? 0),
+              formatCurrency(planDetails.pricing.Platform?.annual ?? 0),
               ' ', // empty column
               ' ', // empty column
             ];
@@ -1411,7 +1411,7 @@ function formatPlanName(planType: string, shortenEnterprise = false): string {
     const prefix = shortenEnterprise ? 'Ent ' : 'Enterprise ';
     return prefix + parts.join(' ');
   }
-  return planType.charAt(0).toUpperCase() + planType.slice(1);
+  return planType.split('_').map(capitalizeWords).join(' ');
 }
 
 function formatDataCategory(dataCategory: DataCategory): string {
