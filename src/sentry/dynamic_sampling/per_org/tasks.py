@@ -1,26 +1,3 @@
-"""Dynamic sampling per-org job: scheduling and per-org orchestration.
-
-This is the top-level scaffold for the per-org dynamic sampling job. Unlike
-``sentry.dynamic_sampling.tasks.*`` - which splits work across multiple
-cron-scheduled global tasks (``boost_low_volume_projects``,
-``boost_low_volume_transactions``, ``recalibrate_orgs``,
-``sliding_window_org``) each fanning out over all orgs - this module runs
-every calculation for a single organization in one task execution, and
-relies on per-org fan-out from the scheduler.
-
-Two tasks are registered:
-
-- :func:`schedule_per_org_calculations` - the cron entry point. Picks the
-  next bucket of active organizations and fans out per-org work.
-- :func:`run_calculations_per_org_task` - the per-org task. Runs the
-  ordered list of calculation steps against EAP and outcomes for one org.
-
-Each step inside :func:`run_calculations_per_org` is a named placeholder
-for now; implementations land in follow-up changes. The scaffolding
-(bucketing, dispatch, task wiring, metrics hooks) is complete so the job
-can be deployed and observed end-to-end before any step is filled in.
-"""
-
 from __future__ import annotations
 
 import random
