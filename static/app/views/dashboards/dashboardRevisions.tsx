@@ -4,6 +4,7 @@ import styled from '@emotion/styled';
 import {useMutation} from '@tanstack/react-query';
 
 import {Alert} from '@sentry/scraps/alert';
+import {UserAvatar} from '@sentry/scraps/avatar';
 import {Tag} from '@sentry/scraps/badge';
 import {Button} from '@sentry/scraps/button';
 import {Flex} from '@sentry/scraps/layout';
@@ -12,13 +13,12 @@ import {Tooltip} from '@sentry/scraps/tooltip';
 
 import type {ModalRenderProps} from 'sentry/actionCreators/modal';
 import {openModal} from 'sentry/actionCreators/modal';
+import {DateTime} from 'sentry/components/dateTime';
 import {LoadingIndicator} from 'sentry/components/loadingIndicator';
-import {SimpleTable} from 'sentry/components/tables/simpleTable';
 import {
   getAbsoluteSummary,
   getRelativeSummary,
 } from 'sentry/components/timeRangeSelector/utils';
-import {TimeSince} from 'sentry/components/timeSince';
 import {IconClock} from 'sentry/icons/iconClock';
 import {IconGraph} from 'sentry/icons/iconGraph';
 import {IconMarkdown} from 'sentry/icons/iconMarkdown';
@@ -26,6 +26,7 @@ import {IconNumber} from 'sentry/icons/iconNumber';
 import {IconSettings} from 'sentry/icons/iconSettings';
 import {IconTable} from 'sentry/icons/iconTable';
 import {t} from 'sentry/locale';
+import type {User} from 'sentry/types/user';
 import {defined} from 'sentry/utils';
 import {useApi} from 'sentry/utils/useApi';
 import {useOrganization} from 'sentry/utils/useOrganization';
@@ -55,7 +56,13 @@ export function DashboardRevisionsButton({dashboard}: DashboardRevisionsButtonPr
 
   const handleClick = () => {
     openModal(
-      props => <DashboardRevisionsModal {...props} dashboardId={dashboard.id} />,
+      props => (
+        <DashboardRevisionsModal
+          {...props}
+          dashboardId={dashboard.id}
+          dashboardCreatedBy={dashboard.createdBy}
+        />
+      ),
       {
         modalCss: css`
           [role='document'] {
@@ -84,12 +91,36 @@ function DashboardRevisionsModal({
   Body,
   closeModal,
   dashboardId,
+  dashboardCreatedBy,
 }: ModalRenderProps & {
+  dashboardCreatedBy: User | undefined;
   dashboardId: string;
 }) {
   const [selectedRevisionId, setSelectedRevisionId] = useState<string | null>(null);
   const {data: revisions, isPending, isError} = useDashboardRevisions({dashboardId});
   const selectedRevision = revisions?.find(r => r.id === selectedRevisionId) ?? null;
+
+  const api = useApi();
+  const organization = useOrganization();
+  const {
+    mutate: restore,
+    isPending: isRestoring,
+    isError: isRestoreError,
+  } = useMutation({
+    mutationFn: () => {
+      if (!selectedRevision) {
+        return Promise.reject(new Error('No revision selected'));
+      }
+      return api.requestPromise(
+        `/organizations/${organization.slug}/dashboards/${dashboardId}/revisions/${selectedRevision.id}/restore/`,
+        {method: 'POST'}
+      );
+    },
+    onSuccess: () => {
+      closeModal();
+      window.location.reload();
+    },
+  });
 
   return (
     <Fragment>
@@ -102,18 +133,36 @@ function DashboardRevisionsModal({
         ) : isError ? (
           <Alert variant="danger">{t('Failed to load dashboard revisions.')}</Alert>
         ) : revisions?.length ? (
-          <SideBySideLayout>
-            <RevisionList
-              revisions={revisions}
-              selectedRevisionId={selectedRevisionId}
-              onSelect={setSelectedRevisionId}
-            />
-            <RevisionPreview
-              dashboardId={dashboardId}
-              revision={selectedRevision}
-              closeModal={closeModal}
-            />
-          </SideBySideLayout>
+          <Flex direction="column" gap="md">
+            <SideBySideLayout>
+              <RevisionPreview dashboardId={dashboardId} revision={selectedRevision} />
+              <EditHistoryPanel
+                revisions={revisions}
+                selectedRevisionId={selectedRevisionId}
+                onSelect={setSelectedRevisionId}
+                currentVersionCreatedBy={dashboardCreatedBy}
+              />
+            </SideBySideLayout>
+            <ModalFooterRow>
+              {isRestoreError && (
+                <Alert variant="danger">{t('Failed to restore this revision.')}</Alert>
+              )}
+              <Flex justify="flex-end" gap="sm">
+                <Button size="sm" onClick={closeModal}>
+                  {t('Cancel')}
+                </Button>
+                <Button
+                  priority="primary"
+                  size="sm"
+                  onClick={() => restore()}
+                  busy={isRestoring}
+                  disabled={!selectedRevisionId}
+                >
+                  {t('Revert to Selection')}
+                </Button>
+              </Flex>
+            </ModalFooterRow>
+          </Flex>
         ) : (
           <Flex align="center" justify="center" padding="xl">
             <Text variant="muted">{t('No revisions found.')}</Text>
@@ -124,88 +173,89 @@ function DashboardRevisionsModal({
   );
 }
 
-function RevisionList({
+function EditHistoryPanel({
   revisions,
   selectedRevisionId,
   onSelect,
+  currentVersionCreatedBy,
 }: {
+  currentVersionCreatedBy: User | undefined;
   onSelect: (id: string) => void;
   revisions: DashboardRevision[];
   selectedRevisionId: string | null;
 }) {
   return (
-    <RevisionsTable>
-      <SimpleTable.Header>
-        <SimpleTable.HeaderCell>{t('Date')}</SimpleTable.HeaderCell>
-        <SimpleTable.HeaderCell>{t('Author')}</SimpleTable.HeaderCell>
-      </SimpleTable.Header>
-      {revisions.map(revision => (
-        <SelectableRow
-          key={revision.id}
-          onClick={() => onSelect(revision.id)}
-          aria-selected={revision.id === selectedRevisionId}
-        >
-          <SimpleTable.RowCell>
-            <Flex direction="column" gap="xs">
-              <TimeSince date={revision.dateCreated} />
-              {revision.source === 'pre-restore' && (
-                <Tag variant="muted">{t('pre-restore')}</Tag>
-              )}
-            </Flex>
-          </SimpleTable.RowCell>
-          <SimpleTable.RowCell>
+    <HistoryPanelContainer>
+      <HistoryPanelHeader>
+        <Text bold>{t('Edit History')}</Text>
+      </HistoryPanelHeader>
+      <HistoryScrollArea role="listbox" aria-label={t('Edit History')}>
+        <CurrentVersionItem>
+          <Text bold size="sm" variant="accent">
+            {t('Current Version')}
+          </Text>
+          <Flex align="center" gap="xs">
+            {currentVersionCreatedBy && (
+              <UserAvatar user={currentVersionCreatedBy} size={16} />
+            )}
             <Text size="sm" variant="muted">
-              {revision.createdBy
-                ? revision.createdBy.name || revision.createdBy.email
+              {currentVersionCreatedBy
+                ? currentVersionCreatedBy.name || currentVersionCreatedBy.email
                 : t('Unknown')}
             </Text>
-          </SimpleTable.RowCell>
-        </SelectableRow>
-      ))}
-    </RevisionsTable>
+          </Flex>
+        </CurrentVersionItem>
+        {revisions.map(revision => (
+          <HistoryItem
+            key={revision.id}
+            role="option"
+            aria-selected={revision.id === selectedRevisionId}
+            onClick={() => onSelect(revision.id)}
+          >
+            <Text bold size="sm">
+              {revision.source === 'pre-restore' ? t('Pre-restore') : t('Edit')}
+            </Text>
+            <DateTime date={revision.dateCreated} timeZone year />
+            <Flex align="center" gap="xs">
+              {revision.createdBy && (
+                <UserAvatar
+                  user={{
+                    ...revision.createdBy,
+                    ip_address: '',
+                    username: revision.createdBy.email,
+                  }}
+                  size={16}
+                />
+              )}
+              <Text size="sm" variant="muted">
+                {revision.createdBy
+                  ? revision.createdBy.name || revision.createdBy.email
+                  : t('Unknown')}
+              </Text>
+            </Flex>
+          </HistoryItem>
+        ))}
+      </HistoryScrollArea>
+    </HistoryPanelContainer>
   );
 }
 
 function RevisionPreview({
   dashboardId,
   revision,
-  closeModal,
 }: {
-  closeModal: () => void;
   dashboardId: string;
   revision: DashboardRevision | null;
 }) {
-  const api = useApi();
-  const organization = useOrganization();
   const {
     data: snapshot,
     isPending,
     isError,
   } = useDashboardRevisionDetails({dashboardId, revisionId: revision?.id ?? null});
 
-  const {
-    mutate: restore,
-    isPending: isRestoring,
-    isError: isRestoreError,
-  } = useMutation({
-    mutationFn: () => {
-      if (!revision) {
-        return Promise.reject(new Error('No revision selected'));
-      }
-      return api.requestPromise(
-        `/organizations/${organization.slug}/dashboards/${dashboardId}/revisions/${revision.id}/restore/`,
-        {method: 'POST'}
-      );
-    },
-    onSuccess: () => {
-      closeModal();
-      window.location.reload();
-    },
-  });
-
   if (!revision) {
     return (
-      <Flex justify="center" padding="xl">
+      <Flex justify="center" align="center" padding="xl">
         <Text variant="muted">{t('Select a revision to preview.')}</Text>
       </Flex>
     );
@@ -225,17 +275,8 @@ function RevisionPreview({
 
   return (
     <Flex direction="column" gap="md">
-      <Text bold>{snapshot.title}</Text>
       <RevisionFilterSummary snapshot={snapshot} />
       <DashboardMinimap widgets={snapshot.widgets} />
-      {isRestoreError && (
-        <Alert variant="danger">{t('Failed to restore this revision.')}</Alert>
-      )}
-      <Flex justify="flex-end">
-        <Button priority="primary" size="sm" onClick={() => restore()} busy={isRestoring}>
-          {t('Restore this version')}
-        </Button>
-      </Flex>
     </Flex>
   );
 }
@@ -337,25 +378,56 @@ function DashboardMinimap({widgets}: {widgets: Widget[]}) {
 
 const SideBySideLayout = styled('div')`
   display: grid;
-  grid-template-columns: minmax(260px, 2fr) minmax(300px, 3fr);
+  grid-template-columns: 1fr 260px;
   gap: ${p => p.theme.space.lg};
-  align-items: start;
+  align-items: stretch;
 `;
 
-const RevisionsTable = styled(SimpleTable)`
-  grid-template-columns: 1fr 1fr;
+const HistoryPanelContainer = styled('div')`
+  display: flex;
+  flex-direction: column;
+  max-height: 520px;
 `;
 
-const SelectableRow = styled(SimpleTable.Row)`
+const HistoryPanelHeader = styled('div')`
+  padding: ${p => p.theme.space.md};
+  flex-shrink: 0;
+`;
+
+const HistoryScrollArea = styled('div')`
+  overflow-y: auto;
+  flex: 1;
+`;
+
+const CurrentVersionItem = styled('div')`
+  padding: ${p => p.theme.space.lg} ${p => p.theme.space.md};
+  display: flex;
+  flex-direction: column;
+  gap: ${p => p.theme.space.xs};
+  border-bottom: 1px solid ${p => p.theme.tokens.border.secondary};
+`;
+
+const HistoryItem = styled('div')`
   cursor: pointer;
+  padding: ${p => p.theme.space.lg} ${p => p.theme.space.md};
+  display: flex;
+  flex-direction: column;
+  gap: ${p => p.theme.space.xs};
 
   &:hover {
     background-color: ${p => p.theme.tokens.background.secondary};
   }
 
   &[aria-selected='true'] {
-    background-color: ${p => p.theme.tokens.background.secondary};
+    background-color: ${p => p.theme.tokens.transparent.accent.muted};
   }
+`;
+
+const ModalFooterRow = styled('div')`
+  display: flex;
+  flex-direction: column;
+  gap: ${p => p.theme.space.sm};
+  align-items: flex-end;
 `;
 
 const MinimapGrid = styled('div')`
@@ -363,10 +435,6 @@ const MinimapGrid = styled('div')`
   grid-template-columns: repeat(${NUM_DESKTOP_COLS}, 1fr);
   grid-auto-rows: minmax(60px, auto);
   gap: ${p => p.theme.space.sm};
-  padding: ${p => p.theme.space.md};
-  background-color: ${p => p.theme.tokens.background.secondary};
-  border: 1px solid ${p => p.theme.tokens.border.primary};
-  border-radius: ${p => p.theme.radius.md};
 `;
 
 const WidgetTile = styled('div')`

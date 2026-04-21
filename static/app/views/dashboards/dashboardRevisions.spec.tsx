@@ -1,6 +1,7 @@
 import {DashboardFixture} from 'sentry-fixture/dashboard';
 import {OrganizationFixture} from 'sentry-fixture/organization';
 import {ProjectFixture} from 'sentry-fixture/project';
+import {UserFixture} from 'sentry-fixture/user';
 
 import {
   render,
@@ -61,15 +62,16 @@ function renderButton(dashboardOverrides = {}) {
   const dashboard = DashboardFixture([], {
     id: '1',
     title: 'My Dashboard',
+    createdBy: UserFixture({name: 'Dashboard Owner', email: 'owner@example.com'}),
     ...dashboardOverrides,
   });
   render(<DashboardRevisionsButton dashboard={dashboard} />, {organization});
 }
 
-// Clicks the first data row in the revision list (skipping the header row).
-async function clickFirstRevisionRow() {
-  const [, firstRow] = await screen.findAllByRole('row');
-  await userEvent.click(firstRow!);
+// Clicks the first item in the Edit History list.
+async function clickFirstRevisionItem() {
+  const [firstItem] = await screen.findAllByRole('option');
+  await userEvent.click(firstItem!);
 }
 
 describe('DashboardRevisionsButton', () => {
@@ -106,7 +108,7 @@ describe('DashboardRevisionsButton', () => {
     expect(revisionsRequest).not.toHaveBeenCalled();
   });
 
-  it('opens the modal and renders revision rows when clicked', async () => {
+  it('opens the modal and renders revision items when clicked', async () => {
     const revisionsRequest = MockApiClient.addMockResponse({
       url: REVISIONS_URL,
       body: [makeRevision()],
@@ -117,11 +119,10 @@ describe('DashboardRevisionsButton', () => {
     await userEvent.click(screen.getByRole('button', {name: 'Dashboard Revisions'}));
 
     expect(revisionsRequest).toHaveBeenCalledTimes(1);
-    // header row + 1 data row
-    expect(await screen.findAllByRole('row')).toHaveLength(2);
+    expect(await screen.findAllByRole('option')).toHaveLength(1);
   });
 
-  it('shows the pre-restore badge for revisions with source pre-restore', async () => {
+  it('shows the source label for each revision in the list', async () => {
     MockApiClient.addMockResponse({
       url: REVISIONS_URL,
       body: [
@@ -134,8 +135,8 @@ describe('DashboardRevisionsButton', () => {
     renderGlobalModal();
     await userEvent.click(screen.getByRole('button', {name: 'Dashboard Revisions'}));
 
-    expect(await screen.findByText('pre-restore')).toBeInTheDocument();
-    expect(screen.getAllByText('pre-restore')).toHaveLength(1);
+    expect(await screen.findByText('Pre-restore')).toBeInTheDocument();
+    expect(screen.getByText('Edit')).toBeInTheDocument();
   });
 
   it('shows the empty state when no revisions exist', async () => {
@@ -160,6 +161,19 @@ describe('DashboardRevisionsButton', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows a non-selectable Current Version item at the top of the list', async () => {
+    MockApiClient.addMockResponse({url: REVISIONS_URL, body: [makeRevision()]});
+
+    renderButton();
+    renderGlobalModal();
+    await userEvent.click(screen.getByRole('button', {name: 'Dashboard Revisions'}));
+
+    expect(await screen.findByText('Current Version')).toBeInTheDocument();
+    // Current Version item is not a listbox option
+    const options = await screen.findAllByRole('option');
+    expect(options).toHaveLength(1);
+  });
+
   it('shows a prompt to select a revision when the list loads', async () => {
     MockApiClient.addMockResponse({url: REVISIONS_URL, body: [makeRevision()]});
 
@@ -170,7 +184,7 @@ describe('DashboardRevisionsButton', () => {
     expect(await screen.findByText('Select a revision to preview.')).toBeInTheDocument();
   });
 
-  it('does not fetch revision details until a row is clicked', async () => {
+  it('does not fetch revision details until an item is clicked', async () => {
     MockApiClient.addMockResponse({url: REVISIONS_URL, body: [makeRevision()]});
     const detailsRequest = MockApiClient.addMockResponse({
       url: REVISION_DETAILS_URL,
@@ -180,12 +194,12 @@ describe('DashboardRevisionsButton', () => {
     renderButton();
     renderGlobalModal();
     await userEvent.click(screen.getByRole('button', {name: 'Dashboard Revisions'}));
-    await screen.findAllByRole('row');
+    await screen.findAllByRole('option');
 
     expect(detailsRequest).not.toHaveBeenCalled();
   });
 
-  it('fetches and shows a preview when a revision row is clicked', async () => {
+  it('fetches and shows a preview when a revision item is clicked', async () => {
     MockApiClient.addMockResponse({url: REVISIONS_URL, body: [makeRevision()]});
     const detailsRequest = MockApiClient.addMockResponse({
       url: REVISION_DETAILS_URL,
@@ -195,7 +209,7 @@ describe('DashboardRevisionsButton', () => {
     renderButton();
     renderGlobalModal();
     await userEvent.click(screen.getByRole('button', {name: 'Dashboard Revisions'}));
-    await clickFirstRevisionRow();
+    await clickFirstRevisionItem();
 
     expect(detailsRequest).toHaveBeenCalledTimes(1);
     expect(await screen.findByText('Error Chart')).toBeInTheDocument();
@@ -249,26 +263,11 @@ describe('DashboardRevisionsButton', () => {
     renderButton();
     renderGlobalModal();
     await userEvent.click(screen.getByRole('button', {name: 'Dashboard Revisions'}));
-    await clickFirstRevisionRow();
+    await clickFirstRevisionItem();
 
     expect(
       await screen.findByText('Failed to load revision preview.')
     ).toBeInTheDocument();
-  });
-
-  it('shows the dashboard title above the minimap preview', async () => {
-    MockApiClient.addMockResponse({url: REVISIONS_URL, body: [makeRevision()]});
-    MockApiClient.addMockResponse({
-      url: REVISION_DETAILS_URL,
-      body: makeSnapshot({title: 'Snapshot Dashboard'}),
-    });
-
-    renderButton();
-    renderGlobalModal();
-    await userEvent.click(screen.getByRole('button', {name: 'Dashboard Revisions'}));
-    await clickFirstRevisionRow();
-
-    expect(await screen.findByText('Snapshot Dashboard')).toBeInTheDocument();
   });
 
   it('shows filter pills for period, environments, and releases', async () => {
@@ -285,7 +284,7 @@ describe('DashboardRevisionsButton', () => {
     renderButton();
     renderGlobalModal();
     await userEvent.click(screen.getByRole('button', {name: 'Dashboard Revisions'}));
-    await clickFirstRevisionRow();
+    await clickFirstRevisionItem();
 
     expect(await screen.findByText('Last 14 days')).toBeInTheDocument();
     expect(screen.getByText('production')).toBeInTheDocument();
@@ -307,7 +306,7 @@ describe('DashboardRevisionsButton', () => {
     renderButton();
     renderGlobalModal();
     await userEvent.click(screen.getByRole('button', {name: 'Dashboard Revisions'}));
-    await clickFirstRevisionRow();
+    await clickFirstRevisionItem();
 
     expect(await screen.findByText('backend')).toBeInTheDocument();
     expect(screen.getByText('frontend')).toBeInTheDocument();
@@ -323,14 +322,16 @@ describe('DashboardRevisionsButton', () => {
     renderButton();
     renderGlobalModal();
     await userEvent.click(screen.getByRole('button', {name: 'Dashboard Revisions'}));
-    await clickFirstRevisionRow();
+    await clickFirstRevisionItem();
 
     await screen.findByText('Error Chart');
     expect(screen.queryByText('Last 14 days')).not.toBeInTheDocument();
     expect(screen.queryByText('production')).not.toBeInTheDocument();
   });
 
-  it('calls the restore endpoint when the Restore button is clicked', async () => {
+  it('calls the restore endpoint when Revert to Selection is clicked', async () => {
+    // jsdom doesn't implement navigation; suppress the expected console.error
+    jest.spyOn(console, 'error').mockImplementation(() => {});
     MockApiClient.addMockResponse({url: REVISIONS_URL, body: [makeRevision()]});
     MockApiClient.addMockResponse({url: REVISION_DETAILS_URL, body: makeSnapshot()});
     const restoreRequest = MockApiClient.addMockResponse({
@@ -342,10 +343,10 @@ describe('DashboardRevisionsButton', () => {
     renderButton();
     renderGlobalModal();
     await userEvent.click(screen.getByRole('button', {name: 'Dashboard Revisions'}));
-    await clickFirstRevisionRow();
+    await clickFirstRevisionItem();
 
     await userEvent.click(
-      await screen.findByRole('button', {name: 'Restore this version'})
+      await screen.findByRole('button', {name: 'Revert to Selection'})
     );
 
     await waitFor(() => expect(restoreRequest).toHaveBeenCalledTimes(1));
@@ -364,10 +365,10 @@ describe('DashboardRevisionsButton', () => {
     renderButton();
     renderGlobalModal();
     await userEvent.click(screen.getByRole('button', {name: 'Dashboard Revisions'}));
-    await clickFirstRevisionRow();
+    await clickFirstRevisionItem();
 
     await userEvent.click(
-      await screen.findByRole('button', {name: 'Restore this version'})
+      await screen.findByRole('button', {name: 'Revert to Selection'})
     );
 
     expect(
