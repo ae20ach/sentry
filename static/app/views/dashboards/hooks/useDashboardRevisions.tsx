@@ -1,7 +1,8 @@
-import {useQuery} from '@tanstack/react-query';
+import {skipToken, useQuery} from '@tanstack/react-query';
 
 import {apiOptions} from 'sentry/utils/api/apiOptions';
 import {useOrganization} from 'sentry/utils/useOrganization';
+import type {DashboardDetails} from 'sentry/views/dashboards/types';
 
 export type DashboardRevision = {
   createdBy: {email: string; id: string; name: string} | null;
@@ -30,6 +31,29 @@ export function useDashboardRevisions({dashboardId}: UseDashboardRevisionsOption
   return useQuery(
     apiOptions.as<DashboardRevision[]>()(REVISIONS_PATH, {
       path: {organizationIdOrSlug: organization.slug, dashboardId},
+      staleTime: 30_000,
+    })
+  );
+}
+
+const REVISION_DETAILS_PATH =
+  '/organizations/$organizationIdOrSlug/dashboards/$dashboardId/revisions/$revisionId/' as const;
+
+interface UseDashboardRevisionDetailsOptions {
+  dashboardId: string;
+  revisionId: string | null;
+}
+
+export function useDashboardRevisionDetails({
+  dashboardId,
+  revisionId,
+}: UseDashboardRevisionDetailsOptions) {
+  const organization = useOrganization();
+  return useQuery(
+    apiOptions.as<DashboardDetails>()(REVISION_DETAILS_PATH, {
+      path: revisionId
+        ? {organizationIdOrSlug: organization.slug, dashboardId, revisionId}
+        : skipToken,
       staleTime: 30_000,
     })
   );
