@@ -19,7 +19,6 @@ from sentry.integrations.github import integration as github_integration
 from sentry.integrations.github.client import (
     MINIMUM_REQUESTS,
     GitHubApiClient,
-    GitHubBaseClient,
     GithubSetupApiClient,
 )
 from sentry.integrations.github.integration import (
@@ -636,7 +635,7 @@ class GitHubIntegrationTest(IntegrationTestCase):
             GitHubIntegration, integration, self.organization.id
         )
 
-        with patch.object(GitHubBaseClient, "page_size", 1):
+        with patch.object(client.GitHubBaseClient, "page_size", 1):
             result = installation.get_repositories()
             assert result == [
                 {
@@ -671,8 +670,8 @@ class GitHubIntegrationTest(IntegrationTestCase):
         )
 
         with (
-            patch.object(GitHubBaseClient, "page_number_limit", 1),
-            patch.object(GitHubBaseClient, "page_size", 1),
+            patch.object(client.GitHubBaseClient, "page_number_limit", 1),
+            patch.object(client.GitHubBaseClient, "page_size", 1),
         ):
             result = installation.get_repositories()
             assert result == [
