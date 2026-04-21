@@ -43,6 +43,7 @@ from sentry.integrations.slack.utils.channel import SlackChannelIdData
 from sentry.models.auditlogentry import AuditLogEntry
 from sentry.models.organizationmember import OrganizationMember
 from sentry.models.projectteam import ProjectTeam
+from sentry.notifications.models.notificationaction import ActionTarget
 from sentry.seer.anomaly_detection.store_data import seer_anomaly_detection_connection_pool
 from sentry.seer.anomaly_detection.types import StoreDataResponse
 from sentry.sentry_metrics import indexer
@@ -65,7 +66,16 @@ from sentry.testutils.outbox import outbox_runner
 from sentry.testutils.silo import assume_test_silo_mode
 from sentry.testutils.skips import requires_snuba
 from sentry.utils.snuba import _snuba_pool
-from sentry.workflow_engine.models import Action, DataSource, Detector
+from sentry.workflow_engine.models import (
+    Action,
+    Condition,
+    DataCondition,
+    DataConditionGroup,
+    DataSource,
+    Detector,
+    DetectorWorkflow,
+    WorkflowDataConditionGroup,
+)
 from sentry.workflow_engine.types import DetectorPriorityLevel
 from tests.sentry.incidents.serializers.test_workflow_engine_base import (
     TestWorkflowEngineSerializer,
@@ -542,6 +552,63 @@ class AlertRuleCreateEndpointTest(AlertRuleIndexBase, SnubaTestCase):
         assert not AlertRule.objects.filter(name=self.alert_rule_dict["name"]).exists()
         detector = Detector.objects.get(type=MetricIssue.slug, project=self.project)
         assert resp.data == serialize(detector, self.user, WorkflowEngineDetectorSerializer())
+
+        # Verify the Workflow was created and linked to the Detector
+        detector_workflow = DetectorWorkflow.objects.get(detector=detector)
+        workflow = detector_workflow.workflow
+        assert workflow.name == self.alert_rule_dict["name"]
+        assert workflow.enabled is True
+        assert workflow.config == {}
+
+        # Workflow should have one action filter per trigger (critical + warning)
+        workflow_dcgs = WorkflowDataConditionGroup.objects.filter(workflow=workflow)
+        assert workflow_dcgs.count() == 2
+
+        # Critical action filter: HIGH priority condition + 1 email-to-team action
+        critical_dcg = DataConditionGroup.objects.get(
+            workflowdataconditiongroup__workflow=workflow,
+            conditions__comparison=DetectorPriorityLevel.HIGH,
+            conditions__type=Condition.ISSUE_PRIORITY_GREATER_OR_EQUAL,
+        )
+        critical_condition = DataCondition.objects.get(
+            condition_group=critical_dcg,
+            type=Condition.ISSUE_PRIORITY_GREATER_OR_EQUAL,
+        )
+        assert critical_condition.comparison == DetectorPriorityLevel.HIGH
+        assert critical_condition.condition_result is True
+
+        critical_actions = Action.objects.filter(
+            dataconditiongroupaction__condition_group=critical_dcg
+        )
+        assert critical_actions.count() == 1
+        critical_action = critical_actions.get()
+        assert critical_action.type == Action.Type.EMAIL
+        assert critical_action.data == {}
+        assert critical_action.config["target_type"] == ActionTarget.TEAM
+        assert critical_action.config["target_identifier"] == str(self.team.id)
+
+        # Warning action filter: MEDIUM priority condition + 2 email actions
+        warning_dcg = DataConditionGroup.objects.get(
+            workflowdataconditiongroup__workflow=workflow,
+            conditions__comparison=DetectorPriorityLevel.MEDIUM,
+            conditions__type=Condition.ISSUE_PRIORITY_GREATER_OR_EQUAL,
+        )
+        warning_condition = DataCondition.objects.get(
+            condition_group=warning_dcg,
+            type=Condition.ISSUE_PRIORITY_GREATER_OR_EQUAL,
+        )
+        assert warning_condition.comparison == DetectorPriorityLevel.MEDIUM
+        assert warning_condition.condition_result is True
+
+        warning_actions = Action.objects.filter(
+            dataconditiongroupaction__condition_group=warning_dcg
+        )
+        assert warning_actions.count() == 2
+        warning_action_configs = {
+            a.config["target_type"]: a.config["target_identifier"] for a in warning_actions
+        }
+        assert warning_action_configs[ActionTarget.TEAM] == str(self.team.id)
+        assert warning_action_configs[ActionTarget.USER] == str(self.user.id)
 
     def test_workflow_engine_post_creates_only_detector_eap(self) -> None:
         data = {

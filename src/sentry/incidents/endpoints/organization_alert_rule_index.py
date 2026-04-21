@@ -106,10 +106,12 @@ from sentry.uptime.types import (
 )
 from sentry.utils.cursors import Cursor, StringCursor
 from sentry.workflow_engine.endpoints.utils.ids import to_valid_int_id
+from sentry.workflow_engine.endpoints.validators.base.workflow import WorkflowValidator
 from sentry.workflow_engine.endpoints.validators.utils import log_alerting_quota_hit
 from sentry.workflow_engine.models import (
     Detector,
     DetectorState,
+    DetectorWorkflow,
     Workflow,
 )
 from sentry.workflow_engine.models.data_condition import Condition
@@ -156,6 +158,104 @@ def filter_detectors_by_datasets(
 
 # Valid sort keys for combined rules endpoint
 VALID_COMBINED_RULE_SORT_KEYS = {"date_added", "name", "incident_status", "date_triggered"}
+
+
+def translate_metric_alert_to_workflow_payload(data: dict[str, Any]) -> dict[str, Any]:
+    """
+    Translate a metric alert rule payload into the shape expected by WorkflowValidator.
+
+    Each trigger becomes an actionFilter with an issue_priority_greater_or_equal condition:
+    - critical trigger -> DetectorPriorityLevel.HIGH
+    - warning trigger -> DetectorPriorityLevel.MEDIUM
+    """
+    action_filters: list[dict[str, Any]] = []
+
+    for trigger in data.get("triggers", []):
+        label = trigger.get("label", "critical")
+        priority = (
+            DetectorPriorityLevel.HIGH if label == "critical" else DetectorPriorityLevel.MEDIUM
+        )
+
+        actions: list[dict[str, Any]] = []
+        for action in trigger.get("actions", []):
+            action_type = action.get("type")
+            target_identifier = action.get("targetIdentifier")
+            target_type = action.get("targetType")
+
+            # build target_identifier
+            if action_type == "sentry_app":
+                sentry_app_id = action.get("sentryAppId")
+                if sentry_app_id is not None:
+                    target_identifier = str(sentry_app_id)
+                target_type = "sentry_app"
+            elif action_type == "slack" and action.get("inputChannelId"):
+                target_identifier = str(action["inputChannelId"])
+
+            if target_identifier is not None:
+                target_identifier = str(target_identifier)
+
+            config: dict[str, Any] = {
+                "targetType": target_type,
+                "targetIdentifier": target_identifier,
+                "targetDisplay": action.get("targetDisplay"),
+            }
+
+            # build action data
+            if action_type in ("pagerduty", "opsgenie") and action.get("priority"):
+                action_data: dict[str, Any] = {"priority": action["priority"]}
+            elif action_type == "sentry_app":
+                sentry_app_config = action.get("sentryAppConfig") or action.get("sentry_app_config")
+                if sentry_app_config is not None:
+                    settings = (
+                        sentry_app_config
+                        if isinstance(sentry_app_config, list)
+                        else [sentry_app_config]
+                    )
+                    action_data = {"settings": settings}
+                else:
+                    action_data = {}
+            else:
+                action_data = {}
+
+            workflow_action: dict[str, Any] = {
+                "type": action_type,
+                "config": config,
+                "data": action_data,
+            }
+            if "integrationId" in action:
+                workflow_action["integrationId"] = action["integrationId"]
+
+            actions.append(workflow_action)
+
+        action_filters.append(
+            {
+                "logicType": "any",
+                "conditions": [
+                    {
+                        "type": Condition.ISSUE_PRIORITY_GREATER_OR_EQUAL,
+                        "comparison": priority,
+                        "conditionResult": True,
+                    }
+                ],
+                "actions": actions,
+            }
+        )
+
+    payload: dict[str, Any] = {
+        "name": data.get("name", ""),
+        "enabled": True,
+        "config": {},
+        "triggers": {
+            "logicType": "any",
+            "conditions": [],
+        },
+        "actionFilters": action_filters,
+    }
+
+    if "owner" in data:
+        payload["owner"] = data["owner"]
+
+    return payload
 
 
 def translate_metric_alert_to_detector_payload(data: dict[str, Any]) -> dict[str, Any]:
@@ -353,7 +453,18 @@ def create_metric_alert(
         if not detector_validator.is_valid():
             raise ValidationError(detector_validator.errors)
 
-        detector = detector_validator.save()
+        workflow_data = translate_metric_alert_to_workflow_payload(data)
+        workflow_validator = WorkflowValidator(
+            data=workflow_data,
+            context={"organization": organization, "request": request},
+        )
+        workflow_validator.is_valid(raise_exception=True)
+
+        with transaction.atomic(router.db_for_write(AlertRule)):
+            workflow = workflow_validator.create(workflow_validator.validated_data)
+            detector = detector_validator.save()
+
+            DetectorWorkflow.objects.create(workflow=workflow, detector=detector)
 
         return Response(
             serialize(
