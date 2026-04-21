@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from sentry.models.group import Group
 from sentry.seer.autofix.constants import AutofixAutomationTuningSettings
+from sentry.seer.autofix.utils import AutofixStoppingPoint
 from sentry.seer.explorer.client_models import Artifact, MemoryBlock, Message, SeerRunState
 from sentry.seer.models.night_shift import SeerNightShiftRun, SeerNightShiftRunIssue
 from sentry.seer.models.project_repository import SeerProjectRepository
@@ -273,6 +274,10 @@ class TestRunNightShiftForOrg(TestCase, SnubaTestCase):
                 "sentry.tasks.seer.night_shift.agentic_triage.SeerExplorerClient",
                 return_value=fake_client,
             ),
+            patch(
+                "sentry.tasks.seer.night_shift.cron.trigger_autofix_explorer",
+                return_value=1,
+            ),
             patch("sentry.tasks.seer.night_shift.cron.logger") as mock_logger,
         ):
             run_night_shift_for_org(org.id)
@@ -407,7 +412,7 @@ class TestRunNightShiftForOrg(TestCase, SnubaTestCase):
                 return_value=fake_client,
             ),
             patch(
-                "sentry.tasks.seer.night_shift.cron._trigger_autofix_for_candidate",
+                "sentry.tasks.seer.night_shift.cron.trigger_autofix_explorer",
                 return_value=42,
             ) as mock_trigger,
         ):
@@ -416,7 +421,9 @@ class TestRunNightShiftForOrg(TestCase, SnubaTestCase):
             mock_trigger.assert_called_once()
             call_kwargs = mock_trigger.call_args.kwargs
             assert call_kwargs["group"].id == group.id
-            assert call_kwargs["triage_action"].value == "autofix"
+            # AUTOFIX triage suggests OPEN_PR; project default automated_run_stopping_point
+            # is CODE_CHANGES, so the clamped stopping point is the more conservative one.
+            assert call_kwargs["stopping_point"] == AutofixStoppingPoint.CODE_CHANGES
 
         run = SeerNightShiftRun.objects.get(organization=org)
         issue = SeerNightShiftRunIssue.objects.get(run=run, group_id=group.id)
@@ -444,14 +451,16 @@ class TestRunNightShiftForOrg(TestCase, SnubaTestCase):
                 return_value=fake_client,
             ),
             patch(
-                "sentry.tasks.seer.night_shift.cron._trigger_autofix_for_candidate",
+                "sentry.tasks.seer.night_shift.cron.trigger_autofix_explorer",
                 return_value=99,
             ) as mock_trigger,
         ):
             run_night_shift_for_org(org.id)
 
             mock_trigger.assert_called_once()
-            assert mock_trigger.call_args.kwargs["triage_action"].value == "root_cause_only"
+            assert (
+                mock_trigger.call_args.kwargs["stopping_point"] == AutofixStoppingPoint.ROOT_CAUSE
+            )
 
         run = SeerNightShiftRun.objects.get(organization=org)
         issue = SeerNightShiftRunIssue.objects.get(run=run, group_id=group.id)
@@ -479,7 +488,7 @@ class TestRunNightShiftForOrg(TestCase, SnubaTestCase):
                 return_value=fake_client,
             ),
             patch(
-                "sentry.tasks.seer.night_shift.cron._trigger_autofix_for_candidate",
+                "sentry.tasks.seer.night_shift.cron.trigger_autofix_explorer",
             ) as mock_trigger,
             patch("sentry.tasks.seer.night_shift.cron.logger") as mock_logger,
         ):
@@ -515,7 +524,7 @@ class TestRunNightShiftForOrg(TestCase, SnubaTestCase):
                 return_value=fake_client,
             ),
             patch(
-                "sentry.tasks.seer.night_shift.cron._trigger_autofix_for_candidate",
+                "sentry.tasks.seer.night_shift.cron.trigger_autofix_explorer",
             ) as mock_trigger,
             patch("sentry.tasks.seer.night_shift.cron.logger") as mock_logger,
         ):
@@ -551,7 +560,7 @@ class TestRunNightShiftForOrg(TestCase, SnubaTestCase):
             ),
             patch("sentry.tasks.seer.night_shift.cron.agentic_triage_strategy") as mock_triage,
             patch(
-                "sentry.tasks.seer.night_shift.cron._trigger_autofix_for_candidate",
+                "sentry.tasks.seer.night_shift.cron.trigger_autofix_explorer",
             ) as mock_trigger,
         ):
             run_night_shift_for_org(org.id)
@@ -564,7 +573,7 @@ class TestRunNightShiftForOrg(TestCase, SnubaTestCase):
         assert run.error_message == "No Seer quota available"
         assert not SeerNightShiftRunIssue.objects.filter(run=run).exists()
 
-    def test_logs_autofix_trigger_returned_none(self) -> None:
+    def test_skips_issue_row_when_trigger_returns_none(self) -> None:
         org = self.create_organization()
         project = self.create_project(organization=org)
         self._make_eligible(project)
@@ -586,7 +595,7 @@ class TestRunNightShiftForOrg(TestCase, SnubaTestCase):
                 return_value=fake_client,
             ),
             patch(
-                "sentry.tasks.seer.night_shift.cron._trigger_autofix_for_candidate",
+                "sentry.tasks.seer.night_shift.cron.trigger_autofix_explorer",
                 return_value=None,
             ),
             patch("sentry.tasks.seer.night_shift.cron.logger") as mock_logger,
@@ -596,10 +605,44 @@ class TestRunNightShiftForOrg(TestCase, SnubaTestCase):
             warn_calls = [call.args[0] for call in mock_logger.warning.call_args_list]
             assert "night_shift.autofix_trigger_returned_none" in warn_calls
 
-        # The issue row is still created (with no seer_run_id) so we track the attempt.
+        # Trigger failure leaves the debug signal in logs only; no dashboard row.
         run = SeerNightShiftRun.objects.get(organization=org)
-        issue = SeerNightShiftRunIssue.objects.get(run=run, group_id=group.id)
-        assert issue.seer_run_id is None
+        assert not SeerNightShiftRunIssue.objects.filter(run=run).exists()
+
+    def test_skips_issue_row_when_trigger_raises(self) -> None:
+        org = self.create_organization()
+        project = self.create_project(organization=org)
+        self._make_eligible(project)
+
+        group = self._store_event_and_update_group(
+            project, "fixable", seer_fixability_score=0.9, times_seen=5
+        )
+
+        fake_client = FakeExplorerClient([group.id], action="autofix")
+        with (
+            self.feature(
+                [
+                    "organizations:seer-project-settings-read-from-sentry",
+                    "projects:seer-night-shift",
+                ]
+            ),
+            patch(
+                "sentry.tasks.seer.night_shift.agentic_triage.SeerExplorerClient",
+                return_value=fake_client,
+            ),
+            patch(
+                "sentry.tasks.seer.night_shift.cron.trigger_autofix_explorer",
+                side_effect=RuntimeError("explorer crash"),
+            ),
+            patch("sentry.tasks.seer.night_shift.cron.logger") as mock_logger,
+        ):
+            run_night_shift_for_org(org.id)
+
+            exception_calls = [call.args[0] for call in mock_logger.exception.call_args_list]
+            assert "night_shift.autofix_trigger_failed" in exception_calls
+
+        run = SeerNightShiftRun.objects.get(organization=org)
+        assert not SeerNightShiftRunIssue.objects.filter(run=run).exists()
 
     def test_empty_candidates_creates_run_with_no_issues(self) -> None:
         org = self.create_organization()
