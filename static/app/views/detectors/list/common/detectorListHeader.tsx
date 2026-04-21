@@ -7,6 +7,7 @@ import {PageFilterBar} from 'sentry/components/pageFilters/pageFilterBar';
 import {ProjectPageFilter} from 'sentry/components/pageFilters/project/projectPageFilter';
 import {usePageFilters} from 'sentry/components/pageFilters/usePageFilters';
 import {IconAdd} from 'sentry/icons';
+import {t} from 'sentry/locale';
 import type {DetectorType} from 'sentry/types/workflowEngine/detectors';
 import {defined} from 'sentry/utils';
 import {useLocation} from 'sentry/utils/useLocation';
@@ -81,7 +82,7 @@ export function DetectorListHeader({
                 : getNoPermissionToCreateMonitorsTooltip(),
             }}
           >
-            Create Monitor
+            {t('Create Monitor')}
           </LinkButton>
         )}
       </Flex>
