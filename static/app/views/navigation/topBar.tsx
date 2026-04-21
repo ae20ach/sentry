@@ -75,7 +75,10 @@ function TopBarContent() {
             {props => <Flex {...props} align="center" gap="sm" />}
           </Slot.Outlet>
 
-          {organization && isSeerExplorerEnabled(organization) ? (
+          {organization &&
+          isSeerExplorerEnabled(organization) &&
+          organization.features.includes('gen-ai-features') &&
+          !organization.hideAiFeatures ? (
             <Button icon={<IconSeer />} onClick={openSeerExplorer}>
               {t('Ask Seer')}
             </Button>
