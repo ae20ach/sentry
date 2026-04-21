@@ -1,8 +1,9 @@
 from typing import Literal
 
 import msgspec
+from scm.types import PullRequestAction
 
-from sentry.scm.types import EventType, PullRequestAction, PullRequestEvent, SubscriptionEvent
+from sentry.scm.types import EventType, PullRequestEvent, SubscriptionEvent
 
 
 class GitLabPullRequestUser(msgspec.Struct, gc=False):
