@@ -12,6 +12,7 @@ from sentry.models.activity import Activity
 from sentry.models.group import Group, GroupStatus
 from sentry.models.groupopenperiod import GroupOpenPeriod
 from sentry.models.organization import Organization
+from sentry.notifications.platform.types import NotificationProviderKey
 from sentry.services.eventstore.models import GroupEvent
 from sentry.types.activity import ActivityType
 from sentry.workflow_engine.models import Detector
@@ -125,8 +126,8 @@ class IssueNotificationContext:
         return self._invocation.notification_uuid
 
     @cached_property
-    def action_type(self) -> str:
-        return self._invocation.action.type
+    def action_type(self) -> NotificationProviderKey:
+        return NotificationProviderKey(self._invocation.action.type)
 
     @cached_property
     def detector(self) -> Detector:
