@@ -264,7 +264,8 @@ export function FiltersBar({
     !isPrebuiltDashboard &&
     !isEditingDashboard &&
     !isPreview &&
-    defined(dashboard?.id);
+    defined(dashboard?.id) &&
+    defined(onAddWidget);
 
   return (
     <Wrapper>
