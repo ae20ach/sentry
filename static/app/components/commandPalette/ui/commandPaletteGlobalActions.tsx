@@ -29,7 +29,6 @@ import {
   IconList,
   IconLock,
   IconOpen,
-  IconProject,
   IconSearch,
   IconSeer,
   IconSettings,
@@ -44,6 +43,7 @@ import {isActiveSuperuser} from 'sentry/utils/isActiveSuperuser';
 import {QUERY_API_CLIENT, useMutation} from 'sentry/utils/queryClient';
 import {useMutateUserOptions} from 'sentry/utils/useMutateUserOptions';
 import {useOrganization} from 'sentry/utils/useOrganization';
+import {useParams} from 'sentry/utils/useParams';
 import {useProjects} from 'sentry/utils/useProjects';
 import {useUser} from 'sentry/utils/useUser';
 import {useGetStarredDashboards} from 'sentry/views/dashboards/hooks/useGetStarredDashboards';
@@ -62,7 +62,6 @@ import {MCP_LANDING_SUB_PATH} from 'sentry/views/insights/pages/mcp/settings';
 import {MOBILE_LANDING_SUB_PATH} from 'sentry/views/insights/pages/mobile/settings';
 import {ISSUE_TAXONOMY_CONFIG} from 'sentry/views/issueList/taxonomies';
 import {useStarredIssueViews} from 'sentry/views/navigation/secondary/sections/issues/issueViews/useStarredIssueViews';
-import {makeProjectsPathname} from 'sentry/views/projects/pathname';
 import {openSeerExplorer} from 'sentry/views/seerExplorer/openSeerExplorer';
 import {getUserOrgNavigationConfiguration} from 'sentry/views/settings/organization/userOrgNavigationConfiguration';
 import {getNavigationConfiguration} from 'sentry/views/settings/project/navigationConfiguration';
@@ -97,6 +96,7 @@ export function GlobalCommandPaletteActions() {
   const organization = useOrganization();
   const user = useUser();
   const {projects} = useProjects();
+  const params = useParams();
   const {mutateAsync: mutateUserOptions} = useMutateUserOptions();
   const {starredViews} = useStarredIssueViews();
   const {data: starredDashboards = []} = useGetStarredDashboards();
@@ -302,7 +302,7 @@ export function GlobalCommandPaletteActions() {
               )}
               {!hasInsightsRollout && (
                 <CMDKAction
-                  display={{label: t('All Projects')}}
+                  display={{label: t('Projects')}}
                   to={`${prefix}/insights/projects/`}
                 />
               )}
@@ -344,26 +344,6 @@ export function GlobalCommandPaletteActions() {
           </CMDKAction>
         )}
 
-        <CMDKAction display={{label: t('Projects'), icon: <IconProject />}}>
-          <CMDKAction
-            display={{label: t('All Projects')}}
-            to={makeProjectsPathname({path: '/', organization})}
-          />
-          {projects
-            .filter(project => project.isBookmarked)
-            .slice(0, 8)
-            .map(project => (
-              <CMDKAction
-                key={project.id}
-                display={{
-                  label: project.name,
-                  icon: <ProjectAvatar project={project} size={16} />,
-                }}
-                to={makeProjectsPathname({path: `/${project.slug}/`, organization})}
-              />
-            ))}
-        </CMDKAction>
-
         <CMDKAction display={{label: t('Settings'), icon: <IconSettings />}}>
           {getUserOrgNavigationConfiguration().flatMap(section =>
             section.items.map(item => (
@@ -386,37 +366,51 @@ export function GlobalCommandPaletteActions() {
                   '/settings/:orgId/projects/:projectId/',
                   ''
                 );
+                const currentProject = params.projectId
+                  ? projects.find(p => p.slug === params.projectId)
+                  : undefined;
                 return (
                   <CMDKAction
                     key={navItem.path}
-                    display={{label: navItem.title, icon: <IconSettings />}}
+                    display={{label: navItem.title}}
                     keywords={navItem.keywords}
                     prompt={t('Select a project...')}
                     resource={(
                       _query: string,
                       {state}: CMDKResourceContext
                     ): CMDKQueryOptions =>
+                      // eslint-disable-next-line @tanstack/query/exhaustive-deps
                       cmdkQueryOptions({
                         queryKey: [
                           'project-settings',
                           organization.slug,
                           suffix,
-                          projects,
+                          params.projectId,
                         ],
                         queryFn: () =>
-                          projects.map(project => ({
-                            display: {
-                              label: project.slug,
-                              icon: <ProjectAvatar project={project} size={16} />,
-                            },
-                            to: `/settings/${organization.slug}/projects/${project.slug}/${suffix}`,
-                          })),
+                          projects
+                            .filter(p => p.slug !== params.projectId)
+                            .map(project => ({
+                              display: {
+                                label: project.slug,
+                                icon: <ProjectAvatar project={project} size={16} />,
+                              },
+                              to: `/settings/${organization.slug}/projects/${project.slug}/${suffix}`,
+                            })),
                         enabled: state === 'selected',
                         staleTime: Infinity,
                       })
                     }
                   >
-                    {data => data.map((result, i) => renderAsyncResult(result, i))}
+                    {currentProject && (
+                      <CMDKAction
+                        display={{
+                          label: currentProject.slug,
+                          icon: <ProjectAvatar project={currentProject} size={16} />,
+                        }}
+                        to={`/settings/${organization.slug}/projects/${currentProject.slug}/${suffix}`}
+                      />
+                    )}
                   </CMDKAction>
                 );
               })
