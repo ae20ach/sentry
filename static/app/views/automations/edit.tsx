@@ -51,6 +51,7 @@ import {
   makeAutomationDetailsPathname,
 } from 'sentry/views/automations/pathnames';
 import {resolveDetectorIdsForProjects} from 'sentry/views/automations/utils/resolveDetectorIdsForProjects';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 
 function AutomationDocumentTitle() {
   const title = useFormField('name');
@@ -105,6 +106,10 @@ function AutomationEditForm({automation}: {automation: Automation}) {
   const params = useParams<{automationId: string}>();
   const theme = useTheme();
   const maxWidth = theme.breakpoints.lg;
+  const hasPageFrame = useHasPageFrameFeature();
+  const bodyMargin = hasPageFrame
+    ? {sm: 'xl lg', md: '2xl xl'}
+    : {sm: 'xl', md: '2xl 3xl'};
 
   const initialData = useMemo((): Record<string, FieldValue> | undefined => {
     if (!automation) {
@@ -230,7 +235,7 @@ function AutomationEditForm({automation}: {automation: Automation}) {
       <AutomationFormProvider automation={automation}>
         <AutomationDocumentTitle />
         <Stack flex={1}>
-          <StyledLayoutHeader>
+          <Layout.Header background="primary">
             <HeaderInner maxWidth={maxWidth}>
               <Layout.HeaderContent>
                 <AutomationBreadcrumbs automationId={params.automationId} />
@@ -242,8 +247,8 @@ function AutomationEditForm({automation}: {automation: Automation}) {
                 <AutomationFeedbackButton />
               </div>
             </HeaderInner>
-          </StyledLayoutHeader>
-          <StyledBody maxWidth={maxWidth}>
+          </Layout.Header>
+          <Layout.Body maxWidth={maxWidth} padding="0" margin={bodyMargin}>
             <Layout.Main width="full">
               <AutomationBuilderErrorContext.Provider
                 value={{
@@ -265,7 +270,7 @@ function AutomationEditForm({automation}: {automation: Automation}) {
                 </AutomationBuilderContext.Provider>
               </AutomationBuilderErrorContext.Provider>
             </Layout.Main>
-          </StyledBody>
+          </Layout.Body>
         </Stack>
         <StickyFooter>
           <Flex maxWidth={maxWidth} align="center" gap="md" justify="end">
@@ -277,10 +282,6 @@ function AutomationEditForm({automation}: {automation: Automation}) {
   );
 }
 
-const StyledLayoutHeader = styled(Layout.Header)`
-  background-color: ${p => p.theme.tokens.background.primary};
-`;
-
 const HeaderInner = styled('div')<{maxWidth?: string}>`
   display: contents;
 
@@ -289,19 +290,5 @@ const HeaderInner = styled('div')<{maxWidth?: string}>`
     grid-template-columns: minmax(0, 1fr) auto;
     max-width: ${p => p.maxWidth};
     width: 100%;
-  }
-`;
-
-const StyledBody = styled(Layout.Body)<{maxWidth?: string}>`
-  max-width: ${p => p.maxWidth};
-  padding: 0;
-  margin: ${p => p.theme.space.xl};
-
-  @media (min-width: ${p => p.theme.breakpoints.md}) {
-    padding: 0;
-    margin: ${p =>
-      p.noRowGap
-        ? `${p.theme.space.xl} ${p.theme.space['3xl']}`
-        : `${p.theme.space['2xl']} ${p.theme.space['3xl']}`};
   }
 `;
