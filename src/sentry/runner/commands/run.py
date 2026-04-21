@@ -244,8 +244,6 @@ def run_taskworker(
             processing_pool_name=processing_pool_name,
             health_check_file_path=health_check_file_path,
             health_check_sec_per_touch=health_check_sec_per_touch,
-            grpc_port=worker_rpc_port,
-            push_mode=push_mode,
             **options,
         )
         exitcode = worker.start()
