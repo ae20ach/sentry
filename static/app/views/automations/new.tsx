@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import {useCallback, useMemo} from 'react';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -136,9 +135,6 @@ export default function AutomationNewSettings() {
   const theme = useTheme();
   const maxWidth = theme.breakpoints.lg;
   const hasPageFrame = useHasPageFrameFeature();
-  const bodyMargin: ComponentProps<typeof Layout.Body>['margin'] = hasPageFrame
-    ? {sm: 'xl lg', md: '2xl xl'}
-    : {sm: 'xl', md: '2xl 3xl'};
   const initialData = useInitialFormData();
 
   const {
@@ -251,7 +247,13 @@ export default function AutomationNewSettings() {
               </div>
             </HeaderInner>
           </Layout.Header>
-          <Layout.Body maxWidth={maxWidth} padding="0" margin={bodyMargin}>
+          <Layout.Body
+            maxWidth={maxWidth}
+            padding="0"
+            margin={
+              hasPageFrame ? {sm: 'xl lg', md: '2xl xl'} : {sm: 'xl', md: '2xl 3xl'}
+            }
+          >
             <Layout.Main width="full">
               <AutomationBuilderErrorContext.Provider
                 value={{

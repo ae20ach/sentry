@@ -1,4 +1,3 @@
-import type {ComponentProps} from 'react';
 import {useCallback, useMemo} from 'react';
 import {useTheme} from '@emotion/react';
 import styled from '@emotion/styled';
@@ -108,9 +107,6 @@ function AutomationEditForm({automation}: {automation: Automation}) {
   const theme = useTheme();
   const maxWidth = theme.breakpoints.lg;
   const hasPageFrame = useHasPageFrameFeature();
-  const bodyMargin: ComponentProps<typeof Layout.Body>['margin'] = hasPageFrame
-    ? {sm: 'xl lg', md: '2xl xl'}
-    : {sm: 'xl', md: '2xl 3xl'};
 
   const initialData = useMemo((): Record<string, FieldValue> | undefined => {
     if (!automation) {
@@ -249,7 +245,13 @@ function AutomationEditForm({automation}: {automation: Automation}) {
               </div>
             </HeaderInner>
           </Layout.Header>
-          <Layout.Body maxWidth={maxWidth} padding="0" margin={bodyMargin}>
+          <Layout.Body
+            maxWidth={maxWidth}
+            padding="0"
+            margin={
+              hasPageFrame ? {sm: 'xl lg', md: '2xl xl'} : {sm: 'xl', md: '2xl 3xl'}
+            }
+          >
             <Layout.Main width="full">
               <AutomationBuilderErrorContext.Provider
                 value={{
