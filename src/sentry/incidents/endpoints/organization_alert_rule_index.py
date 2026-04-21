@@ -208,25 +208,25 @@ def translate_metric_alert_to_detector_payload(data: dict[str, Any]) -> dict[str
             trigger_condition_type = Condition.LESS
             resolve_condition_type = Condition.GREATER_OR_EQUAL
 
+        resolve_threshold = data.get("resolveThreshold")
         # When comparisonDelta is set, the frontend sends a percent delta (e.g. 200 for "200%
         # higher"). Translate to a total-percentage comparison the way DrfAlertRuleSerializer
         # does: ABOVE → threshold + 100 (200 → 300), BELOW → 100 - threshold (40 → 60).
         if data.get("comparisonDelta") is not None:
-            if threshold_type == AlertRuleThresholdType.ABOVE.value:
 
-                def translate_threshold(t: float) -> float:
-                    return t + 100
-
-            else:
-
-                def translate_threshold(t: float) -> float:
-                    return 100 - t
+            def translate_threshold(threshold_type: int, threshold: float) -> float:
+                if threshold_type == AlertRuleThresholdType.ABOVE.value:
+                    return threshold + 100
+                else:
+                    return 100 - threshold
 
             for trigger in triggers:
-                if trigger.get("alertThreshold") is not None:
-                    trigger["alertThreshold"] = translate_threshold(trigger["alertThreshold"])
+                alert_threshold = trigger.get("alertThreshold")
+                if alert_threshold is not None:
+                    trigger["alertThreshold"] = translate_threshold(threshold_type, alert_threshold)
+
             if data.get("resolveThreshold") is not None:
-                data["resolveThreshold"] = translate_threshold(data["resolveThreshold"])
+                resolve_threshold = translate_threshold(threshold_type, resolve_threshold)
 
         for trigger in triggers:
             label = trigger.get("label")
@@ -241,7 +241,6 @@ def translate_metric_alert_to_detector_payload(data: dict[str, Any]) -> dict[str
                 }
             )
 
-        resolve_threshold = data.get("resolveThreshold")
         if resolve_threshold is None:
             warning = next((t for t in triggers if t.get("label") == "warning"), None)
             critical = next((t for t in triggers if t.get("label") == "critical"), None)
@@ -329,7 +328,8 @@ def create_metric_alert(
     if features.has("organizations:workflow-engine-rule-serializers", organization) or features.has(
         "organizations:workflow-engine-metric-alert-endpoints-post", organization
     ):
-        detector_data = translate_metric_alert_to_detector_payload(data)
+        detector_data = deepcopy(data)
+        detector_data = translate_metric_alert_to_detector_payload(detector_data)
 
         context_project = project
         if context_project is None and data.get("projects"):
