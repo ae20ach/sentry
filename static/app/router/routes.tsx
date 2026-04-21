@@ -673,6 +673,11 @@ function buildRoutes(): RouteObject[] {
       component: make(() => import('sentry/views/settings/project/preprod')),
     },
     {
+      path: 'snapshots/',
+      name: t('Snapshots'),
+      component: make(() => import('sentry/views/settings/project/preprod/snapshots')),
+    },
+    {
       path: 'keys/',
       name: t('Client Keys'),
       children: [
@@ -1346,17 +1351,6 @@ function buildRoutes(): RouteObject[] {
       ],
     },
     {
-      path: '/dashboards/new/:templateId',
-      component: make(() => import('sentry/views/dashboards/create')),
-      withOrgPath: true,
-      children: [
-        {
-          path: 'widget/:widgetId/',
-          component: make(() => import('sentry/views/dashboards/create')),
-        },
-      ],
-    },
-    {
       path: '/organizations/:orgId/dashboards/:dashboardId/',
       redirectTo: '/organizations/:orgId/dashboard/:dashboardId/',
     },
@@ -1653,6 +1647,12 @@ function buildRoutes(): RouteObject[] {
     component: make(() => import('sentry/views/replays/index')),
     withOrgPath: true,
     children: replayChildren,
+  };
+
+  const seerRoutes: SentryRouteObject = {
+    path: '/seer/workflows/',
+    component: make(() => import('sentry/views/seerWorkflows')),
+    withOrgPath: true,
   };
 
   const releaseChildren: SentryRouteObject[] = [
@@ -2791,6 +2791,7 @@ function buildRoutes(): RouteObject[] {
       preprodRoutes,
       pullRequestRoutes,
       replayRoutes,
+      seerRoutes,
       releasesRoutes,
       statsRoutes,
       discoverRoutes,
