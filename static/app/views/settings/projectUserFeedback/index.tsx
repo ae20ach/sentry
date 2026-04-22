@@ -3,7 +3,7 @@ import * as Sentry from '@sentry/react';
 import {mutationOptions} from '@tanstack/react-query';
 import {z} from 'zod';
 
-import {Button, LinkButton} from '@sentry/scraps/button';
+import {Button} from '@sentry/scraps/button';
 import {AutoSaveForm, FieldGroup, FormSearch} from '@sentry/scraps/form';
 import {Flex} from '@sentry/scraps/layout';
 import {ExternalLink} from '@sentry/scraps/link';
@@ -82,17 +82,21 @@ export default function ProjectUserFeedback() {
       <SentryDocumentTitle title={t('User Feedback')} projectSlug={project.slug}>
         <SettingsPageHeader
           title={t('User Feedback')}
-          subtitle={t(
-            `Don't rely on stack traces and graphs alone to understand
+          subtitle={
+            <Flex justify="between" align="center" gap="md">
+              <span>
+                {tct(
+                  `Don't rely on stack traces and graphs alone to understand
             the cause and impact of errors. Enable the User Feedback Widget to collect
-            your users' comments at anytime, or enable the Crash Report Modal to collect additional context only when an error occurs.`
-          )}
-          action={
-            <Flex gap="md" align="center">
-              <LinkButton href="https://docs.sentry.io/product/user-feedback/" external>
-                {t('Read the Docs')}
-              </LinkButton>
-              <Button priority="primary" onClick={handleClick}>
+            your users' comments at anytime, or enable the Crash Report Modal to collect additional context only when an error occurs. [link:Read the Docs]`,
+                  {
+                    link: (
+                      <ExternalLink href="https://docs.sentry.io/product/user-feedback/" />
+                    ),
+                  }
+                )}
+              </span>
+              <Button priority="primary" size="md" onClick={handleClick}>
                 {t('Open the Crash Report Modal')}
               </Button>
             </Flex>

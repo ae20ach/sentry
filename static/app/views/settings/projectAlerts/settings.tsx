@@ -1,7 +1,7 @@
 import {Fragment} from 'react';
 
-import {AlertLink} from '@sentry/scraps/alert';
 import {LinkButton} from '@sentry/scraps/button';
+import {Flex} from '@sentry/scraps/layout';
 
 import {Form} from 'sentry/components/forms/form';
 import JsonForm from 'sentry/components/forms/jsonForm';
@@ -11,8 +11,7 @@ import {PanelAlert} from 'sentry/components/panels/panelAlert';
 import {PluginList} from 'sentry/components/pluginList';
 import {SentryDocumentTitle} from 'sentry/components/sentryDocumentTitle';
 import {fields} from 'sentry/data/forms/projectAlerts';
-import {IconMail} from 'sentry/icons';
-import {t} from 'sentry/locale';
+import {t, tct} from 'sentry/locale';
 import type {Plugin} from 'sentry/types/integrations';
 import {getApiUrl} from 'sentry/utils/api/getApiUrl';
 import type {ApiQueryKey} from 'sentry/utils/queryClient';
@@ -20,6 +19,7 @@ import {useApiQuery} from 'sentry/utils/queryClient';
 import {routeTitleGen} from 'sentry/utils/routeTitle';
 import {useOrganization} from 'sentry/utils/useOrganization';
 import {makeAlertsPathname} from 'sentry/views/alerts/pathnames';
+import {useHasPageFrameFeature} from 'sentry/views/navigation/useHasPageFrameFeature';
 import {SettingsPageHeader} from 'sentry/views/settings/components/settingsPageHeader';
 import {ProjectPermissionAlert} from 'sentry/views/settings/project/projectPermissionAlert';
 import {useProjectAlertsOutlet} from 'sentry/views/settings/projectAlerts';
@@ -38,6 +38,7 @@ function makeFetchProjectPluginsQueryKey(
 export default function ProjectAlertSettings() {
   const organization = useOrganization();
   const {canEditRule, project} = useProjectAlertsOutlet();
+  const hasPageFrameFeature = useHasPageFrameFeature();
 
   const {
     data: pluginList = [],
@@ -53,6 +54,11 @@ export default function ProjectAlertSettings() {
     return <LoadingError onRetry={refetchPluginList} />;
   }
 
+  const alertRulesTo = {
+    pathname: makeAlertsPathname({path: '/rules/', organization}),
+    query: {project: project?.id},
+  };
+
   return (
     <Fragment>
       <SentryDocumentTitle
@@ -61,32 +67,14 @@ export default function ProjectAlertSettings() {
       <SettingsPageHeader
         title={t('Alerts Settings')}
         action={
-          <LinkButton
-            to={{
-              pathname: makeAlertsPathname({
-                path: '/rules/',
-                organization,
-              }),
-              query: {project: project?.id},
-            }}
-            size="sm"
-          >
-            {t('View Alert Rules')}
-          </LinkButton>
+          !hasPageFrameFeature && (
+            <LinkButton to={alertRulesTo} size="sm">
+              {t('View Alert Rules')}
+            </LinkButton>
+          )
         }
       />
       <ProjectPermissionAlert project={project} />
-      <AlertLink.Container>
-        <AlertLink
-          to="/settings/account/notifications/"
-          trailingItems={<IconMail />}
-          variant="info"
-        >
-          {t(
-            'Looking to fine-tune your personal notification preferences? Visit your Account Settings'
-          )}
-        </AlertLink>
-      </AlertLink.Container>
 
       {isPluginListLoading ? (
         <LoadingIndicator />
@@ -105,8 +93,27 @@ export default function ProjectAlertSettings() {
           >
             <JsonForm
               disabled={!canEditRule}
-              title={t('Email Settings')}
+              title={
+                hasPageFrameFeature ? (
+                  <Flex justify="between" align="center" width="100%">
+                    {t('Email Settings')}
+                    <LinkButton to={alertRulesTo} size="sm">
+                      {t('View Alert Rules')}
+                    </LinkButton>
+                  </Flex>
+                ) : (
+                  t('Email Settings')
+                )
+              }
               fields={[fields.subjectTemplate]}
+              renderHeader={() => (
+                <PanelAlert variant="info">
+                  {tct(
+                    'Looking to fine-tune your personal notification preferences? Visit your [link:Account Settings].',
+                    {link: <a href="/settings/account/notifications/" />}
+                  )}
+                </PanelAlert>
+              )}
             />
 
             <JsonForm
