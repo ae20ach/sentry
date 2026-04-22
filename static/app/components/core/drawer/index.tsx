@@ -257,7 +257,8 @@ export function useDrawer() {
     (renderer: DrawerConfig['renderer'], options: DrawerConfig['options']) => {
       context.openDrawer(renderer, options, callerId);
     },
-    [context, callerId]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Only depend on context.openDrawer, not the entire context object, to prevent unnecessary re-renders
+    [context.openDrawer, callerId]
   );
   return {
     openDrawer,
